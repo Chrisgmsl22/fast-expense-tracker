@@ -24,9 +24,10 @@ learning. Same code-quality bar, but speed > deliberate practice.
 
 | You want to know… | Look here |
 |---|---|
-| Project goals + non-goals | [docs/specs/0001-initial-design.md](./docs/specs/0001-initial-design.md) |
+| Project goals + non-goals | [docs/specs/0001-initial-design.md](./docs/specs/0001-initial-design.md) *(pending)* |
 | Current phase + what's next | [docs/roadmap/README.md](./docs/roadmap/README.md) |
 | Why a design choice was made | [docs/decisions/](./docs/decisions/) |
+| Data model + seed data + shared-expense math | [docs/reference/domain-reference.md](./docs/reference/domain-reference.md) |
 | Coding conventions | [docs/conventions/coding-conventions.md](./docs/conventions/coding-conventions.md) |
 | How agents work on this repo | [docs/conventions/agent-workflow.md](./docs/conventions/agent-workflow.md) |
 | AI assistant instructions | [CLAUDE.md](./CLAUDE.md) |

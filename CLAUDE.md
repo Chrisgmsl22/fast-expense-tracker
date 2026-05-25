@@ -136,19 +136,23 @@ At a high level, review checks:
 
 User pays full amount but only a percentage is their actual expense.
 
-- Always use `actualShare` for totals, never `amount`
-- Formula: `actualShare = isShared ? amount × yourPercent : amount`
-- Default `yourPercent`: 0.68 (currently — env var, may change with income ratio)
+- Always use `actualExpenditure` for totals, never `amount`
+- Formula: `actualExpenditure = isShared ? amount × yourPercentage : amount`
+- Default `yourPercentage`: 0.68 (currently — env var, may change with income ratio)
+- Field is **stored** (not computed at query time) so historical splits remain correct when the default changes
+- Full math reference, edge cases, and test scenarios: [docs/reference/domain-reference.md §5](./docs/reference/domain-reference.md)
 
 ### Categories
 
-Categories are seeded from MoneyFlow's seed file (verbatim) so migration is
-trivial. See [docs/specs/0001-initial-design.md](./docs/specs/0001-initial-design.md)
-for the seed list.
+Categories are seeded from the frozen reference at
+[docs/reference/domain-reference.md](./docs/reference/domain-reference.md)
+(originally lifted from MoneyFlow's `seed.ts`). All 13 system categories with
+their subcategories, `isRelevant` flags, and slugs live there.
 
 `isRelevant` flag distinguishes essentials (50%) from discretionary (25%) in
 the 50/25/25 tracker. **Savings** is treated as its own bucket on the
-dashboard, NOT as essentials (see ADR-0002 reasoning).
+dashboard, NOT as essentials — see the "Important nuance for 50/25/25 logic"
+section in `domain-reference.md`.
 
 ### Card color coding
 
