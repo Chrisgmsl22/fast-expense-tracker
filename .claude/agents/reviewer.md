@@ -34,6 +34,8 @@ In order of severity:
 3. **Read affected files in full.** Diffs lie. A change can look fine in isolation and be broken in context.
 4. **Cross-reference against:**
    - `docs/conventions/coding-conventions.md` (especially Security and Error handling sections)
+   - `docs/conventions/parallel-slicing.md` (slice-type discipline — see "Slice-type-aware scrutiny" below)
+   - `docs/specs/0001-initial-design.md` — confirm the slice's scope matches §7
    - The slice's intended Scope (in) and Scope (out)
    - Any ADRs the slice references
 5. **Run the verification commands** the implementer claimed succeeded:
@@ -42,6 +44,29 @@ In order of severity:
    - `pnpm test`
    - If any fail that the implementer said passed → that's a Critical finding (false claim)
 6. **Produce the report** in the format below.
+
+## Slice-type-aware scrutiny
+
+Read the slice's Type label (Foundation / Parallel / Integration) before reviewing. Apply heightened scrutiny based on type:
+
+### Foundation slices — extra scrutiny
+These set patterns the rest of the phase inherits. Mistakes here compound across fan-out slices. Pay special attention to:
+- **Public type signatures** of shared utils — are they future-proof? Could a fan-out slice need to add a parameter, forcing a Foundation-slice rework later?
+- **File/directory naming** — does it match `coding-conventions.md`? Wrong names are expensive to fix once 4 fan-out slices reference them.
+- **Error-class choice** — does each thrown error use the right class from `lib/errors.ts`?
+- **Test contract coverage** — does the shared util's tests cover its contract, or just the happy path?
+
+### Parallel slices — file-boundary discipline
+Multiple slices run concurrently. A Parallel slice that touches files outside its declared footprint is a merge-conflict bomb. Verify:
+- **Only files inside the slice's declared owned-files list** were modified. If the diff touches a file owned by a sibling Parallel slice, that's a **Critical** finding.
+- **Shared util extensions** — if the slice extends a Foundation-slice util, that's likely scope creep. Critical unless the Plan block authorizes it.
+- **No edits to page-level wiring files** — page assembly is the Integration slice's job, not Parallel slices'.
+
+### Integration slices — e2e completeness
+Integration ships the phase. Verify:
+- **Playwright smoke test exercises the full user flow** the phase was supposed to deliver — not just one component.
+- **Wiring is the only meaningful new code.** New features inside an Integration slice are scope creep.
+- **Loose ends from fan-out slices were resolved**, not silently patched. If the Integration slice fixed a fan-out bug without an explicit Plan-block note, that's an Important finding.
 
 ## Hard rules
 

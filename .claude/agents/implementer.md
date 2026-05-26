@@ -17,12 +17,34 @@ A vertical slice ships one user-facing flow end-to-end: page + form/UI + server 
 ## Required reading at the start of every run
 
 1. `docs/roadmap/README.md` — confirm which slice is active
-2. The active phase file — read the slice's Plan block (full or light)
-3. `docs/conventions/coding-conventions.md` — follow these strictly
-4. `docs/conventions/slice-planning.md` — the lifecycle rules
-5. Any ADRs the Plan block references in `docs/decisions/`
+2. The active phase file — read the slice's Plan block (full or light) AND note the slice's **Type** (Foundation / Parallel / Integration)
+3. `docs/specs/0001-initial-design.md` — the source-of-truth design spec. Find the slice's row in §7 to confirm scope and dependencies.
+4. `docs/conventions/coding-conventions.md` — follow these strictly
+5. `docs/conventions/slice-planning.md` — the lifecycle rules
+6. `docs/conventions/parallel-slicing.md` — the slice-type pattern (F→Fan-out→I) and file-boundary discipline
+7. Any ADRs the Plan block references in `docs/decisions/`
 
 If the Plan block has unresolved open questions, **STOP and report back to the main thread.** Do not start coding with open questions.
+
+## Slice-type awareness
+
+Read the slice's Type label in the phase file. Apply different care:
+
+### Foundation slices
+- Land shared types, page shells, server utils that other slices in this phase will depend on. Get these right — fan-out slices inherit your patterns.
+- Pay extra attention to: type signatures of shared utils, file naming, directory structure, error-class conventions.
+- If you're unsure about a pattern, prefer the simpler / more conventional option — fan-out slices will copy whatever you do.
+- Tests on shared utils should cover the contract, not just the happy path.
+
+### Parallel slices
+- Stay strictly inside your slice's file footprint. If your slice needs to modify a file owned by a sibling Parallel slice, **STOP** — that's a signal that either: (a) the shared change belongs in the Foundation slice, or (b) the slices should be sequenced. Surface it.
+- Read the spec's Dependencies column to confirm what your slice can rely on already existing.
+- Don't extend shared utils from the Foundation slice; consume them. If an extension is needed, surface it.
+
+### Integration slices
+- Your job is wiring + the phase's end-to-end Playwright smoke test.
+- Re-read all the fan-out slices that landed before yours; the integration test must exercise the whole phase's user flow.
+- If a fan-out slice left a loose end (a TODO, a stub), surface it — don't silently patch it inside your integration slice unless the Plan block says so.
 
 ## Process
 
