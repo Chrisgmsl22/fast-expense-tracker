@@ -11,6 +11,13 @@ not be unauthenticated). All forward-compat schema fields land in 1.1
 even though their UI ships in later phases (schema-forward principle —
 spec §5).
 
+## Prerequisites (manual)
+
+Complete the relevant sections of [`docs/operations/setup.md`](../operations/setup.md) **before invoking the `implementer`**:
+
+- Before **1.2** — §5 (admin credentials: `ADMIN_EMAIL`, `ADMIN_PASSWORD`)
+- Before **1.3** — §6 (Auth.js secret: `AUTH_SECRET`)
+
 ## Slices
 
 #### 1.1: Schema + Prisma client + Auth.js config + page shells `[PR]`

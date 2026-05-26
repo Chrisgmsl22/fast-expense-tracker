@@ -14,6 +14,16 @@ infrastructure — "feature works end-to-end" isn't applicable. Vercel
 preview URLs loading + CI green from 0.2/0.3 serve as integration
 verification.
 
+## Prerequisites (manual)
+
+Complete the relevant sections of [`docs/operations/setup.md`](../operations/setup.md) **before invoking the `implementer`** on each slice:
+
+- Before **0.1** — §1 (local dev environment) and §2 (Neon database + `DATABASE_URL`)
+- Before **0.2** — §3 (Vercel project + env vars)
+- Before **0.3** — no new prereqs
+- Before **0.4** — no new prereqs
+- *After* **0.3** ships — §4 (GitHub branch protection on `main`)
+
 ## Slices
 
 #### 0.1: Next.js + TS-strict + Tailwind + shadcn/ui + Prisma + Neon scaffold `[PR]`

@@ -37,6 +37,7 @@ Slicing follows the **Foundation → Fan-out → Integration** pattern documente
 ## See also
 
 - [`docs/specs/0001-initial-design.md`](../specs/0001-initial-design.md) — the full design spec (source of truth)
+- [`docs/operations/setup.md`](../operations/setup.md) — manual setup checklist (Neon, Vercel, env vars, GitHub branch protection, Resend); phase files reference relevant sections
 - [`docs/conventions/parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I pattern
 - [`docs/conventions/slice-planning.md`](../conventions/slice-planning.md) — Plan block format
 - [`docs/conventions/pr-strategy.md`](../conventions/pr-strategy.md) — vertical-slice philosophy

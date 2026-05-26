@@ -15,6 +15,10 @@ categories.
 
 If by Phase 6 the user has moved on to MoneyFlow, Phase 7 can be skipped.
 
+## Prerequisites (manual)
+
+Before **7.1** — complete §7 of [`docs/operations/setup.md`](../operations/setup.md) (Resend account, API key, `CRON_SECRET`).
+
 ## Slices
 
 #### 7.1: Resend integration + email scaffold `[PR]`
