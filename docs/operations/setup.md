@@ -15,7 +15,7 @@ real values.
 
 One-time setup on your machine.
 
-- [ ] Install Node 20.x LTS (or whatever `package.json` `engines` says once slice 0.1 ships)
+- [ ] Install Node 24.x LTS via nvm (`nvm install 24`) — matches the repo `.nvmrc` / `engines`
 - [ ] Install pnpm: `npm install -g pnpm`
 - [ ] Clone the repo locally
 - [ ] (Optional) Install Prisma extension for VS Code or your editor of choice

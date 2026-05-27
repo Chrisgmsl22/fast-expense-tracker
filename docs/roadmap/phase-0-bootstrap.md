@@ -38,7 +38,7 @@ attach to. Includes the initial empty Prisma migration.
 
 **Scope (in)**
 
-- `package.json` initialized with pnpm + Node 20.x LTS pinned in `engines`
+- `package.json` initialized with pnpm + Node 24.x LTS pinned in `engines`
 - Next.js 15 with App Router (`app/` directory; no Pages Router)
 - TypeScript strict mode in `tsconfig.json` — `strict: true`, `noUncheckedIndexedAccess: true`, `noImplicitOverride: true`
 - Tailwind CSS configured (`tailwind.config.ts`, `app/globals.css`)
@@ -65,7 +65,7 @@ attach to. Includes the initial empty Prisma migration.
 **Design decisions**
 
 - **Package manager**: pnpm (matches `implementer.md`'s commands).
-- **Node version**: pin `"engines": { "node": ">=20 <21" }` (Node 20 LTS).
+- **Node version**: pin `"engines": { "node": ">=24 <25" }` — Node 24 is the active LTS and Vercel's default runtime. (The original Node 20 pick reached EOL 2026-04-30.) Repo `.nvmrc` already pins `24`; pnpm is provided via `packageManager` + corepack. See `docs/lessons.md` for the setup story.
 - **Project structure**: follow [`coding-conventions.md §File organization`](../conventions/coding-conventions.md) initial proposal — `app/`, `components/`, `lib/`, `prisma/`, `tests/`, `types/`.
 - **TypeScript strict**: enable `strict: true`, `noUncheckedIndexedAccess: true`, `noImplicitOverride: true`. Other flags follow Next.js defaults.
 - **Tailwind**: defaults; no custom theme yet. Later slices extend as needed.
@@ -95,7 +95,7 @@ attach to. Includes the initial empty Prisma migration.
 
 ##### Tasks
 
-- [ ] Initialize `package.json` with pnpm + Node 20 in `engines`
+- [ ] Initialize `package.json` with pnpm + Node 24 in `engines` (`.nvmrc` already pins `24`)
 - [ ] Scaffold Next.js 15 App Router (`pnpm create next-app` or manual)
 - [ ] Configure `tsconfig.json` with strict + `noUncheckedIndexedAccess` + `noImplicitOverride`
 - [ ] Install + configure Tailwind CSS (decide v3 vs v4 per open question)
