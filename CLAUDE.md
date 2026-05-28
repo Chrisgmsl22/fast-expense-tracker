@@ -87,10 +87,15 @@ All three steps happen in the same PR — never after merging. See
 1. **Never commit `.env*` files** — `.gitignore` excludes them; if `git status` shows one, STOP and investigate.
 2. **Never hardcode secrets** — DB URLs, auth secrets, API keys live in env vars only.
 3. **Never log secret values** — even in debug output. Mask or omit.
-4. **Never expand slice scope** — if the Plan block says scope (in) is X, don't bundle Y. Open a separate slice.
-5. **Never skip the slice lifecycle** — tasks/Plan/PR-description handoff is non-negotiable.
-6. **Never commit without explicit user request** — same rule as MoneyFlow.
-7. **Never use `gh` CLI** — this repo is on the user's personal GitHub (`Chrisgmsl22`); use plain `git` + browser URLs for PRs. (`gh` is configured for work's GHE.)
+4. **Never read `.env*` files** (except `.env.example`) — runtime tools load them; you never need the value. Harness denies these reads via `.claude/settings.json`. Don't bypass via `cat`/`head`/`tail`/etc.
+5. **Never echo env/secret values in any output** — not in tool descriptions, commits, PR descriptions, error messages, or final reports. Mask as `<redacted>` if a reference is unavoidable.
+6. **Never edit harness files silently** — `.claude/agents/**`, `.claude/settings.json`, `CLAUDE.md`, `.gitignore`, `docs/decisions/**`, `docs/conventions/**` shape the rules themselves. Escalate to the user first; sign-off in the same conversation.
+7. **Never fetch external URLs** — no `curl`/`wget` to URLs not already referenced in committed code. No installs from non-registry sources (no GitHub URL installs, no tarball URLs).
+8. **Never expand slice scope** — if the Plan block says scope (in) is X, don't bundle Y. Open a separate slice.
+9. **Never skip the slice lifecycle** — tasks/Plan/PR-description handoff is non-negotiable.
+10. **Never commit without explicit user request** — same rule as MoneyFlow.
+11. **Never use `gh` CLI** — this repo is on the user's personal GitHub (`Chrisgmsl22`); use plain `git` + browser URLs for PRs. (`gh` is configured for work's GHE.) Harness denies `gh *`.
+12. **Never `git commit --no-verify`** — fix the failing hook instead. Harness denies this too.
 
 ---
 

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.local.*)",
+      "Read(./.env.development)",
+      "Read(./.env.development.local)",
+      "Read(./.env.production)",
+      "Read(./.env.production.local)",
+      "Read(./.env.test)",
+      "Read(./.env.test.local)",
+      "Read(./.env.*.local)",
+
+      "Bash(cat .env)",
+      "Bash(cat .env.local*)",
+      "Bash(cat .env.development*)",
+      "Bash(cat .env.test*)",
+      "Bash(cat .env.production*)",
+      "Bash(head .env.local*)",
+      "Bash(head .env.development*)",
+      "Bash(head .env.test*)",
+      "Bash(head .env.production*)",
+      "Bash(tail .env.local*)",
+      "Bash(tail .env.development*)",
+      "Bash(tail .env.test*)",
+      "Bash(tail .env.production*)",
+
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)",
+      "Bash(rm -rf $HOME*)",
+      "Bash(rm -rf ..*)",
+
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git commit --no-verify*)",
+      "Bash(git commit -n *)",
+
+      "Bash(npm install -g*)",
+      "Bash(pnpm add -g*)",
+      "Bash(chmod -R 777*)",
+      "Bash(gh *)",
+      "Bash(export NODE_TLS_REJECT_UNAUTHORIZED=0*)"
+    ]
+  }
+}

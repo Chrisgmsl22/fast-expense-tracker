@@ -117,7 +117,8 @@ block) is the same for both — the difference is how much is written upfront.
    - **Delete the Plan block** from the phase file.
 7. **Open PR** → paste URL into the conversation for visibility.
 8. **Merge** → `main` is immediately clean. No stale Plan blocks ever land on `main`.
-9. **Update** `docs/roadmap/README.md` if a slice or phase status changed.
+9. **Retrospect** → if the slice hit avoidable friction (see threshold in `docs/lessons.md`), append an entry using the template there. No friction → skip. The reviewer subagent may also surface lesson candidates in its report — check those before deciding.
+10. **Update** `docs/roadmap/README.md` if a slice or phase status changed.
 
 ### Why "delete in the PR, not after"
 

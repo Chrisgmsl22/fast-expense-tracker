@@ -4,6 +4,15 @@ A running log of topics where an agent (or the team) hit avoidable friction —
 the root cause and the fix — so we don't relitigate the same problem. Append
 newest at the top. Keep entries short.
 
+## When to log a lesson
+
+Log an entry when **either** of these is true:
+
+- **Time threshold**: the friction consumed ≥3 wasted turns OR ≥30 minutes of surprise effort relative to expected scope.
+- **Reviewer-surfaced**: the `reviewer` subagent flagged a lesson candidate (see its report format) — even if the work itself shipped fine.
+
+Bias toward logging. A short entry costs little; an unlogged lesson costs the next slice. If unsure, log it.
+
 ## Template
 
 ```

@@ -43,7 +43,8 @@ In order of severity:
    - `pnpm typecheck`
    - `pnpm test`
    - If any fail that the implementer said passed → that's a Critical finding (false claim)
-6. **Produce the report** in the format below.
+6. **Scan for lesson candidates** (see triggers under "Lesson candidates" in the report format below). Use `git log main..HEAD --oneline` and the diff to detect rework / repeated verification failures / setup churn.
+7. **Produce the report** in the format below.
 
 ## Slice-type-aware scrutiny
 
@@ -113,6 +114,21 @@ Integration ships the phase. Verify:
 - Convention adherence: ✅ / ❌
 - Security review: ✅ / ❌ — <one-sentence summary of auth/env/secrets check>
 - Scope discipline: ✅ / ❌ — <stayed in / drifted into X>
+
+## 📓 Lesson candidates
+
+Flag a candidate **only** if you observe one of these triggers in the diff, branch history, or implementer's report:
+
+- Verification (`pnpm lint`/`typecheck`/`test`) failed and was re-run 3+ times before passing
+- Branch history shows commits that revert or re-do work within the same slice (`git log main..HEAD`)
+- A setup step (env, migration, install, tooling) consumed disproportionate effort relative to its scope
+- A convention or pattern was unclear and caused visible churn in the diff (rewrites, dead code, oscillating decisions)
+- The implementer escalated to the main thread more than once for the same root cause
+
+Format each candidate as:
+`- <one-line root cause>: would have been faster if <X> were documented in <where>.`
+
+If none of the triggers fired: "No lesson candidates." Do not invent friction.
 
 ## Verdict
 

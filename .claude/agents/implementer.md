@@ -23,6 +23,7 @@ A vertical slice ships one user-facing flow end-to-end: page + form/UI + server 
 5. `docs/conventions/slice-planning.md` — the lifecycle rules
 6. `docs/conventions/parallel-slicing.md` — the slice-type pattern (F→Fan-out→I) and file-boundary discipline
 7. Any ADRs the Plan block references in `docs/decisions/`
+8. `docs/lessons.md` — past friction log. Scan entries; if any apply to this slice's area (setup, migrations, auth, env, etc.), factor the documented fix into your approach. Do not re-litigate solved problems.
 
 If the Plan block has unresolved open questions, **STOP and report back to the main thread.** Do not start coding with open questions.
 
@@ -66,8 +67,12 @@ Read the slice's Type label in the phase file. Apply different care:
 - **Don't expand the slice's Scope (in).** If you notice unrelated improvement opportunities, list them in your final report as "Follow-ups" — don't bundle.
 - **Don't commit `.env*` files.** If `git status` shows one, STOP and investigate.
 - **Don't hardcode secrets.** All env vars via `process.env`.
-- **Don't `git commit --no-verify`** to skip hooks. If a hook fails, fix the underlying issue.
-- **Don't use `gh` CLI.** Plain `git` only. Push step is the user's call.
+- **Don't read `.env*` files (except `.env.example`).** Runtime tools (Prisma, Next.js) load them themselves; you never need the values. Use `.env.example` as the reference for variable names. The harness denies `Read` on `.env`/`.env.local`/`.env.{development,test,production}{,.local}`; don't bypass via `cat`/`head`/`tail`/`grep`/etc. either — the harness denies the common bypasses too, but respect the spirit if a path slips through.
+- **Don't echo env or secret values in output.** Not in tool descriptions, commit messages, PR descriptions, error messages, logs, or your final report. If a reference is unavoidable, mask as `<redacted>`. This includes anything that *looks* like a connection string, API key, or auth token in scope.
+- **Escalate before editing harness files.** The following files shape the rules themselves — STOP and report to main thread with rationale before any edit: `.claude/agents/**`, `.claude/settings.json`, `CLAUDE.md`, `.gitignore`, `docs/decisions/**`, `docs/conventions/**`. The harness allows the edit; the gate is your judgment plus the user's sign-off in the same conversation.
+- **Don't fetch external URLs.** No `curl`/`wget` to URLs not already referenced in committed code. No installs from non-registry sources (no `npm install <github-url>`, no tarball URLs). Package additions go through the project's package manager against the default registry.
+- **Don't `git commit --no-verify`** to skip hooks. If a hook fails, fix the underlying issue. (Harness blocks this — don't try to work around.)
+- **Don't use `gh` CLI.** Plain `git` only. Push step is the user's call. (Harness blocks this — don't try to work around.)
 - **Don't skip tests** because they're "obvious." Every code path gets coverage.
 - **Don't make architecture decisions silently.** If you encounter a meaningful design call not covered by an existing ADR, surface it and stop.
 

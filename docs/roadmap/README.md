@@ -43,3 +43,4 @@ Slicing follows the **Foundation → Fan-out → Integration** pattern documente
 - [`docs/conventions/pr-strategy.md`](../conventions/pr-strategy.md) — vertical-slice philosophy
 - [`docs/conventions/agent-workflow.md`](../conventions/agent-workflow.md) — `implementer` and `reviewer` invocation
 - [`docs/decisions/`](../decisions/) — ADRs (architecture decision records)
+- [`docs/lessons.md`](../lessons.md) — running log of avoidable friction (read before each slice; append after)

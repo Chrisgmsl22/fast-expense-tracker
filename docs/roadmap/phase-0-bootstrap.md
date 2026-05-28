@@ -140,6 +140,8 @@ deploys both work. Documents the deploy process for future contributors.
 Wires up the CI pipeline so every PR runs lint + typecheck + tests +
 secret-leak guard.
 
+**Carry-over from 2026-05-27 harness audit**: when this slice promotes to active and the Plan block is drafted, decide whether to add a secret-**value** scanner (e.g., `gitleaks`) in addition to the `.env*` filename grep. The filename grep only catches accidentally staged env files; a value scanner catches real connection strings / API keys pasted into code or fixtures. Record the decision in the Plan block.
+
 ##### Tasks
 
 - [ ] Add `.github/workflows/ci.yml`
@@ -147,6 +149,7 @@ secret-leak guard.
 - [ ] CI job: Vitest run (will be empty initially — that's fine)
 - [ ] CI job: Playwright skeleton (one trivial test, just to verify wiring)
 - [ ] CI job: grep guard that fails if any `.env*` file (other than `.env.example`) appears in the diff (per ADR-0003)
+- [ ] Decide on `gitleaks`/equivalent secret-value scanner per audit note above; add to CI workflow if accepted
 - [ ] Verify CI runs on a sample PR
 
 ---
