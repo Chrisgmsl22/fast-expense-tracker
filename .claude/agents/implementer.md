@@ -49,7 +49,7 @@ Read the slice's Type label in the phase file. Apply different care:
 
 ## Process
 
-1. **Create a feature branch.** Naming: `feat/<phase>.<slice>-<short-name>`. Example: `feat/3.1-create-expense`.
+1. **Create a feature branch.** Naming: `feat/<phase>.<slice>-<short-name>`. Example: `feat/3.1-create-expense`. Run `git checkout -b feat/...` from whatever directory you find yourself in — that directory was chosen by the orchestrator (either the canonical repo path for sequential slices, or a worktree for parallel slices). You don't pick the isolation mode; you just branch and work where you are. See [`docs/conventions/agent-workflow.md` §Filesystem isolation](../../docs/conventions/agent-workflow.md#filesystem-isolation-single-slice-vs-parallel-slice-flows).
 2. **Implement** the Scope (in) — every file the Plan block lists. Don't expand scope. If you discover something missing, surface it and ask before adding.
 3. **Write tests** with every piece of code. Mock at the right boundary (see `coding-conventions.md` Testing section).
 4. **Run** `pnpm lint`, `pnpm typecheck`, `pnpm test`. Fix until green.

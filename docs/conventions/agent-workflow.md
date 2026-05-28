@@ -94,6 +94,60 @@ The reviewer returns a structured report (see its definition for format).
 - **Open-ended exploration** ("how should we structure X?"). Use main thread with `Plan` or just talk it through.
 - **Already in flight** in main thread. Don't fork mid-task.
 
+## Filesystem isolation: single-slice vs parallel-slice flows
+
+How a subagent's filesystem changes reach the repo depends on **how the orchestrator invokes it**, not on what the subagent does. The orchestrator (main thread, you, or whatever is launching the subagent) picks the isolation mode; the subagent always creates its own feature branch as step 1 regardless.
+
+### Single-slice flow (default)
+
+When **only one slice is in flight**, no worktree is needed:
+
+1. Orchestrator invokes `implementer` **without** an isolation flag.
+2. Subagent creates a feature branch off `main` in the current working directory: `git checkout -b feat/N.M-name`.
+3. Subagent edits files in-place; changes are visible to the user in the canonical repo path.
+4. Subagent commits on the feature branch; reports back.
+5. User pushes + opens PR.
+
+This is the default for sequential slices (Foundation and Integration types in `parallel-slicing.md`).
+
+**Known caveat**: in some Claude Code runtimes, a subagent invoked without explicit isolation may run in an ephemeral working copy whose changes don't persist back to the parent. If you invoke an `implementer` and it reports success but `git status` / `git branch` on the parent shows nothing landed, that's the symptom. Two remediations:
+
+- Re-invoke with `isolation: "worktree"` (see parallel-slice flow below) so a real on-disk worktree captures the work.
+- Implement in main thread instead. Slower for the orchestrator but always persists.
+
+Surface either remediation immediately; don't keep re-invoking blind.
+
+### Parallel-slice flow (trigger: a second slice is invoked while a first is in flight)
+
+The moment the user (or main thread) starts a **second slice while the first hasn't merged**, both slices need worktrees. Two subagents working in the same directory will collide on files, lockfiles, `node_modules/`, dev-server ports, and `.next/` build artifacts.
+
+The trigger is concrete: **second slice invocation = move to worktrees for both**. Not a heuristic, a mechanical rule.
+
+1. Orchestrator invokes each `implementer` with `isolation: "worktree"`.
+2. Each subagent gets its own on-disk worktree (sibling directory; same `.git`, different branch).
+3. Each subagent creates `feat/N.M-name` inside its worktree; works there; commits.
+4. User inspects each worktree by `cd`-ing into it.
+5. After PR merges, the worktree is removed (`git worktree remove <path>`).
+
+Concrete worktree commands and path conventions live in [`parallel-slicing.md`](./parallel-slicing.md#worktree-mechanics).
+
+### Decision table
+
+| Situation | Isolation | Where work lives |
+|---|---|---|
+| One slice in flight; sequential | None (default) | Canonical repo path |
+| One slice in flight; previous subagent failed to persist | `isolation: "worktree"` OR main thread | Worktree path OR repo path |
+| Two slices in flight (parallel fan-out) | `isolation: "worktree"` for both | Two sibling worktree paths |
+| Trivial one-file edit | None — main thread, no subagent | Repo path |
+
+### What the subagent assumes
+
+Subagents do not pick their isolation mode. They assume:
+
+- They are already in the working directory their work should land in.
+- Their **first action** is `git checkout -b feat/N.M-name` (per `implementer.md` step 1).
+- They never `git worktree add` themselves — that's the orchestrator's job, done before invocation.
+
 ## What the harness gives you
 
 1. **Reviewable PRs.** Small slices, defined scope.

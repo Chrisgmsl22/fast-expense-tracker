@@ -108,6 +108,94 @@ Why this conservative cap:
 - Merge-conflict risk grows with concurrent branches
 - v1 caution; raise after building confidence
 
+## Worktree mechanics
+
+Worktrees are how two `implementer` subagents work in parallel without colliding. Each gets its own on-disk directory, its own branch, sharing one `.git/` history.
+
+**The trigger is mechanical**: as soon as a second `implementer` is invoked while the first is still in flight, both slices must move to worktrees (per [`agent-workflow.md` §Filesystem isolation](./agent-workflow.md#filesystem-isolation-single-slice-vs-parallel-slice-flows)).
+
+### Why worktrees, not just branches
+
+Two branches alone don't solve the parallel problem when two agents share one working directory:
+
+- Both agents would step on each other's edits to the same files.
+- One agent's `pnpm install` / `prisma generate` / `next build` collides with the other's.
+- Dev-server ports (`3000`) conflict.
+- `.next/` build artifacts and `node_modules/.cache/` are shared, causing flaky failures.
+
+Worktrees give each agent its own working tree (files, build artifacts, `node_modules/` if installed there). All commits still land in one `.git/`, so PRs and merges work normally.
+
+### Path convention
+
+Worktrees live as siblings of the main repo:
+
+```
+<parent>/fast-expense-tracker/                  ← main checkout (main branch)
+<parent>/fast-expense-tracker-<slice-id>/       ← worktree for one parallel slice
+<parent>/fast-expense-tracker-<other-slice>/    ← worktree for the other parallel slice
+```
+
+`<slice-id>` uses the slice's number with a dot replaced by a dash to keep paths shell-friendly: `0.2` → `fast-expense-tracker-0-2`. Add a short tag if helpful: `fast-expense-tracker-0-2-vercel`.
+
+### Setup commands (orchestrator runs these before invoking the subagents)
+
+```bash
+# Pre-flight: confirm both slices' file footprints are disjoint per the spec.
+# Foundation slice (N.1) must have already merged.
+
+# Create a worktree per parallel slice
+git worktree add ../fast-expense-tracker-0-2 -b feat/0.2-vercel
+git worktree add ../fast-expense-tracker-0-3 -b feat/0.3-ci
+
+# Verify
+git worktree list
+
+# Each worktree needs its own dependencies installed
+( cd ../fast-expense-tracker-0-2 && pnpm install )
+( cd ../fast-expense-tracker-0-3 && pnpm install )
+```
+
+The `-b feat/N.M-name` form creates the branch as part of the worktree add — the subagent doesn't need to `git checkout -b` itself.
+
+### Invoking the subagents
+
+Each `implementer` is launched with `isolation: "worktree"` AND the orchestrator tells it which worktree path to use. Concretely, the Claude Code Agent tool's `isolation: "worktree"` flag handles the worktree-cwd binding; the subagent's prompt confirms the slice ID and Plan block path as usual.
+
+If invoking without the Agent tool (e.g., starting a parallel `implementer` session by hand), `cd ../fast-expense-tracker-0-2` before launching, so the subagent's cwd is the worktree.
+
+### Inspecting in-flight work
+
+```bash
+# List active worktrees
+git worktree list
+
+# See what one of them changed
+cd ../fast-expense-tracker-0-2
+git status
+git diff main..HEAD
+
+# Run that worktree's checks without leaving it
+pnpm lint && pnpm typecheck && pnpm test
+```
+
+### Cleanup after PR merge
+
+When a worktree's PR has merged to `main`:
+
+```bash
+# From the main checkout
+git worktree remove ../fast-expense-tracker-0-2
+
+# The branch's local ref can be deleted too (PR merge usually does this on GitHub)
+git branch -d feat/0.2-vercel  # safe-delete; fails if not merged
+```
+
+If a worktree was abandoned (slice dropped, branch not merged), `git worktree remove --force <path>` cleans it up regardless. The branch survives until deleted separately.
+
+### What goes in each worktree
+
+Disjoint file footprints are the **slice's** discipline, defined in its Plan block. The worktree is just the on-disk container. If two parallel slices accidentally touch the same file, you'll learn at merge time — the reviewer should catch it earlier (per `reviewer.md` Parallel slice scrutiny).
+
 **To raise the cap when ready:**
 1. Confirm fan-out slices remain file-disjoint at higher N.
 2. Confirm the user's review bandwidth can absorb N PRs per cycle without
