@@ -81,6 +81,7 @@ All three steps happen in the same PR — never after merging. See
 5. **Write ADRs for significant decisions** — non-obvious trade-offs, deferred features, architectural choices.
 6. **Update `docs/roadmap/README.md`** when slice or phase status changes.
 7. **Flag security concerns immediately** — anything touching env, secrets, auth gets extra care.
+8. **Read files with the Read tool, not the shell** — to inspect file contents always use Read (and Grep/Glob for search). Do NOT use `cat`/`head`/`tail`/`sed`/`echo` in Bash to read or display files. Reserve Bash for things only the shell can do: `git` (no dedicated tool exists for it), running tests/build/lint, and inspecting paths outside the repo (e.g. `~/.claude`). Don't add `echo "=== ... ==="` banners to group command output.
 
 ### ❌ AI SHOULD NOT:
 

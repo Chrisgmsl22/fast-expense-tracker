@@ -1,6 +1,6 @@
 # Phase 0: Bootstrap
 
-**Status**: ⚪ Not started
+**Status**: 🟡 In progress (slice 0.1 shipped on `feat/0.1-bootstrap`; 0.2 / 0.3 / 0.4 remaining)
 **Outcome**: Empty Next.js app live on Vercel; CI green; Prisma schema scaffolded.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 0](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out
@@ -30,87 +30,29 @@ Complete the relevant sections of [`docs/operations/setup.md`](../operations/set
 
 **Type**: Foundation
 **Depends on**: —
+**Status**: 🟢 Shipped on `feat/0.1-bootstrap`. Plan block → PR description.
 
 Lays down the entire base stack so subsequent slices have something to
 attach to. Includes the initial empty Prisma migration.
 
-##### Plan
-
-**Scope (in)**
-
-- `package.json` initialized with pnpm + Node 24.x LTS pinned in `engines`
-- Next.js 15 with App Router (`app/` directory; no Pages Router)
-- TypeScript strict mode in `tsconfig.json` — `strict: true`, `noUncheckedIndexedAccess: true`, `noImplicitOverride: true`
-- Tailwind CSS configured (`tailwind.config.ts`, `app/globals.css`)
-- shadcn/ui initialized (`components.json`); install **only `Button`** as a smoke check that the CLI path works
-- Prisma installed; `prisma/schema.prisma` with Postgres datasource + **empty** model section
-- `lib/db.ts` Prisma client singleton per [`coding-conventions.md §Data layer`](../conventions/coding-conventions.md)
-- `.env.example` with `DATABASE_URL=""` + a one-line comment explaining what it is
-- Root layout (`app/layout.tsx`) + placeholder home page (`app/page.tsx`) — bare scaffolding, no auth, no nav
-- `package.json` scripts: `dev`, `build`, `start`, `lint`, `typecheck` (`tsc --noEmit`), `test` (Vitest), `db:generate`, `db:migrate`
-- Vitest installed + minimal `vitest.config.ts`; one smoke test that the root page renders
-- Baseline Prisma migration committed to `prisma/migrations/` (creates `_prisma_migrations` table only)
-
-**Scope (out)**
-
-- Vercel deployment (→ slice 0.2)
-- GitHub Actions CI + `.env*` grep guard (→ slice 0.3)
-- Pre-commit hook + Husky-vs-lefthook decision (→ slice 0.4)
-- Auth.js installation + config (→ slice 1.3)
-- Actual Prisma models (User, Category, Expense, etc.) (→ slice 1.1)
-- Seed script (→ slice 1.2)
-- Playwright skeleton (→ slice 0.3)
-- Any `.env.example` entries other than `DATABASE_URL` (later slices add their own vars)
-
-**Design decisions**
-
-- **Package manager**: pnpm (matches `implementer.md`'s commands).
-- **Node version**: pin `"engines": { "node": ">=24 <25" }` — Node 24 is the active LTS and Vercel's default runtime. (The original Node 20 pick reached EOL 2026-04-30.) Repo `.nvmrc` already pins `24`; pnpm is provided via `packageManager` + corepack. See `docs/lessons.md` for the setup story.
-- **Project structure**: follow [`coding-conventions.md §File organization`](../conventions/coding-conventions.md) initial proposal — `app/`, `components/`, `lib/`, `prisma/`, `tests/`, `types/`.
-- **TypeScript strict**: enable `strict: true`, `noUncheckedIndexedAccess: true`, `noImplicitOverride: true`. Other flags follow Next.js defaults.
-- **Tailwind**: defaults; no custom theme yet. Later slices extend as needed.
-- **shadcn/ui**: initialize via CLI; install only `Button` to verify the path. Other components added JIT per slice.
-- **Prisma**: Postgres provider; client generated to default location; singleton in `lib/db.ts` (the standard Next.js dev-hot-reload-safe pattern using `globalThis.prisma`).
-- **Migration baseline**: empty model section. Migration name: `init`. First real models land in slice 1.1.
-- **ESLint**: Next.js preset only for this slice (`next/core-web-vitals`). Custom rules deferred — add via ADR if needed.
-- **Vitest config**: `environment: 'node'` by default; component tests in later slices opt into `jsdom` per-file.
-
-**Acceptance criteria**
-
-- `pnpm install` completes without errors
-- `pnpm dev` starts and serves a placeholder at `http://localhost:3000`
-- `pnpm lint` → 0 errors
-- `pnpm typecheck` → 0 errors
-- `pnpm test` runs the smoke test (root page renders) and passes
-- `pnpm prisma migrate dev --name init` runs against the configured Neon `DATABASE_URL` and creates the `_prisma_migrations` table
-- `lib/db.ts` exports a Prisma client singleton (verified: importing twice in dev does not create a second client)
-- `.env.example` exists with `DATABASE_URL=""` placeholder
-- After running migrations, `git status` shows **no** `.env*` files other than `.env.example`
-- All `package.json` scripts execute without error
-- `tsconfig.json` has `strict: true` and `noUncheckedIndexedAccess: true`
-
-**Open questions**
-
-- **Tailwind v3 vs v4?** Tailwind v4 (released early 2026) introduces CSS-first config — but shadcn/ui's compatibility may lag. Implementer: check shadcn/ui's docs at time of slice; if v4 is fully supported by shadcn, use it; otherwise pin v3.x. Document the choice in PR description. Not worth an ADR — note in PR is sufficient.
-
 ##### Tasks
 
-- [ ] Initialize `package.json` with pnpm + Node 24 in `engines` (`.nvmrc` already pins `24`)
-- [ ] Scaffold Next.js 15 App Router (`pnpm create next-app` or manual)
-- [ ] Configure `tsconfig.json` with strict + `noUncheckedIndexedAccess` + `noImplicitOverride`
-- [ ] Install + configure Tailwind CSS (decide v3 vs v4 per open question)
-- [ ] Install + initialize shadcn/ui CLI; install only `Button` component
-- [ ] Install Prisma + `@prisma/client`; create `prisma/schema.prisma` with empty model section
-- [ ] Run `pnpm prisma migrate dev --name init` against Neon (requires `DATABASE_URL` in `.env.local`)
-- [ ] Create `lib/db.ts` Prisma client singleton (hot-reload-safe pattern)
-- [ ] Add `.env.example` with `DATABASE_URL=""` placeholder
-- [ ] Create `app/layout.tsx` and `app/page.tsx` placeholder
-- [ ] Add `package.json` scripts: `dev`, `build`, `start`, `lint`, `typecheck`, `test`, `db:generate`, `db:migrate`
-- [ ] Install Vitest + minimal `vitest.config.ts`
-- [ ] Write smoke test: root page renders without error
-- [ ] Verify `pnpm dev` serves placeholder
-- [ ] Verify `pnpm lint`, `pnpm typecheck`, `pnpm test` all green
-- [ ] Confirm `git status` shows no `.env*` files (other than `.env.example`)
+- [x] Initialize `package.json` with pnpm + Node 24 in `engines` (`.nvmrc` already pins `24`)
+- [x] Scaffold Next.js 15 App Router (`pnpm create next-app` or manual)
+- [x] Configure `tsconfig.json` with strict + `noUncheckedIndexedAccess` + `noImplicitOverride`
+- [x] Install + configure Tailwind CSS (decide v3 vs v4 per open question)
+- [x] Install + initialize shadcn/ui CLI; install only `Button` component
+- [x] Install Prisma + `@prisma/client`; create `prisma/schema.prisma` with empty model section
+- [x] Run `pnpm prisma migrate dev --name init` against Neon (requires `DATABASE_URL` in `.env.local`)
+- [x] Create `lib/db.ts` Prisma client singleton (hot-reload-safe pattern)
+- [x] Add `.env.example` with `DATABASE_URL=""` placeholder
+- [x] Create `app/layout.tsx` and `app/page.tsx` placeholder
+- [x] Add `package.json` scripts: `dev`, `build`, `start`, `lint`, `typecheck`, `test`, `db:generate`, `db:migrate`
+- [x] Install Vitest + minimal `vitest.config.ts`
+- [x] Write smoke test: root page renders without error
+- [x] Verify `pnpm dev` serves placeholder
+- [x] Verify `pnpm lint`, `pnpm typecheck`, `pnpm test` all green
+- [x] Confirm `git status` shows no `.env*` files (other than `.env.example`)
 
 ---
 

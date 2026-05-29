@@ -25,6 +25,26 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-05-27 — Prisma 7 broke the `directUrl` pattern; downgrade dance ate several turns
+
+- **Symptom:** Slice 0.1's `pnpm prisma generate` failed with `error: The datasource property directUrl is no longer supported in schema files`. Trying to pin Prisma 6 then required re-running install, getting `[ERR_PNPM_IGNORED_BUILDS]` for `@prisma/engines`, then for `@prisma/client` separately on v6, then re-running `pnpm install` each time before generate would proceed. Roughly 5 round-trips before migrate worked.
+- **Root cause:**
+  - `pnpm create next-app@latest` + `pnpm add prisma` resolved Prisma to `7.8.0` (the current `@latest`). Prisma 7 moved datasource URLs out of `schema.prisma` into a new `prisma.config.ts` API — the well-documented `directUrl = env("DIRECT_URL")` pattern in the datasource block stopped parsing.
+  - pnpm v11 prompts for explicit `allowBuilds` decisions on packages with native postinstalls. The scaffold generated a `pnpm-workspace.yaml` with `allowBuilds` placeholders but didn't decide for us. Each new install (prisma, then @prisma/client at v6) added a fresh undecided entry.
+  - Prisma CLI does not auto-load `.env.local` — only `.env` — so `prisma migrate dev` couldn't see `DIRECT_URL` without `dotenv-cli` wrapping.
+- **Fix / decision:**
+  - Pin Prisma to `^6` (latest 6.x = 6.19.3) in `package.json` until `prisma.config.ts` patterns stabilize and we have a clear migration path. Documented in slice 0.1's PR description.
+  - In `pnpm-workspace.yaml`: explicitly approve `@prisma/client: true`, `@prisma/engines: true`, `prisma: true`; deny `sharp`, `unrs-resolver`, `msw`.
+  - Add `dotenv-cli` as a dev dep; wrap `db:migrate` script: `"db:migrate": "dotenv -e .env.local -- prisma migrate dev"`.
+- **Lessons for next time:**
+  1. Check the **current major** of any tool the Plan block names before scaffolding. Plan blocks written even days ago may assume the previous major's API.
+  2. When `pnpm create <app>@latest` is used, immediately verify resolved versions of critical deps (Prisma, Next, React) before deeper work. A `pnpm list --depth 0` early surfaces version surprises while pivoting is cheap.
+  3. For Prisma + Neon specifically: `directUrl` in `datasource` is a Prisma 6 pattern. Until we adopt Prisma 7's `prisma.config.ts`, pin `^6`.
+  4. Anything in the project that needs values from `.env.local` (not `.env`) must wrap with `dotenv-cli` or be invoked via `next` (which loads `.env.local` itself).
+  5. The pnpm v11 `allowBuilds` allowlist must be filled out **before** running CLI tools that depend on those builds (Prisma, sharp), otherwise the install loop short-circuits with cryptic errors.
+
+---
+
 ### 2026-05-26 — Setting a base Node version took far too many turns
 
 - **Symptom:** Picking and wiring up the project's Node version dragged across

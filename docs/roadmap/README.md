@@ -5,7 +5,7 @@ own file with vertical slices, marked as `[PR]`.
 
 ## Currently active
 
-🟡 **Phase 0 — Bootstrap** is next up.
+🟡 **Phase 0 — Bootstrap** is in progress. Slice 0.1 (foundation scaffold) shipped on `feat/0.1-bootstrap`; slices 0.2 (Vercel) / 0.3 (CI) / 0.4 (pre-commit) remain — parallelizable per [`parallel-slicing.md`](../conventions/parallel-slicing.md) once 0.1 merges.
 
 The full design spec is at [`docs/specs/0001-initial-design.md`](../specs/0001-initial-design.md). It defines what the app does, what it doesn't, and the 8-phase trajectory.
 
@@ -15,7 +15,7 @@ Slicing follows the **Foundation → Fan-out → Integration** pattern documente
 
 | Phase | Focus | Status | File |
 |---|---|---|---|
-| 0 | Bootstrap (Next.js + Tailwind + shadcn + Prisma + Neon + Vercel + CI) | 🟡 Next up | [phase-0-bootstrap.md](./phase-0-bootstrap.md) |
+| 0 | Bootstrap (Next.js + Tailwind + shadcn + Prisma + Neon + Vercel + CI) | 🟡 In progress (0.1 shipped) | [phase-0-bootstrap.md](./phase-0-bootstrap.md) |
 | 1 | Foundation (auth + capture/edit/delete + list + month filter) | 🔒 Locked | [phase-1-foundation.md](./phase-1-foundation.md) |
 | 2 | Weekly Review (summary + category rollup + settlement workflow + settings) | 🔒 Locked | [phase-2-weekly-review.md](./phase-2-weekly-review.md) |
 | 3 | Recurring (`isRecurring` checkbox + month-rollover modal + clone logic) | 🔒 Locked | [phase-3-recurring.md](./phase-3-recurring.md) |
