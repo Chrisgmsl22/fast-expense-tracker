@@ -21,7 +21,8 @@ In order of severity:
 5. **Test gaps** — Happy path covered but error paths missing. Edge cases not tested. Boundary conditions ignored.
 6. **Scope creep** — Files changed that aren't in the slice's Scope (in). Bundled refactors. Unrelated improvements.
 7. **Spec mismatches** — Slice does more or less than the Plan block described.
-8. **Nits** — Style, readability, naming improvements. Optional polish.
+8. **Handoff hygiene** — Does the PR leave `main` cold-resumable: its slice marked shipped, Plan block moved into the PR description? Does it touch **only its own slice's** status + files? Editing the global "Currently active" pointer or another slice's phase-file section — especially under parallelism — is a **Critical** finding (it races/conflicts with sibling slices). The pointer is the orchestrator's to advance, not a worker PR's. See [`session-handoff.md`](../../docs/conventions/session-handoff.md).
+9. **Nits** — Style, readability, naming improvements. Optional polish.
 
 ## Process
 
@@ -114,6 +115,7 @@ Integration ships the phase. Verify:
 - Convention adherence: ✅ / ❌
 - Security review: ✅ / ❌ — <one-sentence summary of auth/env/secrets check>
 - Scope discipline: ✅ / ❌ — <stayed in / drifted into X>
+- Handoff (cold-resumable): ✅ / ❌ — <own slice marked shipped + Plan → PR desc; did NOT touch the global pointer or another slice's section>
 
 ## 📓 Lesson candidates
 

@@ -115,6 +115,7 @@ block) is the same for both — the difference is how much is written upfront.
    - Mark all tasks `[x]` in the phase file.
    - Copy the Plan block content into the PR description (Summary / Scope / Test plan).
    - **Delete the Plan block** from the phase file.
+   - Mark the slice **shipped** in its phase-file section. The slice PR updates only *its own* slice; advancing the global "Currently active" pointer + staging the next brief is the **orchestrator's** serial job. Leave `main` **cold-resumable** — see [`session-handoff.md`](./session-handoff.md).
 7. **Open PR** → paste URL into the conversation for visibility.
 8. **Merge** → `main` is immediately clean. No stale Plan blocks ever land on `main`.
 9. **Retrospect** → if the slice hit avoidable friction (see threshold in `docs/lessons.md`), append an entry using the template there. No friction → skip. The reviewer subagent may also surface lesson candidates in its report — check those before deciding.

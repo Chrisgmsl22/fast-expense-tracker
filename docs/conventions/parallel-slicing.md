@@ -233,7 +233,14 @@ Each fan-out slice should own:
 - **Test files**: co-located with source, one test file per source file.
 
 Page-level wiring (the file that imports components and assembles the page)
-lives in the **Integration slice**, not in fan-out. Foundation lands the
+lives in the **Integration slice**, not in fan-out.
+
+**Status & the roadmap index.** Each slice flips only its **own** phase-file
+section (status, tasks, Plan block). The shared `roadmap/README.md` "Currently
+active" pointer is **orchestrator-owned** and advanced serially — a worker slice
+PR must never edit it (or another slice's section), or concurrent slices race
+and conflict. "Currently active" names the in-flight *set*, not one slice. Full
+rules: [`session-handoff.md`](./session-handoff.md). Foundation lands the
 empty page; fan-out fills in the components; integration wires them up.
 
 ## When to add a new agent role
