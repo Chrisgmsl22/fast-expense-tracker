@@ -97,6 +97,7 @@ All three steps happen in the same PR — never after merging. See
 10. **Never commit without explicit user request** — same rule as MoneyFlow.
 11. **Never use `gh` CLI** — this repo is on the user's personal GitHub (`Chrisgmsl22`); use plain `git` + browser URLs for PRs. (`gh` is configured for work's GHE.) Harness denies `gh *`.
 12. **Never `git commit --no-verify`** — fix the failing hook instead. Harness denies this too.
+13. **Never commit or push directly to `main`** — always branch off up-to-date `main` (`git pull` first), commit on a `feat/`/`chore/`/`docs/` branch, and land via PR. No exceptions, including docs/harness changes. (GitHub branch protection will enforce this once CI lands — see `docs/operations/setup.md §4`.)
 
 ---
 
