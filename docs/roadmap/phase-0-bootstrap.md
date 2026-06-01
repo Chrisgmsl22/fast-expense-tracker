@@ -108,11 +108,11 @@ The interim Neon-integration + preview-branch approach was tried and dropped
 - [x] Add `docker-compose.yml` (Postgres 17) + `db:up`/`db:down` scripts
 - [x] Standardize env vars to `DATABASE_URL` + `DATABASE_URL_UNPOOLED` (`schema.prisma`, `.env.example`)
 - [x] Write ADR-0004 (DB isolation) + `docs/conventions/deployment.md`
-- [ ] Verify local Docker flow: `pnpm db:up` → `cp .env.example .env.local` → `pnpm db:migrate`
-- [ ] *(manual)* Disconnect the Neon-Vercel integration
-- [ ] *(manual)* Delete Neon `dev`, `vercel-dev`, and any `preview/*` branches (keep only `production`)
-- [ ] *(manual)* Set `DATABASE_URL` + `DATABASE_URL_UNPOOLED` in Vercel (Production scope) from the `production` branch
-- [ ] *(manual)* Set Vercel build command: `if [ "$VERCEL_ENV" = "production" ]; then prisma migrate deploy; fi && next build`
+- [x] Verify local Docker flow: `pnpm db:up` → `cp .env.example .env.local` → `pnpm db:migrate` (verified: `init` applies to local Docker on :5433)
+- [x] *(manual)* Disconnect the Neon-Vercel integration
+- [x] *(manual)* Delete Neon `dev`, `vercel-dev`, and any `preview/*` branches (keep only `production`)
+- [x] *(manual)* Set `DATABASE_URL` + `DATABASE_URL_UNPOOLED` in Vercel (Production scope) from the `production` branch
+- [x] *(manual)* Set Vercel build command: `if [ "$VERCEL_ENV" = "production" ]; then prisma migrate deploy; fi && next build`
 - [ ] *(manual)* Verify a production deploy is green with migrations applied
 
 ---
