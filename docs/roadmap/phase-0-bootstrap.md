@@ -56,21 +56,64 @@ attach to. Includes the initial empty Prisma migration.
 
 ---
 
-#### 0.2: Vercel deploy hookup `[PR]`
+#### 0.2: Vercel deploy + Neon DB environment isolation `[PR]`
 
 **Type**: Parallel (with 0.3, 0.4)
 **Depends on**: 0.1
 
-Connects the GitHub repo to Vercel and verifies preview + production
-deploys both work. Documents the deploy process for future contributors.
+Connects the GitHub repo to Vercel and sets up **per-environment database
+separation**: Neon holds real data only (one `production` branch); local + CI
+run Docker Postgres; preview deploys are build-only. Scope expanded from the
+original "Vercel deploy hookup" — see [ADR-0004](../decisions/0004-db-environment-isolation.md).
+The interim Neon-integration + preview-branch approach was tried and dropped
+(see `docs/lessons.md` 2026-05-31).
+
+##### Plan
+
+**Scope (in)**
+- Vercel project connected to the GitHub repo; production deploy verified. *Manual — done.*
+- **Docker Postgres for local dev** — `docker-compose.yml` (`postgres:17`) + `db:up`/`db:down` scripts. *Repo — done.*
+- **Env var convention** `DATABASE_URL` + `DATABASE_URL_UNPOOLED` in `prisma/schema.prisma` + `.env.example` (drop `DIRECT_URL`); `.env.example` defaults to the Docker container. *Repo — done.*
+- **ADR-0004** (DB isolation) + `docs/conventions/deployment.md`. *Repo — done.*
+- **Tear down the interim Neon setup:** disconnect the Neon-Vercel integration; delete the `dev`, `vercel-dev`, and any `preview/*` branches (keep only `production`). *Manual — pending.*
+- **Production env vars** `DATABASE_URL` + `DATABASE_URL_UNPOOLED` set manually in Vercel (Production scope) from the `production` branch. *Manual — pending.*
+- **Vercel build command** (migrate guarded to production): `if [ "$VERCEL_ENV" = "production" ]; then prisma migrate deploy; fi && next build`. *Manual — pending.*
+
+**Scope (out)**
+- No Neon preview branches / no live preview DB — previews are build-only. (Reversible later if PR review needs DB-backed previews.)
+- No `vercel.json` — build command set in the dashboard.
+- CI Postgres service container — documented intent, **built in Phase 1** when DB-touching tests exist.
+- 0.3 (CI), 0.4 (hooks), any app code, Neon Auth.
+
+**Design decisions** (all in ADR-0004)
+- **Neon = real data only:** a single `production` branch. Local + CI = Docker Postgres; previews = build-only (no DB).
+- A live serverless preview can't be backed by an ephemeral container DB, so "no Neon preview branch" means "no preview DB" — accepted for a single-user, locally-reviewed, agent-led project.
+- Standardize on `DATABASE_URL` + `DATABASE_URL_UNPOOLED`; `directUrl = env("DATABASE_URL_UNPOOLED")`.
+- Migrations run on **production only** (the `VERCEL_ENV` guard) since previews have no DB.
+- Postgres pinned to 17 in Docker to match Neon.
+
+**Acceptance criteria**
+- `pnpm db:up` + `cp .env.example .env.local` + `pnpm db:migrate` works against local Docker. *(verify)*
+- Neon has exactly one branch (`production`); integration disconnected. *(manual)*
+- Production deploy `READY`; build log shows `prisma migrate deploy`; prod URL loads. *(verify on next prod deploy)*
+- Preview deploy builds green (DB pages expected to error — no preview DB).
+- ADR-0004 + `deployment.md` committed.
+
+**Open questions**
+- None blocking.
 
 ##### Tasks
 
-- [ ] Connect repo to Vercel via dashboard
-- [ ] Configure env vars in Vercel project settings (`DATABASE_URL`)
-- [ ] Verify preview deploy on a feature branch
-- [ ] Verify production deploy on merge to `main`
-- [ ] Document the deploy process briefly in `docs/conventions/` if needed
+- [x] *(manual)* Create the Vercel project + connect the GitHub repo; verify production deploy
+- [x] Add `docker-compose.yml` (Postgres 17) + `db:up`/`db:down` scripts
+- [x] Standardize env vars to `DATABASE_URL` + `DATABASE_URL_UNPOOLED` (`schema.prisma`, `.env.example`)
+- [x] Write ADR-0004 (DB isolation) + `docs/conventions/deployment.md`
+- [ ] Verify local Docker flow: `pnpm db:up` → `cp .env.example .env.local` → `pnpm db:migrate`
+- [ ] *(manual)* Disconnect the Neon-Vercel integration
+- [ ] *(manual)* Delete Neon `dev`, `vercel-dev`, and any `preview/*` branches (keep only `production`)
+- [ ] *(manual)* Set `DATABASE_URL` + `DATABASE_URL_UNPOOLED` in Vercel (Production scope) from the `production` branch
+- [ ] *(manual)* Set Vercel build command: `if [ "$VERCEL_ENV" = "production" ]; then prisma migrate deploy; fi && next build`
+- [ ] *(manual)* Verify a production deploy is green with migrations applied
 
 ---
 

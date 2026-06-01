@@ -1,9 +1,12 @@
 // Prisma schema for fast-expense-tracker.
 //
-// DATABASE_URL  — pooled (PgBouncer) endpoint, used at runtime by the Next.js
-//                 app via the Prisma client singleton in `lib/db.ts`.
-// DIRECT_URL    — direct (non-pooled) endpoint, used by Prisma migrations
-//                 because PgBouncer interferes with prepared statements.
+// DATABASE_URL           — pooled (PgBouncer) endpoint, used at runtime by the
+//                          Next.js app via the Prisma client singleton in `lib/db.ts`.
+// DATABASE_URL_UNPOOLED  — direct (non-pooled) endpoint, used by Prisma migrations
+//                          because PgBouncer interferes with prepared statements.
+//                          Name matches what the Neon–Vercel integration injects
+//                          (prod + per-PR preview branches), so migrations work on
+//                          every environment without remapping.
 //
 // Models intentionally empty — slice 0.1 commits an empty `init` migration to
 // verify the end-to-end migration loop against Neon. Real models land starting
@@ -16,5 +19,5 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }

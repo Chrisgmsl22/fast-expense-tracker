@@ -25,6 +25,19 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-05-31 — DB + deploy strategy churned through ~5 reconfigurations for lack of upfront topology planning
+
+- **Symptom:** Slice 0.2 (Vercel + Neon) thrashed across many turns and sessions: manual `DATABASE_URL`/`DIRECT_URL` typed at Vercel import → Neon-Managed integration → per-PR Neon preview branches → finally **"Neon = production only" + Docker for local/CI**. Along the way we created then abandoned a Neon `dev` branch, connected/disconnected the integration, deleted duplicate env vars, hit a `vercel-dev` branch-name conflict on reconnect, and rewrote ADR-0004 + `deployment.md` three times.
+- **Root cause:** started clicking in dashboards (entered env vars at import) **before deciding the per-environment data topology** — which environments exist (local / CI / preview / prod), where each one's database lives, which integration mode, and the env-var contract. Also didn't read the Neon×Vercel integration tradeoffs (Vercel-Managed vs Neon-Managed vs manual; static vs dynamic preview vars; that a live serverless preview can't be backed by an ephemeral container DB) until mid-setup, despite having MCP doc access the whole time.
+- **Fix / decision:** Settled the architecture in [ADR-0004](./decisions/0004-db-environment-isolation.md): Docker Postgres for local + CI, Neon `production` branch only for real data, previews build-only (no DB), prod env vars set manually, `migrate deploy` guarded to `VERCEL_ENV=production`. Standardized on `DATABASE_URL` + `DATABASE_URL_UNPOOLED`.
+- **Lessons for next time:**
+  1. For any slice that wires a new external platform/integration (DB, hosting, auth, email), write a short **environment & data-topology plan FIRST**: list every environment, where its data/secrets live, the integration mode + cost tier, and the env-var contract — and confirm with the user **before** touching a dashboard.
+  2. Read the platform's integration docs up front (Neon / Vercel / Context7 MCP doc access exists). The decisive tradeoffs (e.g. a live preview can't use a container DB) are cheap to learn before, expensive after.
+  3. Don't enter config in a third-party dashboard until the topology is decided — dashboard state is the hardest thing to cleanly undo (orphaned branches, duplicate env vars, name conflicts).
+  4. Confirm the cost/tier (free vs paid) early; it shapes the design and the user cares.
+
+---
+
 ### 2026-05-27 — Prisma 7 broke the `directUrl` pattern; downgrade dance ate several turns
 
 - **Symptom:** Slice 0.1's `pnpm prisma generate` failed with `error: The datasource property directUrl is no longer supported in schema files`. Trying to pin Prisma 6 then required re-running install, getting `[ERR_PNPM_IGNORED_BUILDS]` for `@prisma/engines`, then for `@prisma/client` separately on v6, then re-running `pnpm install` each time before generate would proceed. Roughly 5 round-trips before migrate worked.
