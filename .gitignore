@@ -53,6 +53,9 @@ playwright/.cache/
 *.tsbuildinfo
 next-env.d.ts
 
+# Local MCP server config (Neon, Vercel, etc.) — may carry endpoints/auth; never commit to a public repo
+.mcp.json
+
 # Next.js scaffold additions (slice 0.1)
 !.yarn/patches
 !.yarn/plugins

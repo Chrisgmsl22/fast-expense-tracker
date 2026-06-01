@@ -56,21 +56,30 @@ attach to. Includes the initial empty Prisma migration.
 
 ---
 
-#### 0.2: Vercel deploy hookup `[PR]`
+#### 0.2: Vercel deploy + Neon DB environment isolation `[PR]`
 
 **Type**: Parallel (with 0.3, 0.4)
 **Depends on**: 0.1
 
-Connects the GitHub repo to Vercel and verifies preview + production
-deploys both work. Documents the deploy process for future contributors.
+Connects the GitHub repo to Vercel and sets up **per-environment database
+separation**: Neon holds real data only (one `production` branch); local + CI
+run Docker Postgres; preview deploys are build-only. Scope expanded from the
+original "Vercel deploy hookup" — see [ADR-0004](../decisions/0004-db-environment-isolation.md).
+The interim Neon-integration + preview-branch approach was tried and dropped
+(see `docs/lessons.md` 2026-05-31).
 
 ##### Tasks
 
-- [ ] Connect repo to Vercel via dashboard
-- [ ] Configure env vars in Vercel project settings (`DATABASE_URL`)
-- [ ] Verify preview deploy on a feature branch
-- [ ] Verify production deploy on merge to `main`
-- [ ] Document the deploy process briefly in `docs/conventions/` if needed
+- [x] *(manual)* Create the Vercel project + connect the GitHub repo; verify production deploy
+- [x] Add `docker-compose.yml` (Postgres 17) + `db:up`/`db:down` scripts
+- [x] Standardize env vars to `DATABASE_URL` + `DATABASE_URL_UNPOOLED` (`schema.prisma`, `.env.example`)
+- [x] Write ADR-0004 (DB isolation) + `docs/conventions/deployment.md`
+- [x] Verify local Docker flow: `pnpm db:up` → `cp .env.example .env.local` → `pnpm db:migrate` (verified: `init` applies to local Docker on :5433)
+- [x] *(manual)* Disconnect the Neon-Vercel integration
+- [x] *(manual)* Delete Neon `dev`, `vercel-dev`, and any `preview/*` branches (keep only `production`)
+- [x] *(manual)* Set `DATABASE_URL` + `DATABASE_URL_UNPOOLED` in Vercel (Production scope) from the `production` branch
+- [x] *(manual)* Set Vercel build command: `if [ "$VERCEL_ENV" = "production" ]; then prisma migrate deploy; fi && next build`
+- [ ] *(manual)* Verify a production deploy is green with migrations applied
 
 ---
 

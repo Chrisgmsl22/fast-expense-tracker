@@ -1,0 +1,34 @@
+# Local development Postgres for fast-expense-tracker.
+#
+# Dev and CI use containerized Postgres; only preview + production use Neon.
+# See docs/decisions/0004-db-environment-isolation.md.
+#
+# The credentials below are LOCAL-ONLY throwaway values — safe to commit.
+# Real secrets live in .env.local (gitignored) and Vercel env, never in the repo.
+#
+# Start:  pnpm db:up   (docker compose up -d db)
+# Stop:   pnpm db:down (docker compose down)
+# Postgres major version matches Neon (17) to keep dev ↔ prod parity.
+
+services:
+  db:
+    image: postgres:17
+    container_name: fast-expense-tracker-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fast_expense_tracker
+    ports:
+      # Host port 5433 (not 5432) so this coexists with the separate
+      - "5433:5432"
+    volumes:
+      - fast_expense_tracker_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fast_expense_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  fast_expense_tracker_pgdata:
