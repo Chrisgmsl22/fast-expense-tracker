@@ -6,11 +6,15 @@ phase, progress, in-flight work) lives in `docs/roadmap/`, not here.
 
 ## Session startup — REQUIRED
 
-At the start of every session, read these to get oriented:
+At the start of every session:
 
-1. **[docs/roadmap/README.md](./docs/roadmap/README.md)** — Single "where are we?" index. The currently active phase/slice is at the top.
-2. **The active phase file** under [docs/roadmap/](./docs/roadmap/) — Slice list for the current work.
-3. **[docs/decisions/](./docs/decisions/)** — Recent ADRs (skim).
+1. **Sync git with the remote — before reading anything or reasoning about branches.** Run `git fetch origin`, then confirm local `main` matches `origin/main` (`git log --oneline -1 origin/main`). The startup `gitStatus` snapshot and your local refs are **point-in-time** — they go stale the moment anything merges, and a merge may have landed between sessions. Never decide branch topology (rule #13's "branch off up-to-date `main`") or conclude a dependency is "unmerged / missing from main" from un-fetched refs. If local state implies a blocker, **fetch to confirm it's real before escalating**. See [`docs/lessons.md`](./docs/lessons.md) (2026-06-01).
+
+Then read these to get oriented:
+
+2. **[docs/roadmap/README.md](./docs/roadmap/README.md)** — Single "where are we?" index. The currently active phase/slice is at the top.
+3. **The active phase file** under [docs/roadmap/](./docs/roadmap/) — Slice list for the current work.
+4. **[docs/decisions/](./docs/decisions/)** — Recent ADRs (skim).
 
 Skim only — the roadmap README points you to what matters right now.
 
