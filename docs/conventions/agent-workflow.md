@@ -148,6 +148,17 @@ Subagents do not pick their isolation mode. They assume:
 - Their **first action** is `git checkout -b feat/N.M-name` (per `implementer.md` step 1).
 - They never `git worktree add` themselves — that's the orchestrator's job, done before invocation.
 
+## Orchestrator owns the roadmap index
+
+Worker slice PRs update **only their own slice** (its status, tasks, Plan block,
+its ADR/lesson). The shared `docs/roadmap/README.md` "Currently active" pointer
+and the staging of next slices' Plan blocks are the **orchestrator's** job, done
+serially: at spawn, mark the in-flight *set* active and stage their Plan blocks;
+after merges, reconcile the pointer to the next set. One serial writer for shared
+state = no drift or merge-conflict between concurrent slices. The goal is a
+**cold-resumable** `main` after every merge — full rules in
+[`session-handoff.md`](./session-handoff.md).
+
 ## What the harness gives you
 
 1. **Reviewable PRs.** Small slices, defined scope.

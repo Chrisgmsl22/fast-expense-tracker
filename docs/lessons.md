@@ -25,6 +25,18 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-05-31 — Status updates lagged behind merges → stale handoff between sessions
+
+- **Symptom:** After 0.2 merged, the roadmap still showed 0.2 as active and no 0.3 brief was staged — a fresh session would read stale "where are we." Separately, the first 0.3 attempt was lost: an `implementer` running in a worktree built on a *different* baseline (no shadcn, Next 16.0.1, vitest 3) and its `feat/0.3-ci` branch never reached our origin.
+- **Root cause:** the slice lifecycle updated a slice's own status but never reliably advanced the global "Currently active" pointer or staged the next brief — and that bookkeeping got deferred to "after merge / next session," so the state lived only in chat. The worktree isolation also silently diverged from the real repo without anyone verifying the branch landed.
+- **Fix / decision:** the **repo is the handoff** — defined a "cold-resumable" Definition of Done in [`session-handoff.md`](./conventions/session-handoff.md). Status/pointer/brief updates happen **in the slice PR** (worker = its own slice only; orchestrator = the shared "Currently active" pointer, serially). The `reviewer` gate now rejects PRs that aren't cold-resumable or that edit the shared pointer / another slice's section. Default to a **plain branch off `main`** for a single in-flight slice; reserve worktrees for genuine parallel slices.
+- **Lessons for next time:**
+  1. Leave `main` cold-resumable in **every** slice PR — a blank session must resume from the startup docs alone.
+  2. Shared state (the roadmap pointer) gets a **single serial writer** (the orchestrator); workers touch only their own slice — this is what makes parallel slices safe.
+  3. After invoking an `implementer`, **verify its branch + commits actually landed on our origin** before trusting the result.
+
+---
+
 ### 2026-05-31 — DB + deploy strategy churned through ~5 reconfigurations for lack of upfront topology planning
 
 - **Symptom:** Slice 0.2 (Vercel + Neon) thrashed across many turns and sessions: manual `DATABASE_URL`/`DIRECT_URL` typed at Vercel import → Neon-Managed integration → per-PR Neon preview branches → finally **"Neon = production only" + Docker for local/CI**. Along the way we created then abandoned a Neon `dev` branch, connected/disconnected the integration, deleted duplicate env vars, hit a `vercel-dev` branch-name conflict on reconnect, and rewrote ADR-0004 + `deployment.md` three times.

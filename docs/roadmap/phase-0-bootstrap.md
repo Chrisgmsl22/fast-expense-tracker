@@ -1,6 +1,6 @@
 # Phase 0: Bootstrap
 
-**Status**: 🟡 In progress (slice 0.1 shipped on `feat/0.1-bootstrap`; 0.2 / 0.3 / 0.4 remaining)
+**Status**: 🟡 In progress — 0.1 + 0.2 shipped; **0.3 active**; 0.4 after
 **Outcome**: Empty Next.js app live on Vercel; CI green; Prisma schema scaffolded.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 0](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out
@@ -60,6 +60,7 @@ attach to. Includes the initial empty Prisma migration.
 
 **Type**: Parallel (with 0.3, 0.4)
 **Depends on**: 0.1
+**Status**: 🟢 Shipped (PR #3) + deploy-verified. Plan → PR description.
 
 Connects the GitHub repo to Vercel and sets up **per-environment database
 separation**: Neon holds real data only (one `production` branch); local + CI
@@ -79,7 +80,7 @@ The interim Neon-integration + preview-branch approach was tried and dropped
 - [x] *(manual)* Delete Neon `dev`, `vercel-dev`, and any `preview/*` branches (keep only `production`)
 - [x] *(manual)* Set `DATABASE_URL` + `DATABASE_URL_UNPOOLED` in Vercel (Production scope) from the `production` branch
 - [x] *(manual)* Set Vercel build command: `if [ "$VERCEL_ENV" = "production" ]; then prisma migrate deploy; fi && next build`
-- [ ] *(manual)* Verify a production deploy is green with migrations applied
+- [x] *(manual)* Verify a production deploy is green with migrations applied (PR #3 deploy `READY`; build log shows `migrate deploy`)
 
 ---
 
@@ -87,21 +88,31 @@ The interim Neon-integration + preview-branch approach was tried and dropped
 
 **Type**: Parallel (with 0.2, 0.4)
 **Depends on**: 0.1
+**Status**: 🟡 Active (next up). Plan block to be drafted with the user — resolve the open questions below first.
 
-Wires up the CI pipeline so every PR runs lint + typecheck + tests +
-secret-leak guard.
+Wires up the CI pipeline so every PR runs lint + typecheck + tests + secret guards.
 
-**Carry-over from 2026-05-27 harness audit**: when this slice promotes to active and the Plan block is drafted, decide whether to add a secret-**value** scanner (e.g., `gitleaks`) in addition to the `.env*` filename grep. The filename grep only catches accidentally staged env files; a value scanner catches real connection strings / API keys pasted into code or fixtures. Record the decision in the Plan block.
+##### Plan — to draft next session
+
+**Locked inputs** (already decided):
+- **gitleaks adopted** as the secret-value scanner, paired with the `.env*` filename grep guard (per [ADR-0003](../decisions/0003-env-secrets-handling.md)). Use `gitleaks/gitleaks-action` (free for public repos).
+- Jobs: lint → typecheck → `pnpm test`; `.env*` filename grep guard; gitleaks.
+- Triggers: `pull_request` + push to `main`. pnpm + Node 24, cached.
+- **Build on a plain branch off `main` — NOT a worktree.** The first 0.3 attempt was orphaned in a worktree built on the wrong baseline; its branch never reached origin (see `docs/lessons.md` 2026-05-31).
+
+**Open questions** (resolve with the user, then write the full Plan block):
+1. Playwright skeleton **now**, or defer to Phase 1? No pages/features yet → leans defer (YAGNI); the original spec listed a skeleton.
+2. CI Postgres **service container** — confirm it's documented-intent-only, built in Phase 1 when DB-touching tests exist (no DB tests today; local + CI use Docker per [ADR-0004](../decisions/0004-db-environment-isolation.md)).
+3. Regenerate `pnpm-lock.yaml` under pnpm 11.3.0 as part of this slice? (PR #3 build log flagged a 10.x-generated lockfile.)
 
 ##### Tasks
 
-- [ ] Add `.github/workflows/ci.yml`
-- [ ] CI job: `pnpm install` → lint → typecheck
-- [ ] CI job: Vitest run (will be empty initially — that's fine)
-- [ ] CI job: Playwright skeleton (one trivial test, just to verify wiring)
-- [ ] CI job: grep guard that fails if any `.env*` file (other than `.env.example`) appears in the diff (per ADR-0003)
-- [ ] Decide on `gitleaks`/equivalent secret-value scanner per audit note above; add to CI workflow if accepted
-- [ ] Verify CI runs on a sample PR
+- [ ] Add `.github/workflows/ci.yml` (pnpm + Node 24, cached)
+- [ ] Jobs: lint → typecheck → `pnpm test`
+- [ ] `.env*` filename grep guard (fail if any non-`.env.example` env file in the diff, per ADR-0003)
+- [ ] gitleaks secret-value scan (`gitleaks/gitleaks-action`); `.gitleaks.toml` allowlist if needed
+- [ ] Playwright skeleton — pending open question #1
+- [ ] Verify CI runs green on a sample PR
 
 ---
 

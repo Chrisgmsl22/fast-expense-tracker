@@ -5,7 +5,7 @@ own file with vertical slices, marked as `[PR]`.
 
 ## Currently active
 
-🟡 **Phase 0 — Bootstrap** is in progress. Slice 0.1 (foundation scaffold) shipped on `feat/0.1-bootstrap`; slices 0.2 (Vercel) / 0.3 (CI) / 0.4 (pre-commit) remain — parallelizable per [`parallel-slicing.md`](../conventions/parallel-slicing.md) once 0.1 merges.
+🟡 **Phase 0 — Bootstrap** is in progress. Slices **0.1** (scaffold) and **0.2** (Vercel deploy + Neon DB isolation) have shipped. **Active: slice 0.3 — GitHub Actions CI.** 0.4 (pre-commit hooks) follows. See the phase file for 0.3's open design questions (to resolve when drafting its Plan block).
 
 The full design spec is at [`docs/specs/0001-initial-design.md`](../specs/0001-initial-design.md). It defines what the app does, what it doesn't, and the 8-phase trajectory.
 
@@ -15,7 +15,7 @@ Slicing follows the **Foundation → Fan-out → Integration** pattern documente
 
 | Phase | Focus | Status | File |
 |---|---|---|---|
-| 0 | Bootstrap (Next.js + Tailwind + shadcn + Prisma + Neon + Vercel + CI) | 🟡 In progress (0.1 shipped) | [phase-0-bootstrap.md](./phase-0-bootstrap.md) |
+| 0 | Bootstrap (Next.js + Tailwind + shadcn + Prisma + Neon + Vercel + CI) | 🟡 In progress (0.1, 0.2 shipped; 0.3 active) | [phase-0-bootstrap.md](./phase-0-bootstrap.md) |
 | 1 | Foundation (auth + capture/edit/delete + list + month filter) | 🔒 Locked | [phase-1-foundation.md](./phase-1-foundation.md) |
 | 2 | Weekly Review (summary + category rollup + settlement workflow + settings) | 🔒 Locked | [phase-2-weekly-review.md](./phase-2-weekly-review.md) |
 | 3 | Recurring (`isRecurring` checkbox + month-rollover modal + clone logic) | 🔒 Locked | [phase-3-recurring.md](./phase-3-recurring.md) |
@@ -32,6 +32,7 @@ Slicing follows the **Foundation → Fan-out → Integration** pattern documente
 - **Plan blocks**: each slice in a phase has a Plan block (filled in when the slice becomes "next up" — see [`../conventions/slice-planning.md`](../conventions/slice-planning.md)).
 - **Checking off tasks**: mark `[x]` as you complete them. When all tasks for a slice are checked, run the slice-lifecycle cleanup before opening the PR (per [`slice-planning.md`](../conventions/slice-planning.md)).
 - **Phase status**: when a slice ships, update its phase file. When a phase fully ships, mark it 🟢 here AND update "Currently active" to point at the next phase.
+- **Cold-resumable handoff**: every slice PR must leave `main` so a fresh session resumes from these docs alone — status current, next brief staged. The "Currently active" pointer is **orchestrator-owned** (advanced serially); worker PRs touch only their own slice. See [`session-handoff.md`](../conventions/session-handoff.md).
 - **Slicing pattern**: every phase has 1 Foundation slice (sequential), 0-4 Fan-out slices (parallel-capable), and 1 Integration slice (sequential after fan-out — except Phase 0 which has no Integration). See [`parallel-slicing.md`](../conventions/parallel-slicing.md).
 
 ## See also
@@ -40,6 +41,7 @@ Slicing follows the **Foundation → Fan-out → Integration** pattern documente
 - [`docs/operations/setup.md`](../operations/setup.md) — manual setup checklist (Neon, Vercel, env vars, GitHub branch protection, Resend); phase files reference relevant sections
 - [`docs/conventions/parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I pattern
 - [`docs/conventions/slice-planning.md`](../conventions/slice-planning.md) — Plan block format
+- [`docs/conventions/session-handoff.md`](../conventions/session-handoff.md) — cold-resumable handoff (the repo *is* the handoff; how to keep `main` resumable across sessions + under parallelism)
 - [`docs/conventions/pr-strategy.md`](../conventions/pr-strategy.md) — vertical-slice philosophy
 - [`docs/conventions/agent-workflow.md`](../conventions/agent-workflow.md) — `implementer` and `reviewer` invocation
 - [`docs/decisions/`](../decisions/) — ADRs (architecture decision records)
