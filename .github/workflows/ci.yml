@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Newer pushes to the same ref supersede in-flight runs (e.g. a PR force-push).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: CI only needs to read the repo. On a finding gitleaks still
+# exits non-zero and fails the job — that's the outcome we want. We deliberately
+# withhold `pull-requests: write`, so gitleaks' optional "post a summary comment"
+# step just errors harmlessly instead of the action gaining write scope on a
+# public repo. The blocking signal is the failed check, not a PR comment.
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint · Typecheck · Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # pnpm version is read from package.json "packageManager" — don't pin it
+      # again here, or action-setup errors on a version mismatch.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  # NOTE (deferred to Phase 1): no DB-touching tests exist yet, so CI runs no
+  # Postgres. When the first DB test lands, add a `services: postgres:17` block
+  # to the `quality` job (or a dedicated db-test job), point DATABASE_URL at it,
+  # and run `pnpm prisma migrate deploy` before the tests. Local + CI use Docker
+  # Postgres per ADR-0004 (docs/decisions/0004-db-environment-isolation.md).
+
+  secret-guards:
+    name: Secret guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so gitleaks can scan every commit, not just the tip.
+          fetch-depth: 0
+      - name: Guard against committed .env files
+        run: |
+          tracked=$(git ls-files | grep -E '(^|/)\.env' | grep -v '\.env\.example$' || true)
+          if [ -n "$tracked" ]; then
+            echo "::error::Tracked env file(s) other than .env.example detected:"
+            echo "$tracked"
+            exit 1
+          fi
+          echo "OK — no stray .env files tracked."
+      - name: Scan for secret values (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          # No GITLEAKS_LICENSE needed — gitleaks-action is free for public repos.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
