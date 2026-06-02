@@ -25,6 +25,17 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-06-01 — Trusted stale local git refs at session start → invented a false "unmerged dependency" blocker
+
+- **Symptom:** Picking up slice 0.3, the agent read the session-start `gitStatus` snapshot + local refs showing `main` at `6f1dc56` and the harness-docs branch "3 commits ahead, unmerged, no PR." It surfaced a false chicken-and-egg to the user ("`main` lacks the conventions this slice must follow — how should I branch?") and asked which base to use. In reality PR #4 had merged those docs into `origin/main` (`c0311df`) *before the session began*. A single `git fetch` dissolved the entire confusion.
+- **Root cause:** never ran `git fetch` before reasoning about branch state. The CLAUDE.md startup ritual read docs but had no "sync git with remote" step, and the harness-provided `gitStatus` is an explicitly point-in-time snapshot that goes stale the instant anything merges. Rule #13's "branch off up-to-date `main`" was applied to refs that were 4 commits behind — so "up-to-date" was assumed, never verified.
+- **Fix / decision:** Added a mandatory **step 1** to CLAUDE.md § Session startup: `git fetch origin` + confirm local `main` matches `origin/main` before any branch reasoning. Updated `implementer.md` Process step 1 to `git fetch origin && git checkout main && git pull --ff-only` before cutting the branch. Rule of thumb: if local state implies a blocker, fetch to confirm it's real before escalating to the user.
+- **Lessons for next time:**
+  1. `git fetch origin` before any branch-base decision. Local refs and the startup `gitStatus` snapshot are stale by default — a merge may have landed between sessions.
+  2. When local state implies a blocker (unmerged dep, missing baseline, divergence), **verify against `origin` before escalating** — don't make the user resolve a phantom.
+
+---
+
 ### 2026-05-31 — Status updates lagged behind merges → stale handoff between sessions
 
 - **Symptom:** After 0.2 merged, the roadmap still showed 0.2 as active and no 0.3 brief was staged — a fresh session would read stale "where are we." Separately, the first 0.3 attempt was lost: an `implementer` running in a worktree built on a *different* baseline (no shadcn, Next 16.0.1, vitest 3) and its `feat/0.3-ci` branch never reached our origin.

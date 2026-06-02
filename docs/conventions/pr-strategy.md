@@ -68,9 +68,32 @@ Some work doesn't fit a vertical-flow shape. Use a separate PR for:
 
 ## Commit guidelines
 
+**Format:** Conventional Commits — `type(scope): subject`.
+
+- **Types:** `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `build`, `ci`.
+- **Scope** (optional): the slice (`0.3`) or area (`claude`, `db`). Use when it adds signal.
+- **Subject:** imperative mood ("add", not "added"), ≤72 chars, no trailing period. It **must stand alone** — readable in `git log --oneline` without opening the diff.
+
+**Body — omit by default.** Add one only when the WHY isn't obvious from the subject + diff. Then keep it to 1–3 short lines of rationale / tradeoff / risk, wrapped ~72 cols. **Never restate the diff** — the diff already shows what changed; the body exists for what the diff can't show.
+
 - One logical change per commit.
-- Imperative mood: "add", "fix", "refactor" — not "added" / "fixed".
-- Reference the slice in the commit message body when relevant.
+
+```
+# Good — WHY isn't obvious, so one line earns its place:
+fix(db): guard migrate deploy to VERCEL_ENV=production
+
+Preview builds share the prod branch; running migrate there would
+mutate production data.
+
+# Good — trivial change, subject stands alone, no body:
+docs: add scripts table to README
+
+# Bad — 8 lines re-narrating a 3-line doc change the diff already shows:
+docs: require git fetch at session start
+<paragraphs restating each edited file>
+```
+
+Context that belongs to the whole change (not a single commit) goes in the **PR description**, not stacked into every commit body.
 
 ## When to commit
 
@@ -86,8 +109,16 @@ Some work doesn't fit a vertical-flow shape. Use a separate PR for:
 
 ## Pull request format
 
-The PR description carries the Plan block content from the phase file (see
-[slice-planning.md](./slice-planning.md)). Standard sections:
+**All PRs use the same sections** — slice and non-slice (`docs/`, `chore/`,
+`fix/`) alike. Consistency keeps review predictable. Keep each section tight:
+1–3 bullets, not paragraphs. The Summary is the human- and future-agent-facing
+"why this exists"; the rest scopes and verifies it.
+
+- **Slice PRs** populate the sections from the phase file's Plan block (see
+  [slice-planning.md](./slice-planning.md)).
+- **Non-slice PRs** fill them from the change itself. Sections that genuinely
+  don't apply (e.g. Scope (out) on a one-line fix) get a short "n/a" rather
+  than being dropped.
 
 ```markdown
 ## Summary

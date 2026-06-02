@@ -88,31 +88,18 @@ The interim Neon-integration + preview-branch approach was tried and dropped
 
 **Type**: Parallel (with 0.2, 0.4)
 **Depends on**: 0.1
-**Status**: 🟡 Active (next up). Plan block to be drafted with the user — resolve the open questions below first.
+**Status**: 🟢 Shipped on `feat/0.3-ci` (PR #6) + CI-verified green. Plan block → PR description.
 
 Wires up the CI pipeline so every PR runs lint + typecheck + tests + secret guards.
 
-##### Plan — to draft next session
-
-**Locked inputs** (already decided):
-- **gitleaks adopted** as the secret-value scanner, paired with the `.env*` filename grep guard (per [ADR-0003](../decisions/0003-env-secrets-handling.md)). Use `gitleaks/gitleaks-action` (free for public repos).
-- Jobs: lint → typecheck → `pnpm test`; `.env*` filename grep guard; gitleaks.
-- Triggers: `pull_request` + push to `main`. pnpm + Node 24, cached.
-- **Build on a plain branch off `main` — NOT a worktree.** The first 0.3 attempt was orphaned in a worktree built on the wrong baseline; its branch never reached origin (see `docs/lessons.md` 2026-05-31).
-
-**Open questions** (resolve with the user, then write the full Plan block):
-1. Playwright skeleton **now**, or defer to Phase 1? No pages/features yet → leans defer (YAGNI); the original spec listed a skeleton.
-2. CI Postgres **service container** — confirm it's documented-intent-only, built in Phase 1 when DB-touching tests exist (no DB tests today; local + CI use Docker per [ADR-0004](../decisions/0004-db-environment-isolation.md)).
-3. Regenerate `pnpm-lock.yaml` under pnpm 11.3.0 as part of this slice? (PR #3 build log flagged a 10.x-generated lockfile.)
-
 ##### Tasks
 
-- [ ] Add `.github/workflows/ci.yml` (pnpm + Node 24, cached)
-- [ ] Jobs: lint → typecheck → `pnpm test`
-- [ ] `.env*` filename grep guard (fail if any non-`.env.example` env file in the diff, per ADR-0003)
-- [ ] gitleaks secret-value scan (`gitleaks/gitleaks-action`); `.gitleaks.toml` allowlist if needed
-- [ ] Playwright skeleton — pending open question #1
-- [ ] Verify CI runs green on a sample PR
+- [x] Add `.github/workflows/ci.yml` (pnpm + Node 24, cached)
+- [x] `quality` job: `pnpm install --frozen-lockfile` → lint → typecheck → `pnpm test`
+- [x] `.env*` filename guard (fail if any tracked env file other than `.env.example`, per ADR-0003)
+- [x] gitleaks secret-value scan (`gitleaks/gitleaks-action@v2`)
+- [x] Postgres service container — documented-intent comment only (deferred to Phase 1)
+- [x] Verify CI runs green on a sample PR — PR #6, both jobs green
 
 ---
 
