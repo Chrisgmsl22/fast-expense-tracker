@@ -88,35 +88,9 @@ The interim Neon-integration + preview-branch approach was tried and dropped
 
 **Type**: Parallel (with 0.2, 0.4)
 **Depends on**: 0.1
-**Status**: 🟡 Active (in flight on `feat/0.3-ci`).
+**Status**: 🟢 Shipped on `feat/0.3-ci` (PR #6) + CI-verified green. Plan block → PR description.
 
 Wires up the CI pipeline so every PR runs lint + typecheck + tests + secret guards.
-
-##### Plan
-
-**Scope (in)**
-- `.github/workflows/ci.yml` — one workflow, triggers `pull_request` + push to `main`.
-- `quality` job: pnpm (from `packageManager`) + Node 24, cached → `pnpm install --frozen-lockfile` → `pnpm lint` → `pnpm typecheck` → `pnpm test`.
-- `secret-guards` job: `.env*` filename guard + gitleaks secret-value scan (`gitleaks/gitleaks-action@v2`, free for public repos), per [ADR-0003](../decisions/0003-env-secrets-handling.md).
-
-**Scope (out)**
-- Playwright skeleton — deferred to Phase 1 (no pages/flows to drive yet; YAGNI). *[open Q1, resolved with user]*
-- CI Postgres service container — deferred to Phase 1's first DB-touching test; `ci.yml` carries a comment marking where it lands. Local + CI use Docker per [ADR-0004](../decisions/0004-db-environment-isolation.md). *[open Q2, resolved with user]*
-- Branch protection on `main` — manual, `docs/operations/setup.md §4`, after 0.3 ships.
-
-**Design decisions**
-- pnpm version comes from `package.json` `packageManager` (`pnpm@11.3.0`); don't also pin it in `pnpm/action-setup` (avoids the version-conflict error). `actions/setup-node@v4` `cache: pnpm` — pnpm installed first so the store path resolves.
-- env guard uses `git ls-files` (whole tree), stricter than ADR-0003 §8's "in the diff": catches an already-committed leak too, is trigger-independent, and needs no base-ref diffing.
-- gitleaks needs no `GITLEAKS_LICENSE` (public repo) and no `.gitleaks.toml` (only `.env.example` with an empty placeholder is committed).
-- Lockfile regen under 11.3.0 is a verified no-op — committed lockfile already conforms (`--frozen-lockfile` passes, regen yields no diff). *[open Q3, resolved]*
-
-**Acceptance criteria**
-- `lint`, `typecheck`, `test` green in CI. Verified locally: lint ✅, typecheck ✅ (clean `.next`), test ✅ 2/2.
-- env guard fails on a stray `.env`, passes a clean tree.
-- gitleaks runs and passes on current history.
-- CI green on this PR (the sample PR).
-
-**Open questions** — none; all three resolved with the user.
 
 ##### Tasks
 
@@ -125,7 +99,7 @@ Wires up the CI pipeline so every PR runs lint + typecheck + tests + secret guar
 - [x] `.env*` filename guard (fail if any tracked env file other than `.env.example`, per ADR-0003)
 - [x] gitleaks secret-value scan (`gitleaks/gitleaks-action@v2`)
 - [x] Postgres service container — documented-intent comment only (deferred to Phase 1)
-- [ ] Verify CI runs green on a sample PR — pending first push
+- [x] Verify CI runs green on a sample PR — PR #6, both jobs green
 
 ---
 
