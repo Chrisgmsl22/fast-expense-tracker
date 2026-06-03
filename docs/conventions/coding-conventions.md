@@ -13,8 +13,8 @@ already decided; specifics get added per slice.
 - **No `any` without justification**. If you must, add an inline comment: `// any: <reason>`.
 - **Prefer type inference** for locals; explicit return types on exported functions.
 - **`interface` vs `type`**:
-  - `interface` for object shapes that may be extended.
-  - `type` for unions, intersections, derived types (`type ExpenseResponse = ...`).
+    - `interface` for object shapes that may be extended.
+    - `type` for unions, intersections, derived types (`type ExpenseResponse = ...`).
 - **Derive types from Zod schemas**: `type CreateExpenseInput = z.infer<typeof createExpenseSchema>`. Don't restate fields.
 - **No implicit `undefined`**: handle the missing-property case explicitly. `tsconfig` enforces this via `noUncheckedIndexedAccess`.
 
@@ -45,11 +45,11 @@ already decided; specifics get added per slice.
 ## Error handling
 
 - **Throw structured errors from services.** Custom error classes in `lib/errors.ts`:
-  - `ValidationError` (400)
-  - `AuthenticationError` (401)
-  - `NotFoundError` (404)
-  - `ConflictError` (409)
-  - `AppError` (abstract base, don't throw directly)
+    - `ValidationError` (400)
+    - `AuthenticationError` (401)
+    - `NotFoundError` (404)
+    - `ConflictError` (409)
+    - `AppError` (abstract base, don't throw directly)
 - **Never throw bare `Error`** from service code. Pick a class.
 - **Server actions return discriminated unions** for expected errors: `{ ok: true, data } | { ok: false, error }`. Reserve thrown errors for unexpected failures.
 - **Components don't catch errors directly.** Use `error.tsx` boundaries.
@@ -85,35 +85,37 @@ lib/services/expense/
 
 **Mocking**:
 
-| Testing | Mock |
-|---|---|
-| Service | Prisma client (lowest layer) |
-| Server action | The service |
-| Component | Server-fetched data via prop, or MSW for network |
+| Testing       | Mock                                             |
+| ------------- | ------------------------------------------------ |
+| Service       | Prisma client (lowest layer)                     |
+| Server action | The service                                      |
+| Component     | Server-fetched data via prop, or MSW for network |
 
 **Tools**:
+
 - **Vitest** for unit + integration tests.
 - **Playwright** for E2E smoke tests on critical paths (login, create expense, dashboard renders).
 - **React Testing Library** for component tests (where used).
 
 **Patterns**:
+
 - `it.each` for parameterized scenarios.
 - `expect.objectContaining()` for partial assertions.
 - Test names: `Should <expected> when <condition>`.
 
 ## Naming
 
-| What | Convention | Example |
-|---|---|---|
-| Component | `PascalCase` | `ExpenseForm`, `DashboardChart` |
-| Server Component file | `kebab-case.tsx` in `app/` (Next.js convention) | `expenses/page.tsx` |
-| Reusable component file | `PascalCase.tsx` in `components/` | `components/ExpenseForm.tsx` |
-| Service | `<resource>.service.ts` | `expense.service.ts` |
-| Schema | `<resource>.schema.ts` exporting `createXSchema`, etc. | `expense.schema.ts` |
-| Test file | `<source>.test.ts` next to source | `expense.service.test.ts` |
-| Type file | `types/<domain>.ts` | `types/expense.ts` |
-| Interface | `I<Name>` for service contracts (optional, only when useful) | `IExpenseService` |
-| Derived type | `<Name>` (no `I` prefix) | `ExpenseResponse`, `CreateExpenseInput` |
+| What                    | Convention                                                   | Example                                 |
+| ----------------------- | ------------------------------------------------------------ | --------------------------------------- |
+| Component               | `PascalCase`                                                 | `ExpenseForm`, `DashboardChart`         |
+| Server Component file   | `kebab-case.tsx` in `app/` (Next.js convention)              | `expenses/page.tsx`                     |
+| Reusable component file | `PascalCase.tsx` in `components/`                            | `components/ExpenseForm.tsx`            |
+| Service                 | `<resource>.service.ts`                                      | `expense.service.ts`                    |
+| Schema                  | `<resource>.schema.ts` exporting `createXSchema`, etc.       | `expense.schema.ts`                     |
+| Test file               | `<source>.test.ts` next to source                            | `expense.service.test.ts`               |
+| Type file               | `types/<domain>.ts`                                          | `types/expense.ts`                      |
+| Interface               | `I<Name>` for service contracts (optional, only when useful) | `IExpenseService`                       |
+| Derived type            | `<Name>` (no `I` prefix)                                     | `ExpenseResponse`, `CreateExpenseInput` |
 
 ## REST conventions (for route handlers when used)
 
@@ -163,7 +165,8 @@ fast-expense-tracker/
 
 ## Formatting
 
-- **Prettier** (config at root): defaults, 2-space indent (Next.js convention; differs from MoneyFlow).
-- **ESLint**: Next.js preset + custom rules in Phase 0 ADR.
-- Both run via pre-commit hook (Husky or lefthook — decide in Phase 0).
+- **Prettier** (`.prettierrc.json` at root): defaults, **4-space indent**.
+- **ESLint**: Next.js preset (`eslint-config-next`) — `core-web-vitals` + `typescript`.
+- Both run on staged files via a **Husky + lint-staged** pre-commit hook (ADR-0006); the hook also runs a project-wide `tsc --noEmit`.
+- **Opt-out**: `git commit --no-verify` skips the hook — rare human cases only. Agents must never use `--no-verify` (CLAUDE.md rule #12); fix the failing hook.
 - To disable a rule, add an inline comment with a reason: `// eslint-disable-next-line <rule> -- reason: <why>`.
