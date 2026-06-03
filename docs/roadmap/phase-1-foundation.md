@@ -17,6 +17,7 @@ Complete the relevant sections of [`docs/operations/setup.md`](../operations/set
 
 - Before **1.2** — §5 (admin credentials: `ADMIN_EMAIL`, `ADMIN_PASSWORD`)
 - Before **1.3** — §6 (Auth.js secret: `AUTH_SECRET`)
+- Before **1.7** — create a Sentry project (platform: Next.js), supply the **DSN**; enable **Speed Insights** in the Vercel dashboard (per [ADR-0005](../decisions/0005-error-tracking-and-observability.md))
 
 ## Slices
 
@@ -142,3 +143,33 @@ phase shipped.
 - [ ] `deleteExpense` server action
 - [ ] Playwright e2e: login → create expense → edit it → delete it → logout
 - [ ] Tests: update + delete server actions
+
+---
+
+#### 1.7: Observability — Sentry + Speed Insights `[PR]`
+
+**Type**: Parallel (independent of 1.2–1.6; runnable any time after 1.1)
+**Depends on**: 1.1
+**Decision**: [ADR-0005](../decisions/0005-error-tracking-and-observability.md)
+
+> **Stub — Plan block to be written when this slice goes next-up.** Slice
+> number/ordering is provisional (placed after the 1.6 integration only
+> because it is independent of it). Scope below is the intended shape, not a
+> committed Plan block.
+
+Wires production error tracking (Sentry, primary) + real-user Web Vitals
+(Vercel Speed Insights, secondary). Touches root layout + config + env only —
+no feature surface, hence parallel-capable. **Prerequisite**: Sentry project
+created + DSN supplied (see Prerequisites above). v1 skips source-map upload
+(no `SENTRY_AUTH_TOKEN` yet) — errors captured with minified frames; source
+maps added later.
+
+##### Tasks (provisional)
+
+- [ ] Install `@sentry/nextjs`; run the wizard / hand-write client + server + edge configs
+- [ ] Read DSN from `process.env` (`NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_DSN`); inert if unset — no hardcoded DSN
+- [ ] Install `@vercel/speed-insights`; add `<SpeedInsights />` to the root layout
+- [ ] Add a `/sentry-test` (or equivalent) route to prove capture end-to-end, then remove or gate it
+- [ ] Document `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN` in `.env.example` (placeholders) + `coding-conventions.md`; note `SENTRY_AUTH_TOKEN` as deferred (Vercel-only secret)
+- [ ] Add the Sentry/Speed Insights prerequisite steps to `docs/operations/setup.md`
+- [ ] Tests: error boundary / server-action error reaches Sentry config path; build succeeds with DSN unset
