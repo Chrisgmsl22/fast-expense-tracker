@@ -5,7 +5,11 @@ own file with vertical slices, marked as `[PR]`.
 
 ## Currently active
 
-🟡 **Phase 0 — Bootstrap** is in progress. Slices **0.1** (scaffold) and **0.2** (Vercel deploy + Neon DB isolation) have shipped. **Active: slice 0.3 — GitHub Actions CI.** 0.4 (pre-commit hooks) follows. See the phase file for 0.3's open design questions (to resolve when drafting its Plan block).
+🟢 **Phase 0 — Bootstrap is complete** — all four slices shipped (0.1 scaffold, 0.2 Vercel + Neon isolation, 0.3 CI, 0.4 pre-commit hook). No Integration slice (pure infra).
+
+🟡 **Active: Phase 1 — Foundation.** Next up: **slice 1.1 — Schema + Prisma client + Auth.js config + page shells** (Foundation, sequential). Its Plan block gets drafted when work starts. Auth lands this phase (non-negotiable per ADR-0003). Manual prereqs are staged per-slice in the phase file (§5 admin creds before 1.2, §6 `AUTH_SECRET` before 1.3).
+
+⚠️ **Manual, do now:** protect `main` — [`setup.md §4`](../operations/setup.md) (branch protection was due after 0.3; CI now exists to gate against).
 
 The full design spec is at [`docs/specs/0001-initial-design.md`](../specs/0001-initial-design.md). It defines what the app does, what it doesn't, and the 8-phase trajectory.
 
@@ -13,16 +17,16 @@ Slicing follows the **Foundation → Fan-out → Integration** pattern documente
 
 ## All phases
 
-| Phase | Focus | Status | File |
-|---|---|---|---|
-| 0 | Bootstrap (Next.js + Tailwind + shadcn + Prisma + Neon + Vercel + CI) | 🟡 In progress (0.1, 0.2 shipped; 0.3 active) | [phase-0-bootstrap.md](./phase-0-bootstrap.md) |
-| 1 | Foundation (auth + capture/edit/delete + list + month filter) | 🔒 Locked | [phase-1-foundation.md](./phase-1-foundation.md) |
-| 2 | Weekly Review (summary + category rollup + settlement workflow + settings) | 🔒 Locked | [phase-2-weekly-review.md](./phase-2-weekly-review.md) |
-| 3 | Recurring (`isRecurring` checkbox + month-rollover modal + clone logic) | 🔒 Locked | [phase-3-recurring.md](./phase-3-recurring.md) |
-| 4 | Dashboard (50/25/25 + by-category donut + by-card bar + subcategory drilldown) | 🔒 Locked | [phase-4-dashboard.md](./phase-4-dashboard.md) |
-| 5 | Multi-currency (MXN canonical, USD/EUR reference) | 🔒 Locked | [phase-5-multi-currency.md](./phase-5-multi-currency.md) |
-| 6 | Mobile Polish (FAB + optimistic UI + PWA install + inline-row capture) | 🔒 Locked | [phase-6-mobile-polish.md](./phase-6-mobile-polish.md) |
-| 7 | Email Summary (Resend weekly cron, configurable day) | 🔒 Locked | [phase-7-email-summary.md](./phase-7-email-summary.md) |
+| Phase | Focus                                                                          | Status                        | File                                                     |
+| ----- | ------------------------------------------------------------------------------ | ----------------------------- | -------------------------------------------------------- |
+| 0     | Bootstrap (Next.js + Tailwind + shadcn + Prisma + Neon + Vercel + CI)          | 🟢 Complete (0.1–0.4 shipped) | [phase-0-bootstrap.md](./phase-0-bootstrap.md)           |
+| 1     | Foundation (auth + capture/edit/delete + list + month filter)                  | 🟡 Active (1.1 next up)       | [phase-1-foundation.md](./phase-1-foundation.md)         |
+| 2     | Weekly Review (summary + category rollup + settlement workflow + settings)     | 🔒 Locked                     | [phase-2-weekly-review.md](./phase-2-weekly-review.md)   |
+| 3     | Recurring (`isRecurring` checkbox + month-rollover modal + clone logic)        | 🔒 Locked                     | [phase-3-recurring.md](./phase-3-recurring.md)           |
+| 4     | Dashboard (50/25/25 + by-category donut + by-card bar + subcategory drilldown) | 🔒 Locked                     | [phase-4-dashboard.md](./phase-4-dashboard.md)           |
+| 5     | Multi-currency (MXN canonical, USD/EUR reference)                              | 🔒 Locked                     | [phase-5-multi-currency.md](./phase-5-multi-currency.md) |
+| 6     | Mobile Polish (FAB + optimistic UI + PWA install + inline-row capture)         | 🔒 Locked                     | [phase-6-mobile-polish.md](./phase-6-mobile-polish.md)   |
+| 7     | Email Summary (Resend weekly cron, configurable day)                           | 🔒 Locked                     | [phase-7-email-summary.md](./phase-7-email-summary.md)   |
 
 **Status legend**: 🟢 Complete · 🟡 In Progress / Next up · 🔒 Locked (not started) · ⚪ Not started · 📋 Backlog
 
@@ -41,7 +45,7 @@ Slicing follows the **Foundation → Fan-out → Integration** pattern documente
 - [`docs/operations/setup.md`](../operations/setup.md) — manual setup checklist (Neon, Vercel, env vars, GitHub branch protection, Resend); phase files reference relevant sections
 - [`docs/conventions/parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I pattern
 - [`docs/conventions/slice-planning.md`](../conventions/slice-planning.md) — Plan block format
-- [`docs/conventions/session-handoff.md`](../conventions/session-handoff.md) — cold-resumable handoff (the repo *is* the handoff; how to keep `main` resumable across sessions + under parallelism)
+- [`docs/conventions/session-handoff.md`](../conventions/session-handoff.md) — cold-resumable handoff (the repo _is_ the handoff; how to keep `main` resumable across sessions + under parallelism)
 - [`docs/conventions/pr-strategy.md`](../conventions/pr-strategy.md) — vertical-slice philosophy
 - [`docs/conventions/agent-workflow.md`](../conventions/agent-workflow.md) — `implementer` and `reviewer` invocation
 - [`docs/decisions/`](../decisions/) — ADRs (architecture decision records)
