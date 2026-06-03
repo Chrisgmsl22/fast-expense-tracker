@@ -1,6 +1,6 @@
 # Phase 0: Bootstrap
 
-**Status**: 🟡 In progress — 0.1 + 0.2 shipped; **0.3 active**; 0.4 after
+**Status**: 🟢 Complete — 0.1–0.4 all shipped (no Integration slice; pure infra)
 **Outcome**: Empty Next.js app live on Vercel; CI green; Prisma schema scaffolded.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 0](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out

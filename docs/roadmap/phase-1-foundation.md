@@ -1,6 +1,6 @@
 # Phase 1: Foundation
 
-**Status**: 🔒 Locked (Phase 0 must ship first)
+**Status**: 🟡 Active (Phase 0 complete) — **1.1 next up**
 **Outcome**: Auth-gated app; capture / edit / delete expenses; chronological list with month filter. Deployable.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 1](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I
@@ -24,7 +24,8 @@ Complete the relevant sections of [`docs/operations/setup.md`](../operations/set
 #### 1.1: Schema + Prisma client + Auth.js config + page shells `[PR]`
 
 **Type**: Foundation
-**Depends on**: 0.*
+**Depends on**: 0.\*
+**Status**: 🟡 Next up — Plan block to be drafted when work starts (Full Plan: schema migration + Auth.js scaffold).
 
 Lands the full Prisma schema (User, Category, Subcategory, Card, Expense,
 Settings) with all forward-compat fields. Wires Auth.js v5 config (no UI
@@ -36,11 +37,11 @@ yet). Creates empty page shells for `/login`, `/expenses`, `/settings`.
 - [ ] Define `Category`, `Subcategory` models
 - [ ] Define `Card` model
 - [ ] Define `Expense` model with **all** forward-compat fields:
-  - `isRecurring Boolean @default(false)` (Phase 3)
-  - `settlementStatus String @default("not_shared")` (Phase 2)
-  - `paidAt DateTime?` (Phase 2)
-  - `originalAmount Float?` (Phase 5)
-  - `originalCurrency String?` (Phase 5)
+    - `isRecurring Boolean @default(false)` (Phase 3)
+    - `settlementStatus String @default("not_shared")` (Phase 2)
+    - `paidAt DateTime?` (Phase 2)
+    - `originalAmount Float?` (Phase 5)
+    - `originalCurrency String?` (Phase 5)
 - [ ] Define `Settings` model (per spec §3)
 - [ ] Run migration; verify all tables created on Neon
 - [ ] Install Auth.js v5; scaffold `auth.config.ts` + `auth.ts`
