@@ -25,7 +25,7 @@ Complete the relevant sections of [`docs/operations/setup.md`](../operations/set
 
 **Type**: Foundation
 **Depends on**: 0.\*
-**Status**: 🟢 Shipped on `feat/1.1-schema-auth-shells`. Plan block → PR description. ADRs: [0007](../decisions/0007-nextjs16-proxy-convention.md).
+**Status**: 🟢 Shipped on `feat/1.1-schema-auth-shells` (PR #9). Plan block → PR description. ADRs: [0007](../decisions/0007-nextjs16-proxy-convention.md).
 
 Lands the full Prisma schema (User, Category, Subcategory, Card, Expense,
 Settings) with all forward-compat fields. Wires Auth.js v5 config (no UI
