@@ -107,7 +107,7 @@ Wires up the CI pipeline so every PR runs lint + typecheck + tests + secret guar
 
 **Type**: Parallel (with 0.2, 0.3)
 **Depends on**: 0.1
-**Status**: 🟢 Shipped on `feat/0.4-precommit`. Husky + lint-staged chosen (ADR-0006). Plan block → PR description.
+**Status**: 🟢 Shipped on `feat/0.4-precommit` (PR #7). Husky + lint-staged chosen (ADR-0006). Plan block → PR description.
 
 Resolves the **Husky vs lefthook** open question (per ADR-0001). Add the
 hook so pre-commit runs lint + format + typecheck on staged files.
