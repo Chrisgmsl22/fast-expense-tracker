@@ -25,7 +25,7 @@ Complete the relevant sections of [`docs/operations/setup.md`](../operations/set
 
 **Type**: Foundation
 **Depends on**: 0.\*
-**Status**: 🟡 Next up — Plan block to be drafted when work starts (Full Plan: schema migration + Auth.js scaffold).
+**Status**: 🟢 Shipped on `feat/1.1-schema-auth-shells`. Plan block → PR description. ADRs: [0007](../decisions/0007-nextjs16-proxy-convention.md).
 
 Lands the full Prisma schema (User, Category, Subcategory, Card, Expense,
 Settings) with all forward-compat fields. Wires Auth.js v5 config (no UI
@@ -33,21 +33,21 @@ yet). Creates empty page shells for `/login`, `/expenses`, `/settings`.
 
 ##### Tasks
 
-- [ ] Define `User` Prisma model (per spec §3 and domain-reference.md §2)
-- [ ] Define `Category`, `Subcategory` models
-- [ ] Define `Card` model
-- [ ] Define `Expense` model with **all** forward-compat fields:
+- [x] Define `User` Prisma model (per spec §3 and domain-reference.md §2)
+- [x] Define `Category`, `Subcategory` models
+- [x] Define `Card` model
+- [x] Define `Expense` model with **all** forward-compat fields:
     - `isRecurring Boolean @default(false)` (Phase 3)
     - `settlementStatus String @default("not_shared")` (Phase 2)
     - `paidAt DateTime?` (Phase 2)
     - `originalAmount Float?` (Phase 5)
     - `originalCurrency String?` (Phase 5)
-- [ ] Define `Settings` model (per spec §3)
-- [ ] Run migration; verify all tables created on Neon
-- [ ] Install Auth.js v5; scaffold `auth.config.ts` + `auth.ts`
-- [ ] Create empty page shells: `app/(auth)/login/page.tsx`, `app/(dashboard)/expenses/page.tsx`, `app/(dashboard)/settings/page.tsx`
-- [ ] Create `middleware.ts` skeleton (no logic yet)
-- [ ] Tests: schema-validation tests that the migration produces expected columns
+- [x] Define `Settings` model (per spec §3)
+- [x] Run migration; verify all tables created — applied to **local Docker** (ADR-0004); prod via `migrate deploy`
+- [x] Install Auth.js v5; scaffold `auth.config.ts` + `auth.ts`
+- [x] Create empty page shells: `app/(auth)/login/page.tsx`, `app/(dashboard)/expenses/page.tsx`, `app/(dashboard)/settings/page.tsx`
+- [x] Create `proxy.ts` skeleton (Next.js 16 rename of `middleware.ts`, ADR-0007; no enforcement yet)
+- [x] Tests: schema-shape (Prisma DMMF) + page-shell render tests
 
 ---
 

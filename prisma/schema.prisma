@@ -8,9 +8,12 @@
 //                          (prod + per-PR preview branches), so migrations work on
 //                          every environment without remapping.
 //
-// Models intentionally empty — slice 0.1 commits an empty `init` migration to
-// verify the end-to-end migration loop against Neon. Real models land starting
-// with slice 1.1 (per docs/specs/0001-initial-design.md §7).
+// Field names mirror MoneyFlow's schema 1:1 so the eventual migration is
+// `pg_dump | pg_restore` + one translation script (spec §3). Monetary fields are
+// `Float` for that parity — the rounding trade-off is accepted in the spec.
+// Forward-compat fields land here even when their UI ships later (schema-forward
+// principle — spec §5). Source of truth: docs/reference/domain-reference.md §2 +
+// docs/specs/0001-initial-design.md §3.
 
 generator client {
   provider = "prisma-client-js"
@@ -20,4 +23,106 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String // bcrypt hash — never plaintext
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expenses Expense[]
+  cards    Card[]
+  settings Settings?
+}
+
+model Category {
+  id               String   @id @default(uuid())
+  slug             String   @unique
+  name             String
+  isRelevant       Boolean  @default(true)
+  isSystemCategory Boolean  @default(true) // all system in temp app
+  monthlyBudget    Float? // null = no budget set
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  subcategories Subcategory[]
+  expenses      Expense[]
+}
+
+model Subcategory {
+  id         String   @id @default(uuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  name       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  expenses Expense[]
+}
+
+model Card {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  color     String // card color coding — see domain-reference.md §4
+  type      String // "credit" | "debit" | "cash"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expenses Expense[]
+}
+
+model Expense {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  subcategoryId String?
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
+
+  cardId String? // null = cash
+  card   Card?   @relation(fields: [cardId], references: [id])
+
+  date        DateTime
+  description String
+  amount      Float // MXN out of pocket (canonical budgeting truth)
+
+  // Shared expense math
+  isShared          Boolean @default(false)
+  yourPercentage    Float   @default(1.0) // 1.0 = 100% mine; 0.68 = my 68% share
+  actualExpenditure Float // stored, not computed: isShared ? amount * yourPercentage : amount
+
+  // Forward-compat fields (UI ships in later phases — spec §3)
+  isRecurring      Boolean @default(false) // Phase 3
+  settlementStatus String  @default("not_shared") // not_shared | pending | settled — Phase 2
+  paidAt           DateTime? // Phase 2
+  originalAmount   Float? // Phase 5 (multi-currency reference)
+  originalCurrency String? // Phase 5
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+model Settings {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  monthlyIncome             Float   @default(0)
+  defaultSharePercentage    Float   @default(0.68)
+  emailDay                  Int     @default(1) // 0=Sun, 1=Mon, ..., 6=Sat
+  recurringPromptSuppressed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
