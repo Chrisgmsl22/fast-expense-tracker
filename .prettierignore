@@ -1,0 +1,10 @@
+# Build artifacts
+.next/
+build/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Dependencies + lockfile
+node_modules/
+pnpm-lock.yaml

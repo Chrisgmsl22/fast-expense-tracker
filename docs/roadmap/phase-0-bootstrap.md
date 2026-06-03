@@ -22,7 +22,7 @@ Complete the relevant sections of [`docs/operations/setup.md`](../operations/set
 - Before **0.2** — §3 (Vercel project + env vars)
 - Before **0.3** — no new prereqs
 - Before **0.4** — no new prereqs
-- *After* **0.3** ships — §4 (GitHub branch protection on `main`)
+- _After_ **0.3** ships — §4 (GitHub branch protection on `main`)
 
 ## Slices
 
@@ -71,16 +71,16 @@ The interim Neon-integration + preview-branch approach was tried and dropped
 
 ##### Tasks
 
-- [x] *(manual)* Create the Vercel project + connect the GitHub repo; verify production deploy
+- [x] _(manual)_ Create the Vercel project + connect the GitHub repo; verify production deploy
 - [x] Add `docker-compose.yml` (Postgres 17) + `db:up`/`db:down` scripts
 - [x] Standardize env vars to `DATABASE_URL` + `DATABASE_URL_UNPOOLED` (`schema.prisma`, `.env.example`)
 - [x] Write ADR-0004 (DB isolation) + `docs/conventions/deployment.md`
 - [x] Verify local Docker flow: `pnpm db:up` → `cp .env.example .env.local` → `pnpm db:migrate` (verified: `init` applies to local Docker on :5433)
-- [x] *(manual)* Disconnect the Neon-Vercel integration
-- [x] *(manual)* Delete Neon `dev`, `vercel-dev`, and any `preview/*` branches (keep only `production`)
-- [x] *(manual)* Set `DATABASE_URL` + `DATABASE_URL_UNPOOLED` in Vercel (Production scope) from the `production` branch
-- [x] *(manual)* Set Vercel build command: `if [ "$VERCEL_ENV" = "production" ]; then prisma migrate deploy; fi && next build`
-- [x] *(manual)* Verify a production deploy is green with migrations applied (PR #3 deploy `READY`; build log shows `migrate deploy`)
+- [x] _(manual)_ Disconnect the Neon-Vercel integration
+- [x] _(manual)_ Delete Neon `dev`, `vercel-dev`, and any `preview/*` branches (keep only `production`)
+- [x] _(manual)_ Set `DATABASE_URL` + `DATABASE_URL_UNPOOLED` in Vercel (Production scope) from the `production` branch
+- [x] _(manual)_ Set Vercel build command: `if [ "$VERCEL_ENV" = "production" ]; then prisma migrate deploy; fi && next build`
+- [x] _(manual)_ Verify a production deploy is green with migrations applied (PR #3 deploy `READY`; build log shows `migrate deploy`)
 
 ---
 
@@ -107,15 +107,16 @@ Wires up the CI pipeline so every PR runs lint + typecheck + tests + secret guar
 
 **Type**: Parallel (with 0.2, 0.3)
 **Depends on**: 0.1
+**Status**: 🟢 Shipped on `feat/0.4-precommit`. Husky + lint-staged chosen (ADR-0006). Plan block → PR description.
 
 Resolves the **Husky vs lefthook** open question (per ADR-0001). Add the
 hook so pre-commit runs lint + format + typecheck on staged files.
 
 ##### Tasks
 
-- [ ] Decide Husky vs lefthook (write ADR with rationale)
-- [ ] Install + configure chosen tool
-- [ ] Hook runs Prettier + ESLint on staged files
-- [ ] Hook runs `tsc --noEmit` (typecheck) — fast on small diffs
-- [ ] Verify hook fires on a sample commit
-- [ ] Document opt-out (rare cases) in the convention doc if applicable
+- [x] Decide Husky vs lefthook (write ADR with rationale) — ADR-0006: Husky + lint-staged
+- [x] Install + configure chosen tool
+- [x] Hook runs Prettier + ESLint on staged files
+- [x] Hook runs `tsc --noEmit` (typecheck) — project-wide, in the hook
+- [x] Verify hook fires on a sample commit
+- [x] Document opt-out (rare cases) in the convention doc if applicable
