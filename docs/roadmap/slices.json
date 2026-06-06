@@ -1,0 +1,271 @@
+{
+    "branchPattern": "feat/{id}-",
+    "slices": [
+        {
+            "id": "0.1",
+            "phase": 0,
+            "type": "foundation",
+            "title": "Next.js + TS-strict + Tailwind + shadcn + Prisma + Neon scaffold",
+            "dependsOn": []
+        },
+        {
+            "id": "0.2",
+            "phase": 0,
+            "type": "fan-out",
+            "title": "Vercel deploy hookup",
+            "dependsOn": ["0.1"]
+        },
+        {
+            "id": "0.3",
+            "phase": 0,
+            "type": "fan-out",
+            "title": "GitHub Actions CI",
+            "dependsOn": ["0.1"]
+        },
+        {
+            "id": "0.4",
+            "phase": 0,
+            "type": "fan-out",
+            "title": "Pre-commit hook",
+            "dependsOn": ["0.1"]
+        },
+
+        {
+            "id": "1.1",
+            "phase": 1,
+            "type": "foundation",
+            "title": "Schema + Prisma client + Auth.js config + page shells",
+            "dependsOn": ["phase:0"]
+        },
+        {
+            "id": "1.2",
+            "phase": 1,
+            "type": "fan-out",
+            "title": "Seed script",
+            "dependsOn": ["1.1"]
+        },
+        {
+            "id": "1.3",
+            "phase": 1,
+            "type": "fan-out",
+            "title": "Login UI + session middleware",
+            "dependsOn": ["1.1"]
+        },
+        {
+            "id": "1.4",
+            "phase": 1,
+            "type": "fan-out",
+            "title": "Capture modal + create server action",
+            "dependsOn": ["1.1"]
+        },
+        {
+            "id": "1.5",
+            "phase": 1,
+            "type": "fan-out",
+            "title": "List view + month filter",
+            "dependsOn": ["1.1"]
+        },
+        {
+            "id": "1.6",
+            "phase": 1,
+            "type": "integration",
+            "title": "Edit + delete + Playwright smoke",
+            "dependsOn": ["1.4", "1.5"]
+        },
+        {
+            "id": "1.7",
+            "phase": 1,
+            "type": "fan-out",
+            "title": "Observability — Sentry + Speed Insights",
+            "dependsOn": ["1.1"]
+        },
+
+        {
+            "id": "2.1",
+            "phase": 2,
+            "type": "foundation",
+            "title": "getMonthSummary util + summary header shell",
+            "dependsOn": ["phase:1"]
+        },
+        {
+            "id": "2.2",
+            "phase": 2,
+            "type": "fan-out",
+            "title": "Settings page UI",
+            "dependsOn": ["2.1"]
+        },
+        {
+            "id": "2.3",
+            "phase": 2,
+            "type": "fan-out",
+            "title": "Top-line summary widget (Spent/Saved/Remaining)",
+            "dependsOn": ["2.1"]
+        },
+        {
+            "id": "2.4",
+            "phase": 2,
+            "type": "fan-out",
+            "title": "Category rollup table",
+            "dependsOn": ["2.1"]
+        },
+        {
+            "id": "2.5",
+            "phase": 2,
+            "type": "fan-out",
+            "title": "Settlement defaults + badges + Owed-to-you card",
+            "dependsOn": ["2.1"]
+        },
+        {
+            "id": "2.6",
+            "phase": 2,
+            "type": "integration",
+            "title": "Settle-up modal + e2e",
+            "dependsOn": ["2.5"]
+        },
+
+        {
+            "id": "3.1",
+            "phase": 3,
+            "type": "foundation",
+            "title": "Recurring checkbox + badge",
+            "dependsOn": ["1.4", "1.5", "1.6"]
+        },
+        {
+            "id": "3.2",
+            "phase": 3,
+            "type": "fan-out",
+            "title": "getRecurringForCloning + month-rollover detection",
+            "dependsOn": ["3.1"]
+        },
+        {
+            "id": "3.3",
+            "phase": 3,
+            "type": "fan-out",
+            "title": "Recurring prompt suppression setting",
+            "dependsOn": ["2.2"]
+        },
+        {
+            "id": "3.4",
+            "phase": 3,
+            "type": "integration",
+            "title": "Clone modal + date-shift logic + e2e",
+            "dependsOn": ["3.2", "3.3"]
+        },
+
+        {
+            "id": "4.1",
+            "phase": 4,
+            "type": "foundation",
+            "title": "/dashboard route + 4-card layout + chart lib + 50/25/25 widget",
+            "dependsOn": ["phase:2"]
+        },
+        {
+            "id": "4.2",
+            "phase": 4,
+            "type": "fan-out",
+            "title": "By-category donut chart",
+            "dependsOn": ["4.1"]
+        },
+        {
+            "id": "4.3",
+            "phase": 4,
+            "type": "fan-out",
+            "title": "By-card bar chart",
+            "dependsOn": ["4.1"]
+        },
+        {
+            "id": "4.4",
+            "phase": 4,
+            "type": "fan-out",
+            "title": "Month picker propagation",
+            "dependsOn": ["4.1"]
+        },
+        {
+            "id": "4.5",
+            "phase": 4,
+            "type": "integration",
+            "title": "Subcategory drilldown + e2e",
+            "dependsOn": ["4.2"]
+        },
+
+        {
+            "id": "5.1",
+            "phase": 5,
+            "type": "foundation",
+            "title": "Currency picker + originalAmount + Zod",
+            "dependsOn": ["1.4", "1.6"]
+        },
+        {
+            "id": "5.2",
+            "phase": 5,
+            "type": "integration",
+            "title": "Foreign-amount display + e2e",
+            "dependsOn": ["5.1"]
+        },
+
+        {
+            "id": "6.1",
+            "phase": 6,
+            "type": "foundation",
+            "title": "Responsive audit + FAB + useMediaQuery",
+            "dependsOn": ["phase:1", "phase:2"]
+        },
+        {
+            "id": "6.2",
+            "phase": 6,
+            "type": "fan-out",
+            "title": "Capture form responsive split",
+            "dependsOn": ["6.1"]
+        },
+        {
+            "id": "6.3",
+            "phase": 6,
+            "type": "fan-out",
+            "title": "Optimistic UI (useOptimistic)",
+            "dependsOn": ["6.1"]
+        },
+        {
+            "id": "6.4",
+            "phase": 6,
+            "type": "fan-out",
+            "title": "PWA manifest + install prompt + icons",
+            "dependsOn": ["6.1"]
+        },
+        {
+            "id": "6.5",
+            "phase": 6,
+            "type": "integration",
+            "title": "Mobile regression sweep + Playwright mobile",
+            "dependsOn": ["6.2", "6.3"]
+        },
+
+        {
+            "id": "7.1",
+            "phase": 7,
+            "type": "foundation",
+            "title": "Resend integration + env + React Email scaffold",
+            "dependsOn": ["phase:2"]
+        },
+        {
+            "id": "7.2",
+            "phase": 7,
+            "type": "fan-out",
+            "title": "Email template content + preview route",
+            "dependsOn": ["7.1"]
+        },
+        {
+            "id": "7.3",
+            "phase": 7,
+            "type": "fan-out",
+            "title": "Vercel cron + summary computation",
+            "dependsOn": ["7.1"]
+        },
+        {
+            "id": "7.4",
+            "phase": 7,
+            "type": "integration",
+            "title": "Cron e2e test",
+            "dependsOn": ["7.2", "7.3"]
+        }
+    ]
+}
