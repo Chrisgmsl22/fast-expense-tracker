@@ -15,14 +15,14 @@ If yes, the repo carried the work. If no, knowledge is stranded in chat — that
 a **handoff bug**: write the missing piece to its artifact (below) and the bug
 is fixed.
 
-| Question | Artifact |
-|---|---|
-| Where are we / what's active? | `docs/roadmap/README.md` ("Currently active") |
-| What's the next slice's brief? | the active slice's **Plan block** in the phase file |
-| Why was X decided? | `docs/decisions/` (ADRs) |
-| What should I avoid? | `docs/lessons.md` |
-| How do I work here? | `docs/conventions/` |
-| What changed, when? | git history + PR descriptions |
+| Question                       | Artifact                                                                                                                                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Where are we / what's active?  | the SessionStart `[roadmap]` view + `docs/roadmap/README.md` "Currently active (derived)" block — both **generated** from `docs/roadmap/slices.json` + git; run `pnpm roadmap:status` to refresh |
+| What's the next slice's brief? | the active slice's **Plan block** in the phase file                                                                                                                                              |
+| Why was X decided?             | `docs/decisions/` (ADRs)                                                                                                                                                                         |
+| What should I avoid?           | `docs/lessons.md`                                                                                                                                                                                |
+| How do I work here?            | `docs/conventions/`                                                                                                                                                                              |
+| What changed, when?            | git history + PR descriptions                                                                                                                                                                    |
 
 ## When to update: **in the slice's own PR — never deferred**
 
@@ -31,51 +31,55 @@ The slice PR is the unit of handoff. It may not merge until it leaves `main`
 
 1. Its tasks marked `[x]` in the phase file.
 2. Plan block copied into the PR description, then **deleted** from the phase file.
-3. The slice **marked shipped** in the phase file.
-4. Decisions made → an ADR; friction hit → a `lessons.md` entry (same PR).
+3. Decisions made → an ADR; friction hit → a `lessons.md` entry (same PR).
 
-Steps 5–6 (advancing the global pointer + staging the next brief) are the
-**orchestrator's** job, not the slice PR's — see parallelism below.
+There is **no "mark shipped" step**: a slice's shipped state is **derived** from
+git (the merge commit on `origin/main`), never written into the phase file. The
+README "Currently active" block is likewise generated — see below.
 
 Deferring any of this to "after merge" or "next session" is what creates stale
 handoffs. Do it in the PR, atomically with the work.
 
-## Parallelism: split ownership so concurrent slices don't drift
+## Parallelism: status is derived, so there's nothing to race over
 
-With two slices in flight (the v1 cap), the naive "each PR advances the pointer"
-rule races and conflicts — both PRs would edit the same shared lines, and one
-"Currently active" line can't name two slices. Fix by separating **who writes
-what**:
+Status is **derived, never written.** "Shipped" is the merge commit on
+`origin/main`; "in-progress" is a live branch/worktree; "available" is computed
+from `slices.json` deps. With two slices in flight (the v1 cap), neither PR
+touches any shared status line, so the old "each PR advances the pointer" race
+simply cannot occur.
 
-| State | Owner | When |
-|---|---|---|
-| A slice's **own** status (its tasks, its "shipped", its Plan block, its ADR/lesson) | the **slice PR** (worker) | in that PR |
-| The global **"Currently active" pointer** + **staging next briefs** | the **orchestrator** (main thread) — single serial writer | at spawn + after merges |
+What each writer still owns:
+
+| Artifact                                                       | Owner                                         | When                                        |
+| -------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------- |
+| A slice's **own** tasks, Plan block, ADR/lesson                | the **slice PR** (worker)                     | in that PR                                  |
+| `docs/roadmap/slices.json` (the slice graph: type + dependsOn) | the **orchestrator** — single writer          | only when **planning/restructuring** slices |
+| The README "Currently active (derived)" block                  | **generated** — `pnpm roadmap:status --write` | no hand-edits                               |
 
 Rules that fall out of this:
 
 - **Workers edit only their own slice's section** of the phase file and their own
-  code files — never the global pointer, never another slice's section. (This
-  extends the "fan-out slices own disjoint *files*" rule in
+  code files — never the README block, never `slices.json`, never another
+  slice's section. (This extends the "fan-out slices own disjoint _files_" rule in
   [`parallel-slicing.md`](./parallel-slicing.md) to disjoint phase-file
-  *sections*.)
-- **"Currently active" names a set**, not one slice (e.g. `0.3 + 0.4 in flight`).
-- **Orchestrator stages all in-flight Plan blocks up front** (at spawn), and
-  **reconciles the pointer to the next set after merges** — serially. One writer
-  for shared state = no race.
-- **Source of truth = per-slice status markers** (each owned by exactly one
-  writer). "Currently active" is just the orchestrator's index over them.
+  _sections_.)
+- **`slices.json` is edited only when planning slices** — a deliberate,
+  single-writer (orchestrator) action, never part of a concurrent worker PR. So
+  there is no `slices.json` merge contention under the parallel cap.
+- **Source of truth = the manifest + git.** "Currently active" is a computed
+  index over them (`pnpm roadmap:status`), regenerated, not transcribed.
 
 ## Enforcement
 
 Documentation informs; the **reviewer gate** enforces. The `reviewer` subagent's
 checklist includes:
 
-- The PR leaves `main` cold-resumable (its slice marked shipped, Plan block moved
-  to the PR description).
-- The PR touches **only its own slice's** status + files — it does **not** edit
-  the global "Currently active" pointer or another slice's section (a worker that
-  does is a **Critical** finding under parallelism).
+- The PR leaves `main` cold-resumable (Plan block moved to the PR description;
+  shipped state is derived from the merge, not written).
+- The PR touches **only its own slice's** section + files — it does **not** edit
+  the generated README block or `slices.json` (except a deliberate planning PR),
+  nor another slice's section (a worker that does is a **Critical** finding under
+  parallelism).
 
 A later CI guard may add an automated backstop, but the reviewer is the primary
 gate because it runs adversarially before every merge.

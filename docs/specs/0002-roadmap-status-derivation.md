@@ -1,7 +1,7 @@
 # 0002 — Roadmap status derivation
 
 **Date**: 2026-06-05
-**Status**: Draft (design approved; implementation pending)
+**Status**: Accepted
 **Type**: Internal tooling / process
 **Supersedes part of**: the hand-maintained "Currently active" pointer in
 [`docs/roadmap/README.md`](../roadmap/README.md)
@@ -127,33 +127,39 @@ dependency, and Node reads it natively for the richer engine.
 
 **Fields** (all per-slice fields required except where noted):
 
-| Field                       | Meaning                                                                                                                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `branchPattern` (top-level) | template mapping a slice id → its expected branch prefix. Default `feat/{id}-`.                                                                                            |
-| `id`                        | `N.M` slice id (string).                                                                                                                                                   |
-| `phase`                     | integer phase number.                                                                                                                                                      |
-| `type`                      | `foundation` \| `fan-out` \| `integration`.                                                                                                                                |
-| `dependsOn`                 | array of slice ids that must be shipped before this slice is available. `[]` = no in-repo dependency (e.g. a Foundation slice whose only deps are a complete prior phase). |
-| `title`                     | human label (mirrors the phase-file slice header; informational only).                                                                                                     |
+| Field                       | Meaning                                                                                                                                                                                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `branchPattern` (top-level) | template mapping a slice id → its expected branch prefix. Default `feat/{id}-`.                                                                                                                                                                                                          |
+| `id`                        | `N.M` slice id (string).                                                                                                                                                                                                                                                                 |
+| `phase`                     | integer phase number.                                                                                                                                                                                                                                                                    |
+| `type`                      | `foundation` \| `fan-out` \| `integration`.                                                                                                                                                                                                                                              |
+| `dependsOn`                 | array of dependency tokens that must be satisfied before this slice is available. Each token is either a **slice id** (`"1.4"` — satisfied when that slice is shipped) or a **`phase:N` token** (`"phase:1"` — satisfied iff _every_ slice in phase N is shipped). `[]` = no dependency. |
+| `title`                     | human label (mirrors the phase-file slice header; informational only).                                                                                                                                                                                                                   |
 
 **No `status`, no `branch`, no `pr` fields** — those are all derived (§3.2).
 
-> **Phase-level completeness.** A Foundation slice that "depends on all of Phase 0"
-> uses `dependsOn: []` because Phase 0 is already complete; encoding satisfied
-> historical phase-deps adds noise. If a future slice must wait on an _incomplete_
-> prior phase, list that phase's specific blocking slice ids in `dependsOn`.
+> **`phase:N` token.** A Foundation slice that depends on a whole prior phase
+> (e.g. `1.1` depends on all of Phase 0) lists `"phase:0"` rather than enumerating
+> that phase's slice ids. The token resolves to "every slice with `phase === N` is
+> shipped" — so it stays correct as a phase grows. Slice-id deps remain available
+> for waiting on a _specific_ slice (e.g. `1.6` depends on `"1.4"`, `"1.5"`).
+
+> **Manifest size.** The manifest carries **37** slices across all 8 phases.
+> Phase 1 includes **1.7** (Observability — Sentry + Speed Insights, added per
+> ADR-0005), which postdates spec 0001 §7's Phase-1 count of 6; the manifest
+> follows the current phase file, not the stale §7 count.
 
 ### 3.2 Derived state
 
 Given the manifest and git, the engine computes per slice:
 
-| State              | Rule                                                                                                                                      |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **shipped**        | a **merge commit on `origin/main`** references the slice's branch — `git log origin/main --merges --grep "<branchPrefix>"` returns a hit. |
-| **in-progress**    | the slice is not shipped **and** a matching ref exists: a local branch, a remote branch (`origin/<branchPrefix>…`), or a `git worktree`.  |
-| **available**      | not shipped, not in-progress, and **every** `dependsOn` id is shipped.                                                                    |
-| **blocked**        | not shipped, not in-progress, and at least one `dependsOn` id is not shipped.                                                             |
-| **mine** (current) | `git rev-parse --abbrev-ref HEAD` maps to this slice via `branchPattern`.                                                                 |
+| State              | Rule                                                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **shipped**        | a **merge commit on `origin/main`** references the slice's branch — `git log origin/main --merges --grep "<branchPrefix>"` returns a hit.                                             |
+| **in-progress**    | the slice is not shipped **and** a matching ref exists: a local branch, a remote branch (`origin/<branchPrefix>…`), or a `git worktree`.                                              |
+| **available**      | not shipped, not in-progress, and **every** `dependsOn` token is satisfied — a slice-id token by that slice being shipped, a `phase:N` token by every slice in phase N being shipped. |
+| **blocked**        | not shipped, not in-progress, and at least one `dependsOn` token is unsatisfied.                                                                                                      |
+| **mine** (current) | `git rev-parse --abbrev-ref HEAD` maps to this slice via `branchPattern`.                                                                                                             |
 
 "In flight elsewhere" = the set of **in-progress** slices whose branch/worktree is
 not the current one.
