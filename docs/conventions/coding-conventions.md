@@ -170,3 +170,4 @@ fast-expense-tracker/
 - Both run on staged files via a **Husky + lint-staged** pre-commit hook (ADR-0006); the hook also runs a project-wide `tsc --noEmit`.
 - **Opt-out**: `git commit --no-verify` skips the hook — rare human cases only. Agents must never use `--no-verify` (CLAUDE.md rule #12); fix the failing hook.
 - To disable a rule, add an inline comment with a reason: `// eslint-disable-next-line <rule> -- reason: <why>`.
+- **Markdown docs**: keep them small — soft size caps per doc type + split strategy in [`doc-structure.md`](./doc-structure.md), warned (non-blocking) at pre-commit.
