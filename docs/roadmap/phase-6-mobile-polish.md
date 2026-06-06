@@ -1,6 +1,5 @@
 # Phase 6: Mobile Polish
 
-**Status**: 🔒 Locked
 **Outcome**: FAB + optimistic UI + PWA install + inline/modal responsive capture-form split.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 6](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I
@@ -13,9 +12,6 @@ brainstorming session).
 ## Slices
 
 #### 6.1: Responsive audit + FAB + useMediaQuery `[PR]`
-
-**Type**: Foundation
-**Depends on**: 1.*, 2.*
 
 Lays down the responsive patterns the fan-out slices use.
 
@@ -31,9 +27,6 @@ Lays down the responsive patterns the fan-out slices use.
 
 #### 6.2: Capture form responsive split `[PR]`
 
-**Type**: Parallel (with 6.3, 6.4)
-**Depends on**: 6.1
-
 Inline row on desktop ≥md; modal on mobile.
 
 ##### Tasks
@@ -47,9 +40,6 @@ Inline row on desktop ≥md; modal on mobile.
 ---
 
 #### 6.3: Optimistic UI on capture / edit / delete `[PR]`
-
-**Type**: Parallel (with 6.2, 6.4)
-**Depends on**: 6.1
 
 Visual immediacy via React 19 `useOptimistic`.
 
@@ -65,9 +55,6 @@ Visual immediacy via React 19 `useOptimistic`.
 
 #### 6.4: PWA manifest + install prompt + icons `[PR]`
 
-**Type**: Parallel (with 6.2, 6.3)
-**Depends on**: 6.1
-
 Make the app installable as a home-screen PWA.
 
 ##### Tasks
@@ -81,9 +68,6 @@ Make the app installable as a home-screen PWA.
 ---
 
 #### 6.5: Mobile regression sweep + Playwright mobile-viewport `[PR]`
-
-**Type**: Integration
-**Depends on**: 6.2, 6.3
 
 E2E coverage in a mobile viewport + manual audit pass.
 

@@ -1,6 +1,5 @@
 # Phase 0: Bootstrap
 
-**Status**: 🟢 Complete — 0.1–0.4 all shipped (no Integration slice; pure infra)
 **Outcome**: Empty Next.js app live on Vercel; CI green; Prisma schema scaffolded.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 0](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out
@@ -28,10 +27,6 @@ Complete the relevant sections of [`docs/operations/setup.md`](../operations/set
 
 #### 0.1: Next.js + TS-strict + Tailwind + shadcn/ui + Prisma + Neon scaffold `[PR]`
 
-**Type**: Foundation
-**Depends on**: —
-**Status**: 🟢 Shipped on `feat/0.1-bootstrap`. Plan block → PR description.
-
 Lays down the entire base stack so subsequent slices have something to
 attach to. Includes the initial empty Prisma migration.
 
@@ -58,10 +53,6 @@ attach to. Includes the initial empty Prisma migration.
 
 #### 0.2: Vercel deploy + Neon DB environment isolation `[PR]`
 
-**Type**: Parallel (with 0.3, 0.4)
-**Depends on**: 0.1
-**Status**: 🟢 Shipped (PR #3) + deploy-verified. Plan → PR description.
-
 Connects the GitHub repo to Vercel and sets up **per-environment database
 separation**: Neon holds real data only (one `production` branch); local + CI
 run Docker Postgres; preview deploys are build-only. Scope expanded from the
@@ -86,10 +77,6 @@ The interim Neon-integration + preview-branch approach was tried and dropped
 
 #### 0.3: GitHub Actions CI `[PR]`
 
-**Type**: Parallel (with 0.2, 0.4)
-**Depends on**: 0.1
-**Status**: 🟢 Shipped on `feat/0.3-ci` (PR #6) + CI-verified green. Plan block → PR description.
-
 Wires up the CI pipeline so every PR runs lint + typecheck + tests + secret guards.
 
 ##### Tasks
@@ -105,12 +92,9 @@ Wires up the CI pipeline so every PR runs lint + typecheck + tests + secret guar
 
 #### 0.4: Pre-commit hook `[PR]`
 
-**Type**: Parallel (with 0.2, 0.3)
-**Depends on**: 0.1
-**Status**: 🟢 Shipped on `feat/0.4-precommit` (PR #7). Husky + lint-staged chosen (ADR-0006). Plan block → PR description.
-
-Resolves the **Husky vs lefthook** open question (per ADR-0001). Add the
-hook so pre-commit runs lint + format + typecheck on staged files.
+Resolves the **Husky vs lefthook** open question (per ADR-0001) — Husky +
+lint-staged chosen ([ADR-0006](../decisions/0006-pre-commit-hook-tool.md)). Add
+the hook so pre-commit runs lint + format + typecheck on staged files.
 
 ##### Tasks
 
