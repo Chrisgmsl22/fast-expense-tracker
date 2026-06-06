@@ -10,6 +10,17 @@ At the start of every session:
 
 1. **Sync git with the remote — before reading anything or reasoning about branches.** Run `git fetch origin`, then confirm local `main` matches `origin/main` (`git log --oneline -1 origin/main`). The startup `gitStatus` snapshot and your local refs are **point-in-time** — they go stale the moment anything merges, and a merge may have landed between sessions. Never decide branch topology (rule #13's "branch off up-to-date `main`") or conclude a dependency is "unmerged / missing from main" from un-fetched refs. If local state implies a blocker, **fetch to confirm it's real before escalating**. See [`docs/lessons.md`](./docs/lessons.md) (2026-06-01).
 
+### Branch-sync policy (automated)
+
+The `SessionStart` hook [`.claude/hooks/branch-status.sh`](./.claude/hooks/branch-status.sh) runs the fetch from step 1 automatically and injects a `[branch-status]` line into your context every session. Act on its verdict **before** orienting:
+
+- **"PR merged" + tree clean** → no need to ask: `git checkout main`, `git pull --ff-only`, then `git branch -d <branch>` (delete the **local** merged branch only — never touch the remote). Then proceed.
+- **"PR merged" + tree dirty** → **STOP.** Report the uncommitted changes and let the user decide; do not switch.
+- **"work-in-progress"** → the git ancestor check is **blind to squash/rebase merges** (they rewrite commit SHAs). Before trusting "unmerged", confirm the PR state for the branch via the **GitHub MCP** (`mcp__github__list_pull_requests` / `pull_request_read` by head branch). If it's actually MERGED → treat as the merged case above. If genuinely OPEN/none → tell the user what remains on this slice.
+- **On `main`, behind** → `git pull --ff-only`.
+
+This repo merges PRs via **merge commit** (not squash/rebase), which keeps the ancestor check reliable; the MCP fallback is defense-in-depth in case that ever changes.
+
 Then read these to get oriented:
 
 2. **[docs/roadmap/README.md](./docs/roadmap/README.md)** — Single "where are we?" index. The currently active phase/slice is at the top.
@@ -27,7 +38,7 @@ the user's long-form learning project (MoneyFlow / my-expense-tracker) is
 under construction.
 
 This repo is **agent-led**: agents write the code, the user reviews. The
-*opposite* of MoneyFlow's "user writes, AI mentors" model. Code-quality bar
+_opposite_ of MoneyFlow's "user writes, AI mentors" model. Code-quality bar
 is the same; speed is prioritized over deliberate practice.
 
 **User context** (stable facts about Christian):
@@ -168,6 +179,7 @@ section in `domain-reference.md`.
 ### Card color coding
 
 Same as MoneyFlow:
+
 - Amex Platinum: Gray
 - Amex Gold: Yellow/Gold
 - NU: Purple
