@@ -1,6 +1,5 @@
 # Phase 4: Dashboard
 
-**Status**: 🔒 Locked (Phase 3 must ship first — recurring rows feed the dashboard)
 **Outcome**: 50/25/25 progress + by-category donut + by-card bar + subcategory drilldown.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 4](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I
@@ -14,9 +13,6 @@ The 50/25/25 logic follows [`domain-reference.md §1`](../reference/domain-refer
 ## Slices
 
 #### 4.1: Dashboard route + chart-lib decision + 50/25/25 widget `[PR]`
-
-**Type**: Foundation
-**Depends on**: 2.*
 
 Sets up `/dashboard`, chooses the chart library (with ADR), and ships the
 first chart — the 50/25/25 progress bar — as a pattern for the fan-out
@@ -36,9 +32,6 @@ slices to follow.
 
 #### 4.2: By-category donut chart `[PR]`
 
-**Type**: Parallel (with 4.3, 4.4)
-**Depends on**: 4.1
-
 Donut chart breaking down spend by main category.
 
 ##### Tasks
@@ -52,9 +45,6 @@ Donut chart breaking down spend by main category.
 ---
 
 #### 4.3: By-card bar chart `[PR]`
-
-**Type**: Parallel (with 4.2, 4.4)
-**Depends on**: 4.1
 
 Horizontal bar chart of spend per card for the month.
 
@@ -70,9 +60,6 @@ Horizontal bar chart of spend per card for the month.
 
 #### 4.4: Month picker propagating to all charts `[PR]`
 
-**Type**: Parallel (with 4.2, 4.3)
-**Depends on**: 4.1
-
 Single month picker on dashboard; all charts re-fetch when changed.
 
 ##### Tasks
@@ -86,9 +73,6 @@ Single month picker on dashboard; all charts re-fetch when changed.
 ---
 
 #### 4.5: Subcategory drilldown + e2e `[PR]`
-
-**Type**: Integration
-**Depends on**: 4.2
 
 Click a category in the donut → modal/drawer shows its subcategory totals.
 

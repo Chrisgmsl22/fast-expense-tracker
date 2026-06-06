@@ -1,11 +1,10 @@
 # Phase 2: Weekly Review
 
-**Status**: 🔒 Locked (Phase 1 must ship first)
 **Outcome**: Summary numbers + category rollup + settlement workflow + settings page. The Monday-morning review ritual works in the app.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 2](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I
 
-This phase makes the app *useful*. After Phase 1 you can log expenses;
+This phase makes the app _useful_. After Phase 1 you can log expenses;
 after Phase 2 you can do your full weekly review (totals + settle-up with
 girlfriend) entirely in the app.
 
@@ -16,9 +15,6 @@ multiple fan-out slices depend on.
 ## Slices
 
 #### 2.1: `getMonthSummary` util + summary header shell `[PR]`
-
-**Type**: Foundation
-**Depends on**: 1.*
 
 Lands the shared server util + the page shell that fan-out slices fill in.
 Small but unblocks everything.
@@ -34,9 +30,6 @@ Small but unblocks everything.
 ---
 
 #### 2.2: Settings page UI `[PR]`
-
-**Type**: Parallel (with 2.3, 2.4, 2.5)
-**Depends on**: 2.1
 
 Builds the Settings page form for monthlyIncome, defaults, per-category
 budgets, and email day.
@@ -54,9 +47,6 @@ budgets, and email day.
 
 #### 2.3: Top-line summary widget `[PR]`
 
-**Type**: Parallel (with 2.2, 2.4, 2.5)
-**Depends on**: 2.1
-
 Three top-line cards: Spent / Saved / Remaining.
 
 ##### Tasks
@@ -71,9 +61,6 @@ Three top-line cards: Spent / Saved / Remaining.
 
 #### 2.4: Category rollup table `[PR]`
 
-**Type**: Parallel (with 2.2, 2.3, 2.5)
-**Depends on**: 2.1
-
 Table showing main-category totals (subcategory drilldown deferred to Phase 4).
 
 ##### Tasks
@@ -86,9 +73,6 @@ Table showing main-category totals (subcategory drilldown deferred to Phase 4).
 ---
 
 #### 2.5: Settlement auto-defaults + badges + "Owed to you" `[PR]`
-
-**Type**: Parallel (with 2.2, 2.3, 2.4)
-**Depends on**: 2.1
 
 Wires the settlement workflow into the existing capture/edit + list.
 
@@ -104,9 +88,6 @@ Wires the settlement workflow into the existing capture/edit + list.
 ---
 
 #### 2.6: Settle-up modal + e2e `[PR]`
-
-**Type**: Integration
-**Depends on**: 2.5
 
 The bulk-select modal + the e2e test that proves the weekly review flow works.
 

@@ -1,6 +1,5 @@
 # Phase 1: Foundation
 
-**Status**: 🟡 Active (Phase 0 complete) — **1.1 next up**
 **Outcome**: Auth-gated app; capture / edit / delete expenses; chronological list with month filter. Deployable.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 1](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I
@@ -23,13 +22,11 @@ Complete the relevant sections of [`docs/operations/setup.md`](../operations/set
 
 #### 1.1: Schema + Prisma client + Auth.js config + page shells `[PR]`
 
-**Type**: Foundation
-**Depends on**: 0.\*
-**Status**: 🟢 Shipped on `feat/1.1-schema-auth-shells` (PR #9). Plan block → PR description. ADRs: [0007](../decisions/0007-nextjs16-proxy-convention.md).
-
 Lands the full Prisma schema (User, Category, Subcategory, Card, Expense,
 Settings) with all forward-compat fields. Wires Auth.js v5 config (no UI
-yet). Creates empty page shells for `/login`, `/expenses`, `/settings`.
+yet). Creates empty page shells for `/login`, `/expenses`, `/settings`. The
+Next.js 16 route-protection convention is recorded in
+[ADR-0007](../decisions/0007-nextjs16-proxy-convention.md).
 
 ##### Tasks
 
@@ -53,9 +50,6 @@ yet). Creates empty page shells for `/login`, `/expenses`, `/settings`.
 
 #### 1.2: Seed script `[PR]`
 
-**Type**: Parallel (with 1.3, 1.4, 1.5)
-**Depends on**: 1.1
-
 Idempotent seed for categories, subcategories, cards, and the single
 admin user (bcrypt-hashed password via env var).
 
@@ -71,9 +65,6 @@ admin user (bcrypt-hashed password via env var).
 ---
 
 #### 1.3: Login UI + session middleware `[PR]`
-
-**Type**: Parallel (with 1.2, 1.4, 1.5)
-**Depends on**: 1.1
 
 Builds the login flow. Resolves the **bcrypt vs argon2** and
 **rate-limiting** open questions (with ADRs).
@@ -92,9 +83,6 @@ Builds the login flow. Resolves the **bcrypt vs argon2** and
 
 #### 1.4: Capture modal + create server action `[PR]`
 
-**Type**: Parallel (with 1.2, 1.3, 1.5)
-**Depends on**: 1.1
-
 Builds the expense capture modal (Option B from brainstorming — modal on
 the list page opened by a "+ Add" button).
 
@@ -112,9 +100,6 @@ the list page opened by a "+ Add" button).
 
 #### 1.5: List view + month filter `[PR]`
 
-**Type**: Parallel (with 1.2, 1.3, 1.4)
-**Depends on**: 1.1
-
 Renders the expense list with month filtering.
 
 ##### Tasks
@@ -129,9 +114,6 @@ Renders the expense list with month filtering.
 ---
 
 #### 1.6: Edit + delete + Playwright smoke `[PR]`
-
-**Type**: Integration
-**Depends on**: 1.4, 1.5
 
 Wires edit + delete onto the list, adds the e2e test that proves the
 phase shipped.
@@ -149,9 +131,7 @@ phase shipped.
 
 #### 1.7: Observability — Sentry + Speed Insights `[PR]`
 
-**Type**: Parallel (independent of 1.2–1.6; runnable any time after 1.1)
-**Depends on**: 1.1
-**Decision**: [ADR-0005](../decisions/0005-error-tracking-and-observability.md)
+Decision recorded in [ADR-0005](../decisions/0005-error-tracking-and-observability.md).
 
 > **Stub — Plan block to be written when this slice goes next-up.** Slice
 > number/ordering is provisional (placed after the 1.6 integration only

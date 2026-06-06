@@ -1,11 +1,10 @@
 # Phase 3: Recurring
 
-**Status**: 🔒 Locked (Phase 2 must ship first — uses Settings page)
 **Outcome**: Mark expenses as recurring; month-rollover modal offers to clone them into the new month.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 3](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I
 
-Recurring is a *monthly* workflow (vs. the *weekly* settlement workflow in
+Recurring is a _monthly_ workflow (vs. the _weekly_ settlement workflow in
 Phase 2). The user marks fixed bills (rent, services, subscriptions) as
 recurring; when the next month rolls over, the app offers to clone them
 with one click.
@@ -17,9 +16,6 @@ phase adds the UI hooks + month-rollover logic.
 ## Slices
 
 #### 3.1: "Recurring?" checkbox + badge `[PR]`
-
-**Type**: Foundation
-**Depends on**: 1.4, 1.5, 1.6
 
 Adds the UI surfaces — checkbox in capture/edit form, badge in list rows.
 Small and unblocks the rest.
@@ -36,9 +32,6 @@ Small and unblocks the rest.
 
 #### 3.2: `getRecurringForCloning` + month-rollover detection `[PR]`
 
-**Type**: Parallel (with 3.3)
-**Depends on**: 3.1
-
 Server util to fetch the previous month's recurring rows + the
 client-side detection logic for "first-time visit to a new month."
 Resolves the **last-prompted-month tracking** open question (spec §8).
@@ -47,9 +40,9 @@ Resolves the **last-prompted-month tracking** open question (spec §8).
 
 - [ ] `getRecurringForCloning(userId, prevMonth)` service: returns previous month's `isRecurring = true` rows
 - [ ] Decide last-prompted-month tracking mechanism — write ADR if non-trivial:
-  - Option: `Settings.lastPromptedMonth` field (single source of truth)
-  - Option: Separate `MonthPromptLog` table (history of prompts)
-  - Option: Local-storage key (per-device)
+    - Option: `Settings.lastPromptedMonth` field (single source of truth)
+    - Option: Separate `MonthPromptLog` table (history of prompts)
+    - Option: Local-storage key (per-device)
 - [ ] Implement chosen mechanism
 - [ ] Client hook to detect navigation to a month not yet prompted
 - [ ] Tests: service unit, hook behavior
@@ -57,9 +50,6 @@ Resolves the **last-prompted-month tracking** open question (spec §8).
 ---
 
 #### 3.3: "Don't show again" + Settings re-enable `[PR]`
-
-**Type**: Parallel (with 3.2)
-**Depends on**: 2.2
 
 `Settings.recurringPromptSuppressed` already exists. This slice surfaces
 it in the Settings page as a toggle.
@@ -75,9 +65,6 @@ it in the Settings page as a toggle.
 ---
 
 #### 3.4: Modal + clone logic + animation + e2e `[PR]`
-
-**Type**: Integration
-**Depends on**: 3.2, 3.3
 
 The user-visible modal + the cloning behavior + the e2e test.
 

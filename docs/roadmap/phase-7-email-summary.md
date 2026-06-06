@@ -1,6 +1,5 @@
 # Phase 7: Email Summary
 
-**Status**: 🔒 Locked
 **Outcome**: Weekly Resend email summary; day configurable from Settings.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 7](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I
@@ -23,9 +22,6 @@ Before **7.1** — complete §7 of [`docs/operations/setup.md`](../operations/se
 
 #### 7.1: Resend integration + email scaffold `[PR]`
 
-**Type**: Foundation
-**Depends on**: 2.*
-
 Wires up Resend + React Email base template.
 
 ##### Tasks
@@ -41,9 +37,6 @@ Wires up Resend + React Email base template.
 
 #### 7.2: Email template content + preview route `[PR]`
 
-**Type**: Parallel (with 7.3)
-**Depends on**: 7.1
-
 The actual email template + a dev-only preview route.
 
 ##### Tasks
@@ -57,9 +50,6 @@ The actual email template + a dev-only preview route.
 ---
 
 #### 7.3: Vercel cron + summary computation + emailDay honored `[PR]`
-
-**Type**: Parallel (with 7.2)
-**Depends on**: 7.1
 
 Cron handler that decides when to send and computes the summary.
 
@@ -75,9 +65,6 @@ Cron handler that decides when to send and computes the summary.
 ---
 
 #### 7.4: E2E with test-mode Resend `[PR]`
-
-**Type**: Integration
-**Depends on**: 7.2, 7.3
 
 End-to-end test that the cron actually produces the right email content.
 
