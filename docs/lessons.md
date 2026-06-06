@@ -45,6 +45,7 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 - **Lessons for next time:**
     1. `git fetch origin` before any branch-base decision. Local refs and the startup `gitStatus` snapshot are stale by default — a merge may have landed between sessions.
     2. When local state implies a blocker (unmerged dep, missing baseline, divergence), **verify against `origin` before escalating** — don't make the user resolve a phantom.
+- **Recurred 2026-06-05:** cut `chore/sizing-conventions` with `git checkout -b` off **un-synced local `main`** (`3879b22`, #13) instead of the current `origin/main` (`0b05ea6`, #14) — so the branch started 2 commits behind and PR #15 showed "out of date." I had run `git fetch` and _read_ `origin/main`'s tip, but never fast-forwarded **local** `main` before branching. Fixed by merging `origin/main` into the branch (rebase+force-push is blocked by the deny-list). **Hardened rule:** reading `origin/main`'s tip is **not** syncing local `main`. Before any `git checkout -b`, run `git fetch origin && git switch main && git pull --ff-only && git switch -c <branch>` — as one sequence. This applies to the **main thread creating branches mid-session**, not just `implementer`/session-start (the prior fix only covered those).
 
 ---
 
