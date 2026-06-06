@@ -31,7 +31,7 @@ else builds on. Small but unblocks the rest of the phase.
 
 **What goes into a Foundation slice:**
 
-- Prisma schema migrations for the phase (yes, the *whole* phase's schema
+- Prisma schema migrations for the phase (yes, the _whole_ phase's schema
   in one slice — DB changes don't fan out cleanly)
 - Shared TypeScript types (Zod schemas, derived types)
 - Empty page routes / route shells
@@ -52,7 +52,7 @@ concurrently with no merge conflicts.
 - Each fan-out slice owns its component files exclusively
   (`components/summary/SummaryCard.tsx` ≠ `components/summary/CategoryTable.tsx`).
 - Shared utils were established in the Foundation slice. Fan-out slices
-  *read* them; they don't extend them.
+  _read_ them; they don't extend them.
 - Each fan-out slice writes its own tests, in its own test files.
 
 **If two fan-out slices need to touch the same file:**
@@ -79,18 +79,18 @@ test that verifies the phase's user-facing feature works end-to-end.
 until its Integration slice merges.
 
 **A phase may omit the Integration slice** if its work is purely
-infrastructure (Phase 0) — but the *fact* that it's omitted should be
+infrastructure (Phase 0) — but the _fact_ that it's omitted should be
 explicit in the phase file.
 
 ## Slice IDs and markers
 
 In phase files:
 
-| Marker | Meaning |
-|---|---|
-| **Foundation** | Sequential — gates the rest of the phase |
-| **Parallel** | Can run alongside others in same phase (lists which) |
-| **Integration** | Sequential — depends on fan-out, ships last |
+| Marker          | Meaning                                              |
+| --------------- | ---------------------------------------------------- |
+| **Foundation**  | Sequential — gates the rest of the phase             |
+| **Parallel**    | Can run alongside others in same phase (lists which) |
+| **Integration** | Sequential — depends on fan-out, ships last          |
 
 Slice IDs follow `N.M` (phase.slice) format from
 [slice-planning.md](./slice-planning.md). Within a phase:
@@ -104,6 +104,7 @@ Slice IDs follow `N.M` (phase.slice) format from
 **Currently capped at 2 agents at once.**
 
 Why this conservative cap:
+
 - The user reviews PRs one at a time; more PRs in flight = more review backlog
 - Merge-conflict risk grows with concurrent branches
 - v1 caution; raise after building confidence
@@ -197,6 +198,7 @@ If a worktree was abandoned (slice dropped, branch not merged), `git worktree re
 Disjoint file footprints are the **slice's** discipline, defined in its Plan block. The worktree is just the on-disk container. If two parallel slices accidentally touch the same file, you'll learn at merge time — the reviewer should catch it earlier (per `reviewer.md` Parallel slice scrutiny).
 
 **To raise the cap when ready:**
+
 1. Confirm fan-out slices remain file-disjoint at higher N.
 2. Confirm the user's review bandwidth can absorb N PRs per cycle without
    bottlenecking.
@@ -209,7 +211,7 @@ deliberate, not architectural.
 ## Cross-phase parallelism
 
 A next-phase Foundation slice can start before the current phase fully
-ships, *as long as* it doesn't depend on the current phase's Fan-out or
+ships, _as long as_ it doesn't depend on the current phase's Fan-out or
 Integration slices.
 
 The spec's "Dependencies" column on each slice table is the source of
@@ -235,13 +237,15 @@ Each fan-out slice should own:
 Page-level wiring (the file that imports components and assembles the page)
 lives in the **Integration slice**, not in fan-out.
 
-**Status & the roadmap index.** Each slice flips only its **own** phase-file
-section (status, tasks, Plan block). The shared `roadmap/README.md` "Currently
-active" pointer is **orchestrator-owned** and advanced serially — a worker slice
-PR must never edit it (or another slice's section), or concurrent slices race
-and conflict. "Currently active" names the in-flight *set*, not one slice. Full
-rules: [`session-handoff.md`](./session-handoff.md). Foundation lands the
-empty page; fan-out fills in the components; integration wires them up.
+**Status & the roadmap index.** Status is **derived, never written.** The slice
+graph (type + `dependsOn`) lives in [`docs/roadmap/slices.json`](../roadmap/slices.json),
+and shipped/in-progress/available state is computed from git by `pnpm roadmap:status`
+(surfaced at SessionStart and in the **generated** `roadmap/README.md` "Currently
+active (derived)" block — never hand-edited). A worker slice PR edits only its
+**own** phase-file section (tasks, Plan block); it never touches `slices.json`
+(orchestrator-only, when planning) or the generated README block. Full rules:
+[`session-handoff.md`](./session-handoff.md). Foundation lands the empty page;
+fan-out fills in the components; integration wires them up.
 
 ## When to add a new agent role
 
@@ -252,7 +256,7 @@ only ones for v1.
 
 1. The same task-shape comes up across 3+ slices AND has a distinct skill
    set from what the `implementer` is great at.
-2. The pain of *not* having the role has shown up at least twice (a slice
+2. The pain of _not_ having the role has shown up at least twice (a slice
    shipped with avoidable issues that a specialized agent would have caught).
 
 **Don't add a role because:**

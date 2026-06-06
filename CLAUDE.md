@@ -21,6 +21,15 @@ The `SessionStart` hook [`.claude/hooks/branch-status.sh`](./.claude/hooks/branc
 
 This repo merges PRs via **merge commit** (not squash/rebase), which keeps the ancestor check reliable; the MCP fallback is defense-in-depth in case that ever changes.
 
+### Roadmap-status policy (automated)
+
+The `SessionStart` hook [`.claude/hooks/slice-status.sh`](./.claude/hooks/slice-status.sh) injects a `[roadmap]` line reporting **your slice**, **available slices**, and **in-flight slices** (derived from [`docs/roadmap/slices.json`](./docs/roadmap/slices.json) + git — see [ADR-0008](./docs/decisions/0008-derived-roadmap-status.md)). Use it to choose work:
+
+- **Pick only from _available_** slices (deps satisfied). Never start a _blocked_ one.
+- **Never claim an _in-flight_ slice** — another agent/worktree owns it.
+- Shipped state is git-inferred via merge-commit grep, which is **blind to squash/rebase merges**. If a slice looks unshipped but a PR may have landed, **MCP-confirm** before acting (`mcp__github__list_pull_requests` / `pull_request_read` by head branch).
+- Run `pnpm roadmap:status` any time mid-session to refresh (parallel state changes after SessionStart).
+
 Then read these to get oriented:
 
 2. **[docs/roadmap/README.md](./docs/roadmap/README.md)** — Single "where are we?" index. The currently active phase/slice is at the top.

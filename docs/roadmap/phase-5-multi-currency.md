@@ -1,6 +1,5 @@
 # Phase 5: Multi-currency
 
-**Status**: 🔒 Locked
 **Outcome**: USD/EUR capture with MXN equivalent; reference-only foreign-amount display.
 **Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 5](../specs/0001-initial-design.md)
 **Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→I (no fan-out; work is too thin to split)
@@ -21,9 +20,6 @@ and "display changes" with no useful fan-out.
 
 #### 5.1: Currency picker + originalAmount field `[PR]`
 
-**Type**: Foundation
-**Depends on**: 1.4, 1.6
-
 Adds currency picker + originalAmount input to capture/edit form.
 
 ##### Tasks
@@ -32,18 +28,15 @@ Adds currency picker + originalAmount input to capture/edit form.
 - [ ] When currency ≠ MXN, show `originalAmount` input alongside the existing `amount` (MXN equivalent) field
 - [ ] Update help text: "Original amount" and "MXN equivalent (from bank statement)"
 - [ ] Update Zod schema:
-  - `currency: z.enum(['MXN', 'USD', 'EUR'])` (default 'MXN')
-  - `originalAmount: z.number().positive().optional()`
-  - `.refine()`: if currency ≠ MXN, `originalAmount` must be present
+    - `currency: z.enum(['MXN', 'USD', 'EUR'])` (default 'MXN')
+    - `originalAmount: z.number().positive().optional()`
+    - `.refine()`: if currency ≠ MXN, `originalAmount` must be present
 - [ ] Server actions `createExpense` / `updateExpense` persist `originalAmount` + `originalCurrency`
 - [ ] Tests: schema validation (refine), server-action paths
 
 ---
 
 #### 5.2: Foreign-amount display + e2e `[PR]`
-
-**Type**: Integration
-**Depends on**: 5.1
 
 Updates list / summary / dashboard to show the foreign-amount pattern.
 
