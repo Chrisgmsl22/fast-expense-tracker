@@ -165,25 +165,11 @@ schema. A late, additive foundation slice: it changes the **shape** that
 capture (1.4/1.6) and the Phase 2 settlement/Phase 4 stats build on, so it
 lands before them. No UI, no balance logic, no graphs here.
 
-**Plan**
-
-- **Scope (in):** Prisma — add `Expense.paidBy` (`"you" | "gf"`, default `"you"`);
-  add the `Movement` model (per 0003 §3.2); **drop** `Expense.settlementStatus`
-  and `Expense.paidAt` (dead under the running-balance model, 0003 §3.3).
-  Additive migration applied to local Docker (ADR-0004). Update the schema-shape
-  DMMF test.
-- **Scope (out):** the `paidBy` capture control (→ 1.4), Movement entry UI +
-  couple-balance logic (→ Phase 2, redesigned 2.5/2.6), gross-vs-net + outstanding
-  graphs (→ Phase 4). No derived-balance code in this slice.
-- **Approach:** confirm the `Expense` table is empty before the destructive
-  column drops (safe — no capture UI has shipped). Migration name e.g.
-  `settlement_schema`. Prod applies via `migrate deploy` as usual.
-
 ##### Tasks
 
-- [ ] Add `paidBy String @default("you")` to `Expense`
-- [ ] Add the `Movement` model (`date`, `amount`, `type`, `cardId?`, `note`, relations) per 0003 §3.2
-- [ ] Drop `Expense.settlementStatus` and `Expense.paidAt` (confirm empty table first)
-- [ ] Generate + apply the migration to local Docker; `prisma generate`
-- [ ] Update the schema-shape DMMF test: `Expense` has `paidBy`, lacks `settlementStatus`/`paidAt`; `Movement` exists with its fields
-- [ ] Tests green; lint + typecheck clean
+- [x] Add `paidBy String @default("you")` to `Expense`
+- [x] Add the `Movement` model (`date`, `amount`, `type`, `cardId?`, `note`, relations) per 0003 §3.2
+- [x] Drop `Expense.settlementStatus` and `Expense.paidAt` (confirmed empty table first)
+- [x] Generate + apply the migration to local Docker; `prisma generate`
+- [x] Update the schema-shape DMMF test: `Expense` has `paidBy`, lacks `settlementStatus`/`paidAt`; `Movement` exists with its fields
+- [x] Tests green; lint + typecheck clean

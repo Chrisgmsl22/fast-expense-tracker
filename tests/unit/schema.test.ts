@@ -17,11 +17,12 @@ const fieldOf = (model: string, name: string) =>
         ?.fields.find((f) => f.name === name);
 
 describe("Prisma schema", () => {
-    it("Should define the six core models", () => {
+    it("Should define the seven core models", () => {
         expect([...fieldsByModel.keys()].sort()).toEqual([
             "Card",
             "Category",
             "Expense",
+            "Movement",
             "Settings",
             "Subcategory",
             "User",
@@ -35,18 +36,36 @@ describe("Prisma schema", () => {
                 "isShared",
                 "yourPercentage",
                 "actualExpenditure",
+                "paidBy", // spec 0003 — who fronted the money
             ]),
         );
     });
 
-    it("Should carry all forward-compat fields on Expense", () => {
+    it("Should carry the forward-compat fields on Expense", () => {
         expect(fieldsByModel.get("Expense")).toEqual(
             expect.arrayContaining([
                 "isRecurring",
-                "settlementStatus",
-                "paidAt",
                 "originalAmount",
                 "originalCurrency",
+            ]),
+        );
+    });
+
+    it("Should have dropped the one-directional settlement fields (spec 0003)", () => {
+        const expense = fieldsByModel.get("Expense") ?? [];
+        expect(expense).not.toContain("settlementStatus");
+        expect(expense).not.toContain("paidAt");
+    });
+
+    it("Should model Movement as the actual-money-movement log (spec 0003)", () => {
+        expect(fieldsByModel.get("Movement")).toEqual(
+            expect.arrayContaining([
+                "date",
+                "amount",
+                "type",
+                "cardId",
+                "note",
+                "userId",
             ]),
         );
     });
@@ -87,10 +106,10 @@ describe("Prisma schema", () => {
         });
     });
 
-    it("Should default settlementStatus to not_shared and isShared to false", () => {
-        expect(fieldOf("Expense", "settlementStatus")).toMatchObject({
+    it("Should default paidBy to 'you' and isShared to false", () => {
+        expect(fieldOf("Expense", "paidBy")).toMatchObject({
             type: "String",
-            default: "not_shared",
+            default: "you",
         });
         expect(fieldOf("Expense", "isShared")).toMatchObject({
             type: "Boolean",
