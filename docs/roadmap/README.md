@@ -8,47 +8,48 @@ own file with vertical slices, marked as `[PR]`.
 
 ## Currently active (derived)
 
-**In progress:** none · **Available next:** 1.2, 1.3, 1.4, 1.5, 1.7
+**In progress:** 1.8 · **Available next:** 1.2, 1.3, 1.5, 1.7
 
-| Slice | Phase | Type        | State     | Depends on       |
-| ----- | ----- | ----------- | --------- | ---------------- |
-| 0.1   | 0     | foundation  | shipped   | —                |
-| 0.2   | 0     | fan-out     | shipped   | 0.1              |
-| 0.3   | 0     | fan-out     | shipped   | 0.1              |
-| 0.4   | 0     | fan-out     | shipped   | 0.1              |
-| 1.1   | 1     | foundation  | shipped   | phase:0          |
-| 1.2   | 1     | fan-out     | available | 1.1              |
-| 1.3   | 1     | fan-out     | available | 1.1              |
-| 1.4   | 1     | fan-out     | available | 1.1              |
-| 1.5   | 1     | fan-out     | available | 1.1              |
-| 1.6   | 1     | integration | blocked   | 1.4, 1.5         |
-| 1.7   | 1     | fan-out     | available | 1.1              |
-| 2.1   | 2     | foundation  | blocked   | phase:1          |
-| 2.2   | 2     | fan-out     | blocked   | 2.1              |
-| 2.3   | 2     | fan-out     | blocked   | 2.1              |
-| 2.4   | 2     | fan-out     | blocked   | 2.1              |
-| 2.5   | 2     | fan-out     | blocked   | 2.1              |
-| 2.6   | 2     | integration | blocked   | 2.5              |
-| 3.1   | 3     | foundation  | blocked   | 1.4, 1.5, 1.6    |
-| 3.2   | 3     | fan-out     | blocked   | 3.1              |
-| 3.3   | 3     | fan-out     | blocked   | 2.2              |
-| 3.4   | 3     | integration | blocked   | 3.2, 3.3         |
-| 4.1   | 4     | foundation  | blocked   | phase:2          |
-| 4.2   | 4     | fan-out     | blocked   | 4.1              |
-| 4.3   | 4     | fan-out     | blocked   | 4.1              |
-| 4.4   | 4     | fan-out     | blocked   | 4.1              |
-| 4.5   | 4     | integration | blocked   | 4.2              |
-| 5.1   | 5     | foundation  | blocked   | 1.4, 1.6         |
-| 5.2   | 5     | integration | blocked   | 5.1              |
-| 6.1   | 6     | foundation  | blocked   | phase:1, phase:2 |
-| 6.2   | 6     | fan-out     | blocked   | 6.1              |
-| 6.3   | 6     | fan-out     | blocked   | 6.1              |
-| 6.4   | 6     | fan-out     | blocked   | 6.1              |
-| 6.5   | 6     | integration | blocked   | 6.2, 6.3         |
-| 7.1   | 7     | foundation  | blocked   | phase:2          |
-| 7.2   | 7     | fan-out     | blocked   | 7.1              |
-| 7.3   | 7     | fan-out     | blocked   | 7.1              |
-| 7.4   | 7     | integration | blocked   | 7.2, 7.3         |
+| Slice | Phase | Type        | State       | Depends on       |
+| ----- | ----- | ----------- | ----------- | ---------------- |
+| 0.1   | 0     | foundation  | shipped     | —                |
+| 0.2   | 0     | fan-out     | shipped     | 0.1              |
+| 0.3   | 0     | fan-out     | shipped     | 0.1              |
+| 0.4   | 0     | fan-out     | shipped     | 0.1              |
+| 1.1   | 1     | foundation  | shipped     | phase:0          |
+| 1.2   | 1     | fan-out     | available   | 1.1              |
+| 1.3   | 1     | fan-out     | available   | 1.1              |
+| 1.4   | 1     | fan-out     | blocked     | 1.1, 1.8         |
+| 1.5   | 1     | fan-out     | available   | 1.1              |
+| 1.6   | 1     | integration | blocked     | 1.4, 1.5         |
+| 1.7   | 1     | fan-out     | available   | 1.1              |
+| 1.8   | 1     | foundation  | in-progress | 1.1              |
+| 2.1   | 2     | foundation  | blocked     | phase:1          |
+| 2.2   | 2     | fan-out     | blocked     | 2.1              |
+| 2.3   | 2     | fan-out     | blocked     | 2.1              |
+| 2.4   | 2     | fan-out     | blocked     | 2.1              |
+| 2.5   | 2     | fan-out     | blocked     | 2.1              |
+| 2.6   | 2     | integration | blocked     | 2.5              |
+| 3.1   | 3     | foundation  | blocked     | 1.4, 1.5, 1.6    |
+| 3.2   | 3     | fan-out     | blocked     | 3.1              |
+| 3.3   | 3     | fan-out     | blocked     | 2.2              |
+| 3.4   | 3     | integration | blocked     | 3.2, 3.3         |
+| 4.1   | 4     | foundation  | blocked     | phase:2          |
+| 4.2   | 4     | fan-out     | blocked     | 4.1              |
+| 4.3   | 4     | fan-out     | blocked     | 4.1              |
+| 4.4   | 4     | fan-out     | blocked     | 4.1              |
+| 4.5   | 4     | integration | blocked     | 4.2              |
+| 5.1   | 5     | foundation  | blocked     | 1.4, 1.6         |
+| 5.2   | 5     | integration | blocked     | 5.1              |
+| 6.1   | 6     | foundation  | blocked     | phase:1, phase:2 |
+| 6.2   | 6     | fan-out     | blocked     | 6.1              |
+| 6.3   | 6     | fan-out     | blocked     | 6.1              |
+| 6.4   | 6     | fan-out     | blocked     | 6.1              |
+| 6.5   | 6     | integration | blocked     | 6.2, 6.3         |
+| 7.1   | 7     | foundation  | blocked     | phase:2          |
+| 7.2   | 7     | fan-out     | blocked     | 7.1              |
+| 7.3   | 7     | fan-out     | blocked     | 7.1              |
+| 7.4   | 7     | integration | blocked     | 7.2, 7.3         |
 
 <!-- roadmap:status:end -->
 

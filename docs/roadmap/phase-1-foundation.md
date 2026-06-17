@@ -88,8 +88,8 @@ the list page opened by a "+ Add" button).
 
 ##### Tasks
 
-- [ ] `ExpenseForm` component with visible fields: date, amount, category, subcategory, card, description, notes, isShared, yourPercentage
-- [ ] Hidden / defaulted: `isRecurring=false`, `settlementStatus` (auto from isShared), `originalAmount=null`, `originalCurrency=null`
+- [ ] `ExpenseForm` component with visible fields: date, amount, category, subcategory, card, description, notes, isShared, yourPercentage, **`paidBy`** (you/gf — per [spec 0003](../specs/0003-shared-expense-settlement.md); depends on 1.8)
+- [ ] Hidden / defaulted: `isRecurring=false`, `originalAmount=null`, `originalCurrency=null` (no `settlementStatus` — dropped in 1.8 per 0003)
 - [ ] Zod schema in `lib/schemas/expense.ts`
 - [ ] `createExpense` server action in `app/_actions/expense/create.ts`
 - [ ] Compute `actualExpenditure = isShared ? amount * yourPercentage : amount` server-side
@@ -154,3 +154,36 @@ maps added later.
 - [ ] Document `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN` in `.env.example` (placeholders) + `coding-conventions.md`; note `SENTRY_AUTH_TOKEN` as deferred (Vercel-only secret)
 - [ ] Add the Sentry/Speed Insights prerequisite steps to `docs/operations/setup.md`
 - [ ] Tests: error boundary / server-action error reaches Sentry config path; build succeeds with DSN unset
+
+---
+
+#### 1.8: Settlement schema — `paidBy` + `Movement` `[PR]`
+
+Schema-only slice adopting [spec 0003](../specs/0003-shared-expense-settlement.md) — the
+bidirectional-settlement redesign that wasn't anticipated when 1.1 froze the
+schema. A late, additive foundation slice: it changes the **shape** that
+capture (1.4/1.6) and the Phase 2 settlement/Phase 4 stats build on, so it
+lands before them. No UI, no balance logic, no graphs here.
+
+**Plan**
+
+- **Scope (in):** Prisma — add `Expense.paidBy` (`"you" | "gf"`, default `"you"`);
+  add the `Movement` model (per 0003 §3.2); **drop** `Expense.settlementStatus`
+  and `Expense.paidAt` (dead under the running-balance model, 0003 §3.3).
+  Additive migration applied to local Docker (ADR-0004). Update the schema-shape
+  DMMF test.
+- **Scope (out):** the `paidBy` capture control (→ 1.4), Movement entry UI +
+  couple-balance logic (→ Phase 2, redesigned 2.5/2.6), gross-vs-net + outstanding
+  graphs (→ Phase 4). No derived-balance code in this slice.
+- **Approach:** confirm the `Expense` table is empty before the destructive
+  column drops (safe — no capture UI has shipped). Migration name e.g.
+  `settlement_schema`. Prod applies via `migrate deploy` as usual.
+
+##### Tasks
+
+- [ ] Add `paidBy String @default("you")` to `Expense`
+- [ ] Add the `Movement` model (`date`, `amount`, `type`, `cardId?`, `note`, relations) per 0003 §3.2
+- [ ] Drop `Expense.settlementStatus` and `Expense.paidAt` (confirm empty table first)
+- [ ] Generate + apply the migration to local Docker; `prisma generate`
+- [ ] Update the schema-shape DMMF test: `Expense` has `paidBy`, lacks `settlementStatus`/`paidAt`; `Movement` exists with its fields
+- [ ] Tests green; lint + typecheck clean

@@ -74,6 +74,13 @@ Table showing main-category totals (subcategory drilldown deferred to Phase 4).
 
 #### 2.5: Settlement auto-defaults + badges + "Owed to you" `[PR]`
 
+> ⚠️ **Redesigned by [spec 0003](../specs/0003-shared-expense-settlement.md).** The
+> one-directional `settlementStatus` / "Owed to you" model below is **superseded**
+> by the bidirectional **couple balance** (computed) + **Movement log**
+> (`gf_received`/`gf_paid`). The tasks here are stale and will be re-planned when
+> 2.5/2.6 go next-up (Phase 2 is blocked on all of Phase 1, incl. the 1.8 schema).
+> Kept for context only.
+
 Wires the settlement workflow into the existing capture/edit + list.
 
 ##### Tasks
