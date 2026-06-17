@@ -25,6 +25,18 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-06-16 — Dispatched `implementer` ran in a divergent environment → phantom output, nothing reached the repo
+
+- **Symptom:** the `implementer` subagent (for slice 1.4) reported a `git log` and files that don't exist in our repo (commits `ef27f64` / `9bb46d7 "configure shadcn/ui"`, a different `phase-1-foundation.md`, an empty `README.md`). Its 108KB of "work" never touched our checkout — the real tree stayed clean at `74ffba3`, nothing committed/pushed/PR'd. Caught only by manually diffing its output against `git log`.
+- **Root cause:** the subagent operated on a stale/isolated/phantom working tree, and **nothing verified it was on the real repo before it worked**. The branch it should have used (`feat/1.4-capture-modal`) was local-only, so an isolated env couldn't even see it. No env preflight existed for subagents.
+- **Fix / decision:** added a `SubagentStart` hook [`.claude/hooks/env-check.sh`](./.claude/hooks/env-check.sh) that asserts `git merge-base --is-ancestor origin/main HEAD` (HEAD contains current `origin/main`) and warns loudly on mismatch; plus a **Step-0 HARD GATE** in `.claude/agents/{implementer,reviewer}.md` telling the agent to run the same check and STOP if it fails (survives even if an isolated env never loads the hook). Recovered by implementing 1.4 inline in the verified-clean checkout.
+- **Lessons for next time:**
+    1. Never trust a subagent's output without checking it landed on the real tree (`git log`/`git status` in the main checkout) — same "verify, don't trust" family as the merge-state lesson.
+    2. The invariant for "am I on the real repo": HEAD must contain current `origin/main`. Build it into agent start-up, not just human vigilance.
+    3. A hook only fires where the agent's env loads `.claude/` — back it with an in-prompt preflight so the guard travels with the agent.
+
+---
+
 ### 2026-06-05 — Stacked PR merged into its (already-merged) base branch → migration stranded off `main`
 
 - **Symptom:** A feature was split into PR A (engine) and PR B (docs migration), with **B stacked on A's branch**. PR A (#11) was merged to `main` first; PR B (#12) was then merged — but into its base `chore/roadmap-status-derivation`, _after_ that branch had already gone to `main`. GitHub reported #12 "merged," yet its 13-file migration (ADR, phase trims, conventions) never reached `main`. Needed a recovery PR (#13) from the orphaned branch → `main`.
