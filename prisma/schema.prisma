@@ -33,9 +33,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  expenses Expense[]
-  cards    Card[]
-  settings Settings?
+  expenses  Expense[]
+  cards     Card[]
+  settings  Settings?
+  movements Movement[]
 }
 
 model Category {
@@ -73,7 +74,8 @@ model Card {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  expenses Expense[]
+  expenses  Expense[]
+  movements Movement[]
 }
 
 model Expense {
@@ -98,11 +100,10 @@ model Expense {
   isShared          Boolean @default(false)
   yourPercentage    Float   @default(1.0) // 1.0 = 100% mine; 0.68 = my 68% share
   actualExpenditure Float // stored, not computed: isShared ? amount * yourPercentage : amount
+  paidBy            String  @default("you") // "you" | "gf" — who fronted the money (spec 0003)
 
   // Forward-compat fields (UI ships in later phases — spec §3)
   isRecurring      Boolean @default(false) // Phase 3
-  settlementStatus String  @default("not_shared") // not_shared | pending | settled — Phase 2
-  paidAt           DateTime? // Phase 2
   originalAmount   Float? // Phase 5 (multi-currency reference)
   originalCurrency String? // Phase 5
 
@@ -125,4 +126,27 @@ model Settings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Actual money movements (spec 0003): settlement transfers with gf, card
+// payments, one-off income. Decoupled from what's "owed" — amounts are
+// user-entered, never auto-derived, and never enter expense/spend totals.
+model Movement {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  date   DateTime
+  amount Float // always positive; direction comes from `type`
+  type   String // gf_received | gf_paid | card_payment | income | other
+
+  cardId String? // set when type = "card_payment"
+  card   Card?   @relation(fields: [cardId], references: [id])
+
+  note String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
 }

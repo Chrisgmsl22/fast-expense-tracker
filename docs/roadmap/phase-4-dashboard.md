@@ -48,6 +48,11 @@ Donut chart breaking down spend by main category.
 
 Horizontal bar chart of spend per card for the month.
 
+> **Extended by [spec 0003](../specs/0003-shared-expense-settlement.md).** This phase
+> also gains the two stats from 0003: **gross-vs-net** (card-charged vs your share)
+> and **per-card outstanding** (charged − card-payments, "based on logged"). Exact
+> slice placement decided when Phase 4 is planned.
+
 ##### Tasks
 
 - [ ] `getMonthSpendByCard(userId, monthYear)` service

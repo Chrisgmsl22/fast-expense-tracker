@@ -26,6 +26,7 @@ MoneyFlow (the long-form learning project) is paused.
 weekly Monday-morning review ritual, occasional mobile entry.
 
 **Success at the trajectory level**:
+
 - Phase 1 ships → user logs expenses on phone/laptop behind a real auth gate.
 - Phase 2 ships → user does the weekly Sunday/Monday review entirely in the
   app (settles up with girlfriend, sees what's spent / saved / left).
@@ -87,13 +88,14 @@ migration includes ALL of the following, even when the UI exposing them
 ships in a later phase (schema-forward principle — see §5):
 
 #### Re-added to `Expense`
-| Field | Type | Reason re-added | UI lands in |
-|---|---|---|---|
-| `isRecurring` | `Boolean @default(false)` | Recurring expense templates (Q6) | Phase 3 |
-| `settlementStatus` | `String @default("not_shared")` — values `not_shared` / `pending` / `settled` | Settlement tracking (Q7) | Phase 2 |
-| `paidAt` | `DateTime?` | Companion to `settlementStatus` | Phase 2 |
-| `originalAmount` | `Float?` | Multi-currency reference (Q8) | Phase 5 |
-| `originalCurrency` | `String?` | Multi-currency reference (Q8) | Phase 5 |
+
+| Field              | Type                                                                          | Reason re-added                  | UI lands in |
+| ------------------ | ----------------------------------------------------------------------------- | -------------------------------- | ----------- |
+| `isRecurring`      | `Boolean @default(false)`                                                     | Recurring expense templates (Q6) | Phase 3     |
+| `settlementStatus` | `String @default("not_shared")` — values `not_shared` / `pending` / `settled` | Settlement tracking (Q7)         | Phase 2     |
+| `paidAt`           | `DateTime?`                                                                   | Companion to `settlementStatus`  | Phase 2     |
+| `originalAmount`   | `Float?`                                                                      | Multi-currency reference (Q8)    | Phase 5     |
+| `originalCurrency` | `String?`                                                                     | Multi-currency reference (Q8)    | Phase 5     |
 
 #### New model: `Settings`
 
@@ -136,6 +138,7 @@ Already in domain-reference.md as a per-category nullable Float; no change.
 
 `amount` on `Expense` is **always in MXN** (the canonical budgeting truth).
 For foreign-currency expenses:
+
 - `originalCurrency` is set to e.g. `"USD"`.
 - `originalAmount` holds the original-currency value.
 - `amount` holds the MXN-equivalent (taken from the bank statement).
@@ -147,6 +150,12 @@ script: if `originalCurrency` is non-null, swap `amount`/`currency` to
 match. Otherwise pass through with `currency = "MXN"`.
 
 ### Settlement convention
+
+> ⚠️ **Superseded by [`0003-shared-expense-settlement.md`](./0003-shared-expense-settlement.md).**
+> The one-directional model below (per-expense `settlementStatus`, "Owed to you"
+> only, reverse case faked via a category) is replaced by a bidirectional **couple
+> balance** + a **Movement** log, with `settlementStatus`/`paidAt` dropped. Kept
+> here for historical context.
 
 When `isShared = true` is set on create/edit, `settlementStatus` defaults
 to `"pending"`. When `isShared = false`, it's `"not_shared"`. The
@@ -168,6 +177,7 @@ exists in the seed.
 The "template" is implicit: the previous month's recurring rows.
 
 Month-rollover behavior:
+
 1. User navigates to a month they haven't been prompted for yet. (This
    condition is independent of whether the month has any expenses logged —
    the modal can still fire on a month with manual entries, as long as
@@ -199,22 +209,22 @@ In list view, rows with `isRecurring = true` display a "Recurring" badge.
 
 ### In scope (full trajectory across 8 phases)
 
-| Feature | First lands in |
-|---|---|
-| Auth (single-user Credentials login) | Phase 1 |
-| Expense capture (modal form) | Phase 1 |
-| Expense list (chronological + month filter) | Phase 1 |
-| Edit / delete expense | Phase 1 |
-| Top-line numeric summary (Spent / Saved / Remaining) | Phase 2 |
-| Category rollup table | Phase 2 |
-| Settlement workflow ("Owed to you" + Settle-up modal) | Phase 2 |
-| Settings page (income, default %, per-cat budgets, email day) | Phase 2 |
-| Recurring-expense flag + month-rollover modal + clone logic | Phase 3 |
-| Dashboard with charts (50/25/25, by-category donut, by-card bar) | Phase 4 |
-| Subcategory drilldown | Phase 4 |
-| Multi-currency (MXN canonical, USD/EUR as reference) | Phase 5 |
-| Mobile polish + PWA install + capture-form responsive split | Phase 6 |
-| Weekly email summary (Resend, cron, configurable day) | Phase 7 |
+| Feature                                                          | First lands in |
+| ---------------------------------------------------------------- | -------------- |
+| Auth (single-user Credentials login)                             | Phase 1        |
+| Expense capture (modal form)                                     | Phase 1        |
+| Expense list (chronological + month filter)                      | Phase 1        |
+| Edit / delete expense                                            | Phase 1        |
+| Top-line numeric summary (Spent / Saved / Remaining)             | Phase 2        |
+| Category rollup table                                            | Phase 2        |
+| Settlement workflow ("Owed to you" + Settle-up modal)            | Phase 2        |
+| Settings page (income, default %, per-cat budgets, email day)    | Phase 2        |
+| Recurring-expense flag + month-rollover modal + clone logic      | Phase 3        |
+| Dashboard with charts (50/25/25, by-category donut, by-card bar) | Phase 4        |
+| Subcategory drilldown                                            | Phase 4        |
+| Multi-currency (MXN canonical, USD/EUR as reference)             | Phase 5        |
+| Mobile polish + PWA install + capture-form responsive split      | Phase 6        |
+| Weekly email summary (Resend, cron, configurable day)            | Phase 7        |
 
 ### Out of scope (final list — overrides earlier YAGNI in domain-reference.md)
 
@@ -225,7 +235,7 @@ In list view, rows with `isRecurring = true` display a "Recurring" badge.
   handled via "Combined Expenses" category only
 - Currency display switching (totals always in MXN; no per-user display
   currency)
-- Card balance ledger / payments-into-card tracking (per-card *charges*
+- Card balance ledger / payments-into-card tracking (per-card _charges_
   breakdown lives in Phase 4 dashboard; payments-to-card stay in the
   user's bank app)
 - Multi-user (single user — the project owner)
@@ -255,23 +265,23 @@ near-zero schema cost for zero migration risk later.
 
 ## 6. Phase trajectory
 
-| # | Name | Outcome | Rough effort |
-|---|---|---|---|
-| **0** | Bootstrap | Empty Next.js app live on Vercel; CI green; Prisma schema scaffolded | ~1 week |
-| **1** | Foundation | Auth-gated app; capture/edit/delete expenses; chronological list + month filter | ~2-3 weeks |
-| **2** | Weekly Review | Summary numbers + category rollup + settlement workflow + settings page | ~2-3 weeks |
-| **3** | Recurring | Recurring checkbox + month-rollover modal + clone logic + badge | ~1-2 weeks |
-| **4** | Dashboard | 50/25/25 progress + by-category donut + by-card bar + subcategory drilldown | ~2 weeks |
-| **5** | Multi-currency | USD/EUR capture with MXN equivalent; reference-only foreign display | ~1 week |
-| **6** | Mobile Polish | FAB + optimistic UI + PWA install + inline/modal responsive split | ~1-2 weeks |
-| **7** | Email Summary | Weekly Resend cron with summary email; day configurable from Settings | ~1 week |
+| #     | Name           | Outcome                                                                         | Rough effort |
+| ----- | -------------- | ------------------------------------------------------------------------------- | ------------ |
+| **0** | Bootstrap      | Empty Next.js app live on Vercel; CI green; Prisma schema scaffolded            | ~1 week      |
+| **1** | Foundation     | Auth-gated app; capture/edit/delete expenses; chronological list + month filter | ~2-3 weeks   |
+| **2** | Weekly Review  | Summary numbers + category rollup + settlement workflow + settings page         | ~2-3 weeks   |
+| **3** | Recurring      | Recurring checkbox + month-rollover modal + clone logic + badge                 | ~1-2 weeks   |
+| **4** | Dashboard      | 50/25/25 progress + by-category donut + by-card bar + subcategory drilldown     | ~2 weeks     |
+| **5** | Multi-currency | USD/EUR capture with MXN equivalent; reference-only foreign display             | ~1 week      |
+| **6** | Mobile Polish  | FAB + optimistic UI + PWA install + inline/modal responsive split               | ~1-2 weeks   |
+| **7** | Email Summary  | Weekly Resend cron with summary email; day configurable from Settings           | ~1 week      |
 
 ### Ordering rationale
 
 - **0 first**: table stakes; everything depends on the scaffold.
 - **1 before everything UI**: auth is non-negotiable per ADR-0003 (the
   repo is public, the URL must be gated).
-- **2 before 3**: settlement is a *weekly* ritual; recurring is *monthly*.
+- **2 before 3**: settlement is a _weekly_ ritual; recurring is _monthly_.
   Weekly need is louder. Also, Phase 2 lands the Settings page which
   Phase 3 extends.
 - **3 before 4**: recurring rows must already exist before the dashboard
@@ -279,8 +289,8 @@ near-zero schema cost for zero migration risk later.
 - **4 before 5**: dashboard works fine on single-currency data;
   multi-currency just adds one more dimension that's easier to add to an
   existing dashboard than to design around upfront.
-- **5 before 6**: multi-currency is a *capture* feature (form field);
-  mobile polish is a *layout* concern. Capture changes first so mobile
+- **5 before 6**: multi-currency is a _capture_ feature (form field);
+  mobile polish is a _layout_ concern. Capture changes first so mobile
   polish targets the final form shape.
 - **7 last**: truly optional. If by Phase 6 the user has moved on to
   MoneyFlow, Phase 7 can be skipped.
@@ -295,12 +305,12 @@ lists; this section lists slice IDs, types, and dependencies.
 
 ### Phase 0 — Bootstrap (4 slices)
 
-| # | Slice | Type | Dependencies |
-|---|---|---|---|
-| 0.1 | Next.js + TS-strict + Tailwind + shadcn/ui + Prisma + Neon + empty migration baseline | **Foundation** | — |
-| 0.2 | Vercel deploy hookup | Parallel | 0.1 |
-| 0.3 | GitHub Actions CI (lint + typecheck + Vitest + Playwright skeleton + `.env*` grep guard) | Parallel | 0.1 |
-| 0.4 | Pre-commit hook (resolves Husky vs lefthook open question) | Parallel | 0.1 |
+| #   | Slice                                                                                    | Type           | Dependencies |
+| --- | ---------------------------------------------------------------------------------------- | -------------- | ------------ |
+| 0.1 | Next.js + TS-strict + Tailwind + shadcn/ui + Prisma + Neon + empty migration baseline    | **Foundation** | —            |
+| 0.2 | Vercel deploy hookup                                                                     | Parallel       | 0.1          |
+| 0.3 | GitHub Actions CI (lint + typecheck + Vitest + Playwright skeleton + `.env*` grep guard) | Parallel       | 0.1          |
+| 0.4 | Pre-commit hook (resolves Husky vs lefthook open question)                               | Parallel       | 0.1          |
 
 No Integration slice — Phase 0 is infrastructure; "feature works end-to-end"
 isn't applicable. The Vercel preview URL loading + CI green from 0.2/0.3
@@ -308,86 +318,86 @@ serves as integration verification.
 
 ### Phase 1 — Foundation (6 slices)
 
-| # | Slice | Type | Dependencies |
-|---|---|---|---|
-| 1.1 | Full schema migration (User, Category, Subcategory, Card, Expense with all forward-compat fields, Settings) + Prisma client + Auth.js config + page shells | **Foundation** | 0.* |
-| 1.2 | Seed script (13 categories + subcategories, 5 cards, admin user with bcrypt-hashed password) | Parallel | 1.1 |
-| 1.3 | Login UI + session middleware (resolves bcrypt vs argon2 open question; rate-limit decision in ADR) | Parallel | 1.1 |
-| 1.4 | Expense capture modal + create server action | Parallel | 1.1 |
-| 1.5 | Expense list view + month filter + reverse-chronological table | Parallel | 1.1 |
-| 1.6 | Edit + delete (confirm prompt) + Playwright smoke test (login → create → edit → delete) | **Integration** | 1.4, 1.5 |
+| #   | Slice                                                                                                                                                      | Type            | Dependencies |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------ |
+| 1.1 | Full schema migration (User, Category, Subcategory, Card, Expense with all forward-compat fields, Settings) + Prisma client + Auth.js config + page shells | **Foundation**  | 0.\*         |
+| 1.2 | Seed script (13 categories + subcategories, 5 cards, admin user with bcrypt-hashed password)                                                               | Parallel        | 1.1          |
+| 1.3 | Login UI + session middleware (resolves bcrypt vs argon2 open question; rate-limit decision in ADR)                                                        | Parallel        | 1.1          |
+| 1.4 | Expense capture modal + create server action                                                                                                               | Parallel        | 1.1          |
+| 1.5 | Expense list view + month filter + reverse-chronological table                                                                                             | Parallel        | 1.1          |
+| 1.6 | Edit + delete (confirm prompt) + Playwright smoke test (login → create → edit → delete)                                                                    | **Integration** | 1.4, 1.5     |
 
 ### Phase 2 — Weekly Review (6 slices)
 
-| # | Slice | Type | Dependencies |
-|---|---|---|---|
-| 2.1 | `Settings` already in schema from 1.1; this slice adds `getMonthSummary(userId, monthYear)` server util skeleton + summary header component shell | **Foundation** | 1.* |
-| 2.2 | Settings page UI (forms for monthlyIncome, defaultSharePercentage, per-category monthlyBudget, emailDay) | Parallel | 2.1 |
-| 2.3 | Top-line summary widget (Spent / Saved / Remaining cards) | Parallel | 2.1 |
-| 2.4 | Category rollup table (extends `getMonthSummary` with `byCategory[]`) | Parallel | 2.1 |
-| 2.5 | Settlement: auto-default `settlementStatus` on create/edit + per-row pending/settled badges in list + "Owed to you" card in summary header | Parallel | 2.1 |
-| 2.6 | Settle-up modal with bulk-select + e2e test (create shared expense → settle up → verify "Owed to you" drops) | **Integration** | 2.5 |
+| #   | Slice                                                                                                                                             | Type            | Dependencies |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------ |
+| 2.1 | `Settings` already in schema from 1.1; this slice adds `getMonthSummary(userId, monthYear)` server util skeleton + summary header component shell | **Foundation**  | 1.\*         |
+| 2.2 | Settings page UI (forms for monthlyIncome, defaultSharePercentage, per-category monthlyBudget, emailDay)                                          | Parallel        | 2.1          |
+| 2.3 | Top-line summary widget (Spent / Saved / Remaining cards)                                                                                         | Parallel        | 2.1          |
+| 2.4 | Category rollup table (extends `getMonthSummary` with `byCategory[]`)                                                                             | Parallel        | 2.1          |
+| 2.5 | Settlement: auto-default `settlementStatus` on create/edit + per-row pending/settled badges in list + "Owed to you" card in summary header        | Parallel        | 2.1          |
+| 2.6 | Settle-up modal with bulk-select + e2e test (create shared expense → settle up → verify "Owed to you" drops)                                      | **Integration** | 2.5          |
 
 ### Phase 3 — Recurring (4 slices)
 
-| # | Slice | Type | Dependencies |
-|---|---|---|---|
-| 3.1 | "Recurring?" checkbox in capture/edit modal + "Recurring" badge in list view rows | **Foundation** | 1.4, 1.5, 1.6 |
-| 3.2 | `getRecurringForCloning(userId, prevMonth)` server util + month-rollover detection (navigation hook to detect new-month-first-visit) | Parallel | 3.1 |
-| 3.3 | "Don't show again" via `Settings.recurringPromptSuppressed` + Settings page toggle to re-enable | Parallel | 2.2 |
-| 3.4 | Modal + clone-with-date-shift logic (last-day-of-month clamping) + reveal animation + e2e test | **Integration** | 3.2, 3.3 |
+| #   | Slice                                                                                                                                | Type            | Dependencies  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------- | ------------- |
+| 3.1 | "Recurring?" checkbox in capture/edit modal + "Recurring" badge in list view rows                                                    | **Foundation**  | 1.4, 1.5, 1.6 |
+| 3.2 | `getRecurringForCloning(userId, prevMonth)` server util + month-rollover detection (navigation hook to detect new-month-first-visit) | Parallel        | 3.1           |
+| 3.3 | "Don't show again" via `Settings.recurringPromptSuppressed` + Settings page toggle to re-enable                                      | Parallel        | 2.2           |
+| 3.4 | Modal + clone-with-date-shift logic (last-day-of-month clamping) + reveal animation + e2e test                                       | **Integration** | 3.2, 3.3      |
 
 ### Phase 4 — Dashboard (5 slices)
 
-| # | Slice | Type | Dependencies |
-|---|---|---|---|
-| 4.1 | `/dashboard` route + base 4-card layout + chart library decision (resolves ADR-0001 open question) + 50/25/25 progress widget | **Foundation** | 2.* |
-| 4.2 | By-category donut chart | Parallel | 4.1 |
-| 4.3 | By-card bar chart | Parallel | 4.1 |
-| 4.4 | Month picker propagating to all charts | Parallel | 4.1 |
-| 4.5 | Subcategory drilldown (click donut category → modal/drawer with subcategory breakdown table) + e2e test | **Integration** | 4.2 |
+| #   | Slice                                                                                                                         | Type            | Dependencies |
+| --- | ----------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------ |
+| 4.1 | `/dashboard` route + base 4-card layout + chart library decision (resolves ADR-0001 open question) + 50/25/25 progress widget | **Foundation**  | 2.\*         |
+| 4.2 | By-category donut chart                                                                                                       | Parallel        | 4.1          |
+| 4.3 | By-card bar chart                                                                                                             | Parallel        | 4.1          |
+| 4.4 | Month picker propagating to all charts                                                                                        | Parallel        | 4.1          |
+| 4.5 | Subcategory drilldown (click donut category → modal/drawer with subcategory breakdown table) + e2e test                       | **Integration** | 4.2          |
 
 ### Phase 5 — Multi-currency (2 slices)
 
-| # | Slice | Type | Dependencies |
-|---|---|---|---|
-| 5.1 | Currency picker (MXN/USD/EUR) + `originalAmount` field + Zod validation in capture/edit modal | **Foundation** | 1.4, 1.6 |
-| 5.2 | Foreign-amount display in list / summary / dashboard (`$45 USD ($810 MXN)` pattern) + e2e test | **Integration** | 5.1 |
+| #   | Slice                                                                                          | Type            | Dependencies |
+| --- | ---------------------------------------------------------------------------------------------- | --------------- | ------------ |
+| 5.1 | Currency picker (MXN/USD/EUR) + `originalAmount` field + Zod validation in capture/edit modal  | **Foundation**  | 1.4, 1.6     |
+| 5.2 | Foreign-amount display in list / summary / dashboard (`$45 USD ($810 MXN)` pattern) + e2e test | **Integration** | 5.1          |
 
 No fan-out for Phase 5; the work is too thin to split. Pure F→I.
 
 ### Phase 6 — Mobile Polish (5 slices)
 
-| # | Slice | Type | Dependencies |
-|---|---|---|---|
-| 6.1 | Responsive layout audit + FAB component + `useMediaQuery` hook + base mobile patterns | **Foundation** | 1.*, 2.* |
-| 6.2 | Capture form responsive split (inline-row on desktop ≥md breakpoint, modal on mobile) | Parallel | 6.1 |
-| 6.3 | Optimistic UI on capture / edit / delete (React 19 `useOptimistic`) | Parallel | 6.1 |
-| 6.4 | PWA manifest + install prompt + app icons | Parallel | 6.1 |
-| 6.5 | Mobile regression sweep + Playwright mobile-viewport tests | **Integration** | 6.2, 6.3 |
+| #   | Slice                                                                                 | Type            | Dependencies |
+| --- | ------------------------------------------------------------------------------------- | --------------- | ------------ |
+| 6.1 | Responsive layout audit + FAB component + `useMediaQuery` hook + base mobile patterns | **Foundation**  | 1._, 2._     |
+| 6.2 | Capture form responsive split (inline-row on desktop ≥md breakpoint, modal on mobile) | Parallel        | 6.1          |
+| 6.3 | Optimistic UI on capture / edit / delete (React 19 `useOptimistic`)                   | Parallel        | 6.1          |
+| 6.4 | PWA manifest + install prompt + app icons                                             | Parallel        | 6.1          |
+| 6.5 | Mobile regression sweep + Playwright mobile-viewport tests                            | **Integration** | 6.2, 6.3     |
 
 ### Phase 7 — Email Summary (4 slices)
 
-| # | Slice | Type | Dependencies |
-|---|---|---|---|
-| 7.1 | Resend integration + env wiring (`RESEND_API_KEY`) + React Email template scaffold | **Foundation** | 2.* |
-| 7.2 | Email template content (Spent/Saved/Remaining + top 3 categories from `getMonthSummary`) + preview route for dev | Parallel | 7.1 |
-| 7.3 | Vercel cron job + summary-computation + `Settings.emailDay` honored | Parallel | 7.1 |
-| 7.4 | E2E test: trigger cron handler in test mode → verify email body matches expected content | **Integration** | 7.2, 7.3 |
+| #   | Slice                                                                                                            | Type            | Dependencies |
+| --- | ---------------------------------------------------------------------------------------------------------------- | --------------- | ------------ |
+| 7.1 | Resend integration + env wiring (`RESEND_API_KEY`) + React Email template scaffold                               | **Foundation**  | 2.\*         |
+| 7.2 | Email template content (Spent/Saved/Remaining + top 3 categories from `getMonthSummary`) + preview route for dev | Parallel        | 7.1          |
+| 7.3 | Vercel cron job + summary-computation + `Settings.emailDay` honored                                              | Parallel        | 7.1          |
+| 7.4 | E2E test: trigger cron handler in test mode → verify email body matches expected content                         | **Integration** | 7.2, 7.3     |
 
 ### Slice count summary
 
-| Phase | Foundation | Fan-out | Integration | Total |
-|---|---|---|---|---|
-| 0 | 1 | 3 | 0 | 4 |
-| 1 | 1 | 4 | 1 | 6 |
-| 2 | 1 | 4 | 1 | 6 |
-| 3 | 1 | 2 | 1 | 4 |
-| 4 | 1 | 3 | 1 | 5 |
-| 5 | 1 | 0 | 1 | 2 |
-| 6 | 1 | 3 | 1 | 5 |
-| 7 | 1 | 2 | 1 | 4 |
-| **Total** | **8** | **21** | **7** | **36** |
+| Phase     | Foundation | Fan-out | Integration | Total  |
+| --------- | ---------- | ------- | ----------- | ------ |
+| 0         | 1          | 3       | 0           | 4      |
+| 1         | 1          | 4       | 1           | 6      |
+| 2         | 1          | 4       | 1           | 6      |
+| 3         | 1          | 2       | 1           | 4      |
+| 4         | 1          | 3       | 1           | 5      |
+| 5         | 1          | 0       | 1           | 2      |
+| 6         | 1          | 3       | 1           | 5      |
+| 7         | 1          | 2       | 1           | 4      |
+| **Total** | **8**      | **21**  | **7**       | **36** |
 
 At 2-agent parallelism, the practical review cadence is ~22 review moments
 (Foundation and Integration are sequential bottlenecks; Fan-out slices
@@ -401,19 +411,20 @@ user reviews 2-3 PRs per week.
 These are decisions intentionally not made in this spec. Each will be
 resolved in the slice listed, with an ADR if the trade-off warrants one.
 
-| Question | Resolved in slice | ADR likely? |
-|---|---|---|
-| Pre-commit hook: Husky vs lefthook | 0.4 | Yes |
-| Password hashing: bcrypt vs argon2 | 1.3 | Yes |
-| Rate-limiting login: Vercel KV / Upstash / deferred | 1.3 | Yes |
-| Chart library: Recharts vs Tremor vs visx | 4.1 | Yes |
-| Last-prompted-month tracking model for recurring modal | 3.4 | Maybe |
+| Question                                               | Resolved in slice | ADR likely? |
+| ------------------------------------------------------ | ----------------- | ----------- |
+| Pre-commit hook: Husky vs lefthook                     | 0.4               | Yes         |
+| Password hashing: bcrypt vs argon2                     | 1.3               | Yes         |
+| Rate-limiting login: Vercel KV / Upstash / deferred    | 1.3               | Yes         |
+| Chart library: Recharts vs Tremor vs visx              | 4.1               | Yes         |
+| Last-prompted-month tracking model for recurring modal | 3.4               | Maybe       |
 
 ---
 
 ## 9. Done definition per phase
 
 A phase is "shipped" when:
+
 1. All slices in the phase are merged to `main`.
 2. CI is green on `main` (lint, typecheck, Vitest, Playwright skeleton).
 3. The phase's Integration slice's e2e test (where applicable) passes.
@@ -422,6 +433,7 @@ A phase is "shipped" when:
    deployed Vercel preview / production.
 
 A slice is "shipped" when:
+
 1. Code + tests written, lint + typecheck + Vitest + relevant Playwright
    pass locally.
 2. `reviewer` subagent run, all Critical / Important items resolved.
