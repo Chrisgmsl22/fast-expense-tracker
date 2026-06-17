@@ -1,6 +1,10 @@
 import { db } from "@/lib/db";
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
 
+// Per-request, DB-backed data — never prerender at build. Without this, the
+// preview build (no DB, per ADR-0004) tries to prerender and fails connecting.
+export const dynamic = "force-dynamic";
+
 // Expenses page (1.4: capture). The chronological list + month filter land in
 // 1.5. Category/subcategory/card options come from the DB (seeded in 1.2) —
 // empty until then, which is fine; the "+ Add" modal still opens.
