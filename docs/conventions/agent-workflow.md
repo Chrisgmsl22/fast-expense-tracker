@@ -20,6 +20,7 @@ Two named subagents live in `.claude/agents/`:
 the user wants to ship it.
 
 **What it does**:
+
 1. Reads the active slice from `docs/roadmap/README.md`
 2. Reads the slice's Plan block (Scope in/out, design decisions, tasks)
 3. Implements the scope on a `feat/` branch
@@ -29,16 +30,19 @@ the user wants to ship it.
 7. Commits and reports back
 
 **Invocation example**:
+
 > "Run the implementer on slice 3.1."
 
 ### `reviewer`
 
 **When to invoke**:
+
 - After `implementer` finishes a slice, before opening the PR
 - Before merging any PR (even hand-coded ones)
 - Spot-check on suspicious changes
 
 **What it does**:
+
 1. Reads the slice's intended scope
 2. Reads the diff (`git diff main...HEAD`)
 3. Re-reads affected files in full (not just the diff)
@@ -51,6 +55,7 @@ security issues, silent failures, scope creep, and test gaps. It does NOT
 edit code — only reports.
 
 **Invocation example**:
+
 > "Run the reviewer on the current branch before I open the PR."
 
 ## When to use built-in subagents
@@ -58,14 +63,14 @@ edit code — only reports.
 In addition to the project-defined subagents, Claude Code ships several useful
 built-ins. Use these too:
 
-| Built-in | Use when |
-|---|---|
-| `Explore` | Need to map an unfamiliar area of the codebase before implementing. Read-only, fast. |
-| `Plan` | Need an architecture-level plan before implementing a multi-file change. |
-| `general-purpose` | Open-ended research that doesn't fit a more specific agent. |
+| Built-in          | Use when                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| `Explore`         | Need to map an unfamiliar area of the codebase before implementing. Read-only, fast. |
+| `Plan`            | Need an architecture-level plan before implementing a multi-file change.             |
+| `general-purpose` | Open-ended research that doesn't fit a more specific agent.                          |
 
-The two project subagents (`implementer`, `reviewer`) wrap *slice-level*
-workflow. The built-ins wrap *task-level* exploration and planning.
+The two project subagents (`implementer`, `reviewer`) wrap _slice-level_
+workflow. The built-ins wrap _task-level_ exploration and planning.
 
 ## Slice handoff format
 
@@ -87,6 +92,17 @@ When handing to the `reviewer`:
 3. **Anything to focus on** (optional — e.g., "auth code, paranoid mode")
 
 The reviewer returns a structured report (see its definition for format).
+
+### The review loop is mandatory before a PR
+
+Review is **not** a one-shot rubber stamp at the end — it's a loop that gates the PR:
+
+1. Implementation complete → run the `reviewer` (or the `/review-changes` skill), applying its **full** criteria — including silent-failure / hidden-state / state-UI-sync / user-flow / message-accuracy lenses, **and a real-browser check for any FE slice** (dev server + Playwright MCP).
+2. Fix **every Critical and Warning**.
+3. **Re-review.** Repeat 1–2 until a pass returns no Critical/Warning.
+4. Only then open the PR.
+
+Opening a PR without a clean review pass is a process violation (it shipped the 1.4 silent-save-failure into an open PR — see [`../lessons.md`](../lessons.md)).
 
 ## When NOT to use a subagent
 
@@ -133,12 +149,12 @@ Concrete worktree commands and path conventions live in [`parallel-slicing.md`](
 
 ### Decision table
 
-| Situation | Isolation | Where work lives |
-|---|---|---|
-| One slice in flight; sequential | None (default) | Canonical repo path |
+| Situation                                                | Isolation                              | Where work lives           |
+| -------------------------------------------------------- | -------------------------------------- | -------------------------- |
+| One slice in flight; sequential                          | None (default)                         | Canonical repo path        |
 | One slice in flight; previous subagent failed to persist | `isolation: "worktree"` OR main thread | Worktree path OR repo path |
-| Two slices in flight (parallel fan-out) | `isolation: "worktree"` for both | Two sibling worktree paths |
-| Trivial one-file edit | None — main thread, no subagent | Repo path |
+| Two slices in flight (parallel fan-out)                  | `isolation: "worktree"` for both       | Two sibling worktree paths |
+| Trivial one-file edit                                    | None — main thread, no subagent        | Repo path                  |
 
 ### What the subagent assumes
 
@@ -153,7 +169,7 @@ Subagents do not pick their isolation mode. They assume:
 Worker slice PRs update **only their own slice** (its status, tasks, Plan block,
 its ADR/lesson). The shared `docs/roadmap/README.md` "Currently active" pointer
 and the staging of next slices' Plan blocks are the **orchestrator's** job, done
-serially: at spawn, mark the in-flight *set* active and stage their Plan blocks;
+serially: at spawn, mark the in-flight _set_ active and stage their Plan blocks;
 after merges, reconcile the pointer to the next set. One serial writer for shared
 state = no drift or merge-conflict between concurrent slices. The goal is a
 **cold-resumable** `main` after every merge — full rules in

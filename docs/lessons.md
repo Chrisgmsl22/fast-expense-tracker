@@ -25,6 +25,18 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-06-17 — Opened a slice PR with no review pass → a silent-failure bug shipped into the PR
+
+- **Symptom:** 1.4 (capture) went implement → open PR (#18) with **no adversarial review step**. A `/review-changes` pass (run by the user) then found a **Critical**: `createExpense` had no error handling around the DB write and the form didn't catch it → DB failures would silently do nothing (no user feedback). Plus a data-integrity Warning (subcategory not validated against category). Both were invisible to the unit tests — "silent failure" / "state-UI" class issues an adversarial review or browser run surfaces.
+- **Root cause:** the review step was treated as optional and skipped. Mode 2 said "reviewer before merge" but nothing made it a hard gate, and the `reviewer` agent's criteria didn't yet match the `/review-changes` adversarial lens.
+- **Fix / decision:** made the **review loop mandatory** before any slice PR (CLAUDE.md §How to Work, `agent-workflow.md` §Review handoff): implement → review (full `/review-changes` criteria + a real-browser check for FE slices) → fix every Critical/Warning → re-review → repeat until clean → _then_ open the PR. Aligned `reviewer.md` criteria with `/review-changes`. Fixed the 1.4 bugs with tests.
+- **Lessons for next time:**
+    1. No slice PR without a clean adversarial-review pass. Tests catch what you thought of; review catches the silent-failure / hidden-state classes you didn't.
+    2. FE slices get a real-browser check (dev server + Playwright MCP), not just unit tests.
+    3. Keep the `reviewer` agent's criteria in sync with the `/review-changes` skill.
+
+---
+
 ### 2026-06-05 — Stacked PR merged into its (already-merged) base branch → migration stranded off `main`
 
 - **Symptom:** A feature was split into PR A (engine) and PR B (docs migration), with **B stacked on A's branch**. PR A (#11) was merged to `main` first; PR B (#12) was then merged — but into its base `chore/roadmap-status-derivation`, _after_ that branch had already gone to `main`. GitHub reported #12 "merged," yet its 13-file migration (ADR, phase trims, conventions) never reached `main`. Needed a recovery PR (#13) from the orphaned branch → `main`.

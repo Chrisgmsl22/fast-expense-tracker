@@ -22,28 +22,35 @@ In order of severity:
 6. **Scope creep** — Files changed that aren't in the slice's Scope (in). Bundled refactors. Unrelated improvements.
 7. **Spec mismatches** — Slice does more or less than the Plan block described.
 8. **Handoff hygiene** — Does the PR leave `main` cold-resumable: its slice marked shipped, Plan block moved into the PR description? Does it touch **only its own slice's** status + files? Editing the global "Currently active" pointer or another slice's phase-file section — especially under parallelism — is a **Critical** finding (it races/conflicts with sibling slices). The pointer is the orchestrator's to advance, not a worker PR's. See [`session-handoff.md`](../../docs/conventions/session-handoff.md).
-9. **Nits** — Style, readability, naming improvements. Optional polish.
+9. **Edge cases** — null / undefined / empty inputs, unexpected types that crash. Trace each input.
+10. **State-UI sync / hidden-state traps** — fields populated from data but conditionally hidden/disabled; validation running on (or wrongly skipping) hidden fields; loaded state that becomes invalid after the user changes an option (e.g. a select that should filter another). Flag the mismatch.
+11. **User-flow tracing** — walk the key journeys (load → change options → submit). Where does entered/loaded state go stale or invalid?
+12. **Message accuracy** — trace each user-facing message (error, success, label) to the code path that renders it; confirm it describes what actually happened, not a generic stand-in.
+13. **Nits** — Style, readability, naming improvements. Optional polish.
+
+> Items 9–12 mirror the **`/review-changes`** skill — apply that same adversarial lens, not just the convention checklist. (The 1.4 silent-save-failure + subcategory/category mismatch were both caught by this lens, not by tests — see `docs/lessons.md`.)
 
 ## Process
 
 1. **Identify the slice scope:**
-   - Read `docs/roadmap/README.md` → find the slice
-   - Open the phase file → read the Plan block (may already be deleted if implementer ran lifecycle cleanup — in that case, get the PR description from the last commit message body or the GitHub PR body)
+    - Read `docs/roadmap/README.md` → find the slice
+    - Open the phase file → read the Plan block (may already be deleted if implementer ran lifecycle cleanup — in that case, get the PR description from the last commit message body or the GitHub PR body)
 2. **Get the diff:**
-   - `git diff main...HEAD --stat` (file list)
-   - `git diff main...HEAD` (full diff)
+    - `git diff main...HEAD --stat` (file list)
+    - `git diff main...HEAD` (full diff)
 3. **Read affected files in full.** Diffs lie. A change can look fine in isolation and be broken in context.
 4. **Cross-reference against:**
-   - `docs/conventions/coding-conventions.md` (especially Security and Error handling sections)
-   - `docs/conventions/parallel-slicing.md` (slice-type discipline — see "Slice-type-aware scrutiny" below)
-   - `docs/specs/0001-initial-design.md` — confirm the slice's scope matches §7
-   - The slice's intended Scope (in) and Scope (out)
-   - Any ADRs the slice references
+    - `docs/conventions/coding-conventions.md` (especially Security and Error handling sections)
+    - `docs/conventions/parallel-slicing.md` (slice-type discipline — see "Slice-type-aware scrutiny" below)
+    - `docs/specs/0001-initial-design.md` — confirm the slice's scope matches §7
+    - The slice's intended Scope (in) and Scope (out)
+    - Any ADRs the slice references
 5. **Run the verification commands** the implementer claimed succeeded:
-   - `pnpm lint`
-   - `pnpm typecheck`
-   - `pnpm test`
-   - If any fail that the implementer said passed → that's a Critical finding (false claim)
+    - `pnpm lint`
+    - `pnpm typecheck`
+    - `pnpm test`
+    - **UI/FE slices:** also exercise the flow in a real browser (dev server + Playwright MCP) — load the page, open/submit the form, confirm states render and errors surface. Unit tests alone do not verify FE.
+    - If any fail that the implementer said passed → that's a Critical finding (false claim)
 6. **Scan for lesson candidates** (see triggers under "Lesson candidates" in the report format below). Use `git log main..HEAD --oneline` and the diff to detect rework / repeated verification failures / setup churn.
 7. **Produce the report** in the format below.
 
@@ -52,20 +59,26 @@ In order of severity:
 Read the slice's Type label (Foundation / Parallel / Integration) before reviewing. Apply heightened scrutiny based on type:
 
 ### Foundation slices — extra scrutiny
+
 These set patterns the rest of the phase inherits. Mistakes here compound across fan-out slices. Pay special attention to:
+
 - **Public type signatures** of shared utils — are they future-proof? Could a fan-out slice need to add a parameter, forcing a Foundation-slice rework later?
 - **File/directory naming** — does it match `coding-conventions.md`? Wrong names are expensive to fix once 4 fan-out slices reference them.
 - **Error-class choice** — does each thrown error use the right class from `lib/errors.ts`?
 - **Test contract coverage** — does the shared util's tests cover its contract, or just the happy path?
 
 ### Parallel slices — file-boundary discipline
+
 Multiple slices run concurrently. A Parallel slice that touches files outside its declared footprint is a merge-conflict bomb. Verify:
+
 - **Only files inside the slice's declared owned-files list** were modified. If the diff touches a file owned by a sibling Parallel slice, that's a **Critical** finding.
 - **Shared util extensions** — if the slice extends a Foundation-slice util, that's likely scope creep. Critical unless the Plan block authorizes it.
 - **No edits to page-level wiring files** — page assembly is the Integration slice's job, not Parallel slices'.
 
 ### Integration slices — e2e completeness
+
 Integration ships the phase. Verify:
+
 - **Playwright smoke test exercises the full user flow** the phase was supposed to deliver — not just one component.
 - **Wiring is the only meaningful new code.** New features inside an Integration slice are scope creep.
 - **Loose ends from fan-out slices were resolved**, not silently patched. If the Integration slice fixed a fan-out bug without an explicit Plan-block note, that's an Important finding.
@@ -144,6 +157,7 @@ If none of the triggers fired: "No lesson candidates." Do not invent friction.
 ## When you're stuck
 
 If you can't find anything wrong: re-read the file with fresh eyes, looking specifically for:
+
 - What happens when input is empty / null / undefined
 - What happens when the DB call fails
 - What happens when two requests race
