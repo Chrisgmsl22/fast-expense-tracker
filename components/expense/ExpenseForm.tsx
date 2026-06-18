@@ -6,6 +6,8 @@ import {
     createExpense,
     type CreateExpenseResult,
 } from "@/app/_actions/expense/create";
+import type { FieldErrors } from "@/lib/actions/result";
+import type { ExpenseInput } from "@/lib/schemas/expense";
 
 export type CategoryOption = { id: string; name: string };
 export type SubcategoryOption = {
@@ -36,12 +38,13 @@ export function ExpenseForm({
 }: Props) {
     const [isShared, setIsShared] = useState(false);
     const [pending, startTransition] = useTransition();
-    const [errors, setErrors] = useState<Record<string, string[]>>({});
+    const [errors, setErrors] = useState<FieldErrors<ExpenseInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        const fd = new FormData(e.currentTarget);
+        const form = e.currentTarget;
+        const fd = new FormData(form);
         const input = {
             date: String(fd.get("date") ?? ""),
             amount: String(fd.get("amount") ?? ""),
@@ -55,24 +58,32 @@ export function ExpenseForm({
             paidBy: String(fd.get("paidBy") ?? "you"),
         };
         startTransition(async () => {
-            const res: CreateExpenseResult = await createExpense(input);
-            if (res.ok) {
-                setErrors({});
-                setFormError(null);
-                onSuccess?.();
-            } else {
-                setErrors(res.fieldErrors ?? {});
-                setFormError(res.error);
+            try {
+                const res: CreateExpenseResult = await createExpense(input);
+                if (res.ok) {
+                    setErrors({});
+                    setFormError(null);
+                    form.reset();
+                    setIsShared(false);
+                    onSuccess?.();
+                } else {
+                    setErrors(res.fieldErrors ?? {});
+                    setFormError(res.message);
+                }
+            } catch {
+                setFormError("Something went wrong saving the expense.");
             }
         });
     }
 
-    const fieldError = (name: string) =>
-        errors[name]?.[0] ? (
+    const fieldError = (name: keyof ExpenseInput) => {
+        const msg = errors[name]?.[0];
+        return msg ? (
             <p className="mt-1 text-sm text-red-600" role="alert">
-                {errors[name][0]}
+                {msg}
             </p>
         ) : null;
+    };
 
     return (
         <form

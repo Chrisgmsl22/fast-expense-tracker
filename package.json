@@ -20,7 +20,8 @@
         "db:generate": "prisma generate",
         "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
         "db:migrate:deploy": "prisma migrate deploy",
-        "prepare": "husky"
+        "prepare": "husky",
+        "postinstall": "prisma generate"
     },
     "lint-staged": {
         "*.{ts,tsx}": [
