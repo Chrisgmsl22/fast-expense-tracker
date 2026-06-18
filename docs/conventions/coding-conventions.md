@@ -17,6 +17,7 @@ already decided; specifics get added per slice.
     - `type` for unions, intersections, derived types (`type ExpenseResponse = ...`).
 - **Derive types from Zod schemas**: `type CreateExpenseInput = z.infer<typeof createExpenseSchema>`. Don't restate fields.
 - **No implicit `undefined`**: handle the missing-property case explicitly. `tsconfig` enforces this via `noUncheckedIndexedAccess`.
+- **No loose `as` casts to paper over a type.** Fix the type at its source instead — e.g. augment third-party types (`types/next-auth.d.ts` adds `Session.user.id`) rather than casting `session.user as { id?: string }`. A cast that asserts a shape the compiler can't see is a code smell a reviewer flags.
 
 ## Next.js App Router
 
@@ -51,7 +52,11 @@ already decided; specifics get added per slice.
     - `ConflictError` (409)
     - `AppError` (abstract base, don't throw directly)
 - **Never throw bare `Error`** from service code. Pick a class.
-- **Server actions return discriminated unions** for expected errors: `{ ok: true, data } | { ok: false, error }`. Reserve thrown errors for unexpected failures.
+- **Server actions return the shared `ActionResult`** from [`lib/actions/result.ts`](../../lib/actions/result.ts) — never a bespoke shape. It's `{ ok: true, data } | { ok: false, code, message, fieldErrors? }`:
+    - **`code`** is a per-action string-literal union (e.g. `"validation" | "unauthenticated" | "db_error"`). Callers branch on `code`, **never** on `message` strings.
+    - **`message`** is the human-facing text.
+    - **`fieldErrors`** is `FieldErrors<TInput>` — keyed to the action's input type (`Partial<Record<keyof TInput, string[]>>`), not `Record<string, string[]>`, so a wrong field name is a compile error.
+    - Wrap **every** DB touch in the action in one `try/catch` → return `{ ok:false, code:"db_error", … }`; a thrown action = silent failure in the client. Reserve thrown errors for truly unexpected failures.
 - **Components don't catch errors directly.** Use `error.tsx` boundaries.
 
 ## Auth

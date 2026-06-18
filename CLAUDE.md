@@ -207,7 +207,7 @@ Same as MoneyFlow:
 
 1. **Starting work**: read the roadmap; identify the active slice; read its Plan block.
 2. **Implementing**: invoke the `implementer` subagent OR implement directly in main thread. Follow conventions.
-3. **Reviewing**: invoke the `reviewer` subagent for adversarial review before opening PR.
+3. **Reviewing — MANDATORY loop, not optional**: when implementation is complete, run an adversarial review (`reviewer` subagent, or the `/review-changes` skill) using its full criteria — including the silent-failure / hidden-state / state-UI-sync / user-flow / message-accuracy lenses, **and a real-browser check for any FE slice** (dev server + Playwright MCP). Fix **every Critical and Warning**, then **re-review**. Repeat until a pass returns no Critical/Warning. **Do not open the PR until the review is clean.** Skipping this is how the 1.4 silent-save-failure shipped into an open PR (see `docs/lessons.md`).
 4. **Pre-PR**: mark tasks [x], copy Plan → PR description, delete Plan block — all in one commit.
 5. **Open PR**: plain `git` + paste the URL into browser. No `gh` CLI in this repo.
 6. **After merge**: update `docs/roadmap/README.md` if phase/slice status changed.

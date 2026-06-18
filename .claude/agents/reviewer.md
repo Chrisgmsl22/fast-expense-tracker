@@ -32,7 +32,13 @@ In order of severity:
 6. **Scope creep** — Files changed that aren't in the slice's Scope (in). Bundled refactors. Unrelated improvements.
 7. **Spec mismatches** — Slice does more or less than the Plan block described.
 8. **Handoff hygiene** — Does the PR leave `main` cold-resumable: its slice marked shipped, Plan block moved into the PR description? Does it touch **only its own slice's** status + files? Editing the global "Currently active" pointer or another slice's phase-file section — especially under parallelism — is a **Critical** finding (it races/conflicts with sibling slices). The pointer is the orchestrator's to advance, not a worker PR's. See [`session-handoff.md`](../../docs/conventions/session-handoff.md).
-9. **Nits** — Style, readability, naming improvements. Optional polish.
+9. **Edge cases** — null / undefined / empty inputs, unexpected types that crash. Trace each input.
+10. **State-UI sync / hidden-state traps** — fields populated from data but conditionally hidden/disabled; validation running on (or wrongly skipping) hidden fields; loaded state that becomes invalid after the user changes an option (e.g. a select that should filter another). Flag the mismatch.
+11. **User-flow tracing** — walk the key journeys (load → change options → submit). Where does entered/loaded state go stale or invalid?
+12. **Message accuracy** — trace each user-facing message (error, success, label) to the code path that renders it; confirm it describes what actually happened, not a generic stand-in.
+13. **Nits** — Style, readability, naming improvements. Optional polish.
+
+> Items 9–12 mirror the **`/review-changes`** skill — apply that same adversarial lens, not just the convention checklist. (The 1.4 silent-save-failure + subcategory/category mismatch were both caught by this lens, not by tests — see `docs/lessons.md`.)
 
 ## Process
 
@@ -53,6 +59,7 @@ In order of severity:
     - `pnpm lint`
     - `pnpm typecheck`
     - `pnpm test`
+    - **UI/FE slices:** also exercise the flow in a real browser (dev server + Playwright MCP) — load the page, open/submit the form, confirm states render and errors surface. Unit tests alone do not verify FE.
     - If any fail that the implementer said passed → that's a Critical finding (false claim)
 6. **Scan for lesson candidates** (see triggers under "Lesson candidates" in the report format below). Use `git log main..HEAD --oneline` and the diff to detect rework / repeated verification failures / setup churn.
 7. **Produce the report** in the format below.

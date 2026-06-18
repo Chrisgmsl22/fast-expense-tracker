@@ -88,13 +88,13 @@ the list page opened by a "+ Add" button).
 
 ##### Tasks
 
-- [ ] `ExpenseForm` component with visible fields: date, amount, category, subcategory, card, description, notes, isShared, yourPercentage, **`paidBy`** (you/gf — per [spec 0003](../specs/0003-shared-expense-settlement.md); depends on 1.8)
-- [ ] Hidden / defaulted: `isRecurring=false`, `originalAmount=null`, `originalCurrency=null` (no `settlementStatus` — dropped in 1.8 per 0003)
-- [ ] Zod schema in `lib/schemas/expense.ts`
-- [ ] `createExpense` server action in `app/_actions/expense/create.ts`
-- [ ] Compute `actualExpenditure = isShared ? amount * yourPercentage : amount` server-side
-- [ ] "+ Add" button on `/expenses` page opens modal
-- [ ] Tests: schema validation, server-action happy path + error paths, component render
+- [x] `ExpenseForm` component with visible fields: date, amount, category, subcategory, card, description, notes, isShared, yourPercentage, **`paidBy`** (you/gf — per [spec 0003](../specs/0003-shared-expense-settlement.md); depends on 1.8)
+- [x] Hidden / defaulted: `isRecurring=false`, `originalAmount=null`, `originalCurrency=null` (no `settlementStatus` — dropped in 1.8 per 0003)
+- [x] Zod schema in `lib/schemas/expense.ts`
+- [x] `createExpense` server action in `app/_actions/expense/create.ts`
+- [x] Compute `actualExpenditure = isShared ? amount * yourPercentage : amount` server-side
+- [x] "+ Add" button on `/expenses` page opens modal
+- [x] Tests: schema validation, server-action happy path + error paths, component render
 
 ---
 
