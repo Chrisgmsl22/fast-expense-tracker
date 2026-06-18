@@ -55,12 +55,12 @@ admin user (bcrypt-hashed password via env var).
 
 ##### Tasks
 
-- [ ] Port 13 categories + subcategories from [`domain-reference.md §1`](../reference/domain-reference.md)
-- [ ] Port 5 cards from [`domain-reference.md §4`](../reference/domain-reference.md) (Amex Platinum, Amex Gold, NU, BBVA, Cash)
-- [ ] Create admin user with bcrypt-hashed password (set via `ADMIN_PASSWORD` env var; no fallback per ADR-0003)
-- [ ] Make seed idempotent (re-runnable without dupes — use `upsert`)
-- [ ] Document in `.env.example`: `ADMIN_EMAIL`, `ADMIN_PASSWORD`
-- [ ] Tests: seed runs cleanly; second run is a no-op
+- [x] Port 13 categories + subcategories from [`domain-reference.md §1`](../reference/domain-reference.md)
+- [x] Port 5 cards from [`domain-reference.md §4`](../reference/domain-reference.md) (Amex Platinum, Amex Gold, NU, BBVA, Cash)
+- [x] Create admin user with bcrypt-hashed password (set via `ADMIN_PASSWORD` env var; no fallback per ADR-0003)
+- [x] Make seed idempotent (re-runnable without dupes — `upsert` for category/user; find-then-create for subcategory/card, which have no natural unique key)
+- [x] Document in `.env.example`: `ADMIN_EMAIL`, `ADMIN_PASSWORD`
+- [x] Tests: seed runs cleanly; second run is a no-op
 
 ---
 
