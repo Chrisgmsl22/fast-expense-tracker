@@ -38,6 +38,7 @@ A Postgres instance for local development and (later) production.
 - [ ] Verify after slice 0.1 lands: `pnpm prisma migrate dev` connects successfully
 
 Notes:
+
 - The pooled URL goes through Neon's PgBouncer; the direct URL bypasses it (required for migrations).
 - See Prisma's Neon guide: https://www.prisma.io/docs/orm/overview/databases/neon
 
@@ -53,8 +54,8 @@ A Vercel project linked to the GitHub repo for preview + production deploys.
 - [ ] Root directory: `./` (default)
 - [ ] **Do NOT trigger the first deploy yet** — env vars must be set first
 - [ ] Project Settings → Environment Variables, add:
-  - `DATABASE_URL` = your Neon pooled URL — Production + Preview scopes
-  - `DIRECT_URL` = your Neon direct URL — Production + Preview scopes
+    - `DATABASE_URL` = your Neon pooled URL — Production + Preview scopes
+    - `DIRECT_URL` = your Neon direct URL — Production + Preview scopes
 - [ ] Now trigger the first deploy (push a branch, open PR, or trigger from dashboard)
 - [ ] Verify the preview URL loads the placeholder page from slice 0.1
 
@@ -84,12 +85,33 @@ The seed script creates the single admin user (you).
 
 - [ ] Pick a strong password and store it in your password manager
 - [ ] Add to `.env.local`:
-  ```
-  ADMIN_EMAIL="your@email.com"
-  ADMIN_PASSWORD="<strong-password>"
-  ```
+    ```
+    ADMIN_EMAIL="your@email.com"
+    ADMIN_PASSWORD="<strong-password>"
+    ```
 - [ ] Add the same to Vercel env vars (Production scope only — Preview can use a throwaway test value if you want)
 - [ ] Never commit either value
+
+### Seeding production (manual one-shot)
+
+`prisma migrate deploy` (the prod build step) applies migrations but **does not
+run the seed** — only `migrate dev`/`reset` auto-seed. So production tables are
+empty until you seed them once, by hand, from your machine:
+
+```bash
+# after the first prod deploy has run migrate deploy
+vercel env pull .env.production.local --environment=production  # gets DATABASE_URL + ADMIN_* for prod
+pnpm db:seed:prod                                               # runs the seed against the prod DB
+rm .env.production.local                                        # don't leave prod creds on disk
+```
+
+- The seed is **idempotent**, so re-run `pnpm db:seed:prod` whenever the
+  category/card list in `docs/reference/domain-reference.md` changes — existing
+  rows are left untouched, only new ones are added.
+- `.env.production.local` is gitignored (`.env.*.local`); it holds **real prod
+  credentials** — pull it only when seeding and delete it after.
+- This writes directly to the production database. Double-check the pulled
+  `DATABASE_URL` points at the Neon `production` branch before running.
 
 ---
 
@@ -104,7 +126,7 @@ Auth.js signs session tokens with this secret.
 
 ---
 
-## 7. Before slice 7.1 — Resend account *(deferred)*
+## 7. Before slice 7.1 — Resend account _(deferred)_
 
 Only needed when Phase 7 (Email Summary) is in flight. Many months out.
 
