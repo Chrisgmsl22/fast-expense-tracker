@@ -66,18 +66,19 @@ admin user (bcrypt-hashed password via env var).
 
 #### 1.3: Login UI + session middleware `[PR]`
 
-Builds the login flow. Resolves the **bcrypt vs argon2** and
-**rate-limiting** open questions (with ADRs).
+Builds the login flow. Resolved the **bcrypt vs argon2** and
+**rate-limiting** open questions in [ADR-0009](../decisions/0009-login-credential-security.md).
 
 ##### Tasks
 
-- [ ] Decide bcrypt vs argon2 (ADR)
-- [ ] Decide rate-limiting strategy: Vercel KV vs Upstash vs deferred (ADR)
-- [ ] Build login form (email + password) at `/login`
-- [ ] Configure Auth.js Credentials provider
-- [ ] `middleware.ts`: whitelist `/login` and `/api/auth/*`; block everything else
-- [ ] Logout action
-- [ ] Tests: login success path, wrong password, missing fields, rate-limit (if implemented)
+- [x] ADR-0009: bcryptjs (matches seed) + rate-limiting deferred
+- [x] `loginSchema` + `LoginInput` in `lib/schemas/auth.ts`
+- [x] `user.service.ts`: `getUserByEmail` + `verifyCredentials`
+- [x] `auth.ts`: Credentials provider wired to `verifyCredentials`
+- [x] `auth.config.ts`: `authorized` whitelist + `jwt`/`session` callbacks (`token.sub` carries the user id — no `JWT` augmentation needed)
+- [x] Login form at `/login` (email + password) + `loginAction`
+- [x] Logout action + button in the dashboard layout
+- [x] Tests: schema, `verifyCredentials` (success / wrong password / unknown), `loginAction` (validation / invalid / non-credentials error / redirect)
 
 ---
 
