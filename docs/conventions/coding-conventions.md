@@ -168,6 +168,34 @@ fast-expense-tracker/
 └── .claude/agents/               # Subagent definitions
 ```
 
+## Comments
+
+Comments are a maintenance cost — they rot, they drift from the code, they add
+noise. Write one only when it earns its place. The code itself, through clear
+names and simple structure, is the primary documentation.
+
+- **Default to no comment.** If a comment only restates what the code plainly
+  does, delete it. `// Login page` above `LoginPage` is noise.
+- **Comment the _why_, not the _what_.** A comment earns its place when it
+  explains non-obvious logic, a subtle constraint, or a decision the code can't
+  express itself — e.g. "the disabled button has `pointer-events: none`, so the
+  wrapper carries the tooltip." If the _what_ is hard to follow, first try to
+  make the code clearer; reach for a comment only when it genuinely can't be.
+- **No slice tags, step numbers, or banners.** Never `// (slice 1.3)`,
+  `// Step 1:`, or `// === Section ===`. Slice provenance lives in git history
+  and PRs, not the source. (Linking an ADR for a non-obvious decision is fine —
+  that's a _why_.)
+- **Incomplete work uses a marker, not prose** — and the marker is temporary:
+    - `TODO:` — work still to do, scoped where possible (`// TODO(1.6): wire edit action`).
+    - `FIXME:` — a known defect to fix.
+    - When the slice that completes the work lands, the marker **must be resolved
+      or removed**. A finished feature must never ship with a `TODO`/`FIXME` that
+      points at itself — a stale marker is a review finding.
+
+Both roles apply this: the `implementer` writes to it; the `reviewer` treats
+comment quality as an explicit lens and challenges every comment in a diff —
+needed, or noise?
+
 ## Formatting
 
 - **Prettier** (`.prettierrc.json` at root): defaults, **4-space indent**.
