@@ -8,10 +8,9 @@ import type { FieldErrors } from "@/lib/actions/result";
 import type { LoginInput } from "@/lib/schemas/auth";
 
 /**
- * Credentials login form (slice 1.3). Uncontrolled inputs read via FormData on
- * submit; validation lives server-side in `loginAction`. A successful login
- * redirects server-side (the action never returns), so a returned result is
- * always a failure to surface.
+ * Uncontrolled inputs read via FormData on submit; validation lives server-side
+ * in `loginAction`. A successful login redirects server-side (the action never
+ * returns), so a returned result is always a failure to surface.
  */
 export function LoginForm() {
     const [pending, startTransition] = useTransition();

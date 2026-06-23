@@ -12,7 +12,7 @@ export type LoginCode = "validation" | "invalid_credentials" | "error";
 export type LoginResult = ActionResult<void, LoginInput, LoginCode>;
 
 /**
- * Authenticate with email + password (slice 1.3).
+ * Authenticate with email + password.
  *
  * On success `signIn` throws a redirect to `/expenses` — Next propagates it to
  * the browser, so the success branch below is effectively unreachable and only

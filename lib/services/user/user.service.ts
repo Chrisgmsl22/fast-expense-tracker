@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
 /**
- * User data layer + credential verification (slice 1.3).
+ * User data layer + credential verification.
  *
  * Per coding-conventions §Data layer, all DB access lives in a service. The
  * credential check (bcrypt.compare) lives here too so the security-critical

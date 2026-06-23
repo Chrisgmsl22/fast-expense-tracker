@@ -3,9 +3,8 @@ import type { ReactNode } from "react";
 import { auth } from "@/auth";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 
-// Shared chrome for the authenticated app (slice 1.3). The proxy route gate
-// guarantees a session here; the email is shown as a "who am I" cue next to the
-// logout control. `auth()` reads the session in this server component.
+// The proxy route gate guarantees a session here; the email is a "who am I"
+// cue next to the logout control.
 export default async function DashboardLayout({
     children,
 }: {

@@ -1,8 +1,8 @@
 import { LoginForm } from "@/components/auth/LoginForm";
 import { Button } from "@/components/ui/button";
 
-// Login page (slice 1.3). The route gate in auth.config.ts bounces an
-// already-signed-in visitor to /expenses, so this only renders when logged out.
+// The route gate in auth.config.ts bounces an already-signed-in visitor to
+// /expenses, so this only renders when logged out.
 export default function LoginPage() {
     return (
         <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">

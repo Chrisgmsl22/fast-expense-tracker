@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Validation for the credentials login form (slice 1.3).
+ * Validation for the credentials login form.
  *
  * Email is trimmed only — NOT lowercased. The seed stores `ADMIN_EMAIL`
  * verbatim (`prisma/seed.ts`), and `verifyCredentials` does an exact

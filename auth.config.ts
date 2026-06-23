@@ -19,7 +19,7 @@ export const authConfig = {
     pages: {
         signIn: LOGIN_PATH,
     },
-    providers: [], // Credentials provider added in auth.ts (slice 1.3)
+    providers: [], // Credentials provider added in auth.ts
     callbacks: {
         // Route gate, evaluated by the proxy on every matched request.
         // `/api/auth/*` never reaches here — it's excluded by the proxy matcher.
