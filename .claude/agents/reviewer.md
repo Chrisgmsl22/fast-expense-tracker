@@ -40,7 +40,7 @@ In order of severity:
 
 > Items 9–12 mirror the **`/review-changes`** skill — apply that same adversarial lens, not just the convention checklist. (The 1.4 silent-save-failure + subcategory/category mismatch were both caught by this lens, not by tests — see `docs/lessons.md`.)
 
-> **Comment quality is a first-class lens** (`coding-conventions.md` §Comments). Challenge **every** comment in the diff: slice tags (`// (slice 1.3)`), step narration, banners, and comments that merely restate the code are noise — flag them. A comment earns its place only by explaining a non-obvious _why_ (a constraint, a gotcha, an ADR link). Also flag any `TODO`/`FIXME` left pointing at work the slice under review actually completes — a finished feature must not ship a marker aimed at itself.
+> **Comment quality is a first-class lens** (`coding-conventions.md` §Comments). Challenge **every** comment in the diff: slice tags (`// (slice 1.3)`), step narration, banners, and comments that merely restate the code are noise — flag them. A comment earns its place only by explaining a non-obvious _why_ (a constraint, a gotcha, an ADR link). **Apply this strictly to docblocks on small, self-evident blocks too** — a one-liner or thin wrapper (e.g. an action that's just `await signOut({ redirectTo: "/login" })`) needs no docblock even if the sentence is phrased as "why"; if a competent reader infers it from the names + body, flag it for deletion. Also flag any `TODO`/`FIXME` left pointing at work the slice under review actually completes — a finished feature must not ship a marker aimed at itself.
 
 ## Process
 

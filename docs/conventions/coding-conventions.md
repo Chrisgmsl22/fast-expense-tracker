@@ -181,6 +181,13 @@ names and simple structure, is the primary documentation.
   express itself — e.g. "the disabled button has `pointer-events: none`, so the
   wrapper carries the tooltip." If the _what_ is hard to follow, first try to
   make the code clearer; reach for a comment only when it genuinely can't be.
+- **A self-evident block needs no comment — not even a _why_.** If a competent
+  reader gets it from the names plus a few lines of body, skip the comment.
+  Thin wrappers and one-liners don't earn a docblock just because a sentence
+  _can_ be written — e.g. a logout action that is only
+  `await signOut({ redirectTo: "/login" })` needs nothing. The test: does the
+  comment tell the reader something the code doesn't? If no, delete it. A
+  comment phrased as "why" that a reader would already infer is still noise.
 - **No slice tags, step numbers, or banners.** Never `// (slice 1.3)`,
   `// Step 1:`, or `// === Section ===`. Slice provenance lives in git history
   and PRs, not the source. (Linking an ADR for a non-obvious decision is fine —
