@@ -27,7 +27,7 @@ In order of severity:
 1. **Correctness bugs** — Code that doesn't do what the spec says, or produces wrong results in edge cases.
 2. **Security issues** — Secret leaks, auth bypass, missing input validation, SQL injection (Prisma usually prevents this, but raw queries can break it), XSS, open redirects, missing CSRF.
 3. **Silent failures** — Swallowed errors, generic `throw new Error()` from services, missing error classes, fallback behavior that hides real failures.
-4. **Convention violations** — Mismatch with `docs/conventions/coding-conventions.md`. Wrong file location, naming, error class, validation pattern, missing tests.
+4. **Convention violations** — Mismatch with `docs/conventions/coding-conventions.md`. Wrong file location, naming, error class, validation pattern, missing tests, **comment quality** (§Comments — see the dedicated note below).
 5. **Test gaps** — Happy path covered but error paths missing. Edge cases not tested. Boundary conditions ignored.
 6. **Scope creep** — Files changed that aren't in the slice's Scope (in). Bundled refactors. Unrelated improvements.
 7. **Spec mismatches** — Slice does more or less than the Plan block described.
@@ -39,6 +39,8 @@ In order of severity:
 13. **Nits** — Style, readability, naming improvements. Optional polish.
 
 > Items 9–12 mirror the **`/review-changes`** skill — apply that same adversarial lens, not just the convention checklist. (The 1.4 silent-save-failure + subcategory/category mismatch were both caught by this lens, not by tests — see `docs/lessons.md`.)
+
+> **Comment quality is a first-class lens** (`coding-conventions.md` §Comments). Challenge **every** comment in the diff: slice tags (`// (slice 1.3)`), step narration, banners, and comments that merely restate the code are noise — flag them. A comment earns its place only by explaining a non-obvious _why_ (a constraint, a gotcha, an ADR link). **Apply this strictly to docblocks on small, self-evident blocks too** — a one-liner or thin wrapper (e.g. an action that's just `await signOut({ redirectTo: "/login" })`) needs no docblock even if the sentence is phrased as "why"; if a competent reader infers it from the names + body, flag it for deletion. Also flag any `TODO`/`FIXME` left pointing at work the slice under review actually completes — a finished feature must not ship a marker aimed at itself.
 
 ## Process
 

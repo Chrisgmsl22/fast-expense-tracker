@@ -1,5 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+
+// The login form pulls in the login server action, which imports `@/auth` →
+// `next-auth` → `next/server` (unresolvable under Vitest). Stub the action so
+// the shell render stays a pure UI check.
+vi.mock("@/app/_actions/auth/login", () => ({ loginAction: vi.fn() }));
+
 import LoginPage from "@/app/(auth)/login/page";
 import SettingsPage from "@/app/(dashboard)/settings/page";
 

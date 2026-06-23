@@ -3,26 +3,57 @@ import type { NextAuthConfig } from "next-auth";
 /**
  * Shared Auth.js base config.
  *
- * Holds provider-independent settings (`pages`, the `authorized` route-gate
- * callback) so `auth.ts` and any consumer compose from one source. Kept
- * separate from `auth.ts` for organization; under Next.js 16 the proxy runs on
- * the Node runtime (ADR-0007), so this no longer needs to be Edge-safe.
+ * Holds provider-independent settings (`pages`, the route-gate + token/session
+ * callbacks) so `auth.ts` and the `proxy.ts` route gate compose from one
+ * source. Under Next.js 16 the proxy runs on the Node runtime (ADR-0007), so
+ * this no longer needs to be Edge-safe.
  *
- * Scaffold only (slice 1.1): no providers and no real authorization logic
- * yet. The Credentials provider, login flow, and the route whitelist/block
- * land in slice 1.3.
+ * All callbacks live here in a single object: `auth.ts` spreads this config and
+ * adds the Credentials provider, so a second `callbacks` object there would
+ * shallow-override and silently drop `authorized`.
  */
+const LOGIN_PATH = "/login";
+const DEFAULT_AUTHED_PATH = "/expenses";
+
 export const authConfig = {
     pages: {
-        signIn: "/login",
+        signIn: LOGIN_PATH,
     },
-    providers: [], // Credentials provider added in slice 1.3
+    providers: [], // Credentials provider added in auth.ts
     callbacks: {
-        // No enforcement yet — returning true leaves every route open so the
-        // app isn't locked before the login flow exists. Slice 1.3 replaces
-        // this with the real whitelist (/login, /api/auth/*) + block.
-        authorized() {
-            return true;
+        // Route gate, evaluated by the proxy on every matched request.
+        // `/api/auth/*` never reaches here — it's excluded by the proxy matcher.
+        authorized({ auth, request }) {
+            const isLoggedIn = Boolean(auth?.user);
+            const isOnLogin = request.nextUrl.pathname === LOGIN_PATH;
+
+            if (isOnLogin) {
+                // Don't strand a signed-in user on the login screen.
+                return isLoggedIn
+                    ? Response.redirect(
+                          new URL(DEFAULT_AUTHED_PATH, request.nextUrl),
+                      )
+                    : true;
+            }
+
+            // Everything else requires a session; `false` redirects to signIn.
+            return isLoggedIn;
+        },
+        // JWT strategy (no DB sessions with Credentials): carry the DB user id
+        // on the standard `sub` claim so `session.user.id` is populated for
+        // server actions. `sub` is typed `string | undefined` by default, so no
+        // module augmentation is needed.
+        jwt({ token, user }) {
+            if (user?.id) {
+                token.sub = user.id;
+            }
+            return token;
+        },
+        session({ session, token }) {
+            if (token.sub) {
+                session.user.id = token.sub;
+            }
+            return session;
         },
     },
 } satisfies NextAuthConfig;
