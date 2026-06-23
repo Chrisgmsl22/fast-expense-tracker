@@ -1,15 +1,34 @@
+import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
+import { getExpensesForMonth } from "@/lib/services/expense/expense.service";
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
+import { ExpenseList } from "@/components/expense/ExpenseList";
+import { MonthPicker } from "@/components/expense/MonthPicker";
 
-// Per-request, DB-backed data — never prerender at build. Without this, the
-// preview build (no DB, per ADR-0004) tries to prerender and fails connecting.
+// Per-request, DB-backed data — never prerender at build (no DB in preview builds, ADR-0004).
 export const dynamic = "force-dynamic";
 
-// Expenses page (1.4: capture). The chronological list + month filter land in
-// 1.5. Category/subcategory/card options come from the DB (seeded in 1.2) —
-// empty until then, which is fine; the "+ Add" modal still opens.
-export default async function ExpensesPage() {
-    const [categories, subcategories, cards] = await Promise.all([
+export default async function ExpensesPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ month?: string }>;
+}) {
+    const { month: monthParam } = await searchParams;
+    const month =
+        monthParam && isValidMonth(monthParam)
+            ? monthParam
+            : getCurrentMonthCdmx();
+
+    const session = await auth();
+    const userId = session?.user?.id;
+    // The proxy route gate guarantees a session; this satisfies the nullable
+    // type and fails safe if it's ever reached without one.
+    if (!userId) {
+        return null;
+    }
+
+    const [categories, subcategories, cards, expenses] = await Promise.all([
         db.category.findMany({
             orderBy: { name: "asc" },
             select: { id: true, name: true },
@@ -21,6 +40,7 @@ export default async function ExpensesPage() {
             orderBy: { name: "asc" },
             select: { id: true, name: true },
         }),
+        getExpensesForMonth(userId, month),
     ]);
 
     return (
@@ -32,6 +52,12 @@ export default async function ExpensesPage() {
                     subcategories={subcategories}
                     cards={cards}
                 />
+            </div>
+            <div className="mt-6">
+                <MonthPicker month={month} />
+            </div>
+            <div className="mt-4">
+                <ExpenseList expenses={expenses} />
             </div>
         </main>
     );

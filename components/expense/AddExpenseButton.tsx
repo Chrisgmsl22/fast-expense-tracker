@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
     ExpenseForm,
@@ -15,12 +16,9 @@ type Props = {
     cards: CardOption[];
 };
 
-/**
- * "+ Add" button on the expenses page (slice 1.4). Opens the capture form in a
- * native <dialog> modal; closes on a successful create.
- */
 export function AddExpenseButton(props: Props) {
     const dialogRef = useRef<HTMLDialogElement>(null);
+    const router = useRouter();
 
     return (
         <>
@@ -45,7 +43,11 @@ export function AddExpenseButton(props: Props) {
                 </div>
                 <ExpenseForm
                     {...props}
-                    onSuccess={() => dialogRef.current?.close()}
+                    onSuccess={() => {
+                        dialogRef.current?.close();
+                        // Re-fetch the server-rendered list so the new expense shows.
+                        router.refresh();
+                    }}
                 />
             </dialog>
         </>
