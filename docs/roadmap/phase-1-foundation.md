@@ -105,12 +105,14 @@ Renders the expense list with month filtering.
 
 ##### Tasks
 
-- [ ] `getExpensesForMonth(userId, monthYear)` service in `lib/services/expense/`
-- [ ] `/expenses` page: server component, fetches data, renders `ExpenseList`
-- [ ] `ExpenseList` component: reverse-chronological table
-- [ ] Month picker component (defaults to current month per CDMX local time)
-- [ ] URL param sync (`?month=2026-05`)
-- [ ] Tests: service unit, page integration
+- [x] `lib/dates.ts` — `getMonthRangeUtc`, `getCurrentMonthCdmx`, `isValidMonth`
+- [x] `lib/format.ts` — `formatMxn`, `formatExpenseDate`
+- [x] `lib/services/expense/expense.service.ts` — `getExpensesForMonth`
+- [x] `ExpenseList` component (table + empty state)
+- [x] `MonthPicker` component (URL-synced)
+- [x] Wire `/expenses` page (searchParams.month, default current CDMX) + `loading.tsx` + `error.tsx`
+- [x] `AddExpenseButton`: `router.refresh()` on success
+- [x] Tests: dates, service, ExpenseList
 
 ---
 
