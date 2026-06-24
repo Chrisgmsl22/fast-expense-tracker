@@ -33,3 +33,12 @@ export function getCurrentMonthCdmx(now: Date = new Date()): string {
     const month = String(cdmx.getUTCMonth() + 1).padStart(2, "0");
     return `${year}-${month}`;
 }
+
+/** `YYYY-MM` shifted by `delta` months, with year rollover. */
+export function shiftMonth(month: string, delta: number): string {
+    const year = Number(month.slice(0, 4));
+    const monthIndex = Number(month.slice(5, 7)) - 1 + delta;
+    const shifted = new Date(Date.UTC(year, monthIndex, 1));
+    const shiftedMonth = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+    return `${shifted.getUTCFullYear()}-${shiftedMonth}`;
+}

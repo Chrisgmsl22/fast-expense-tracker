@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 
-// Error message is intentionally generic — don't surface DB internals to the user.
 export default function ExpensesError({ reset }: { reset: () => void }) {
     return (
         <main className="p-8">

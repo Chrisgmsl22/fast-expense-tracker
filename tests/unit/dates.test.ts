@@ -5,6 +5,7 @@ import {
     getCurrentMonthCdmx,
     getMonthRangeUtc,
     isValidMonth,
+    shiftMonth,
 } from "@/lib/dates";
 
 describe("isValidMonth", () => {
@@ -64,5 +65,17 @@ describe("getCurrentMonthCdmx", () => {
         expect(getCurrentMonthCdmx(new Date("2027-01-01T03:00:00Z"))).toBe(
             "2026-12",
         );
+    });
+});
+
+describe("shiftMonth", () => {
+    it.each([
+        ["2026-06", -1, "2026-05"],
+        ["2026-06", 1, "2026-07"],
+        ["2026-01", -1, "2025-12"],
+        ["2026-12", 1, "2027-01"],
+        ["2026-06", -6, "2025-12"],
+    ])("%s %+d → %s", (month, delta, expected) => {
+        expect(shiftMonth(month, delta)).toBe(expected);
     });
 });
