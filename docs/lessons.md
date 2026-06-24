@@ -146,3 +146,19 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
        approach is truly required, flag it explicitly as non-standard.
     4. nvm is interactive-oriented; automation needs the version on PATH (e.g.
        via `~/.zshenv`), not behind interactive-only lazy-load functions.
+
+---
+
+### 2026-06-23 — Tailwind v4 `@theme` edits need a dev-server restart
+
+- **Symptom:** After adding tokens to `app/globals.css` (`@theme inline` + new
+  `:root` vars), the running `pnpm dev` kept serving the OLD compiled CSS — new
+  utilities (`bg-primary`, `text-positive`, `bg-bucket-*`) weren't emitted, so
+  buttons looked unstyled on the live server even though the source was correct.
+- **Root cause:** Tailwind v4 HMR does not reliably recompile the **theme layer**
+  when `@theme`/token definitions change; the dev server must be restarted to
+  pick them up.
+- **Lesson:** After editing `@theme` or token vars in `globals.css`, **restart
+  `pnpm dev`** before judging the result. Don't conclude "components are
+  unstyled" from a stale dev server — verify against a fresh build (or
+  `tailwindcss` CLI compile) first.

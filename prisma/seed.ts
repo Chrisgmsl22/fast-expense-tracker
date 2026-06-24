@@ -174,8 +174,9 @@ export const CATEGORY_SEED: readonly CategorySeed[] = [
 
 // Per-category display colors (hex). Keyed by slug; unmapped slugs fall back to
 // neutral grey. Categories store hex directly (user-editable) — unlike cards,
-// which store semantic color names. Palette aligned to the design system
-// (docs/designs-screens/README.md §Design Tokens).
+// which store semantic color names. Palette is inspired by the design system's
+// category colors (illustrative in docs/designs-screens/README.md; the per-slug
+// values here are authoritative).
 const CATEGORY_COLORS: Record<string, string> = {
     housing: "#4f46e5",
     groceries: "#65a30d",
