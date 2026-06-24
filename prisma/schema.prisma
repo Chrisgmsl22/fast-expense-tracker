@@ -43,6 +43,7 @@ model Category {
   id               String   @id @default(uuid())
   slug             String   @unique
   name             String
+  color            String   @default("#6b7280") // per-category hex; user-editable. See domain-reference.md §1
   isRelevant       Boolean  @default(true)
   isSystemCategory Boolean  @default(true) // all system in temp app
   monthlyBudget    Float? // null = no budget set

@@ -82,10 +82,19 @@ describe("Prisma schema", () => {
         );
     });
 
-    it("Should keep monthlyBudget on Category", () => {
+    it("Should keep monthlyBudget and carry a color on Category", () => {
         expect(fieldsByModel.get("Category")).toEqual(
-            expect.arrayContaining(["slug", "isRelevant", "monthlyBudget"]),
+            expect.arrayContaining([
+                "slug",
+                "isRelevant",
+                "monthlyBudget",
+                "color",
+            ]),
         );
+        expect(fieldOf("Category", "color")).toMatchObject({
+            type: "String",
+            hasDefaultValue: true,
+        });
     });
 
     it("Should lock the shared-expense field types and defaults", () => {

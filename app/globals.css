@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. Neutrals + semantic + budget-bucket colors come from the
+ * design system (docs/designs-screens/README.md §Design Tokens). Card and
+ * category colors are per-row hex stored in the DB (user-editable) and applied
+ * inline — they are NOT theme tokens. Light theme only for now; a dark theme +
+ * toggle is a tracked follow-up.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+    /* shadcn/Base UI base token set */
+    --background: #ffffff;
+    --foreground: #111827;
+    --card: #ffffff;
+    --card-foreground: #111827;
+    --popover: #ffffff;
+    --popover-foreground: #111827;
+    --primary: #111827;
+    --primary-foreground: #ffffff;
+    --secondary: #f1f2f4;
+    --secondary-foreground: #111827;
+    --muted: #f1f2f4;
+    --muted-foreground: #6b7280;
+    --accent: #f1f2f4;
+    --accent-foreground: #111827;
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --border: #e6e8eb;
+    --input: #e6e8eb;
+    --ring: #111827;
+
+    /* Semantic systems (authoritative) */
+    --positive: #16a34a;
+    --positive-tint: #f0fdf4;
+    --danger: #dc2626;
+    --danger-tint: #fef2f2;
+    --payment: #2563eb;
+    --payment-tint: #eff6ff;
+
+    /* 50/25/25 budget buckets */
+    --bucket-essentials: #475569;
+    --bucket-discretionary: #d97706;
+    --bucket-savings: #0d9488;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+    --color-positive: var(--positive);
+    --color-positive-tint: var(--positive-tint);
+    --color-danger: var(--danger);
+    --color-danger-tint: var(--danger-tint);
+    --color-payment: var(--payment);
+    --color-payment-tint: var(--payment-tint);
+    --color-bucket-essentials: var(--bucket-essentials);
+    --color-bucket-discretionary: var(--bucket-discretionary);
+    --color-bucket-savings: var(--bucket-savings);
+
+    --font-sans: var(--font-geist-sans);
+    --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), system-ui, sans-serif;
 }

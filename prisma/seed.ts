@@ -172,6 +172,27 @@ export const CATEGORY_SEED: readonly CategorySeed[] = [
     },
 ];
 
+// Per-category display colors (hex). Keyed by slug; unmapped slugs fall back to
+// neutral grey. Categories store hex directly (user-editable) — unlike cards,
+// which store semantic color names. Palette is inspired by the design system's
+// category colors (illustrative in docs/designs-screens/README.md; the per-slug
+// values here are authoritative).
+const CATEGORY_COLORS: Record<string, string> = {
+    housing: "#4f46e5",
+    groceries: "#65a30d",
+    charity: "#db2777",
+    transport: "#7c3aed",
+    insurance: "#0891b2",
+    savings: "#0d9488",
+    services: "#2563eb",
+    health: "#e11d48",
+    "combined-expenses": "#d97706",
+    personal: "#0ea5e9",
+    debt: "#b91c1c",
+    "disposable-income": "#c026d3",
+    unassigned: "#6b7280",
+};
+
 // 5 cards — semantic color names (mapped to Tailwind tokens in the UI layer),
 // never hex in the DB (domain-reference.md §4).
 export const CARD_SEED: readonly CardSeed[] = [
@@ -215,11 +236,13 @@ export async function runSeed(
             create: {
                 slug: cat.slug,
                 name: cat.name,
+                color: CATEGORY_COLORS[cat.slug] ?? "#6b7280",
                 isRelevant: cat.isRelevant,
                 isSystemCategory: true,
             },
             update: {
                 name: cat.name,
+                color: CATEGORY_COLORS[cat.slug] ?? "#6b7280",
                 isRelevant: cat.isRelevant,
                 isSystemCategory: true,
             },

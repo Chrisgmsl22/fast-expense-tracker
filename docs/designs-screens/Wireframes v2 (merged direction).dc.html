@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,sans-serif}
+</style>
+</helmet>
+
+<!-- ===================== TITLE ===================== -->
+<div style="position:absolute;left:80px;top:-10px;font:700 34px Caveat,cursive;color:#1f2937">Fast Expense Tracker — wireframes v2 (merged direction)</div>
+<div style="position:absolute;left:82px;top:34px;font:500 16px Caveat,cursive;color:#6b7280">Buckets hero + per-category charts + month feed · settlement · income · MXN</div>
+
+<!-- ===================== LEGENDS ===================== -->
+<div style="position:absolute;left:1140px;top:120px;width:280px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Color systems</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px">
+    <div style="font:600 11px system-ui;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:9px">Cards (payment method)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px 12px;margin-bottom:14px">
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:50%;background:#6b7280"></span>Platinum</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:50%;background:#c79a3b"></span>Gold</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:50%;background:#820ad1"></span>NU</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:50%;background:#0b5cab"></span>BBVA</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:50%;background:#16a34a"></span>Cash 🔒</span>
+    </div>
+    <div style="font:600 11px system-ui;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:9px">Buckets (50 / 25 / 25)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px 12px;margin-bottom:14px">
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#475569"></span>Essentials 50</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#d97706"></span>Discretionary 25</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#0d9488"></span>Savings/Inv 25</span>
+    </div>
+    <div style="font:600 11px system-ui;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:9px">Categories (own color)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px 12px">
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#4f46e5"></span>Rent</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#65a30d"></span>Groceries</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#0891b2"></span>Utilities</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#ea580c"></span>Eating out</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#db2777"></span>Fun</span>
+      <span style="font:12px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#7c3aed"></span>Transport</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 1: DASHBOARD (MERGED) ===================== -->
+<div style="position:absolute;left:80px;top:110px;font:700 26px Caveat,cursive;color:#2b2b2b">1 · Dashboard <span style="color:#6b7280">— buckets + per-category charts + live month feed</span></div>
+
+<!-- Dashboard desktop -->
+<div style="position:absolute;left:80px;top:160px;width:980px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Dashboard — desktop</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:22px;display:grid;grid-template-columns:1fr 280px;gap:20px">
+    <!-- MAIN COLUMN -->
+    <div>
+      <div style="display:flex;align-items:center;margin-bottom:18px">
+        <div style="font:700 20px system-ui;color:#111827">June 2026</div>
+        <div style="display:flex;gap:6px;margin-left:12px"><div style="width:26px;height:26px;border:1px solid #d7dadf;border-radius:7px;display:flex;align-items:center;justify-content:center;font:13px system-ui;color:#6b7280">‹</div><div style="width:26px;height:26px;border:1px solid #d7dadf;border-radius:7px;display:flex;align-items:center;justify-content:center;font:13px system-ui;color:#6b7280">›</div></div>
+        <div style="position:relative;margin-left:14px">
+          <div onClick="{{ toggleIncome }}" style="cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid #d7dadf;border-radius:8px;padding:6px 12px;background:#fafbfc"><span style="font:11px system-ui;color:#9ca3af">Total income</span><span style="font:700 14px system-ui;color:#111827">{{ totalAmt }}</span><span style="font:10px system-ui;color:#9ca3af">▾</span></div>
+          <div style="display:{{ incomeDisp }};position:absolute;top:44px;left:0;width:300px;background:#fff;border:1px solid #e6e8eb;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.16);padding:14px;z-index:30">
+            <div style="display:flex;align-items:center;margin-bottom:10px"><div style="font:600 13px system-ui;color:#111827">June income</div><div style="margin-left:auto;font:700 14px system-ui;color:#111827">{{ totalAmt }}</div></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f2f4;font:12px system-ui"><span style="color:#374151">Fixed income · job</span><span style="font-weight:700;color:#111827">$44,000</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f2f4;font:12px system-ui"><span style="color:#374151">Sold sneakers · 18 Jun</span><span style="font-weight:700;color:#16a34a">+$1,200</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;font:12px system-ui"><span style="color:#374151">Freelance · 10 Jun</span><span style="font-weight:700;color:#16a34a">+$3,000</span></div>
+            <div style="margin-top:10px;height:38px;background:#111827;border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#fff">+ Add income</div>
+          </div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center"><div style="border:1px solid #d7dadf;border-radius:999px;padding:5px 12px;font:12px system-ui;color:#374151;background:#f9fafb">My view · 68%</div><div style="background:#111827;color:#fff;border-radius:8px;padding:8px 14px;font:600 13px system-ui">+ Add</div></div>
+      </div>
+      <!-- buckets hero -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+        <div style="border:1px solid #e6e8eb;border-radius:10px;padding:14px;border-top:3px solid #475569"><div style="display:flex;justify-content:space-between;font:600 12px system-ui;color:#374151"><span>Essentials</span><span style="color:#9ca3af">50%</span></div><div style="font:700 22px system-ui;color:#111827;margin:6px 0 1px">$18,400</div><div style="font:11px system-ui;color:#6b7280;margin-bottom:9px">of $24,000 · $5,600 left</div><div style="height:7px;background:#eef0f2;border-radius:999px;overflow:hidden"><div style="width:77%;height:100%;background:#475569"></div></div></div>
+        <div style="border:1px solid #e6e8eb;border-radius:10px;padding:14px;border-top:3px solid #d97706"><div style="display:flex;justify-content:space-between;font:600 12px system-ui;color:#374151"><span>Discretionary</span><span style="color:#9ca3af">25%</span></div><div style="font:700 22px system-ui;color:#b45309;margin:6px 0 1px">$11,900</div><div style="font:11px system-ui;color:#6b7280;margin-bottom:9px">of $12,000 · $100 left</div><div style="height:7px;background:#eef0f2;border-radius:999px;overflow:hidden"><div style="width:99%;height:100%;background:#d97706"></div></div></div>
+        <div style="border:1px solid #e6e8eb;border-radius:10px;padding:14px;border-top:3px solid #0d9488"><div style="display:flex;justify-content:space-between;font:600 12px system-ui;color:#374151"><span>Savings/Inv</span><span style="color:#9ca3af">25%</span></div><div style="font:700 22px system-ui;color:#0d9488;margin:6px 0 1px">$12,000</div><div style="font:11px system-ui;color:#6b7280;margin-bottom:9px">of $12,000 · goal met</div><div style="height:7px;background:#eef0f2;border-radius:999px;overflow:hidden"><div style="width:100%;height:100%;background:#0d9488"></div></div></div>
+      </div>
+      <!-- radar overall + spend by card -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+        <div style="border:1px solid #e6e8eb;border-radius:10px;padding:14px">
+          <div style="font:600 12px system-ui;color:#374151">This month — overall</div>
+          <div style="font:11px system-ui;color:#9ca3af;margin-bottom:2px">Spending shape across categories</div>
+          <svg viewBox="0 0 240 220" width="100%" style="display:block">
+            <polygon points="120,30 205.6,92.2 172.9,192.8 67.1,192.8 34.4,92.2" fill="none" stroke="#e6e8eb"/>
+            <polygon points="120,60 177.1,101.5 155.3,168.5 84.7,168.5 62.9,101.5" fill="none" stroke="#eef0f2"/>
+            <polygon points="120,90 148.5,110.7 137.6,144.3 102.4,144.3 91.5,110.7" fill="none" stroke="#eef0f2"/>
+            <line x1="120" y1="120" x2="120" y2="30" stroke="#eef0f2"/><line x1="120" y1="120" x2="205.6" y2="92.2" stroke="#eef0f2"/><line x1="120" y1="120" x2="172.9" y2="192.8" stroke="#eef0f2"/><line x1="120" y1="120" x2="67.1" y2="192.8" stroke="#eef0f2"/><line x1="120" y1="120" x2="34.4" y2="92.2" stroke="#eef0f2"/>
+            <polygon points="120,48 201.3,93.6 151.8,163.7 98.8,149.1 60.1,100.5" fill="rgba(17,24,39,.10)" stroke="#111827" stroke-width="2"/>
+            <text x="120" y="22" text-anchor="middle" font-size="9" fill="#6b7280" font-family="system-ui">Rent</text><text x="212" y="90" font-size="9" fill="#6b7280" font-family="system-ui">Grocery</text><text x="176" y="208" font-size="9" fill="#6b7280" font-family="system-ui">Eating</text><text x="64" y="208" text-anchor="end" font-size="9" fill="#6b7280" font-family="system-ui">Transp.</text><text x="28" y="90" text-anchor="end" font-size="9" fill="#6b7280" font-family="system-ui">Fun</text>
+          </svg>
+        </div>
+        <div style="border:1px solid #e6e8eb;border-radius:10px;padding:14px;display:flex;flex-direction:column">
+          <div style="font:600 12px system-ui;color:#374151;margin-bottom:12px">Spend by card</div>
+          <div style="height:12px;border-radius:999px;overflow:hidden;display:flex;margin-bottom:14px"><div style="width:34%;background:#6b7280"></div><div style="width:14%;background:#c79a3b"></div><div style="width:22%;background:#820ad1"></div><div style="width:20%;background:#0b5cab"></div><div style="width:10%;background:#16a34a"></div></div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;align-items:center;gap:7px;font:12px system-ui;color:#6b7280"><span style="width:8px;height:8px;border-radius:50%;background:#6b7280"></span>Platinum<span style="margin-left:auto;color:#111827;font-weight:600">$14.4k</span></div>
+            <div style="display:flex;align-items:center;gap:7px;font:12px system-ui;color:#6b7280"><span style="width:8px;height:8px;border-radius:50%;background:#820ad1"></span>NU<span style="margin-left:auto;color:#111827;font-weight:600">$9.3k</span></div>
+            <div style="display:flex;align-items:center;gap:7px;font:12px system-ui;color:#6b7280"><span style="width:8px;height:8px;border-radius:50%;background:#0b5cab"></span>BBVA<span style="margin-left:auto;color:#111827;font-weight:600">$8.5k</span></div>
+            <div style="display:flex;align-items:center;gap:7px;font:12px system-ui;color:#6b7280"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a"></span>Cash<span style="margin-left:auto;color:#111827;font-weight:600">$4.2k</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- per-category cards w/ own chart + budget limit -->
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><div style="font:600 13px system-ui;color:#374151">Categories</div><div style="font:11px system-ui;color:#9ca3af">each has its own limit · tap for detail →</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div style="border:1px solid #e6e8eb;border-radius:10px;padding:13px"><div style="display:flex;align-items:center;gap:7px;margin-bottom:7px"><span style="width:9px;height:9px;border-radius:3px;background:#4f46e5"></span><span style="font:600 12px system-ui;color:#374151">Rent</span><span style="margin-left:auto;font:700 13px system-ui;color:#111827">$14,000</span></div><div style="height:6px;background:#eef0f2;border-radius:999px;overflow:hidden;margin-bottom:5px"><div style="width:100%;height:100%;background:#4f46e5"></div></div><div style="font:10px system-ui;color:#9ca3af">limit $14,000 · maxed</div></div>
+        <div style="border:1px solid #e6e8eb;border-radius:10px;padding:13px"><div style="display:flex;align-items:center;gap:7px;margin-bottom:7px"><span style="width:9px;height:9px;border-radius:3px;background:#65a30d"></span><span style="font:600 12px system-ui;color:#374151">Groceries</span><span style="margin-left:auto;font:700 13px system-ui;color:#111827">$3,200</span></div><div style="height:6px;background:#eef0f2;border-radius:999px;overflow:hidden;margin-bottom:5px"><div style="width:64%;height:100%;background:#65a30d"></div></div><div style="font:10px system-ui;color:#9ca3af">limit $5,000 · $1,800 left</div></div>
+        <div style="border:1px solid #e6e8eb;border-radius:10px;padding:13px"><div style="display:flex;align-items:center;gap:7px;margin-bottom:7px"><span style="width:9px;height:9px;border-radius:3px;background:#ea580c"></span><span style="font:600 12px system-ui;color:#374151">Eating out</span><span style="margin-left:auto;font:700 13px system-ui;color:#dc2626">$4,900</span></div><div style="height:6px;background:#eef0f2;border-radius:999px;overflow:hidden;margin-bottom:5px"><div style="width:100%;height:100%;background:#dc2626"></div></div><div style="font:10px system-ui;color:#dc2626">limit $4,000 · over by $900</div></div>
+      </div>
+    </div>
+    <!-- RIGHT RAIL: scrollable month feed -->
+    <div style="border:1px solid #e6e8eb;border-radius:10px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:13px 14px;border-bottom:1px solid #e6e8eb"><div style="font:600 13px system-ui;color:#111827">All expenses · June</div><div style="font:11px system-ui;color:#9ca3af">42 entries · scroll</div></div>
+      <div style="overflow-y:auto;max-height:430px;padding:4px 0">
+        <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid #f4f5f6;background:#eff6ff"><span style="width:3px;height:26px;border-radius:2px;background:#2563eb"></span><div style="min-width:0"><div style="font:600 12px system-ui;color:#1d4ed8">Card payment</div><div style="font:10px system-ui;color:#2563eb;display:flex;align-items:center;gap:4px">24 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#6b7280"></span>Platinum</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 12px system-ui;color:#2563eb">−$8,000</div><div style="font:9px system-ui;color:#2563eb">paid</div></div></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid #f4f5f6"><span style="width:3px;height:26px;border-radius:2px;background:#ea580c"></span><div style="min-width:0"><div style="font:600 12px system-ui;color:#111827">Shoes</div><div style="font:10px system-ui;color:#9ca3af;display:flex;align-items:center;gap:4px">24 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#16a34a"></span>Cash</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 12px system-ui;color:#111827">$1,000</div><div style="font:9px system-ui;color:#16a34a">share $680</div></div></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid #f4f5f6"><span style="width:3px;height:26px;border-radius:2px;background:#65a30d"></span><div style="min-width:0"><div style="font:600 12px system-ui;color:#111827">Soriana</div><div style="font:10px system-ui;color:#9ca3af;display:flex;align-items:center;gap:4px">22 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#0b5cab"></span>BBVA</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 12px system-ui;color:#111827">$1,820</div><div style="font:9px system-ui;color:#16a34a">share $1,237</div></div></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid #f4f5f6"><span style="width:3px;height:26px;border-radius:2px;background:#ea580c"></span><div style="min-width:0"><div style="font:600 12px system-ui;color:#111827">Contramar</div><div style="font:10px system-ui;color:#9ca3af;display:flex;align-items:center;gap:4px">21 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#820ad1"></span>NU</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 12px system-ui;color:#111827">$1,640</div><div style="font:9px system-ui;color:#16a34a">share $1,115</div></div></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid #f4f5f6"><span style="width:3px;height:26px;border-radius:2px;background:#7c3aed"></span><div style="min-width:0"><div style="font:600 12px system-ui;color:#111827">Uber</div><div style="font:10px system-ui;color:#9ca3af;display:flex;align-items:center;gap:4px">20 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#6b7280"></span>Platinum</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 12px system-ui;color:#111827">$185</div><div style="font:9px system-ui;color:#9ca3af">solo</div></div></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid #f4f5f6"><span style="width:3px;height:26px;border-radius:2px;background:#4f46e5"></span><div style="min-width:0"><div style="font:600 12px system-ui;color:#111827">Rent</div><div style="font:10px system-ui;color:#9ca3af;display:flex;align-items:center;gap:4px">01 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#0b5cab"></span>BBVA</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 12px system-ui;color:#111827">$14,000</div><div style="font:9px system-ui;color:#16a34a">share $9,520</div></div></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid #f4f5f6"><span style="width:3px;height:26px;border-radius:2px;background:#0891b2"></span><div style="min-width:0"><div style="font:600 12px system-ui;color:#111827">CFE light</div><div style="font:10px system-ui;color:#9ca3af;display:flex;align-items:center;gap:4px">03 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#820ad1"></span>NU</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 12px system-ui;color:#111827">$640</div><div style="font:9px system-ui;color:#16a34a">share $435</div></div></div>
+        <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid #f4f5f6"><span style="width:3px;height:26px;border-radius:2px;background:#db2777"></span><div style="min-width:0"><div style="font:600 12px system-ui;color:#111827">Cinema</div><div style="font:10px system-ui;color:#9ca3af;display:flex;align-items:center;gap:4px">15 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#c79a3b"></span>Gold</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 12px system-ui;color:#111827">$320</div><div style="font:9px system-ui;color:#16a34a">share $217</div></div></div>
+      </div>
+      <div style="margin-top:auto;padding:12px 14px;border-top:1px solid #e6e8eb;background:#fafbfc"><div style="display:flex;justify-content:space-between;font:11px system-ui;color:#6b7280"><span>Charged</span><span style="color:#111827;font-weight:700">$42,300</span></div><div style="display:flex;justify-content:space-between;font:11px system-ui;color:#6b7280;margin-top:3px"><span>My share</span><span style="color:#16a34a;font-weight:700">$29,800</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard mobile (B-style) -->
+<div style="position:absolute;left:1090px;top:430px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Dashboard — mobile (B-style, you liked this)</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:18px 16px 70px;min-height:780px;position:relative">
+    <div style="display:flex;align-items:center;margin-bottom:10px"><div style="font:700 17px system-ui;color:#111827">June 2026</div><div style="margin-left:auto;border:1px solid #d7dadf;border-radius:999px;padding:4px 10px;font:11px system-ui;color:#374151">My view</div></div>
+    <div onClick="{{ toggleIncome }}" style="cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid #d7dadf;border-radius:9px;padding:9px 12px;background:#fafbfc;margin-bottom:14px"><span style="font:11px system-ui;color:#9ca3af">Total income</span><span style="font:700 14px system-ui;color:#111827">{{ totalAmtM }}</span><span style="margin-left:auto;font:10px system-ui;color:#9ca3af">tap ▾</span></div>
+    <div style="display:{{ incomeDisp }};border:1px solid #e6e8eb;border-radius:10px;padding:12px;margin-bottom:14px;background:#fff">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f2f4;font:12px system-ui"><span style="color:#374151">Fixed · job</span><span style="font-weight:700;color:#111827">$44,000</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f2f4;font:12px system-ui"><span style="color:#374151">Sold sneakers</span><span style="font-weight:700;color:#16a34a">+$1,200</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;font:12px system-ui"><span style="color:#374151">Freelance</span><span style="font-weight:700;color:#16a34a">+$3,000</span></div>
+      <div style="margin-top:10px;height:38px;border:1px dashed #cbd5e1;border-radius:9px;display:flex;align-items:center;justify-content:center;font:600 12px system-ui;color:#374151">+ Add income</div>
+    </div>
+    <!-- bucket strip compact -->
+    <div style="display:flex;gap:6px;margin-bottom:16px">
+      <div style="flex:1;border:1px solid #e6e8eb;border-radius:9px;padding:9px;border-top:3px solid #475569"><div style="font:10px system-ui;color:#9ca3af">Essent.</div><div style="font:700 13px system-ui;color:#111827">77%</div></div>
+      <div style="flex:1;border:1px solid #e6e8eb;border-radius:9px;padding:9px;border-top:3px solid #d97706"><div style="font:10px system-ui;color:#9ca3af">Discr.</div><div style="font:700 13px system-ui;color:#b45309">99%</div></div>
+      <div style="flex:1;border:1px solid #e6e8eb;border-radius:9px;padding:9px;border-top:3px solid #0d9488"><div style="font:10px system-ui;color:#9ca3af">Savings</div><div style="font:700 13px system-ui;color:#0d9488">100%</div></div>
+    </div>
+    <div style="font:600 12px system-ui;color:#374151;margin-bottom:8px">Categories</div>
+    <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px">
+      <div style="border:1px solid #e6e8eb;border-radius:9px;padding:11px"><div style="display:flex;align-items:center;gap:7px;margin-bottom:7px"><span style="width:9px;height:9px;border-radius:3px;background:#65a30d"></span><span style="font:600 12px system-ui;color:#374151">Groceries</span><span style="margin-left:auto;font:700 13px system-ui;color:#111827">$3,200</span><span style="font:10px system-ui;color:#9ca3af">/ $5k</span></div><div style="height:6px;background:#eef0f2;border-radius:999px;overflow:hidden"><div style="width:64%;height:100%;background:#65a30d"></div></div></div>
+      <div style="border:1px solid #e6e8eb;border-radius:9px;padding:11px"><div style="display:flex;align-items:center;gap:7px;margin-bottom:7px"><span style="width:9px;height:9px;border-radius:3px;background:#ea580c"></span><span style="font:600 12px system-ui;color:#374151">Eating out</span><span style="margin-left:auto;font:700 13px system-ui;color:#dc2626">$4,900</span><span style="font:10px system-ui;color:#9ca3af">/ $4k</span></div><div style="height:6px;background:#eef0f2;border-radius:999px;overflow:hidden"><div style="width:100%;height:100%;background:#dc2626"></div></div></div>
+      <div style="border:1px solid #e6e8eb;border-radius:9px;padding:11px"><div style="display:flex;align-items:center;gap:7px;margin-bottom:7px"><span style="width:9px;height:9px;border-radius:3px;background:#7c3aed"></span><span style="font:600 12px system-ui;color:#374151">Transport</span><span style="margin-left:auto;font:700 13px system-ui;color:#111827">$2,100</span><span style="font:10px system-ui;color:#9ca3af">/ $3k</span></div><div style="height:6px;background:#eef0f2;border-radius:999px;overflow:hidden"><div style="width:70%;height:100%;background:#7c3aed"></div></div></div>
+    </div>
+    <div style="font:600 12px system-ui;color:#374151;margin-bottom:8px">Recent</div>
+    <div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #f1f2f4"><span style="width:3px;height:24px;border-radius:2px;background:#ea580c"></span><div><div style="font:600 12px system-ui;color:#111827">Shoes</div><div style="font:10px system-ui;color:#9ca3af">24 Jun · Cash</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 12px system-ui">$1,000</div><div style="font:9px system-ui;color:#16a34a">share $680</div></div></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:8px 0"><span style="width:3px;height:24px;border-radius:2px;background:#65a30d"></span><div><div style="font:600 12px system-ui;color:#111827">Soriana</div><div style="font:10px system-ui;color:#9ca3af">22 Jun · BBVA</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 12px system-ui">$1,820</div><div style="font:9px system-ui;color:#16a34a">share $1,237</div></div></div>
+    <div style="position:absolute;right:18px;bottom:18px;width:52px;height:52px;border-radius:50%;background:#111827;display:flex;align-items:center;justify-content:center;color:#fff;font:300 28px system-ui;box-shadow:0 4px 12px rgba(0,0,0,.25)">+</div>
+  </div>
+</div>
+
+<div style="position:absolute;left:1440px;top:470px;width:220px;background:#fef4a8;padding:13px 15px;font:15px/1.45 Caveat,cursive;color:#4a4326;box-shadow:0 2px 6px rgba(0,0,0,.12);transform:rotate(1.5deg);border-radius:2px">Right rail = scrollable feed of every June expense, totals pinned at bottom. Over-limit categories flip red (see Eating out).</div>
+
+<!-- ===================== SECTION 2: CATEGORY DETAIL ===================== -->
+<div style="position:absolute;left:80px;top:1010px;font:700 26px Caveat,cursive;color:#2b2b2b">2 · Category detail <span style="color:#6b7280">— each category its own dashboard + budget limit</span></div>
+
+<!-- Category detail desktop -->
+<div style="position:absolute;left:80px;top:1060px;width:620px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Eating out — detail (desktop)</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:22px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px"><span style="font:13px system-ui;color:#9ca3af">‹ Back</span><span style="width:14px;height:14px;border-radius:4px;background:#ea580c;margin-left:6px"></span><span style="font:700 20px system-ui;color:#111827">Eating out</span><span style="margin-left:auto;font:12px system-ui;color:#dc2626;background:#fef2f2;border-radius:999px;padding:4px 10px">Over by $900</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px">
+      <div style="border:1px solid #e6e8eb;border-radius:10px;padding:13px"><div style="font:11px system-ui;color:#9ca3af">Spent</div><div style="font:700 20px system-ui;color:#111827">$4,900</div></div>
+      <div style="border:1px solid #e6e8eb;border-radius:10px;padding:13px"><div style="font:11px system-ui;color:#9ca3af">Monthly limit</div><div style="font:700 20px system-ui;color:#111827">$4,000</div></div>
+      <div style="border:1px solid #e6e8eb;border-radius:10px;padding:13px"><div style="font:11px system-ui;color:#9ca3af">Remaining</div><div style="font:700 20px system-ui;color:#dc2626">−$900</div></div>
+    </div>
+    <div style="height:9px;background:#eef0f2;border-radius:999px;overflow:hidden;margin-bottom:6px"><div style="width:100%;height:100%;background:#dc2626"></div></div>
+    <div style="font:11px system-ui;color:#9ca3af;margin-bottom:20px">122% of limit · 7 days left in month</div>
+    <!-- daily trend bars -->
+    <div style="font:600 12px system-ui;color:#374151;margin-bottom:10px">Daily spend this month</div>
+    <div style="display:flex;align-items:flex-end;gap:3px;height:90px;margin-bottom:6px">
+      <div style="flex:1;height:20%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:0%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:55%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:30%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:70%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:10%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:40%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:85%;background:#ea580c;border-radius:2px"></div><div style="flex:1;height:25%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:60%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:100%;background:#ea580c;border-radius:2px"></div><div style="flex:1;height:35%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:50%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:15%;background:#fcd9bf;border-radius:2px"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font:10px system-ui;color:#9ca3af;margin-bottom:18px"><span>Jun 1</span><span>Jun 24</span></div>
+    <div style="font:600 12px system-ui;color:#374151;margin-bottom:8px">Expenses in this category</div>
+    <div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #f1f2f4"><div style="font:13px system-ui;color:#111827">Contramar</div><div style="font:11px system-ui;color:#9ca3af;margin-left:6px">21 Jun · NU</div><div style="margin-left:auto;font:700 13px system-ui">$1,640</div></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #f1f2f4"><div style="font:13px system-ui;color:#111827">Taquería</div><div style="font:11px system-ui;color:#9ca3af;margin-left:6px">18 Jun · Cash</div><div style="margin-left:auto;font:700 13px system-ui">$420</div></div>
+    <div style="display:flex;align-items:center;gap:9px;padding:8px 0"><div style="font:13px system-ui;color:#111827">Rosetta brunch</div><div style="font:11px system-ui;color:#9ca3af;margin-left:6px">12 Jun · Gold</div><div style="margin-left:auto;font:700 13px system-ui">$980</div></div>
+  </div>
+</div>
+
+<!-- Category detail mobile -->
+<div style="position:absolute;left:740px;top:1060px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Category — mobile</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:18px 16px;min-height:560px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><span style="font:13px system-ui;color:#9ca3af">‹</span><span style="width:12px;height:12px;border-radius:4px;background:#ea580c"></span><span style="font:700 17px system-ui;color:#111827">Eating out</span></div>
+    <div style="text-align:center;margin-bottom:6px"><div style="font:700 32px system-ui;color:#111827">$4,900</div><div style="font:11px system-ui;color:#dc2626">$900 over your $4,000 limit</div></div>
+    <div style="height:8px;background:#eef0f2;border-radius:999px;overflow:hidden;margin:12px 0 18px"><div style="width:100%;height:100%;background:#dc2626"></div></div>
+    <div style="display:flex;align-items:flex-end;gap:2px;height:64px;margin-bottom:6px"><div style="flex:1;height:20%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:55%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:30%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:85%;background:#ea580c;border-radius:2px"></div><div style="flex:1;height:40%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:100%;background:#ea580c;border-radius:2px"></div><div style="flex:1;height:35%;background:#fcd9bf;border-radius:2px"></div><div style="flex:1;height:60%;background:#fcd9bf;border-radius:2px"></div></div>
+    <div style="font:10px system-ui;color:#9ca3af;text-align:center;margin-bottom:18px">Daily spend</div>
+    <div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #f1f2f4"><div style="font:12px system-ui;color:#111827">Contramar</div><div style="margin-left:auto;font:700 12px system-ui">$1,640</div></div>
+    <div style="display:flex;align-items:center;padding:8px 0"><div style="font:12px system-ui;color:#111827">Taquería</div><div style="margin-left:auto;font:700 12px system-ui">$420</div></div>
+  </div>
+</div>
+
+<!-- ===================== SECTION 3: EXPENSE LIST ===================== -->
+<div style="position:absolute;left:80px;top:1720px;font:700 26px Caveat,cursive;color:#2b2b2b">3 · Expense list <span style="color:#6b7280">— categories carry color · mobile has pinned total</span></div>
+
+<!-- Expense list desktop -->
+<div style="position:absolute;left:80px;top:1770px;width:760px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Expenses — desktop</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:22px">
+    <div style="display:flex;align-items:center;margin-bottom:14px"><div style="font:700 20px system-ui;color:#111827">Expenses</div><div style="margin-left:auto;display:flex;gap:8px;align-items:center"><div style="border:1px solid #d7dadf;border-radius:8px;padding:6px 12px;font:13px system-ui;color:#374151">‹ June 2026 ›</div><div style="border:1px solid #2563eb;color:#1d4ed8;border-radius:8px;padding:7px 12px;font:600 13px system-ui;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>+ Payment</div><div style="background:#111827;color:#fff;border-radius:8px;padding:8px 14px;font:600 13px system-ui">+ Add</div></div></div>
+    <div style="display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="border:1px solid #111827;background:#111827;color:#fff;border-radius:999px;padding:5px 11px;font:11px system-ui">All</div>
+      <div style="border:1px solid #d7dadf;border-radius:999px;padding:5px 11px;font:11px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:3px;background:#4f46e5"></span>Rent</div>
+      <div style="border:1px solid #d7dadf;border-radius:999px;padding:5px 11px;font:11px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:3px;background:#65a30d"></span>Groceries</div>
+      <div style="border:1px solid #d7dadf;border-radius:999px;padding:5px 11px;font:11px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:3px;background:#ea580c"></span>Eating out</div>
+      <div style="border:1px solid #d7dadf;border-radius:999px;padding:5px 11px;font:11px system-ui;color:#374151;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:3px;background:#7c3aed"></span>Transport</div>
+    </div>
+    <div style="display:grid;grid-template-columns:80px 1fr 150px 110px 150px;gap:12px;padding:0 8px 8px;border-bottom:1px solid #e6e8eb;font:600 11px system-ui;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em"><div>Date</div><div>Description</div><div>Category</div><div>Card</div><div style="text-align:right">Amount</div></div>
+    <div style="display:grid;grid-template-columns:80px 1fr 150px 110px 150px;gap:12px;padding:12px 8px;border-bottom:1px solid #f1f2f4;align-items:center;font:13px system-ui;background:#eff6ff;border-left:3px solid #2563eb;border-radius:0 6px 6px 0"><div style="color:#2563eb;font-weight:600">24 Jun</div><div style="color:#1d4ed8;font-weight:600;display:flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Card payment</div><div><span style="background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:3px 8px;font:11px system-ui;font-weight:600">Payment</span></div><div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#6b7280"></span>Platinum</div><div style="text-align:right"><div style="font-weight:700;color:#2563eb">−$8,000.00</div><div style="font:10px system-ui;color:#2563eb;margin-top:2px">paid to card</div></div></div>
+    <div style="display:grid;grid-template-columns:80px 1fr 150px 110px 150px;gap:12px;padding:12px 8px;border-bottom:1px solid #f1f2f4;align-items:center;font:13px system-ui;color:#374151"><div style="color:#6b7280">24 Jun</div><div style="color:#111827;font-weight:500">Shoes</div><div><span style="background:#fef0e6;color:#ea580c;border-radius:6px;padding:3px 8px;font:11px system-ui;font-weight:600;display:inline-flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:#ea580c"></span>Eating out</span></div><div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a"></span>Cash</div><div style="text-align:right"><div style="font-weight:700;color:#111827">$1,000.00</div><div style="font:10px system-ui;color:#16a34a;margin-top:2px">my share $680.00</div></div></div>
+    <div style="display:grid;grid-template-columns:80px 1fr 150px 110px 150px;gap:12px;padding:12px 8px;border-bottom:1px solid #f1f2f4;align-items:center;font:13px system-ui;color:#374151"><div style="color:#6b7280">22 Jun</div><div style="color:#111827;font-weight:500">Soriana</div><div><span style="background:#eef5e3;color:#4d7c0f;border-radius:6px;padding:3px 8px;font:11px system-ui;font-weight:600;display:inline-flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:#65a30d"></span>Groceries</span></div><div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#0b5cab"></span>BBVA</div><div style="text-align:right"><div style="font-weight:700;color:#111827">$1,820.00</div><div style="font:10px system-ui;color:#16a34a;margin-top:2px">my share $1,237.60</div></div></div>
+    <div style="display:grid;grid-template-columns:80px 1fr 150px 110px 150px;gap:12px;padding:12px 8px;border-bottom:1px solid #f1f2f4;align-items:center;font:13px system-ui;color:#374151"><div style="color:#6b7280">01 Jun</div><div style="color:#111827;font-weight:500">Rent</div><div><span style="background:#eceafe;color:#4f46e5;border-radius:6px;padding:3px 8px;font:11px system-ui;font-weight:600;display:inline-flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:#4f46e5"></span>Rent</span></div><div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#0b5cab"></span>BBVA</div><div style="text-align:right"><div style="font-weight:700;color:#111827">$14,000.00</div><div style="font:10px system-ui;color:#16a34a;margin-top:2px">my share $9,520.00</div></div></div>
+    <div style="display:grid;grid-template-columns:80px 1fr 150px 110px 150px;gap:12px;padding:12px 8px;align-items:center;font:13px system-ui;color:#374151"><div style="color:#6b7280">20 Jun</div><div style="color:#111827;font-weight:500">Uber</div><div><span style="background:#f1ecfd;color:#7c3aed;border-radius:6px;padding:3px 8px;font:11px system-ui;font-weight:600;display:inline-flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:#7c3aed"></span>Transport</span></div><div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#6b7280"></span>Platinum</div><div style="text-align:right"><div style="font-weight:700;color:#111827">$185.00</div><div style="font:10px system-ui;color:#9ca3af;margin-top:2px">not shared</div></div></div>
+    <div style="display:flex;justify-content:flex-end;gap:24px;margin-top:14px;padding-top:14px;border-top:1px solid #e6e8eb;font:13px system-ui"><span style="color:#6b7280">Charged <b style="color:#111827">$17,005.00</b></span><span style="color:#6b7280">My share <b style="color:#16a34a">$11,622.60</b></span></div>
+  </div>
+</div>
+
+<!-- Expense list mobile w/ pinned total -->
+<div style="position:absolute;left:880px;top:1770px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Expenses — mobile (pinned total)</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:18px 16px 0;min-height:640px;position:relative;overflow:hidden">
+    <div style="display:flex;align-items:center;margin-bottom:10px"><div style="font:700 18px system-ui;color:#111827">Expenses</div><div style="margin-left:auto;font:12px system-ui;color:#6b7280">‹ Jun 2026 ›</div></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px"><div style="flex:1;border:1px solid #111827;background:#111827;color:#fff;border-radius:9px;padding:7px;text-align:center;font:600 12px system-ui">+ Add expense</div><div style="flex:1;border:1px solid #2563eb;color:#1d4ed8;border-radius:9px;padding:7px;text-align:center;font:600 12px system-ui">+ Card payment</div></div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;overflow:hidden"><div style="border:1px solid #111827;background:#111827;color:#fff;border-radius:999px;padding:4px 10px;font:11px system-ui">All</div><div style="border:1px solid #d7dadf;border-radius:999px;padding:4px 10px;font:11px system-ui;color:#374151;display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:3px;background:#65a30d"></span>Grocery</div><div style="border:1px solid #d7dadf;border-radius:999px;padding:4px 10px;font:11px system-ui;color:#374151;display:flex;align-items:center;gap:4px"><span style="width:7px;height:7px;border-radius:3px;background:#ea580c"></span>Eating</div></div>
+    <div style="padding-bottom:70px">
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #e6e8eb;background:#eff6ff;margin:0 -16px"><span style="width:3px;height:30px;border-radius:2px;background:#2563eb;flex-shrink:0"></span><div style="min-width:0"><div style="font:600 13px system-ui;color:#1d4ed8">Card payment</div><div style="font:11px system-ui;color:#2563eb;display:flex;align-items:center;gap:4px">24 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#6b7280"></span>Platinum</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 14px system-ui;color:#2563eb">−$8,000</div><div style="font:10px system-ui;color:#2563eb">paid to card</div></div></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f1f2f4"><span style="width:3px;height:30px;border-radius:2px;background:#ea580c;flex-shrink:0"></span><div style="min-width:0"><div style="font:600 13px system-ui;color:#111827">Shoes</div><div style="font:11px system-ui;color:#9ca3af;display:flex;align-items:center;gap:4px">24 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#16a34a"></span>Cash</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 14px system-ui;color:#111827">$1,000.00</div><div style="font:10px system-ui;color:#16a34a;background:#eafaf0;border-radius:5px;padding:1px 5px;display:inline-block;margin-top:2px">share $680</div></div></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f1f2f4"><span style="width:3px;height:30px;border-radius:2px;background:#65a30d;flex-shrink:0"></span><div style="min-width:0"><div style="font:600 13px system-ui;color:#111827">Soriana</div><div style="font:11px system-ui;color:#9ca3af;display:flex;align-items:center;gap:4px">22 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#0b5cab"></span>BBVA</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 14px system-ui;color:#111827">$1,820.00</div><div style="font:10px system-ui;color:#16a34a;background:#eafaf0;border-radius:5px;padding:1px 5px;display:inline-block;margin-top:2px">share $1,237</div></div></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f1f2f4"><span style="width:3px;height:30px;border-radius:2px;background:#4f46e5;flex-shrink:0"></span><div style="min-width:0"><div style="font:600 13px system-ui;color:#111827">Rent</div><div style="font:11px system-ui;color:#9ca3af;display:flex;align-items:center;gap:4px">01 Jun · <span style="width:6px;height:6px;border-radius:50%;background:#0b5cab"></span>BBVA</div></div><div style="margin-left:auto;text-align:right"><div style="font:700 14px system-ui;color:#111827">$14,000</div><div style="font:10px system-ui;color:#16a34a;background:#eafaf0;border-radius:5px;padding:1px 5px;display:inline-block;margin-top:2px">share $9,520</div></div></div>
+    </div>
+    <!-- pinned total -->
+    <div style="position:absolute;left:0;right:0;bottom:0;background:#111827;color:#fff;padding:14px 18px;display:flex;align-items:center"><div><div style="font:10px system-ui;color:#9aa0aa">Total spent · June</div><div style="font:700 18px system-ui">$17,005.00</div></div><div style="margin-left:auto;text-align:right"><div style="font:10px system-ui;color:#9aa0aa">My share</div><div style="font:700 14px system-ui;color:#4ade80">$11,622.60</div></div></div>
+  </div>
+</div>
+
+<div style="position:absolute;left:1230px;top:1810px;width:220px;background:#fef4a8;padding:13px 15px;font:15px/1.45 Caveat,cursive;color:#4a4326;box-shadow:0 2px 6px rgba(0,0,0,.12);transform:rotate(-1.5deg);border-radius:2px">Category chips use each category's own color. Mobile pins "Total spent" at the bottom. "+ Card payment" logs a payment — it shows as a blue highlighted line here AND in the dashboard feed so a payment is never mistaken for spend.</div>
+
+<!-- ===================== SECTION 4: WEEKLY SETTLEMENT ===================== -->
+<div style="position:absolute;left:80px;top:2530px;font:700 26px Caveat,cursive;color:#2b2b2b">4 · Weekly settlement <span style="color:#6b7280">— what Ana reimburses + what you pay your card</span></div>
+
+<!-- Settlement desktop -->
+<div style="position:absolute;left:80px;top:2580px;width:560px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Settlement — desktop</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:22px">
+    <div style="display:flex;align-items:center;margin-bottom:18px"><div style="font:700 18px system-ui;color:#111827">Week of Jun 17–23</div><div style="margin-left:auto;font:12px system-ui;color:#9ca3af">‹ prev week ›</div></div>
+    <!-- 3-step flow -->
+    <div style="display:flex;align-items:stretch;gap:10px;margin-bottom:20px">
+      <div style="flex:1;border:1px solid #e6e8eb;border-radius:10px;padding:14px;text-align:center"><div style="font:11px system-ui;color:#9ca3af">You charged to cards</div><div style="font:700 22px system-ui;color:#111827;margin-top:4px">$1,000</div><div style="font:10px system-ui;color:#9ca3af;margin-top:2px">shared this week</div></div>
+      <div style="display:flex;align-items:center;font:20px system-ui;color:#cbd5e1">→</div>
+      <div style="flex:1;border:1px solid #d1fae5;background:#f0fdf4;border-radius:10px;padding:14px;text-align:center"><div style="font:11px system-ui;color:#16a34a">Ana gives you (32%)</div><div style="font:700 22px system-ui;color:#16a34a;margin-top:4px">$320</div><div style="font:10px system-ui;color:#16a34a;margin-top:2px">in cash</div></div>
+      <div style="display:flex;align-items:center;font:20px system-ui;color:#cbd5e1">→</div>
+      <div style="flex:1;border:1px solid #111827;background:#111827;border-radius:10px;padding:14px;text-align:center"><div style="font:11px system-ui;color:#9aa0aa">You pay the card</div><div style="font:700 22px system-ui;color:#fff;margin-top:4px">$1,000</div><div style="font:10px system-ui;color:#9aa0aa;margin-top:2px">full statement</div></div>
+    </div>
+    <div style="background:#fafbfc;border:1px solid #e6e8eb;border-radius:10px;padding:14px;margin-bottom:18px;display:flex;align-items:center"><div><div style="font:12px system-ui;color:#6b7280">Your true cost this week (68%)</div><div style="font:700 24px system-ui;color:#111827">$680</div></div><div style="margin-left:auto;background:#111827;color:#fff;border-radius:8px;padding:9px 16px;font:600 13px system-ui">Mark settled ✓</div></div>
+    <div style="font:600 12px system-ui;color:#374151;margin-bottom:8px">Shared expenses this week</div>
+    <div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #f1f2f4;font:13px system-ui"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:8px"></span><span style="color:#111827">Shoes</span><span style="color:#9ca3af;margin-left:8px;font-size:11px">24 Jun · Cash</span><span style="margin-left:auto;color:#111827;font-weight:700">$1,000</span><span style="font:10px system-ui;color:#16a34a;margin-left:10px">you $680 · Ana $320</span></div>
+  </div>
+</div>
+
+<!-- Settlement mobile -->
+<div style="position:absolute;left:700px;top:2580px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Settlement — mobile</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:18px 16px;min-height:520px">
+    <div style="font:700 17px system-ui;color:#111827;margin-bottom:4px">Settle the week</div>
+    <div style="font:12px system-ui;color:#9ca3af;margin-bottom:18px">Jun 17–23</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+      <div style="border:1px solid #e6e8eb;border-radius:10px;padding:13px;display:flex;align-items:center"><div style="font:12px system-ui;color:#6b7280">You charged</div><div style="margin-left:auto;font:700 16px system-ui;color:#111827">$1,000</div></div>
+      <div style="border:1px solid #d1fae5;background:#f0fdf4;border-radius:10px;padding:13px;display:flex;align-items:center"><div style="font:12px system-ui;color:#16a34a">Ana gives you</div><div style="margin-left:auto;font:700 16px system-ui;color:#16a34a">$320</div></div>
+      <div style="border:1px solid #e6e8eb;border-radius:10px;padding:13px;display:flex;align-items:center"><div style="font:12px system-ui;color:#6b7280">Your true cost</div><div style="margin-left:auto;font:700 16px system-ui;color:#111827">$680</div></div>
+    </div>
+    <div style="background:#111827;border-radius:12px;padding:14px;text-align:center;margin-bottom:14px"><div style="font:11px system-ui;color:#9aa0aa">Pay your card</div><div style="font:700 26px system-ui;color:#fff">$1,000</div></div>
+    <div style="height:46px;border:1px solid #16a34a;color:#16a34a;border-radius:12px;display:flex;align-items:center;justify-content:center;font:600 14px system-ui">Mark settled ✓</div>
+  </div>
+</div>
+
+<div style="position:absolute;left:1060px;top:2620px;width:230px;background:#fef4a8;padding:13px 15px;font:15px/1.45 Caveat,cursive;color:#4a4326;box-shadow:0 2px 6px rgba(0,0,0,.12);transform:rotate(1.5deg);border-radius:2px">The weekly money-movement made literal: you charged → Ana reimburses her 32% → you pay the full card statement. "True cost" is the number that hits your budget.</div>
+
+<!-- ===================== SECTION 5: INCOME ===================== -->
+<div style="position:absolute;left:80px;top:3160px;font:700 26px Caveat,cursive;color:#2b2b2b">5 · Income <span style="color:#6b7280">— static + variable (the 50/25/25 base)</span></div>
+
+<!-- Income desktop -->
+<div style="position:absolute;left:80px;top:3210px;width:620px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Income — desktop</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:22px">
+    <div style="display:flex;align-items:center;margin-bottom:18px"><div style="font:700 18px system-ui;color:#111827">Income</div><div onClick="{{ toggleMask }}" style="margin-left:12px;cursor:pointer;display:flex;align-items:center;gap:5px;border:1px solid #d7dadf;border-radius:8px;padding:4px 10px;font:11px system-ui;color:#6b7280"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>{{ eyeLabel }}</div><div style="margin-left:auto;font:11px system-ui;color:#9ca3af">drives your bucket targets</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="border:1px solid #e6e8eb;border-radius:10px;padding:14px"><div style="font:11px system-ui;color:#9ca3af">Fixed income · monthly</div><div style="font:700 21px system-ui;color:#111827">{{ fixedAmt }}</div><div style="font:10px system-ui;color:#9ca3af;margin-top:2px">recurs every month</div></div>
+      <div style="border:1px solid #e6e8eb;border-radius:10px;padding:14px"><div style="font:11px system-ui;color:#9ca3af">Variable · June</div><div style="font:700 21px system-ui;color:#16a34a">{{ varAmt }}</div><div style="font:10px system-ui;color:#9ca3af;margin-top:2px">logged this month</div></div>
+      <div style="border:1px solid #111827;background:#111827;border-radius:10px;padding:14px"><div style="font:11px system-ui;color:#9aa0aa">Total · June</div><div style="font:700 21px system-ui;color:#fff">{{ totalAmt }}</div><div style="font:10px system-ui;color:#9aa0aa;margin-top:2px">fixed + variable</div></div>
+    </div>
+    <div style="display:flex;align-items:center;margin-bottom:10px"><div style="font:600 12px system-ui;color:#374151">Variable income log</div><div style="margin-left:auto;border:1px solid #d7dadf;border-radius:8px;padding:5px 11px;font:11px system-ui;color:#374151">+ Add income</div></div>
+    <div style="display:grid;grid-template-columns:90px 1fr 130px;gap:12px;padding:0 8px 8px;border-bottom:1px solid #e6e8eb;font:600 11px system-ui;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em"><div>Date</div><div>Source</div><div style="text-align:right">Amount</div></div>
+    <div style="display:grid;grid-template-columns:90px 1fr 130px;gap:12px;padding:11px 8px;border-bottom:1px solid #f1f2f4;align-items:center;font:13px system-ui"><div style="color:#6b7280">18 Jun</div><div style="color:#111827;font-weight:500">Sold sneakers (Jordan 1)</div><div style="text-align:right;font-weight:700;color:#16a34a">+$1,200.00</div></div>
+    <div style="display:grid;grid-template-columns:90px 1fr 130px;gap:12px;padding:11px 8px;border-bottom:1px solid #f1f2f4;align-items:center;font:13px system-ui"><div style="color:#6b7280">10 Jun</div><div style="color:#111827;font-weight:500">Freelance — logo</div><div style="text-align:right;font-weight:700;color:#16a34a">+$3,000.00</div></div>
+    <div style="display:grid;grid-template-columns:90px 1fr 130px;gap:12px;padding:11px 8px;align-items:center;font:13px system-ui"><div style="color:#9ca3af">—</div><div style="color:#9ca3af;font-style:italic">+ Add a row…</div><div style="text-align:right;color:#cbd5e1">$0.00</div></div>
+  </div>
+</div>
+
+<!-- Income mobile -->
+<div style="position:absolute;left:740px;top:3210px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Income — mobile</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:18px 16px;min-height:520px">
+    <div style="display:flex;align-items:center;margin-bottom:14px"><div style="font:700 17px system-ui;color:#111827">Income</div><div onClick="{{ toggleMask }}" style="margin-left:auto;cursor:pointer;display:flex;align-items:center;gap:5px;border:1px solid #d7dadf;border-radius:8px;padding:4px 9px;font:11px system-ui;color:#6b7280"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>{{ eyeLabel }}</div></div>
+    <div style="background:#111827;border-radius:12px;padding:16px;text-align:center;margin-bottom:14px"><div style="font:11px system-ui;color:#9aa0aa">Total · June</div><div style="font:700 28px system-ui;color:#fff">{{ totalAmtM }}</div><div style="font:11px system-ui;color:#9aa0aa;margin-top:3px">{{ subAmtM }}</div></div>
+    <div style="display:flex;align-items:center;margin-bottom:10px"><div style="font:600 12px system-ui;color:#374151">Variable income</div><div style="margin-left:auto;font:11px system-ui;color:#111827;font-weight:600">+ Add</div></div>
+    <div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #f1f2f4"><div><div style="font:13px system-ui;color:#111827">Sold sneakers</div><div style="font:11px system-ui;color:#9ca3af">18 Jun</div></div><div style="margin-left:auto;font:700 13px system-ui;color:#16a34a">+$1,200</div></div>
+    <div style="display:flex;align-items:center;padding:10px 0"><div><div style="font:13px system-ui;color:#111827">Freelance — logo</div><div style="font:11px system-ui;color:#9ca3af">10 Jun</div></div><div style="margin-left:auto;font:700 13px system-ui;color:#16a34a">+$3,000</div></div>
+  </div>
+</div>
+
+<div style="position:absolute;left:1060px;top:3250px;width:230px;background:#fef4a8;padding:13px 15px;font:15px/1.45 Caveat,cursive;color:#4a4326;box-shadow:0 2px 6px rgba(0,0,0,.12);transform:rotate(-1.5deg);border-radius:2px">Fixed income is global — recurs every month (your job). Variable is logged per month (sold shoes, freelance). The eye icon hides sensitive totals. Total = fixed + variable, re-bases the 50/25/25.</div>
+
+<!-- ===================== SECTION 6: ADD EXPENSE ===================== -->
+<div style="position:absolute;left:80px;top:3800px;font:700 26px Caveat,cursive;color:#2b2b2b">6 · Add expense <span style="color:#6b7280">— your real fields</span></div>
+
+<!-- Add expense mobile -->
+<div style="position:absolute;left:80px;top:3850px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Add — mobile</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:20px 18px;min-height:840px;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;margin-bottom:18px"><div style="font:700 19px system-ui;color:#111827">Add expense</div><div style="margin-left:auto;font:18px system-ui;color:#9ca3af">×</div></div>
+    <label style="font:600 12px system-ui;color:#6b7280;margin-bottom:6px">Date</label>
+    <div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-bottom:14px;display:flex;align-items:center;padding:0 12px;font:13px system-ui;color:#9ca3af">dd/mm/yyyy <span style="margin-left:auto">📅</span></div>
+    <label style="font:600 12px system-ui;color:#6b7280;margin-bottom:6px">Amount (MXN)</label>
+    <div style="height:52px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-bottom:14px;display:flex;align-items:center;padding:0 14px;font:600 22px system-ui;color:#111827">$0.00</div>
+    <label style="font:600 12px system-ui;color:#6b7280;margin-bottom:6px">Category</label>
+    <div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-bottom:14px;display:flex;align-items:center;padding:0 12px;font:13px system-ui;color:#374151">Select a category… <span style="margin-left:auto;color:#9ca3af">▾</span></div>
+    <label style="font:600 12px system-ui;color:#6b7280;margin-bottom:6px">Subcategory <span style="color:#cbd5e1;font-weight:400">(optional)</span></label>
+    <div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-bottom:14px;display:flex;align-items:center;padding:0 12px;font:13px system-ui;color:#9ca3af">None <span style="margin-left:auto">▾</span></div>
+    <label style="font:600 12px system-ui;color:#6b7280;margin-bottom:6px">Card</label>
+    <div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-bottom:14px;display:flex;align-items:center;gap:8px;padding:0 12px;font:13px system-ui;color:#374151"><span style="width:9px;height:9px;border-radius:50%;background:#16a34a"></span>Cash <span style="margin-left:auto;color:#9ca3af">▾</span></div>
+    <label style="font:600 12px system-ui;color:#6b7280;margin-bottom:6px">Description</label>
+    <div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-bottom:14px"></div>
+    <label style="font:600 12px system-ui;color:#6b7280;margin-bottom:6px">Notes <span style="color:#cbd5e1;font-weight:400">(optional)</span></label>
+    <div style="height:60px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-bottom:14px"></div>
+    <label style="font:600 12px system-ui;color:#6b7280;margin-bottom:6px">Paid by</label>
+    <div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-bottom:14px;display:flex;align-items:center;padding:0 12px;font:13px system-ui;color:#374151">You <span style="margin-left:auto;color:#9ca3af">▾</span></div>
+    <!-- shared with live share -->
+    <div style="border:1px solid #e6e8eb;border-radius:10px;padding:12px;margin-bottom:16px"><div style="display:flex;align-items:center;gap:9px"><div style="width:18px;height:18px;border:2px solid #16a34a;border-radius:5px;background:#16a34a;display:flex;align-items:center;justify-content:center;color:#fff;font:12px system-ui">✓</div><div style="font:600 13px system-ui;color:#374151">Shared expense · 68 / 32</div></div><div style="font:11px system-ui;color:#16a34a;margin-top:8px">Counts toward your budget: <b>$0.00</b></div></div>
+    <div style="height:48px;background:#111827;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font:600 15px system-ui;margin-top:auto">Add expense</div>
+  </div>
+</div>
+
+<!-- Add expense desktop modal -->
+<div style="position:absolute;left:480px;top:3850px;width:480px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font:700 16px Caveat,cursive;color:#3f3a33">Add — desktop (modal)</div>
+  <div style="background:#fff;border:1px solid #e6e8eb;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.16);padding:24px">
+    <div style="display:flex;align-items:center;margin-bottom:18px"><div style="font:700 19px system-ui;color:#111827">Add expense</div><div style="margin-left:auto;font:18px system-ui;color:#9ca3af">×</div></div>
+    <div style="display:flex;gap:14px;margin-bottom:14px">
+      <div style="width:170px"><label style="font:600 11px system-ui;color:#6b7280">Date</label><div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-top:6px;display:flex;align-items:center;padding:0 12px;font:13px system-ui;color:#9ca3af">dd/mm/yyyy <span style="margin-left:auto">📅</span></div></div>
+      <div style="flex:1"><label style="font:600 11px system-ui;color:#6b7280">Amount (MXN)</label><div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-top:6px;display:flex;align-items:center;padding:0 14px;font:600 18px system-ui;color:#111827">$0.00</div></div>
+    </div>
+    <div style="display:flex;gap:14px;margin-bottom:14px">
+      <div style="flex:1"><label style="font:600 11px system-ui;color:#6b7280">Category</label><div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-top:6px;display:flex;align-items:center;padding:0 12px;font:13px system-ui;color:#374151">Select… <span style="margin-left:auto;color:#9ca3af">▾</span></div></div>
+      <div style="flex:1"><label style="font:600 11px system-ui;color:#6b7280">Subcategory <span style="color:#cbd5e1;font-weight:400">(opt)</span></label><div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-top:6px;display:flex;align-items:center;padding:0 12px;font:13px system-ui;color:#9ca3af">None <span style="margin-left:auto">▾</span></div></div>
+      <div style="flex:1"><label style="font:600 11px system-ui;color:#6b7280">Card</label><div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-top:6px;display:flex;align-items:center;gap:7px;padding:0 12px;font:13px system-ui;color:#374151"><span style="width:9px;height:9px;border-radius:50%;background:#16a34a"></span>Cash <span style="margin-left:auto;color:#9ca3af">▾</span></div></div>
+    </div>
+    <label style="font:600 11px system-ui;color:#6b7280">Description</label>
+    <div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin:6px 0 14px"></div>
+    <label style="font:600 11px system-ui;color:#6b7280">Notes <span style="color:#cbd5e1;font-weight:400">(optional)</span></label>
+    <div style="height:54px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin:6px 0 14px"></div>
+    <div style="display:flex;gap:14px;align-items:flex-end;margin-bottom:16px">
+      <div style="width:200px"><label style="font:600 11px system-ui;color:#6b7280">Paid by</label><div style="height:42px;border:1px solid #d7dadf;border-radius:10px;background:#fafbfc;margin-top:6px;display:flex;align-items:center;padding:0 12px;font:13px system-ui;color:#374151">You <span style="margin-left:auto;color:#9ca3af">▾</span></div></div>
+      <div style="flex:1;display:flex;align-items:center;gap:9px;height:42px"><div style="width:18px;height:18px;border:2px solid #16a34a;border-radius:5px;background:#16a34a;display:flex;align-items:center;justify-content:center;color:#fff;font:12px system-ui">✓</div><div><div style="font:600 13px system-ui;color:#374151">Shared expense · 68/32</div><div style="font:11px system-ui;color:#16a34a">your share $0.00</div></div></div>
+    </div>
+    <div style="display:flex;gap:10px"><div style="flex:1;height:44px;border:1px solid #d7dadf;border-radius:10px;display:flex;align-items:center;justify-content:center;font:600 14px system-ui;color:#374151">Cancel</div><div style="flex:1;height:44px;background:#111827;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font:600 14px system-ui">Add expense</div></div>
+  </div>
+</div>
+
+<div style="position:absolute;left:1000px;top:3890px;width:230px;background:#fef4a8;padding:13px 15px;font:15px/1.45 Caveat,cursive;color:#4a4326;box-shadow:0 2px 6px rgba(0,0,0,.12);transform:rotate(1.5deg);border-radius:2px">Matches your current form fields exactly: Date · Amount · Category · Subcategory · Card · Description · Notes · Paid by · Shared. Toggling Shared live-computes your 68% share.</div>
+
+
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" fill="#111827"/>
+  <rect x="30" y="38" width="40" height="28" rx="4" fill="none" stroke="#fff" stroke-width="2.5"/>
+  <rect x="30" y="45" width="40" height="5" fill="#16a34a"/>
+  <circle cx="61" cy="58" r="3" fill="#c79a3b"/>
+</svg>
+</template></x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { masked: false, incomeOpen: false };
+  renderVals() {
+    const m = this.state.masked;
+    const mask = (v) => m ? "$ ••••••" : v;
+    return {
+      fixedAmt: mask("$44,000"),
+      varAmt: mask("$4,200"),
+      totalAmt: mask("$48,200"),
+      totalAmtM: mask("$48,200"),
+      subAmtM: m ? "hidden" : "$44,000 fixed · $4,200 variable",
+      eyeLabel: m ? "Show" : "Hide",
+      toggleMask: () => this.setState((s) => ({ masked: !s.masked })),
+      incomeDisp: this.state.incomeOpen ? "block" : "none",
+      toggleIncome: () => this.setState((s) => ({ incomeOpen: !s.incomeOpen })),
+    };
+  }
+}
+</script>
+</body>
+</html>
