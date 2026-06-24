@@ -176,3 +176,21 @@ lands before them. No UI, no balance logic, no graphs here.
 - [x] Generate + apply the migration to local Docker; `prisma generate`
 - [x] Update the schema-shape DMMF test: `Expense` has `paidBy`, lacks `settlementStatus`/`paidAt`; `Movement` exists with its fields
 - [x] Tests green; lint + typecheck clean
+
+---
+
+#### 1.9: Design-system foundation — theme tokens + `Category.color` `[PR]`
+
+Establishes the visual foundation the screen re-skins build on, from the design
+handoff ([`docs/designs-screens/`](../designs-screens/README.md), V2 source of
+truth). Defines the Tailwind theme tokens (fixing the shadcn token refs
+components already used but that weren't defined) + the design's semantic/bucket
+color systems, and adds `Category.color` so category pills/dots render. No screen
+re-skins here — login + dashboard/expenses redesigns are a **separate PR**.
+shadcn primitives are added per-screen during those re-skins, not up front.
+
+##### Tasks
+
+- [x] `globals.css`: shadcn base tokens (background/foreground/primary/muted/border/ring/card/popover/…) + semantic (`positive`/`danger`/`payment`) + bucket (`essentials`/`discretionary`/`savings`) systems
+- [x] `Category.color` (`String @default("#6b7280")`) + migration; per-slug hex palette in the seed
+- [x] Tests: schema-shape (`Category.color`) + seed (hex color per category)

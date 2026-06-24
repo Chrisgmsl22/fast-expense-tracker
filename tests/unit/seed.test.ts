@@ -133,6 +133,15 @@ describe("runSeed", () => {
         );
     });
 
+    it("writes a hex color on every category upsert", async () => {
+        const { db, category } = makeDb();
+        await runSeed(db, ADMIN);
+        for (const call of category.upsert.mock.calls) {
+            const create = call[0].create as { color: string };
+            expect(create.color).toMatch(/^#[0-9a-f]{6}$/i);
+        }
+    });
+
     it("creates every subcategory on a fresh DB, linked to its category", async () => {
         const { db, subcategory } = makeDb({ subExists: false });
         await runSeed(db, ADMIN);
