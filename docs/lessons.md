@@ -25,6 +25,18 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-06-24 — Browser-reviewed a FE slice against a stale dev server → chased phantom CSS bugs
+
+- **Symptom:** Re-skinning login (1.10), the live `/login` showed a white (invisible) Sign-in button, invisible inputs, dark page bg, full-height card. Spent several Playwright passes inspecting computed styles before finding `--muted`/`--primary` **unset** and `--foreground` = an old `#171717` — i.e. every theme token + new `md:` utility was missing from the served CSS. The source was correct against `main`; the running `pnpm dev` had been started **before slice 1.9's `globals.css` tokens merged**, and Tailwind's theme/utility layer never recompiled (TSX hot-reloaded, CSS did not).
+- **Root cause:** two compounding things. (1) Tailwind v4 doesn't reliably recompile the theme/utility layer on `@theme`/token changes — the **exact** failure already logged 2026-06-23. (2) The dev server outlived a `main` merge, so its CSS predated tokens the branch depends on. The review trusted a long-lived server instead of a fresh build.
+- **Fix / decision:** Restart the dev server before any FE browser review. **Operating-model change (user-ratified 2026-06-24** — "you handle the server, so you can restart whenever it's needed"**):** the agent now **owns the dev-server lifecycle** — start/restart it whenever needed (superseded the prior "user keeps `pnpm dev` running, don't touch it" rule). Before screenshotting an FE slice, (re)start `pnpm dev` so the CSS is built from the current branch.
+- **Lessons for next time:**
+    1. A real-browser FE check is only valid against a **freshly built** server. Restart `pnpm dev` first — especially after `globals.css`/`@theme` edits or after `main` moved under a long-running server.
+    2. When live styles contradict correct source, suspect a **stale build before suspecting the code** — check a token's computed value (`getComputedStyle(:root)`) early; an `(unset)` token is the tell.
+    3. This is the 2026-06-23 Tailwind-theme-HMR lesson recurring with a new trigger (server outliving a merge). The durable fix is owning the server lifecycle, not remembering to restart ad hoc.
+
+---
+
 ### 2026-06-17 — Opened a slice PR with no review pass → a silent-failure bug shipped into the PR
 
 - **Symptom:** 1.4 (capture) went implement → open PR (#18) with **no adversarial review step**. A `/review-changes` pass (run by the user) then found a **Critical**: `createExpense` had no error handling around the DB write and the form didn't catch it → DB failures would silently do nothing (no user feedback). Plus a data-integrity Warning (subcategory not validated against category). Both were invisible to the unit tests — "silent failure" / "state-UI" class issues an adversarial review or browser run surfaces.

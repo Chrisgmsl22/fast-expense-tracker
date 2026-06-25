@@ -194,3 +194,24 @@ shadcn primitives are added per-screen during those re-skins, not up front.
 - [x] `globals.css`: shadcn base tokens (background/foreground/primary/muted/border/ring/card/popover/…) + semantic (`positive`/`danger`/`payment`) + bucket (`essentials`/`discretionary`/`savings`) systems
 - [x] `Category.color` (`String @default("#6b7280")`) + migration; per-slug hex palette in the seed
 - [x] Tests: schema-shape (`Category.color`) + seed (hex color per category)
+
+---
+
+#### 1.10: Login re-skin — two-panel Confirmed-designs-V1 layout `[PR]`
+
+Re-skinned the shipped `/login` (slice 1.3) to the `Confirmed designs V1`
+two-panel layout (screen #1 of [`ui-build-plan.md`](./ui-build-plan.md)): a
+**full-bleed** dark brand panel (5 card-color dots motif) + white form panel on
+desktop, single dark column on mobile. Added the `input` + `label` shadcn
+primitives. Full-bleed (vs the design's centered card) was an explicit user call.
+Auth logic unchanged; signup stays the disabled "Coming soon" placeholder
+([ADR-0009](../decisions/0009-login-credential-security.md)).
+
+##### Tasks
+
+- [x] Add `components/ui/input.tsx` + `components/ui/label.tsx` (shadcn on Base UI, theme-neutral/reusable)
+- [x] Re-skin `app/(auth)/login/page.tsx`: full-bleed two-panel layout, dark brand panel + 5 card-color dots, responsive (mobile = single dark column)
+- [x] Re-skin `components/auth/LoginForm.tsx` onto `Input`/`Label`; `md:` overrides re-theme the shared light primitives for the dark mobile surface
+- [x] Keep the disabled "Sign up / Coming soon" placeholder (ADR-0009)
+- [x] FE tests: extend `page-shells.test.tsx` (fields, brand copy, non-interactive Sign up)
+- [x] Real-browser fidelity check (desktop 1512×900, mobile 390×844, breakpoint reflow) + error-path AA contrast
