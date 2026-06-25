@@ -24,10 +24,11 @@ meaningful gate to blocking immediately would break CI.
 | Components — `components/**`             | 90%    |
 | Global floor                             | 80%    |
 
-**Excluded** (measured by Playwright E2E instead, not unit coverage): server
-components `app/**/{page,layout,loading,error}.tsx`, `auth*.ts`, `proxy.ts`,
-config, `prisma/`, `scripts/`, `components/ui/**` (vendored shadcn/Base UI),
-`lib/db.ts` (Prisma singleton), `*.d.ts`.
+**Not measured** (outside the `include` allowlist — a few are also in `exclude`;
+Playwright E2E covers them instead): server components
+`app/**/{page,layout,loading,error}.tsx`, `auth*.ts`, `proxy.ts`, config,
+`prisma/`, `scripts/`, `components/ui/**` (vendored shadcn/Base UI), `lib/db.ts`
+(Prisma singleton), `*.d.ts`.
 
 **Phased rollout:**
 
@@ -53,8 +54,8 @@ The how-to lives in [`testing.md`](../conventions/testing.md).
 
 - **Report-only until the backfill PR** — the thresholds don't block yet.
 - **v8 multi-environment quirk:** with mixed `jsdom` + `node` (`// @vitest-environment node`)
-  suites, v8 coverage aggregation drops some `lib` files in the full run (they
-  report correctly in isolation). The 100% `lib` threshold is therefore not yet
+  suites, v8 coverage aggregation drops **all** `lib` files from the full-run
+  report (they report correctly in isolation). The 100% `lib` threshold is therefore not yet
   reliably evaluated. The backfill PR resolves this (likely Vitest
   projects-per-environment) before the gate goes blocking.
 

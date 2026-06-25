@@ -16,7 +16,7 @@ tests/unit/
 ├── dates.test.ts          # lib/dates.ts
 ├── expense-service.test.ts # lib/services/expense/expense.service.ts
 ├── login-form.test.tsx     # components/auth/LoginForm.tsx
-└── page-shells.test.tsx    # server-component shells
+└── page-shells.test.tsx    # shell smoke test (not a coverage target)
 ```
 
 Naming: `<kebab-source>.test.ts` (logic) / `.test.tsx` (components). Vitest
@@ -49,7 +49,8 @@ Every unit covers **happy path + each error path + the edge cases you can name**
 
 ### What NOT to test
 
-Excluded from coverage (`vitest.config.ts`) — don't write hollow tests for these:
+Not measured (outside the coverage `include` allowlist in `vitest.config.ts`; a
+few are also in `exclude`) — don't write hollow tests for these:
 server components / route files (`app/**/{page,layout,loading,error}.tsx`),
 auth/route wiring (`auth*.ts`, `proxy.ts`), config, `prisma/`, `scripts/`,
 vendored UI primitives (`components/ui/**`), the Prisma client singleton
@@ -86,8 +87,9 @@ Tiered thresholds (the bar — see [ADR-0011](../decisions/0011-test-coverage-po
 
 > **Status: report-only.** CI runs `pnpm test:coverage` non-blocking today. A
 > dedicated backfill PR closes the existing gaps and fixes a v8
-> multi-environment reporting quirk (mixed jsdom/node suites under-report some
-> `lib` files), after which the CI step becomes a blocking gate. Until then,
+> multi-environment reporting quirk (mixed jsdom/node suites drop **all** `lib`
+> files from the full-run report — they cover fine in isolation), after which the
+> CI step becomes a blocking gate. Until then,
 > ensure **new/changed** code in a layer meets that layer's target.
 
 > **⚠️ TODO — remaining-test work is not "done" until the gate is blocking.**
