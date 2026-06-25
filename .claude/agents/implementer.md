@@ -40,7 +40,7 @@ A vertical slice ships one user-facing flow end-to-end: page + form/UI + server 
 6. `docs/conventions/parallel-slicing.md` — the slice-type pattern (F→Fan-out→I) and file-boundary discipline
 7. Any ADRs the Plan block references in `docs/decisions/`
 8. `docs/lessons.md` — past friction log. Scan entries; if any apply to this slice's area (setup, migrations, auth, env, etc.), factor the documented fix into your approach. Do not re-litigate solved problems.
-9. **For any UI-related slice** — [`docs/designs-screens/README.md`](../../docs/designs-screens/README.md) and the matching screen's PNG in `docs/designs-screens/screenshots/`. **V2 (merged direction) is the source of truth for every screen; the Login follows V1** (`Wireframes v1 (A vs B).dc.html` — login isn't in V2). Match the layout, component inventory, behavior, and the **color systems** (cards / buckets / categories — these are authoritative). Build with shadcn/ui on Base UI + Tailwind v4 + lucide — don't hand-roll what shadcn provides (Card, Button, Badge, Select, Dialog, Switch, Checkbox, Tabs, Progress, Popover, Table). The wireframes are **lofi**: take layout/structure/flow from them, apply the project's Tailwind theme for final styling.
+9. **For any UI-related slice** — [`docs/designs-screens/README.md`](../../docs/designs-screens/README.md), the per-screen plan in [`docs/roadmap/ui-build-plan.md`](../../docs/roadmap/ui-build-plan.md), and the matching screen's PNG in `docs/designs-screens/screenshots/`. **`Confirmed designs V1` is the source of truth for every screen, login included.** Match the layout, component inventory, behavior, and the **color systems** (cards / buckets / categories — these are authoritative). Build with shadcn/ui on Base UI + Tailwind v4 + lucide — don't hand-roll what shadcn provides (Card, Button, Badge, Select, Dialog, Switch, Checkbox, Tabs, Progress, Popover, Table). The wireframes are **lofi**: take layout/structure/flow from them, apply the project's Tailwind theme for final styling.
 
 If the Plan block has unresolved open questions, **STOP and report back to the main thread.** Do not start coding with open questions.
 
@@ -84,7 +84,7 @@ Read the slice's Type label in the phase file. Apply different care:
 ## Hard rules
 
 - **Follow `docs/conventions/coding-conventions.md` exactly.** When in doubt, re-read the relevant section.
-- **UI matches the design references.** For any UI slice, the implementation follows `docs/designs-screens/` (V2 = source of truth; Login = V1) — layout, component inventory, color systems, and behavior. Carry the color systems through exactly; a deliberate deviation needs a noted reason in your report. Smoke-test (step 5) by comparing the rendered page against the screen's screenshot.
+- **UI matches the design references.** For any UI slice, the implementation follows `docs/designs-screens/` (`Confirmed designs V1` — source of truth for all screens) + the screen's plan in `docs/roadmap/ui-build-plan.md` — layout, component inventory, color systems, and behavior. Carry the color systems through exactly; a deliberate deviation needs a noted reason in your report. Smoke-test (step 5) by comparing the rendered page against the screen's screenshot.
 - **Don't expand the slice's Scope (in).** If you notice unrelated improvement opportunities, list them in your final report as "Follow-ups" — don't bundle.
 - **Don't commit `.env*` files.** If `git status` shows one, STOP and investigate.
 - **Don't hardcode secrets.** All env vars via `process.env`.

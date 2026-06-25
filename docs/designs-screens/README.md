@@ -10,13 +10,6 @@ A private, two-person expense tracker for a couple in Mexico City. Currency is *
 - **Weekly card settlement** — partner reimburses their 32% in cash, you pay the full card statement; "true cost" (your 68%) is the budget number.
 - **Income = global fixed + per-month variable** — fixed salary recurs every month; variable income (sold sneakers, freelance) is logged per month. A privacy "eye" toggle hides sensitive totals.
 
-## Source of truth
-
-- **V2 (merged direction)** — `Wireframes v2 (merged direction).standalone.html` — is the **source of truth for every screen** (dashboard, expenses, category detail, settlement, income, add expense). Open the standalone in a browser; the per-screen PNGs in `screenshots/` are the rendered reference.
-- **Login is the exception — it follows V1**: `Wireframes v1 (A vs B).dc.html`. The login exists only in V1 (V2 has no login screen). Use the V1 login: desktop two-panel (dark brand panel left with the 5 card-color dots, form right); mobile single dark column.
-- The **color systems** (card / bucket / category colors — see `screenshots/color-systems.png` + Design Tokens below) are authoritative and must be carried through. Greys/typography are placeholders — replace with the Tailwind theme.
-- These are **lofi** references for layout / structure / flow / behavior — recreate them in the project stack (shadcn/ui on Base UI + Tailwind v4 + lucide); do not copy the wireframe HTML.
-
 ## About the Design Files
 
 The files in this bundle are **design references created in HTML** — low-fidelity wireframes showing intended **layout, structure, flow, and data relationships**. They are **not production code to copy**. The task is to **recreate these designs in the target codebase** using its established stack and patterns:
@@ -35,9 +28,9 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 
 ## How to view the wireframes
 
-- `Wireframes v2 (merged direction).standalone.html` — self-contained, **open directly in a browser** (no server needed). **V2 / source of truth.** Pannable canvas: scroll/drag to move, pinch/scroll to zoom. The income "Total income" chip and the income "eye" toggle are interactive — click them.
-- `Wireframes v2 (merged direction).dc.html` — source of the above (depends on the project runtime; prefer the standalone for viewing).
-- `Wireframes v1 (A vs B).dc.html` — earlier two-direction exploration. **Reference only for the screens that V2 merged — except the Login, which V2 dropped, so the V1 login is the design to build.**
+- `Confirmed designs V1.standalone.html` — self-contained, **open directly in a browser** (no server needed). This is the current/approved version. It is a pannable canvas: scroll/drag to move, pinch/scroll to zoom. The income "Total income" chip and the income "eye" toggle are interactive — click them.
+- `Confirmed designs V1.dc.html` — source of the above (depends on the project runtime; prefer the standalone for viewing).
+- `Rough mockups.dc.html` — earlier exploration (two dashboard directions + login). Historical reference only.
 
 ---
 
@@ -45,7 +38,6 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 
 ### 1. Auth — Login
 
-- **Source**: **V1 wireframe** (`Wireframes v1 (A vs B).dc.html`) — login is not in V2.
 - **Purpose**: email + password sign-in; link to sign up.
 - **Layout**: desktop = two-panel (dark brand panel left, form right). Mobile = single dark column, form stacked.
 - **Components**: Email input, Password input, primary Sign in button (full-width on mobile), "No account? Sign up" link. Brand panel shows the 5 card-color dots as a motif.
@@ -64,8 +56,8 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 
 ### 3. Category detail
 
-- **Purpose**: one category's own dashboard.
-- **Components**: back link + colored category title + over/under badge; 3 stat cards (Spent / Monthly limit / Remaining — Remaining negative & red when over); a wide Progress bar with "% of limit · N days left"; a **daily-spend bar chart** (bars tinted in the category color, peak days darker); a list of that category's expenses.
+- **Purpose**: one category's own dashboard. The **headline is "Spend by subcategory"** — knowing _which_ subcategories the money went to is as important as the budget status.
+- **Components**: back link + colored category title + an `isRelevant` (Essentials/Discretionary) tag + an over/under badge; 3 stat cards (Spent (my share) / Monthly limit / Remaining — Remaining negative & red when over); a wide Progress bar with "% of limit · N days left · N expenses across N subcategories"; a **"Spend by subcategory" breakdown** — one horizontal bar per subcategory (amount + % of category), sorted high→low, with zero-spend subcategories listed faint at the end; then the category's expense list where **each row shows its subcategory** (e.g. "Dr. Salinas — Doctors appt"). (A daily-spend bar chart is optional/secondary.)
 
 ### 4. Expense list
 
@@ -105,13 +97,36 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 - **Category card → Category detail** navigation.
 - **Mark settled** on the settlement screen flips that week to a settled state.
 
+## Categories & Subcategories
+
+**13 system categories**, seeded immutably on first migration. Each has an `isRelevant` flag (50/25/25: essentials vs discretionary), a URL-friendly `slug` (used to match across systems for migration), a color, and a fixed list of subcategories. **Savings is special-cased as its own 25% bucket** (not lumped with essentials). The category detail screen must surface **spend per subcategory**.
+
+| #   | Name              | slug                | isRelevant | Subcategories                                                                                             |
+| --- | ----------------- | ------------------- | ---------- | --------------------------------------------------------------------------------------------------------- |
+| 1   | Housing           | `housing`           | yes        | Rent · Mortgage · House expenses · Repairs/maintenance · Tax/fees                                         |
+| 2   | Groceries         | `groceries`         | yes        | Groceries · Restaurants/other                                                                             |
+| 3   | Charity           | `charity`           | yes        | Taxes · Donations                                                                                         |
+| 4   | Transport         | `transport`         | yes        | Gasoline · Repairs/tires · License/fees · Parking/tolls · Public transportation · Ubers · Car maintenance |
+| 5   | Insurance         | `insurance`         | yes        | Life · Medical expenses · House · Car · Handicap · Theft · Long-term care                                 |
+| 6   | Savings           | `savings`           | yes        | Emergency fund · Open savings · Future purchases                                                          |
+| 7   | Services          | `services`          | yes        | Electricity · Gas · Water · Trash · Phone plan · Internet                                                 |
+| 8   | Health            | `health`            | yes        | Medicine · Doctors appt · Dentist · Additional medication · Therapy · Other expenses                      |
+| 9   | Combined Expenses | `combined-expenses` | yes        | Purchases made by girlfriend · Purchases made between the two · Cats                                      |
+| 10  | Personal          | `personal`          | no         | Courses · Education · Books · Subscriptions · Cash withdrawals · Technology · Accountant · Other          |
+| 11  | Debt              | `debt`              | yes        | Car loan · Credit card balance · Personal loans · Monthly installments                                    |
+| 12  | Disposable Income | `disposable-income` | no         | Entertainment · Hobbies · Dining out · Social events · Tech gadgets · Ecommerce expenses                  |
+| 13  | Unassigned        | `unassigned`        | no         | (none — sentinel for orphaned expenses)                                                                   |
+
+- In **Add expense**, the **Subcategory** options are driven by the chosen **Category** (e.g. Category = Health → subcategory choices = Medicine, Doctors appt, Dentist, …).
+- `isRelevant: yes` → counts toward **Essentials (50%)**; `isRelevant: no` → **Discretionary (25%)**; `Savings` category feeds the **Savings (25%)** bucket.
+
 ## State Management
 
 Suggested data model (Prisma-ish):
 
 - `User` (you, partner) — `next-auth` session for the single household.
 - `Income` — `{ id, type: 'FIXED' | 'VARIABLE', source, amount, date | recurring, month }`. Fixed is global/recurring; variable is per-month.
-- `Category` — `{ id, name, color (hex), isRelevant: boolean (essentials vs discretionary), monthlyLimit }`. Savings/Investments is special-cased as its own bucket (NOT lumped into essentials).
+- `Category` — `{ id, name, slug, color (hex), isRelevant: boolean (essentials vs discretionary), monthlyLimit, subcategories: string[] }`. Seeded immutably (13 system categories above). Savings is special-cased as its own 25% bucket (NOT lumped into essentials).
 - `Card` — `{ id, name, color (hex), isCash: boolean }`. Cash color is locked green.
 - `Expense` — `{ id, date, amount, categoryId, subcategory?, cardId, description, notes?, paidById, isShared }`. Derived: `myShare = isShared ? amount * 0.68 : amount` (only when paid by you).
 - `CardPayment` — `{ id, date, cardId, amount }`. Distinct from Expense; excluded from spend/share aggregations.
@@ -156,6 +171,7 @@ Key derived values:
 
 Per-screen PNGs in `screenshots/` (rendered from the current wireframes):
 
+- `login-desktop.png` / `login-mobile.png`
 - `dashboard-desktop.png` / `dashboard-mobile.png`
 - `category-detail-desktop.png` / `category-detail-mobile.png`
 - `expenses-desktop.png` / `expenses-mobile.png`
@@ -166,9 +182,9 @@ Per-screen PNGs in `screenshots/` (rendered from the current wireframes):
 
 ## Files
 
-- `Wireframes v2 (merged direction).standalone.html` — open in a browser to view the full canvas (**V2 / source of truth**).
-- `Wireframes v2 (merged direction).dc.html` — source for the above.
-- `Wireframes v1 (A vs B).dc.html` — earlier two-direction exploration; **the Login design to build lives here** (V2 has no login).
+- `Confirmed designs V1.standalone.html` — open in a browser to view the full canvas (current/approved version).
+- `Confirmed designs V1.dc.html` — source for the above.
+- `Rough mockups.dc.html` — earlier two-direction exploration (reference only).
 
 ## Open questions to confirm before building
 
