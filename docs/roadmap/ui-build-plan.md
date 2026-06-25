@@ -23,16 +23,6 @@ Progress/Popover/Table/Tabs), **lucide** icons, the **color systems** carried
 through exactly, **charts via Recharts** (radar) + CSS/divs (bars/progress).
 Lofi → apply the Tailwind theme for final styling.
 
-## Data-model gaps (resolve in the slice that needs them)
-
-| Gap                                              | Status                                              | Needed by                         |
-| ------------------------------------------------ | --------------------------------------------------- | --------------------------------- |
-| **`Income` model** (fixed + variable log)        | **missing** — `Settings.monthlyIncome` stopgap only | Income screen, Dashboard          |
-| Card-payment UI (`Movement` type `card_payment`) | model exists ✓, no UI                               | Expenses, Dashboard, Settlement   |
-| `Category.monthlyBudget` editing                 | field exists ✓ (nullable), no UI                    | Dashboard limits, Category detail |
-| `Expense.subcategoryId`                          | exists ✓                                            | Add expense, Category detail      |
-| Card color name→hex map                          | `Card.color` is a semantic name (`gray`/`blue`/…)   | any card dot/bar                  |
-
 ## Build order
 
 1. **Login** (re-skin) → 2. **Add expense** (re-skin) → 3. **Expenses** (re-skin)
@@ -51,8 +41,8 @@ So implementers never have to guess:
   its backend (server actions, services, Zod schemas, Prisma schema + migration)
   **and** tests. We do **not** split front-end and back-end into separate PRs.
   (See [`pr-strategy.md`](../conventions/pr-strategy.md) + `coding-conventions.md`.)
-- **What backend each slice carries** — its **Scope (in)** + the data-model-gaps
-  table above are authoritative:
+- **What backend each slice carries** — each screen's **Scope (in)** + **Prereqs**
+  below are authoritative:
     - **Re-skins** (Login, Add expense, Expenses): backend already shipped → mostly
       FE; no new model/migration.
     - **Income, Dashboard, Settlement**: real backend (new `Income` model + migration,
@@ -93,7 +83,7 @@ designs V1` screenshot + this doc's section + any referenced ADR → writes a
   shared → show `68/32` split + **live "your share $X"** as amount changes.
   Desktop = Dialog (2–3 col grid); mobile = full-screen sheet.
 - **Out:** card payments.
-- **Prereqs:** `Expense.subcategoryId` ✓; card name→hex map.
+- **Prereqs:** `Expense.subcategoryId` ✓.
 
 ## 3. Expenses — re-skin
 
@@ -105,7 +95,7 @@ designs V1` screenshot + this doc's section + any referenced ADR → writes a
   Mobile: rows + pinned dark "Total spent" bar.
 - **Out / defer:** `+ Card payment` button + blue card-payment rows → comes with
   the `Movement` UI (slice 7).
-- **Prereqs:** `Category.color` ✓; card name→hex map.
+- **Prereqs:** `Category.color` ✓.
 
 ## 4. Income model + Income screen — new (data foundation)
 
