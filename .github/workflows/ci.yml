@@ -35,6 +35,13 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # Coverage is REPORT-ONLY for now (continue-on-error) — see ADR-0011. The
+      # tiered thresholds in vitest.config.ts are the target; the backfill PR
+      # closes the gaps (and fixes the v8 multi-environment reporting quirk),
+      # then this step drops `continue-on-error` to become a blocking gate.
+      - name: Coverage report (non-blocking until backfill — ADR-0011)
+        run: pnpm test:coverage
+        continue-on-error: true
 
   # NOTE (deferred to Phase 1): no DB-touching tests exist yet, so CI runs no
   # Postgres. When the first DB test lands, add a `services: postgres:17` block

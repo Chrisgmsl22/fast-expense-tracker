@@ -100,9 +100,15 @@ Review is **not** a one-shot rubber stamp at the end — it's a loop that gates 
 1. Implementation complete → run the `reviewer` (or the `/review-changes` skill), applying its **full** criteria — including silent-failure / hidden-state / state-UI-sync / user-flow / message-accuracy lenses, **and a real-browser check for any FE slice** (dev server + Playwright MCP).
 2. Fix **every Critical and Warning**.
 3. **Re-review.** Repeat 1–2 until a pass returns no Critical/Warning.
-4. Only then open the PR.
+4. **Run `pnpm test:coverage`** — new/changed code must meet its layer's threshold (100% logic core, 90% components — see [`testing.md`](./testing.md) + [ADR-0011](../decisions/0011-test-coverage-policy.md)). CI reports this; don't make it the first place a gap is found.
+5. Only then open the PR.
 
 Opening a PR without a clean review pass is a process violation (it shipped the 1.4 silent-save-failure into an open PR — see [`../lessons.md`](../lessons.md)).
+
+#### FE real-browser check — mechanics
+
+- **The agent owns the dev-server lifecycle.** Start/restart `pnpm dev` yourself before any browser check — don't depend on a server the user left running. Tailwind v4 doesn't reliably recompile the theme layer on `globals.css`/`@theme` edits, and a long-running server can outlive a `main` merge → it serves **stale CSS** and you'll chase phantom bugs (see [`../lessons.md`](../lessons.md), 2026-06-24). When live styles contradict correct source, suspect a stale build first (`getComputedStyle(:root)` showing an `(unset)` token is the tell).
+- **Use the dev machine's real screen size, not a generic 1920×1080.** An oversized viewport clamps/scales the headed browser window and misleads the check. Detect the actual logical resolution (macOS: `osascript -e 'tell application "Finder" to get bounds of window of desktop'`) and test desktop at that width; mobile ≈ 390×844.
 
 ## When NOT to use a subagent
 

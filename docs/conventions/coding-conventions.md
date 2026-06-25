@@ -80,13 +80,16 @@ These rules are non-negotiable. The repo is public.
 
 ## Testing
 
-**Layout**: tests co-located with source.
+> Full operational guide — where tests live, what to test per layer, patterns,
+> and the coverage bar — is in [`testing.md`](./testing.md). Coverage policy:
+> [ADR-0011](../decisions/0011-test-coverage-policy.md). Summary below.
 
-```
-lib/services/expense/
-├── expense.service.ts
-└── expense.service.test.ts
-```
+**Layout**: all tests live under `tests/unit/`, one file per source unit
+(`<kebab-source>.test.ts` / `.test.tsx`). Vitest discovers
+`tests/**/*.{test,spec}.{ts,tsx}`.
+
+**Coverage** (tiered, `pnpm test:coverage`): 100% logic core (`lib/**`,
+`app/_actions/**`), 90% components, 80% floor; infra/vendored excluded.
 
 **Mocking**:
 
