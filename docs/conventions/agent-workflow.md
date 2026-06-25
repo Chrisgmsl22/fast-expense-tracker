@@ -105,6 +105,11 @@ Review is **not** a one-shot rubber stamp at the end — it's a loop that gates 
 
 Opening a PR without a clean review pass is a process violation (it shipped the 1.4 silent-save-failure into an open PR — see [`../lessons.md`](../lessons.md)).
 
+#### FE real-browser check — mechanics
+
+- **The agent owns the dev-server lifecycle.** Start/restart `pnpm dev` yourself before any browser check — don't depend on a server the user left running. Tailwind v4 doesn't reliably recompile the theme layer on `globals.css`/`@theme` edits, and a long-running server can outlive a `main` merge → it serves **stale CSS** and you'll chase phantom bugs (see [`../lessons.md`](../lessons.md), 2026-06-24). When live styles contradict correct source, suspect a stale build first (`getComputedStyle(:root)` showing an `(unset)` token is the tell).
+- **Use the dev machine's real screen size, not a generic 1920×1080.** An oversized viewport clamps/scales the headed browser window and misleads the check. Detect the actual logical resolution (macOS: `osascript -e 'tell application "Finder" to get bounds of window of desktop'`) and test desktop at that width; mobile ≈ 390×844.
+
 ## When NOT to use a subagent
 
 - **Trivial work** (one-file edits, doc tweaks, dependency bumps). Just do it in main thread.

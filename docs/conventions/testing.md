@@ -90,6 +90,13 @@ Tiered thresholds (the bar — see [ADR-0011](../decisions/0011-test-coverage-po
 > `lib` files), after which the CI step becomes a blocking gate. Until then,
 > ensure **new/changed** code in a layer meets that layer's target.
 
+> **⚠️ TODO — remaining-test work is not "done" until the gate is blocking.**
+> The backfill PR MUST, as its final step, **flip CI from report-only to
+> blocking** — drop `continue-on-error` from the coverage step in
+> [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). Shipping the
+> tests without turning the gate on leaves coverage unenforced, which defeats
+> the purpose. (Tracked in the roadmap backlog + ADR-0011.)
+
 ## Before opening a PR
 
 1. `pnpm test` green.
