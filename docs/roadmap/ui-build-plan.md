@@ -42,6 +42,34 @@ Lofi → apply the Tailwind theme for final styling.
 Rationale: re-skin the shipped P1 screens first (no new data), then the `Income`
 model (unblocks budget targets), then the dashboard, then the remaining new screens.
 
+## How each slice is built (execution model)
+
+So implementers never have to guess:
+
+- **Vertical slices — FE + backend together in ONE PR.** Each screen-slice ships
+  everything it needs in a single PR: the page/components (shadcn + tokens) **and**
+  its backend (server actions, services, Zod schemas, Prisma schema + migration)
+  **and** tests. We do **not** split front-end and back-end into separate PRs.
+  (See [`pr-strategy.md`](../conventions/pr-strategy.md) + `coding-conventions.md`.)
+- **What backend each slice carries** — its **Scope (in)** + the data-model-gaps
+  table above are authoritative:
+    - **Re-skins** (Login, Add expense, Expenses): backend already shipped → mostly
+      FE; no new model/migration.
+    - **Income, Dashboard, Settlement**: real backend (new `Income` model + migration,
+      `getDashboardSummary` service, `Movement` / card-payment UI) bundled with the FE.
+- **Sequential**, in the build order above — dependencies forbid reordering
+  (Income before Dashboard; the `Movement` UI lands with Settlement). One screen at
+  a time. Independent re-skins _may_ run in parallel (cap 2, `parallel-slicing.md`),
+  but default to sequential.
+- **Per-slice flow:** pick the next screen → implementer reads its `Confirmed
+designs V1` screenshot + this doc's section + any referenced ADR → writes a
+  **Plan block** ([`slice-planning.md`](../conventions/slice-planning.md): Scope
+  in/out + acceptance) + a `slices.json` entry → implements end-to-end →
+  **reviewer** loop incl. a real-browser check vs the screenshot → PR.
+  (See [`agent-workflow.md`](../conventions/agent-workflow.md).)
+- **Done =** matches the design screenshot (reviewer UI-fidelity lens) +
+  `pnpm typecheck`/`lint`/`test` green + reviewer-approved + slice-lifecycle complete.
+
 ---
 
 ## 1. Login — re-skin
@@ -94,12 +122,11 @@ model (unblocks budget targets), then the dashboard, then the remaining new scre
 
 - **Design:** `dashboard-desktop.png` / `dashboard-mobile.png`. New `/dashboard`,
   becomes the post-login landing; `/expenses` stays the list.
-- **Scope (in):** topbar (month nav, **Total income** chip, "My view · 68%",
-    - Add); **buckets hero** (Essentials/Discretionary/Savings — colored top border,
-      amount, "of $X · $Y left", Progress; over → danger); **radar** (Recharts, top ~5
-      categories); **spend-by-card** stacked bar + legend; **categories grid**
-      (dot + Progress vs `monthlyBudget`, null → "no limit"); **right rail** (month
-      expenses feed + Charged/My-share footer). New `getDashboardSummary(userId,
+- **Scope (in):** topbar (month nav, **Total income** chip, "My view · 68%", - Add); **buckets hero** (Essentials/Discretionary/Savings — colored top border,
+  amount, "of $X · $Y left", Progress; over → danger); **radar** (Recharts, top ~5
+  categories); **spend-by-card** stacked bar + legend; **categories grid**
+  (dot + Progress vs `monthlyBudget`, null → "no limit"); **right rail** (month
+  expenses feed + Charged/My-share footer). New `getDashboardSummary(userId,
 month)` service (totals use `actualExpenditure`).
 - **Bucket classification (CLAUDE.md):** Essentials = `isRelevant` − Savings;
   Discretionary = non-relevant − Unassigned; **Savings = its own bucket**.
