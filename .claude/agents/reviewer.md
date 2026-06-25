@@ -40,7 +40,7 @@ In order of severity:
 
 > Items 9–12 mirror the **`/review-changes`** skill — apply that same adversarial lens, not just the convention checklist. (The 1.4 silent-save-failure + subcategory/category mismatch were both caught by this lens, not by tests — see `docs/lessons.md`.)
 
-> **UI fidelity is a first-class lens** (for any UI slice). Verify the implementation matches [`docs/designs-screens/`](../../docs/designs-screens/README.md) — **V2 (merged direction)** for every screen, **V1** for the login. Check layout, component inventory (shadcn/Base UI primitives used, not hand-rolled), the **color systems** (card / bucket / category colors carried through), and behavior against the screen's screenshot. A visible deviation from the design is **Important** (not a nit) unless the Plan block calls it out.
+> **UI fidelity is a first-class lens** (for any UI slice). Verify the implementation matches [`docs/designs-screens/`](../../docs/designs-screens/README.md) (`Confirmed designs V1` — source of truth for every screen, login included) + the screen's plan in `docs/roadmap/ui-build-plan.md`. Check layout, component inventory (shadcn/Base UI primitives used, not hand-rolled), the **color systems** (card / bucket / category colors carried through), and behavior against the screen's screenshot. A visible deviation from the design is **Important** (not a nit) unless the Plan block calls it out.
 
 > **Comment quality is a first-class lens** (`coding-conventions.md` §Comments). Challenge **every** comment in the diff: slice tags (`// (slice 1.3)`), step narration, banners, and comments that merely restate the code are noise — flag them. A comment earns its place only by explaining a non-obvious _why_ (a constraint, a gotcha, an ADR link). **Apply this strictly to docblocks on small, self-evident blocks too** — a one-liner or thin wrapper (e.g. an action that's just `await signOut({ redirectTo: "/login" })`) needs no docblock even if the sentence is phrased as "why"; if a competent reader infers it from the names + body, flag it for deletion. Also flag any `TODO`/`FIXME` left pointing at work the slice under review actually completes — a finished feature must not ship a marker aimed at itself.
 
@@ -63,7 +63,7 @@ In order of severity:
     - `pnpm lint`
     - `pnpm typecheck`
     - `pnpm test`
-    - **UI/FE slices:** also exercise the flow in a real browser (dev server + Playwright MCP) — load the page, open/submit the form, confirm states render and errors surface. Unit tests alone do not verify FE. **Compare the rendered page against the matching screenshot in `docs/designs-screens/screenshots/`** — layout, component inventory, and color systems should match V2 (the login matches V1).
+    - **UI/FE slices:** also exercise the flow in a real browser (dev server + Playwright MCP) — load the page, open/submit the form, confirm states render and errors surface. Unit tests alone do not verify FE. **Compare the rendered page against the matching screenshot in `docs/designs-screens/screenshots/`** — layout, component inventory, and color systems should match the `Confirmed designs V1` screenshot.
     - If any fail that the implementer said passed → that's a Critical finding (false claim)
 6. **Scan for lesson candidates** (see triggers under "Lesson candidates" in the report format below). Use `git log main..HEAD --oneline` and the diff to detect rework / repeated verification failures / setup churn.
 7. **Produce the report** in the format below.
