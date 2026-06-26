@@ -24,6 +24,7 @@
         "db:migrate:deploy": "prisma migrate deploy",
         "db:test:setup": "docker exec fast-expense-tracker-db psql -U postgres -tc \"SELECT 1 FROM pg_database WHERE datname='fast_expense_tracker_test'\" | grep -q 1 || docker exec fast-expense-tracker-db psql -U postgres -c 'CREATE DATABASE fast_expense_tracker_test'",
         "db:seed": "dotenv -e .env.local -- node prisma/seed.ts",
+        "db:seed:dev": "dotenv -e .env.local -- node prisma/seed-dev.ts",
         "db:seed:prod": "dotenv -e .env.production.local -- node prisma/seed.ts",
         "prepare": "husky",
         "postinstall": "prisma generate"
