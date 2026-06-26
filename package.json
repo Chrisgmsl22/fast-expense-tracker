@@ -22,6 +22,7 @@
         "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
         "db:migrate:deploy": "prisma migrate deploy",
         "db:seed": "dotenv -e .env.local -- node prisma/seed.ts",
+        "db:seed:dev": "dotenv -e .env.local -- node prisma/seed-dev.ts",
         "db:seed:prod": "dotenv -e .env.production.local -- node prisma/seed.ts",
         "prepare": "husky",
         "postinstall": "prisma generate"

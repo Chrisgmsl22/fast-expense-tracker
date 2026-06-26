@@ -92,6 +92,20 @@ The seed script creates the single admin user (you).
 - [ ] Add the same to Vercel env vars (Production scope only — Preview can use a throwaway test value if you want)
 - [ ] Never commit either value
 
+### Local demo data (optional, dev only)
+
+After `pnpm db:seed` (categories/cards/admin), load a few months of demo
+expenses so the lists/dashboards have content:
+
+```
+pnpm db:seed:dev
+```
+
+It's **re-runnable** — it wipes the admin user's expenses + movements and
+reinserts a deterministic demo set (3 months across categories/cards, mixed
+shared/solo) plus a few category budgets and a `monthlyIncome`. **Local/dev
+only** — never run it against production (`prisma/seed-dev.ts`).
+
 ### Seeding production (manual one-shot)
 
 `prisma migrate deploy` (the prod build step) applies migrations but **does not
