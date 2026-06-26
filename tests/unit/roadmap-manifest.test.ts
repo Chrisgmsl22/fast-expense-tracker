@@ -50,9 +50,12 @@ describe("slices.json manifest", () => {
         }
     });
 
-    it("covers all 8 phases", () => {
+    // Phase 4 (Dashboard) was retired and absorbed into Phase 2's screen
+    // build-out when the Confirmed designs V1 handoff landed — see ADR-0013.
+    // The vacant number is left as-is (renumbering 5–7 would break existing refs).
+    it("covers every phase except the retired Phase 4", () => {
         expect(new Set(manifest.slices.map((s) => s.phase))).toEqual(
-            new Set([0, 1, 2, 3, 4, 5, 6, 7]),
+            new Set([0, 1, 2, 3, 5, 6, 7]),
         );
     });
 });

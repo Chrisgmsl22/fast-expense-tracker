@@ -33,7 +33,9 @@ Split **slow-changing structure** from **fast-changing state**:
 - **State is never stored.** Shipped / in-progress / available / blocked / mine
   is **derived from git** every time it's needed, by `scripts/roadmap-status.ts`:
     - **shipped** — a merge commit on `origin/main` references the slice's branch
-      prefix (`git log origin/main --merges`, grepped for `feat/<id>-`).
+      prefix (`git log origin/main --merges`, grepped for `feat/<id>-`), **or** a
+      `feat(<id>)` conventional commit landed on `origin/main` (covers slices that
+      shipped under a differently-named branch — see the blind-spot section).
     - **in-progress** — not shipped, but a live local/remote branch or worktree
       matches the prefix.
     - **available** — not shipped, not in-progress, and every `dependsOn` token is
@@ -54,13 +56,27 @@ Grepping merges on `origin/main` for the branch prefix detects "shipped" purely
 in git — hook-friendly, and robust even after the branch is deleted locally.
 
 **Blind spot:** squash/rebase merges rewrite commits and produce no
-branch-named merge commit, so the grep would miss a genuinely-shipped slice.
+branch-named merge commit, so the merge-prefix grep alone would miss a
+genuinely-shipped slice. A related case bit us in practice: **slice 1.9 shipped
+under `docs/design-handoff` (PR #22), not `feat/1.9-`**, so the merge-prefix grep
+reported it `available` for weeks.
+
+**Mitigation — conventional-commit scope fallback (ADR-0013).** Detection now
+also treats a slice as shipped when a `feat(<id>)` commit subject appears on
+`origin/main` (`git log origin/main --format=%s`, matched on `feat(<id>)`). Because
+this repo writes Conventional Commits, the slice id is reliably encoded in the
+commit scope even when the _branch_ name doesn't follow `feat/<id>-`. Restricted
+to the `feat(` type so planning-only `docs(<id>)`/`chore(<id>)` commits for
+not-yet-built slices don't false-positive; the `(<id>)` paren delimiter keeps
+`feat(1.1)` from matching `feat(1.10)`.
+
 This is the **same** blind spot as the branch-sync hook (`branch-status.sh`),
-handled the **same** way: the deterministic git check is the fast path; when a
-slice looks unshipped but a PR may have landed, the agent **cross-checks merged
-PRs via the GitHub MCP** (`list_pull_requests` / `pull_request_read` by head
-branch). The merge-commit strategy keeps the fast path reliable today; if it
-changes, the MCP fallback (and the deferred CI guard in spec §10) cover it.
+handled the **same** way for what the fallbacks still miss: the deterministic git
+checks are the fast path; when a slice looks unshipped but a PR may have landed,
+the agent **cross-checks merged PRs via the GitHub MCP** (`list_pull_requests` /
+`pull_request_read` by head branch). The merge-commit strategy + scope fallback
+keep the fast path reliable today; if it changes, the MCP fallback (and the
+deferred CI guard in spec §10) cover it.
 
 ## Consequences
 
