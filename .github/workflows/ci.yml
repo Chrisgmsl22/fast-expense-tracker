@@ -19,11 +19,57 @@ permissions:
   contents: read
 
 jobs:
-  quality:
-    name: Lint · Typecheck · Test
+  # One job per concern so each shows as its own PR check (and can be required
+  # independently in branch protection). They share the same setup; the small
+  # duplication buys clearer, granular signal. pnpm version is read from
+  # package.json "packageManager" — don't pin it in action-setup or it errors.
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-    # Ephemeral Postgres for integration tests (ADR-0004). The service creates the
-    # test database; the suite's globalSetup runs `prisma migrate deploy` against it.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Runs the unit suite and prints the advisory coverage report in one pass —
+      # no thresholds, so it fails only on a test failure (coverage is advisory
+      # per ADR-0011/0012, not a gate).
+      - run: pnpm test:coverage
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    # Ephemeral Postgres (ADR-0004). The service creates the test database; the
+    # suite's globalSetup runs `prisma migrate deploy` against it.
     services:
       postgres:
         image: postgres:17
@@ -39,32 +85,18 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      # Throwaway CI-only creds (match the service above). Both URLs point at the
-      # service container; locally the suite defaults to the Docker test DB.
+      # Throwaway CI-only creds (match the service above).
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fast_expense_tracker_test?schema=public
       DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/fast_expense_tracker_test?schema=public
     steps:
       - uses: actions/checkout@v4
-      # pnpm version is read from package.json "packageManager" — don't pin it
-      # again here, or action-setup errors on a version mismatch.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      # Integration tests against the Postgres service (real queries, real DB).
       - run: pnpm test:integration
-      # Coverage is an ADVISORY report (continue-on-error): the v8/istanbul
-      # reporters unreliably drop executed Prisma-importing modules in this
-      # environment, so it isn't a trustworthy gate — the gate is tests passing
-      # (unit + integration). See ADR-0011 + docs/conventions/testing.md.
-      - name: Coverage report (advisory — ADR-0011)
-        run: pnpm test:coverage
-        continue-on-error: true
 
   secret-guards:
     name: Secret guards
