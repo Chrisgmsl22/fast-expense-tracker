@@ -1,8 +1,12 @@
 "use server";
 
+import { z } from "zod";
+
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import type { ActionResult } from "@/lib/actions/result";
+
+const idSchema = z.object({ id: z.string().min(1) });
 
 /** `not_found` also covers "not yours" — the row matched no owned expense. */
 export type DeleteExpenseCode =
@@ -11,6 +15,10 @@ export type DeleteExpenseCode =
     | "not_found"
     | "db_error";
 
+// ActionResult<TData, TInput, TCode>: TData is the success payload, TInput only
+// types the keys for field errors. A delete's input and output are both just the
+// id, so the same `{ id: string }` fills both slots — they read alike but mean
+// different things.
 export type DeleteExpenseResult = ActionResult<
     { id: string },
     { id: string },
@@ -25,11 +33,11 @@ export type DeleteExpenseResult = ActionResult<
 export async function deleteExpense(
     input: unknown,
 ): Promise<DeleteExpenseResult> {
-    const rawId = (input as { id?: unknown })?.id;
-    const id = typeof rawId === "string" ? rawId : "";
-    if (!id) {
+    const parsed = idSchema.safeParse(input);
+    if (!parsed.success) {
         return { ok: false, code: "validation", message: "Missing expense id" };
     }
+    const { id } = parsed.data;
 
     const session = await auth();
     const userId = session?.user?.id;

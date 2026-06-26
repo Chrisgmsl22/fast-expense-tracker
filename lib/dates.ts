@@ -51,6 +51,15 @@ export function cdmxCalendarDateToUtc(date: Date): Date {
     );
 }
 
+/**
+ * A `Date` → the `yyyy-mm-dd` a `type="date"` input expects, read in UTC — the
+ * same frame capture/edit store dates in (see `cdmxCalendarDateToUtc`), so the
+ * round-trip is lossless.
+ */
+export function toDateInputValue(date: Date): string {
+    return date.toISOString().slice(0, 10);
+}
+
 /** `YYYY-MM` shifted by `delta` months, with year rollover. */
 export function shiftMonth(month: string, delta: number): string {
     const year = Number(month.slice(0, 4));

@@ -10,6 +10,7 @@ import {
     updateExpense,
     type UpdateExpenseResult,
 } from "@/app/_actions/expense/update";
+import { toDateInputValue } from "@/lib/dates";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { ExpenseInput } from "@/lib/schemas/expense";
 import type { ExpenseEditable } from "@/lib/services/expense/expense.service";
@@ -30,12 +31,6 @@ type Props = {
     expense?: ExpenseEditable;
     onSuccess?: () => void;
 };
-
-/** A `Date` → the `yyyy-mm-dd` a `type="date"` input expects (read in UTC, the
- *  same frame capture stored it in — see lib/dates `cdmxCalendarDateToUtc`). */
-function toDateInputValue(date: Date): string {
-    return date.toISOString().slice(0, 10);
-}
 
 /**
  * Expense capture/edit form. Uncontrolled inputs read via
