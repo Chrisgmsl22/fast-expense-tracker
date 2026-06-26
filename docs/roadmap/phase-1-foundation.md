@@ -123,12 +123,13 @@ phase shipped.
 
 ##### Tasks
 
-- [ ] Edit: click row → opens `ExpenseForm` in modal pre-filled
-- [ ] `updateExpense` server action
-- [ ] Delete: button on row → confirm dialog → delete
-- [ ] `deleteExpense` server action
-- [ ] Playwright e2e: login → create expense → edit it → delete it → logout
-- [ ] Tests: update + delete server actions
+- [x] `getExpenseById(userId, id)` service (full editable shape)
+- [x] `ExpenseForm` edit mode: `expense?` prop → prefill + `updateExpense` + label
+- [x] `updateExpense` server action (`userId`-scoped, recompute `actualExpenditure`)
+- [x] `deleteExpense` server action (`userId`-scoped)
+- [x] Client list wrapper (`ExpenseListInteractive`): per-row edit → pre-filled modal; delete → confirm `<dialog>` → delete; `router.refresh()`
+- [x] Playwright infra (`playwright.config.ts`, `e2e/`, `test:e2e` script) + smoke spec: login → create → edit → delete → logout
+- [x] Tests: update + delete actions (incl. ownership-denied + db_error), edit-mode form, delete-confirm + failure
 
 ---
 

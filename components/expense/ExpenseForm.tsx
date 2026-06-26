@@ -6,8 +6,13 @@ import {
     createExpense,
     type CreateExpenseResult,
 } from "@/app/_actions/expense/create";
+import {
+    updateExpense,
+    type UpdateExpenseResult,
+} from "@/app/_actions/expense/update";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { ExpenseInput } from "@/lib/schemas/expense";
+import type { ExpenseEditable } from "@/lib/services/expense/expense.service";
 
 export type CategoryOption = { id: string; name: string };
 export type SubcategoryOption = {
@@ -21,22 +26,33 @@ type Props = {
     categories: CategoryOption[];
     subcategories: SubcategoryOption[];
     cards: CardOption[];
+    /** When present, the form edits this expense instead of creating one. */
+    expense?: ExpenseEditable;
     onSuccess?: () => void;
 };
 
+/** A `Date` → the `yyyy-mm-dd` a `type="date"` input expects (read in UTC, the
+ *  same frame capture stored it in — see lib/dates `cdmxCalendarDateToUtc`). */
+function toDateInputValue(date: Date): string {
+    return date.toISOString().slice(0, 10);
+}
+
 /**
- * Expense capture form (slice 1.4). Uncontrolled inputs read via FormData on
- * submit; only `isShared` is stateful (it reveals the share field). Validation
- * + the actualExpenditure math live server-side in `createExpense` — this just
- * surfaces the field errors it returns.
+ * Expense capture/edit form. Uncontrolled inputs read via
+ * FormData on submit; only `isShared` is stateful (it reveals the share field).
+ * Validation + the actualExpenditure math live server-side — this surfaces the
+ * field errors the action returns. With an `expense` prop it updates that row;
+ * without, it creates a new one.
  */
 export function ExpenseForm({
     categories,
     subcategories,
     cards,
+    expense,
     onSuccess,
 }: Props) {
-    const [isShared, setIsShared] = useState(false);
+    const isEdit = expense !== undefined;
+    const [isShared, setIsShared] = useState(expense?.isShared ?? false);
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<ExpenseInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
@@ -59,12 +75,17 @@ export function ExpenseForm({
         };
         startTransition(async () => {
             try {
-                const res: CreateExpenseResult = await createExpense(input);
+                const res: CreateExpenseResult | UpdateExpenseResult = isEdit
+                    ? await updateExpense({ id: expense.id, ...input })
+                    : await createExpense(input);
                 if (res.ok) {
                     setErrors({});
                     setFormError(null);
-                    form.reset();
-                    setIsShared(false);
+                    // On create, clear for the next entry; on edit, the modal closes.
+                    if (!isEdit) {
+                        form.reset();
+                        setIsShared(false);
+                    }
                     onSuccess?.();
                 } else {
                     setErrors(res.fieldErrors ?? {});
@@ -89,7 +110,7 @@ export function ExpenseForm({
         <form
             onSubmit={handleSubmit}
             className="flex flex-col gap-4"
-            aria-label="Add expense"
+            aria-label={isEdit ? "Edit expense" : "Add expense"}
         >
             <div>
                 <label htmlFor="date" className="block text-sm font-medium">
@@ -100,6 +121,9 @@ export function ExpenseForm({
                     name="date"
                     type="date"
                     required
+                    defaultValue={
+                        expense ? toDateInputValue(expense.date) : undefined
+                    }
                     className="w-full rounded border p-2"
                 />
                 {fieldError("date")}
@@ -116,6 +140,7 @@ export function ExpenseForm({
                     step="0.01"
                     min="0"
                     required
+                    defaultValue={expense?.amount}
                     className="w-full rounded border p-2"
                 />
                 {fieldError("amount")}
@@ -132,6 +157,7 @@ export function ExpenseForm({
                     id="categoryId"
                     name="categoryId"
                     required
+                    defaultValue={expense?.categoryId ?? ""}
                     className="w-full rounded border p-2"
                 >
                     <option value="">Select a category…</option>
@@ -154,6 +180,7 @@ export function ExpenseForm({
                 <select
                     id="subcategoryId"
                     name="subcategoryId"
+                    defaultValue={expense?.subcategoryId ?? ""}
                     className="w-full rounded border p-2"
                 >
                     <option value="">None</option>
@@ -172,6 +199,7 @@ export function ExpenseForm({
                 <select
                     id="cardId"
                     name="cardId"
+                    defaultValue={expense?.cardId ?? ""}
                     className="w-full rounded border p-2"
                 >
                     <option value="">Cash</option>
@@ -195,6 +223,7 @@ export function ExpenseForm({
                     name="description"
                     type="text"
                     required
+                    defaultValue={expense?.description}
                     className="w-full rounded border p-2"
                 />
                 {fieldError("description")}
@@ -208,6 +237,7 @@ export function ExpenseForm({
                     id="notes"
                     name="notes"
                     rows={2}
+                    defaultValue={expense?.notes ?? ""}
                     className="w-full rounded border p-2"
                 />
             </div>
@@ -219,7 +249,7 @@ export function ExpenseForm({
                 <select
                     id="paidBy"
                     name="paidBy"
-                    defaultValue="you"
+                    defaultValue={expense?.paidBy ?? "you"}
                     className="w-full rounded border p-2"
                 >
                     <option value="you">You</option>
@@ -252,7 +282,7 @@ export function ExpenseForm({
                         step="0.01"
                         min="0"
                         max="1"
-                        defaultValue="0.7"
+                        defaultValue={expense?.yourPercentage ?? 0.7}
                         className="w-full rounded border p-2"
                     />
                     {fieldError("yourPercentage")}
@@ -266,7 +296,7 @@ export function ExpenseForm({
             )}
 
             <Button type="submit" disabled={pending}>
-                {pending ? "Saving…" : "Add expense"}
+                {pending ? "Saving…" : isEdit ? "Save changes" : "Add expense"}
             </Button>
         </form>
     );

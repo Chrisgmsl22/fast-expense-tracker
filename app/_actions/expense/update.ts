@@ -6,25 +6,39 @@ import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { expenseInputSchema, type ExpenseInput } from "@/lib/schemas/expense";
 import type { ActionResult, FieldErrors } from "@/lib/actions/result";
 
-/** Failure modes the caller can branch on. */
-export type CreateExpenseCode = "validation" | "unauthenticated" | "db_error";
+/** Failure modes the caller can branch on. `not_found` also covers "not yours". */
+export type UpdateExpenseCode =
+    | "validation"
+    | "unauthenticated"
+    | "not_found"
+    | "db_error";
 
-export type CreateExpenseResult = ActionResult<
+export type UpdateExpenseResult = ActionResult<
     { id: string },
     ExpenseInput,
-    CreateExpenseCode
+    UpdateExpenseCode
 >;
 
 /**
- * Create an expense for the signed-in user (slice 1.4).
+ * Update an existing expense for the signed-in user.
  *
- * `actualExpenditure` is computed server-side and stored, never trusted from the
- * client (spec 0001 §3). `paidBy` is persisted as-is — netting lives in the
- * settlement layer, never in the expense row (spec 0003).
+ * Mirrors `createExpense`: validates the same shape, recomputes
+ * `actualExpenditure` server-side (never trusts a client value), and converts the
+ * calendar date to its CDMX-midnight UTC instant. The write is **scoped by
+ * `userId`** so a user can never edit a row that isn't theirs — a mismatch
+ * matches zero rows and returns `not_found` rather than mutating another user's
+ * data (IDOR guard, even though the app is single-user today).
+ *
+ * `id` rides alongside the expense fields; the Zod object strips it, so it's read
+ * separately. `isRecurring` / `originalAmount` / `originalCurrency` are left
+ * untouched — they're owned by later phases, not this form.
  */
-export async function createExpense(
+export async function updateExpense(
     input: unknown,
-): Promise<CreateExpenseResult> {
+): Promise<UpdateExpenseResult> {
+    const rawId = (input as { id?: unknown })?.id;
+    const id = typeof rawId === "string" ? rawId : "";
+
     const parsed = expenseInputSchema.safeParse(input);
     if (!parsed.success) {
         const fieldErrors: FieldErrors<ExpenseInput> = {};
@@ -42,11 +56,11 @@ export async function createExpense(
             fieldErrors,
         };
     }
+    if (!id) {
+        return { ok: false, code: "validation", message: "Invalid expense" };
+    }
 
     const session = await auth();
-    // `session.user.id` is typed via types/next-auth.d.ts and populated by the
-    // Credentials callbacks in slice 1.3; until then there's no live session, so
-    // this guards rather than assumes.
     const userId = session?.user?.id;
     if (!userId) {
         return {
@@ -62,13 +76,7 @@ export async function createExpense(
         : v.amount;
     const dateUtc = cdmxCalendarDateToUtc(v.date);
 
-    // One try around every DB touch: the subcategory check and the insert both
-    // hit the DB, so a failure in either returns a typed error instead of
-    // throwing (no silent failure).
     try {
-        // A subcategory must belong to the chosen category — both FKs are valid
-        // individually, so without this check a mismatched pair would persist
-        // as silently-wrong data.
         if (v.subcategoryId) {
             const sub = await db.subcategory.findUnique({
                 where: { id: v.subcategoryId },
@@ -88,9 +96,12 @@ export async function createExpense(
             }
         }
 
-        const created = await db.expense.create({
+        // userId in the where-clause is the ownership guard: a row that isn't the
+        // signed-in user's matches nothing, so count stays 0 and we report
+        // not_found instead of touching someone else's data.
+        const result = await db.expense.updateMany({
+            where: { id, userId },
             data: {
-                userId,
                 categoryId: v.categoryId,
                 subcategoryId: v.subcategoryId ?? null,
                 cardId: v.cardId ?? null,
@@ -102,22 +113,22 @@ export async function createExpense(
                 actualExpenditure,
                 paidBy: v.paidBy,
                 notes: v.notes ?? null,
-                isRecurring: false,
-                originalAmount: null,
-                originalCurrency: null,
             },
-            select: { id: true },
         });
-        return { ok: true, data: { id: created.id } };
+        if (result.count === 0) {
+            return {
+                ok: false,
+                code: "not_found",
+                message: "Expense not found.",
+            };
+        }
+        return { ok: true, data: { id } };
     } catch (e) {
-        // Don't leak DB internals to the client; surface a generic failure and
-        // keep the typed contract so the form shows an error instead of
-        // silently doing nothing.
-        console.error("createExpense: db write failed", e);
+        console.error("updateExpense: db write failed", e);
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the expense. Please try again.",
+            message: "Could not save changes. Please try again.",
         };
     }
 }
