@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
  * Per coding-conventions §Data layer, all DB access lives in a service. The
  * credential check (bcrypt.compare) lives here too so the security-critical
  * path is a plain function the Credentials `authorize` callback calls — and one
- * that unit tests can exercise without booting Auth.js.
+ * that tests can exercise without booting Auth.js.
  */
 
 /** The shape Auth.js puts on the session/JWT — never includes the hash. */
