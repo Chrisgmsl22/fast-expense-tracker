@@ -75,7 +75,7 @@ type-only files. Critical user flows are covered by Playwright E2E instead.
 - **No `@testing-library/jest-dom`** — assert with plain Vitest (`getBy*`/`findBy*`
   throw if absent; read `el.textContent` / `(el as HTMLButtonElement).disabled`).
 - **Async UI:** `await screen.findBy*` / `waitFor`. **Events:** `fireEvent`.
-- **Test names:** `Should <expected> when <condition>`.
+- **Test names:** a clear phrase describing the behavior under test (descriptive present-tense, e.g. "returns an empty array for a user with no expenses").
 
 ## Coverage — advisory, not a gate
 

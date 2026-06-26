@@ -81,7 +81,7 @@ These rules are non-negotiable. The repo is public.
 ## Testing
 
 > Full operational guide — the unit/integration split, what to test per layer,
-> patterns, and how coverage is gated — is in [`testing.md`](./testing.md).
+> patterns, and how coverage is reported (advisory) — is in [`testing.md`](./testing.md).
 > Decisions: [ADR-0011](../decisions/0011-test-coverage-policy.md) (coverage) +
 > [ADR-0012](../decisions/0012-integration-tests-for-db-layer.md) (integration).
 > Summary below.
