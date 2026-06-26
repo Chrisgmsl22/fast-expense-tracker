@@ -25,6 +25,18 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-06-25 — Coverage reporter silently drops Prisma-importing files → days lost chasing a blocking gate
+
+- **Symptom:** Building the coverage backfill to flip CI from report-only → blocking, executed source modules that import `@/lib/db` (services, DB actions) never appeared in the coverage report — read as absent/0% while unrelated files showed fine. So a 100% `lib`/`app_actions` gate could not be honestly evaluated.
+- **Root cause:** a Vitest 4 + coverage interaction (reproduced on **both** `@vitest/coverage-v8` and `@vitest/coverage-istanbul`, versions aligned): executed modules that import the Prisma client load through a path that bypasses coverage instrumentation and get dropped from the report. Independent of `vi.mock`, jsdom/node mixing, prisma inlining, or `vite-tsconfig-paths`. Likely Node 24 + Prisma module-load. Compounded by chasing many hypotheses (provider swap, projects, single-process, env-unification) before isolating the one variable: **does the file import Prisma?**
+- **Fix / decision:** stopped gating on the number. **DB layer → integration tests** against real Postgres (no `vi.mock("@/lib/db")`); **everything else → unit tests**; **coverage advisory**; **CI gate = tests passing (unit + integration).** [ADR-0012](./decisions/0012-integration-tests-for-db-layer.md) + [`testing.md`](./conventions/testing.md).
+- **Lessons for next time:**
+    1. **Before adopting a coverage gate, prove the reporter attributes coverage to the files you mean to gate** — one tiny test against one representative file. An absent/0% row for a file you know ran is the tell; don't build a policy on an unverified reporter.
+    2. When a tool misbehaves, **isolate the single differentiating variable early** instead of cycling configs (provider/projects/env carousel cost most of the time here).
+    3. **"Covered" for DB code = a real integration test that passes**, not a line-coverage %. Don't unit-mock the database.
+
+---
+
 ### 2026-06-24 — Browser-reviewed a FE slice against a stale dev server → chased phantom CSS bugs
 
 - **Symptom:** Re-skinning login (1.10), the live `/login` showed a white (invisible) Sign-in button, invisible inputs, dark page bg, full-height card. Spent several Playwright passes inspecting computed styles before finding `--muted`/`--primary` **unset** and `--foreground` = an old `#171717` — i.e. every theme token + new `md:` utility was missing from the served CSS. The source was correct against `main`; the running `pnpm dev` had been started **before slice 1.9's `globals.css` tokens merged**, and Tailwind's theme/utility layer never recompiled (TSX hot-reloaded, CSS did not).

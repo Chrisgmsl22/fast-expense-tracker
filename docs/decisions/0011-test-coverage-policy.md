@@ -1,7 +1,7 @@
 # ADR-0011: Tiered test-coverage policy, phased rollout
 
 Date: 2026-06-24
-Status: Accepted
+Status: Accepted — **rollout revised by [ADR-0012](./0012-integration-tests-for-db-layer.md)** (2026-06-25): the tiered gate never goes blocking; coverage is advisory and the DB layer is tested via integration, because the coverage reporter unreliably drops Prisma-importing files. The tiering below still describes the _aspiration_ for reliably-measured layers.
 
 ## Context
 

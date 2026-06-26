@@ -59,8 +59,6 @@ own file with vertical slices, marked as `[PR]`.
 
 ⚠️ **Manual, do now:** protect `main` — [`setup.md §4`](../operations/setup.md) (branch protection was due after 0.3; CI now exists to gate against).
 
-📋 **Backlog — test-coverage backfill:** coverage is report-only ([ADR-0011](../decisions/0011-test-coverage-policy.md)). The remaining-test-implementation work must write tests to the tiered thresholds, fix the v8 multi-environment reporting quirk, **and flip the CI coverage step from report-only to blocking** (drop `continue-on-error` in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)). See [`testing.md`](../conventions/testing.md).
-
 The full design spec is at [`docs/specs/0001-initial-design.md`](../specs/0001-initial-design.md). It defines what the app does, what it doesn't, and the 8-phase trajectory.
 
 Slicing follows the **Foundation → Fan-out → Integration** pattern documented in [`docs/conventions/parallel-slicing.md`](../conventions/parallel-slicing.md). Parallelism is capped at 2 agents at once for v1.

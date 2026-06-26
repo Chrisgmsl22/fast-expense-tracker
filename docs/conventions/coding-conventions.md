@@ -80,30 +80,32 @@ These rules are non-negotiable. The repo is public.
 
 ## Testing
 
-> Full operational guide — where tests live, what to test per layer, patterns,
-> and the coverage bar — is in [`testing.md`](./testing.md). Coverage policy:
-> [ADR-0011](../decisions/0011-test-coverage-policy.md). Summary below.
+> Full operational guide — the unit/integration split, what to test per layer,
+> patterns, and how coverage is reported (advisory) — is in [`testing.md`](./testing.md).
+> Decisions: [ADR-0011](../decisions/0011-test-coverage-policy.md) (coverage) +
+> [ADR-0012](../decisions/0012-integration-tests-for-db-layer.md) (integration).
+> Summary below.
 
-**Layout**: all tests live under `tests/unit/`, one file per source unit
-(`<kebab-source>.test.ts` / `.test.tsx`). Vitest discovers
-`tests/**/*.{test,spec}.{ts,tsx}`.
+**Layout**: `tests/unit/` (pure logic + components, no DB — `pnpm test`) and
+`tests/integration/` (DB layer, real Postgres — `pnpm test:integration`).
+One file per source unit; `<kebab-source>.test.ts` / `.test.tsx`.
 
-**Coverage** (tiered, `pnpm test:coverage`): 100% logic core (`lib/**`,
-`app/_actions/**`), 90% components, 80% floor; infra/vendored excluded.
+**Unit vs integration**: anything importing `@/lib/db` (services, DB actions) →
+**integration** test against a real DB (**never `vi.mock("@/lib/db")`**).
+Everything else (pure logic, schemas, components) → **unit**.
 
-**Mocking**:
+**Coverage**: advisory only (`pnpm test:coverage`, non-blocking) — the reporter
+unreliably drops Prisma-importing files (ADR-0011/0012). **The gate is tests
+passing — unit + integration.**
 
-| Testing       | Mock                                             |
-| ------------- | ------------------------------------------------ |
-| Service       | Prisma client (lowest layer)                     |
-| Server action | The service                                      |
-| Component     | Server-fetched data via prop, or MSW for network |
+**Mocking** (unit): mock the layer directly below — the action in component
+tests, `@/auth` in action tests. The DB layer isn't mocked; it's integration-tested.
 
 **Tools**:
 
 - **Vitest** for unit + integration tests.
 - **Playwright** for E2E smoke tests on critical paths (login, create expense, dashboard renders).
-- **React Testing Library** for component tests (where used).
+- **React Testing Library** for component tests.
 
 **Patterns**:
 
