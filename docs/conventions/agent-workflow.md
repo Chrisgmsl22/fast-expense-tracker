@@ -100,7 +100,7 @@ Review is **not** a one-shot rubber stamp at the end — it's a loop that gates 
 1. Implementation complete → run the `reviewer` (or the `/review-changes` skill), applying its **full** criteria — including silent-failure / hidden-state / state-UI-sync / user-flow / message-accuracy lenses, **and a real-browser check for any FE slice** (dev server + Playwright MCP).
 2. Fix **every Critical and Warning**.
 3. **Re-review.** Repeat 1–2 until a pass returns no Critical/Warning.
-4. **Run `pnpm test:coverage`** — new/changed code must meet its layer's threshold (100% logic core, 90% components — see [`testing.md`](./testing.md) + [ADR-0011](../decisions/0011-test-coverage-policy.md)). CI reports this; don't make it the first place a gap is found.
+4. **Run `pnpm verify`** — one command that runs the same gates CI does (`db:up` → lint → typecheck → unit → integration). It must be green locally before you push; CI shouldn't be the first place a gate fails. (Coverage is advisory — see [`testing.md`](./testing.md) + [ADR-0012](../decisions/0012-integration-tests-for-db-layer.md).)
 5. Only then open the PR.
 
 Opening a PR without a clean review pass is a process violation (it shipped the 1.4 silent-save-failure into an open PR — see [`../lessons.md`](../lessons.md)).

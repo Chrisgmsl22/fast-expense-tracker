@@ -98,7 +98,10 @@ to catch a missing one.
 
 ## Before opening a PR
 
-1. `pnpm test` green (unit).
-2. `pnpm test:integration` green (if you touched the DB layer).
-3. `pnpm typecheck` + `pnpm lint` clean.
-4. New/changed code has tests covering its branches (error paths included).
+Run **`pnpm verify`** — one command that runs the same gates CI does:
+`db:up` → `db:test:setup` → lint → typecheck → unit → integration. It must pass
+before you push; CI shouldn't be the first place a gate fails. (Needs Docker for
+the integration step.)
+
+Also confirm new/changed code has tests covering its branches (error paths
+included).
