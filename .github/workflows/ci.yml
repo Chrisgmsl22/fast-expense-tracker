@@ -22,6 +22,27 @@ jobs:
   quality:
     name: Lint · Typecheck · Test
     runs-on: ubuntu-latest
+    # Ephemeral Postgres for integration tests (ADR-0004). The service creates the
+    # test database; the suite's globalSetup runs `prisma migrate deploy` against it.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fast_expense_tracker_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Throwaway CI-only creds (match the service above). Both URLs point at the
+      # service container; locally the suite defaults to the Docker test DB.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fast_expense_tracker_test?schema=public
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/fast_expense_tracker_test?schema=public
     steps:
       - uses: actions/checkout@v4
       # pnpm version is read from package.json "packageManager" — don't pin it
@@ -35,19 +56,15 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      # Coverage is REPORT-ONLY for now (continue-on-error) — see ADR-0011. The
-      # tiered thresholds in vitest.config.ts are the target; the backfill PR
-      # closes the gaps (and fixes the v8 multi-environment reporting quirk),
-      # then this step drops `continue-on-error` to become a blocking gate.
-      - name: Coverage report (non-blocking until backfill — ADR-0011)
+      # Integration tests against the Postgres service (real queries, real DB).
+      - run: pnpm test:integration
+      # Coverage is an ADVISORY report (continue-on-error): the v8/istanbul
+      # reporters unreliably drop executed Prisma-importing modules in this
+      # environment, so it isn't a trustworthy gate — the gate is tests passing
+      # (unit + integration). See ADR-0011 + docs/conventions/testing.md.
+      - name: Coverage report (advisory — ADR-0011)
         run: pnpm test:coverage
         continue-on-error: true
-
-  # NOTE (deferred to Phase 1): no DB-touching tests exist yet, so CI runs no
-  # Postgres. When the first DB test lands, add a `services: postgres:17` block
-  # to the `quality` job (or a dedicated db-test job), point DATABASE_URL at it,
-  # and run `pnpm prisma migrate deploy` before the tests. Local + CI use Docker
-  # Postgres per ADR-0004 (docs/decisions/0004-db-environment-isolation.md).
 
   secret-guards:
     name: Secret guards
