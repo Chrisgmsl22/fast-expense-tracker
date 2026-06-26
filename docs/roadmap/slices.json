@@ -104,43 +104,43 @@
         {
             "id": "2.1",
             "phase": 2,
-            "type": "foundation",
-            "title": "getMonthSummary util + summary header shell",
-            "dependsOn": ["phase:1"]
+            "type": "fan-out",
+            "title": "Add-expense re-skin — Confirmed designs V1 capture modal",
+            "dependsOn": ["1.6"]
         },
         {
             "id": "2.2",
             "phase": 2,
             "type": "fan-out",
-            "title": "Settings page UI",
-            "dependsOn": ["2.1"]
+            "title": "Expenses re-skin — filter chips + category pills + my-share footer",
+            "dependsOn": ["1.6"]
         },
         {
             "id": "2.3",
             "phase": 2,
-            "type": "fan-out",
-            "title": "Top-line summary widget (Spent/Saved/Remaining)",
-            "dependsOn": ["2.1"]
+            "type": "foundation",
+            "title": "Income model (fixed + variable) + Income screen",
+            "dependsOn": ["2.1", "2.2"]
         },
         {
             "id": "2.4",
             "phase": 2,
             "type": "fan-out",
-            "title": "Category rollup table",
-            "dependsOn": ["2.1"]
+            "title": "Dashboard — buckets hero + radar + spend-by-card + categories + month feed",
+            "dependsOn": ["2.3"]
         },
         {
             "id": "2.5",
             "phase": 2,
             "type": "fan-out",
-            "title": "Settlement defaults + badges + Owed-to-you card",
-            "dependsOn": ["2.1"]
+            "title": "Category detail — spend-by-subcategory breakdown",
+            "dependsOn": ["2.4"]
         },
         {
             "id": "2.6",
             "phase": 2,
             "type": "integration",
-            "title": "Settle-up modal + e2e",
+            "title": "Settlement screen + Movement / card-payment UI + e2e",
             "dependsOn": ["2.5"]
         },
 
@@ -163,7 +163,7 @@
             "phase": 3,
             "type": "fan-out",
             "title": "Recurring prompt suppression setting",
-            "dependsOn": ["2.2"]
+            "dependsOn": ["3.1"]
         },
         {
             "id": "3.4",
@@ -171,42 +171,6 @@
             "type": "integration",
             "title": "Clone modal + date-shift logic + e2e",
             "dependsOn": ["3.2", "3.3"]
-        },
-
-        {
-            "id": "4.1",
-            "phase": 4,
-            "type": "foundation",
-            "title": "/dashboard route + 4-card layout + chart lib + 50/25/25 widget",
-            "dependsOn": ["phase:2"]
-        },
-        {
-            "id": "4.2",
-            "phase": 4,
-            "type": "fan-out",
-            "title": "By-category donut chart",
-            "dependsOn": ["4.1"]
-        },
-        {
-            "id": "4.3",
-            "phase": 4,
-            "type": "fan-out",
-            "title": "By-card bar chart",
-            "dependsOn": ["4.1"]
-        },
-        {
-            "id": "4.4",
-            "phase": 4,
-            "type": "fan-out",
-            "title": "Month picker propagation",
-            "dependsOn": ["4.1"]
-        },
-        {
-            "id": "4.5",
-            "phase": 4,
-            "type": "integration",
-            "title": "Subcategory drilldown + e2e",
-            "dependsOn": ["4.2"]
         },
 
         {

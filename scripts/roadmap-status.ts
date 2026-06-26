@@ -101,6 +101,14 @@ export interface GitState {
     worktrees: { path: string; branch: string }[];
     /** subjects (%s) of merge commits on origin/main */
     mergeSubjects: string[];
+    /**
+     * subjects (%s) of ALL commits on origin/main. Used for conventional-commit
+     * scope detection (`feat(<id>)`) so a slice that shipped under a branch NOT
+     * matching `feat/<id>-` (e.g. 1.9 landed via `docs/design-handoff`) is still
+     * seen as shipped. Optional: callers that only test merge-named detection
+     * may omit it. See ADR-0008.
+     */
+    commitSubjects?: string[];
 }
 
 export interface SliceStatus extends SliceDef {
@@ -126,12 +134,17 @@ export function branchPrefixFor(id: string, branchPattern: string): string {
 export function deriveStatus(manifest: Manifest, git: GitState): RoadmapModel {
     const prefix = (id: string) => branchPrefixFor(id, manifest.branchPattern);
 
-    // Pass 1: shipped — a merge commit subject contains the slice's branch prefix.
+    // Pass 1: shipped — either a merge commit subject contains the slice's branch
+    // prefix (`feat/<id>-`), OR a `feat(<id>)` conventional commit landed on main.
+    // The second path covers slices that shipped under a non-`feat/<id>-` branch
+    // (e.g. 1.9 merged via `docs/design-handoff`). See ADR-0008.
+    const commitSubjects = git.commitSubjects ?? [];
     const shipped = new Map<string, boolean>();
     for (const s of manifest.slices) {
         shipped.set(
             s.id,
-            git.mergeSubjects.some((subj) => subj.includes(prefix(s.id))),
+            git.mergeSubjects.some((subj) => subj.includes(prefix(s.id))) ||
+                commitSubjects.some((subj) => subj.includes(`feat(${s.id})`)),
         );
     }
     const isShipped = (id: string) => shipped.get(id) === true;
@@ -307,7 +320,24 @@ export function getGitState(cwd: string = process.cwd()): GitState {
         }
     }
 
-    return { currentBranch, branches, worktrees, mergeSubjects };
+    let commitSubjects: string[] = [];
+    try {
+        commitSubjects = lines(git(["log", "origin/main", "--format=%s"]));
+    } catch {
+        try {
+            commitSubjects = lines(git(["log", "main", "--format=%s"]));
+        } catch {
+            /* ignore */
+        }
+    }
+
+    return {
+        currentBranch,
+        branches,
+        worktrees,
+        mergeSubjects,
+        commitSubjects,
+    };
 }
 
 export function loadManifest(cwd: string = process.cwd()): Manifest {

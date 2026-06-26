@@ -206,6 +206,46 @@ describe("deriveStatus", () => {
         expect(stateOf(slices, "1.10")).toBe("shipped");
         expect(stateOf(slices, "1.1")).toBe("available"); // not shipped by 1.10's merge
     });
+
+    it("marks a slice shipped via a feat(<id>) commit when no branch-named merge exists", () => {
+        // 1.5 landed under a non-feat/1.5- branch (cf. 1.9 via docs/design-handoff);
+        // only the conventional-commit subject reveals it shipped.
+        const git: GitState = {
+            ...emptyGit,
+            commitSubjects: ["feat(1.5): list view + month filter"],
+        };
+        const { slices } = deriveStatus(manifest, git);
+        expect(stateOf(slices, "1.5")).toBe("shipped");
+    });
+
+    it("scope detection does not confuse feat(1.1) with feat(1.10)", () => {
+        const big: Manifest = {
+            branchPattern: "feat/{id}-",
+            slices: [
+                {
+                    id: "1.1",
+                    phase: 1,
+                    type: "fan-out",
+                    title: "a",
+                    dependsOn: [],
+                },
+                {
+                    id: "1.10",
+                    phase: 1,
+                    type: "fan-out",
+                    title: "b",
+                    dependsOn: [],
+                },
+            ],
+        };
+        const git: GitState = {
+            ...emptyGit,
+            commitSubjects: ["feat(1.10): login re-skin"],
+        };
+        const { slices } = deriveStatus(big, git);
+        expect(stateOf(slices, "1.10")).toBe("shipped");
+        expect(stateOf(slices, "1.1")).toBe("available");
+    });
 });
 
 // --- formatView + renderReadmeBlock ----------------------------------------

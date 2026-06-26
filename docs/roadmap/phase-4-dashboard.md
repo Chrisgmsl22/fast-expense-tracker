@@ -1,91 +1,18 @@
-# Phase 4: Dashboard
+# Phase 4: Dashboard — RETIRED (absorbed into Phase 2)
 
-**Outcome**: 50/25/25 progress + by-category donut + by-card bar + subcategory drilldown.
-**Spec**: [`docs/specs/0001-initial-design.md` §7 — Phase 4](../specs/0001-initial-design.md)
-**Slicing**: [`parallel-slicing.md`](../conventions/parallel-slicing.md) — F→Fan-out→I
+> **This phase no longer exists in the roadmap.** The Dashboard and its charts
+> were re-sliced into the design-driven **Phase 2** screen build-out when the
+> `Confirmed designs V1` handoff landed. See [ADR-0013](../decisions/0013-screen-driven-reslice.md).
 
-This is "Path C" from the brainstorming session — the real visual
-dashboard. Most ambitious phase by visual surface area. Resolves the
-**chart library** open question from ADR-0001.
+The original Phase 4 decomposed the dashboard into widget slices (50/25/25
+widget, by-category **donut**, by-card bar, month picker, subcategory drilldown).
+The designs superseded that:
 
-The 50/25/25 logic follows [`domain-reference.md §1`](../reference/domain-reference.md) — Essentials (50%) / Discretionary (25%) / Savings (25%) with the special-case treatment of the Savings category.
+- **Dashboard** is now [`phase-2-screens.md` §2.4](./phase-2-screens.md) — and the
+  by-category chart is a **radar** ("where the money went"), not a donut.
+- **Subcategory drilldown** became its own screen, **Category detail**
+  ([`phase-2-screens.md` §2.5](./phase-2-screens.md)).
 
-## Slices
-
-#### 4.1: Dashboard route + chart-lib decision + 50/25/25 widget `[PR]`
-
-Sets up `/dashboard`, chooses the chart library (with ADR), and ships the
-first chart — the 50/25/25 progress bar — as a pattern for the fan-out
-slices to follow.
-
-##### Tasks
-
-- [ ] Decide chart library: Recharts vs Tremor vs visx — write ADR
-- [ ] Install chosen library
-- [ ] Create `/dashboard` route (server component, auth-gated)
-- [ ] Base 4-card grid layout
-- [ ] `50/25/25` progress widget: three bars (Essentials / Discretionary / Savings) with target lines
-- [ ] `getMonthBudgetBuckets(userId, monthYear)` service: returns `{ essentials, discretionary, savings, income }` using the bucket logic from `domain-reference.md §1`
-- [ ] Tests: bucket computation, widget render
-
----
-
-#### 4.2: By-category donut chart `[PR]`
-
-Donut chart breaking down spend by main category.
-
-##### Tasks
-
-- [ ] `CategoryDonutChart` component using chosen lib
-- [ ] Reads from `getMonthSummary.byCategory` (already exists from 2.1)
-- [ ] Hover: tooltip with category name + total + % of month
-- [ ] Color palette consistent with card colors (per [domain-reference.md §4](../reference/domain-reference.md))
-- [ ] Tests: render with mocked data, tooltip behavior
-
----
-
-#### 4.3: By-card bar chart `[PR]`
-
-Horizontal bar chart of spend per card for the month.
-
-> **Extended by [spec 0003](../specs/0003-shared-expense-settlement.md).** This phase
-> also gains the two stats from 0003: **gross-vs-net** (card-charged vs your share)
-> and **per-card outstanding** (charged − card-payments, "based on logged"). Exact
-> slice placement decided when Phase 4 is planned.
-
-##### Tasks
-
-- [ ] `getMonthSpendByCard(userId, monthYear)` service
-- [ ] `CardBarChart` component
-- [ ] Card colors from `domain-reference.md §4` (gray, yellow, purple, blue, green)
-- [ ] Tooltip: card name + total + count of expenses
-- [ ] Tests: service unit, chart render
-
----
-
-#### 4.4: Month picker propagating to all charts `[PR]`
-
-Single month picker on dashboard; all charts re-fetch when changed.
-
-##### Tasks
-
-- [ ] `DashboardMonthPicker` component
-- [ ] URL param sync (`?month=2026-05`)
-- [ ] All charts re-fetch on month change (server components re-render via param)
-- [ ] Defaults to current month (CDMX local)
-- [ ] Tests: URL sync, default behavior
-
----
-
-#### 4.5: Subcategory drilldown + e2e `[PR]`
-
-Click a category in the donut → modal/drawer shows its subcategory totals.
-
-##### Tasks
-
-- [ ] `getSubcategoryBreakdown(userId, monthYear, categoryId)` service
-- [ ] `SubcategoryDrilldownDrawer` component (drawer or modal — UI decision)
-- [ ] Wire donut click handler → open drawer for clicked category
-- [ ] Table inside drawer: subcategory name + spent + count
-- [ ] Playwright e2e: navigate to dashboard → click "Housing" in donut → verify subcategories appear with correct totals
-- [ ] Tests: service unit, drawer render
+The full per-screen spec is [`ui-build-plan.md`](./ui-build-plan.md). The
+chart-library question once parked here is resolved there (**Recharts** for the
+radar; CSS/divs for bars/progress).

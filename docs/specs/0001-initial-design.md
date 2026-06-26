@@ -329,6 +329,12 @@ serves as integration verification.
 
 ### Phase 2 — Weekly Review (6 slices)
 
+> **Superseded by [ADR-0013](../decisions/0013-screen-driven-reslice.md).** This
+> pre-design widget decomposition was re-sliced screen-by-screen against
+> `Confirmed designs V1`. Live plan: [`ui-build-plan.md`](../roadmap/ui-build-plan.md)
+>
+> - [`phase-2-screens.md`](../roadmap/phase-2-screens.md). Kept for history.
+
 | #   | Slice                                                                                                                                             | Type            | Dependencies |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------ |
 | 2.1 | `Settings` already in schema from 1.1; this slice adds `getMonthSummary(userId, monthYear)` server util skeleton + summary header component shell | **Foundation**  | 1.\*         |
@@ -348,6 +354,11 @@ serves as integration verification.
 | 3.4 | Modal + clone-with-date-shift logic (last-day-of-month clamping) + reveal animation + e2e test                                       | **Integration** | 3.2, 3.3      |
 
 ### Phase 4 — Dashboard (5 slices)
+
+> **Retired — absorbed into Phase 2 by [ADR-0013](../decisions/0013-screen-driven-reslice.md).**
+> The dashboard became [`phase-2-screens.md` §2.4](../roadmap/phase-2-screens.md)
+> (by-category chart is a **radar**, not a donut) and subcategory drilldown became
+> the Category-detail screen (§2.5). Kept for history.
 
 | #   | Slice                                                                                                                         | Type            | Dependencies |
 | --- | ----------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------ |

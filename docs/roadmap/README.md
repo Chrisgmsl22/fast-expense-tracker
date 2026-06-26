@@ -10,50 +10,45 @@ own file with vertical slices, marked as `[PR]`.
 
 ## Currently active (derived)
 
-**In progress:** 1.10 · **Available next:** 1.6, 1.7, 1.9
+**In progress:** none · **Available next:** 1.6, 1.7
 
-| Slice | Phase | Type        | State       | Depends on       |
-| ----- | ----- | ----------- | ----------- | ---------------- |
-| 0.1   | 0     | foundation  | shipped     | —                |
-| 0.2   | 0     | fan-out     | shipped     | 0.1              |
-| 0.3   | 0     | fan-out     | shipped     | 0.1              |
-| 0.4   | 0     | fan-out     | shipped     | 0.1              |
-| 1.1   | 1     | foundation  | shipped     | phase:0          |
-| 1.2   | 1     | fan-out     | shipped     | 1.1              |
-| 1.3   | 1     | fan-out     | shipped     | 1.1              |
-| 1.4   | 1     | fan-out     | shipped     | 1.1, 1.8         |
-| 1.5   | 1     | fan-out     | shipped     | 1.1              |
-| 1.6   | 1     | integration | available   | 1.4, 1.5         |
-| 1.7   | 1     | fan-out     | available   | 1.1              |
-| 1.8   | 1     | foundation  | shipped     | 1.1              |
-| 1.9   | 1     | foundation  | available   | 1.1              |
-| 1.10  | 1     | fan-out     | in-progress | 1.3, 1.9         |
-| 2.1   | 2     | foundation  | blocked     | phase:1          |
-| 2.2   | 2     | fan-out     | blocked     | 2.1              |
-| 2.3   | 2     | fan-out     | blocked     | 2.1              |
-| 2.4   | 2     | fan-out     | blocked     | 2.1              |
-| 2.5   | 2     | fan-out     | blocked     | 2.1              |
-| 2.6   | 2     | integration | blocked     | 2.5              |
-| 3.1   | 3     | foundation  | blocked     | 1.4, 1.5, 1.6    |
-| 3.2   | 3     | fan-out     | blocked     | 3.1              |
-| 3.3   | 3     | fan-out     | blocked     | 2.2              |
-| 3.4   | 3     | integration | blocked     | 3.2, 3.3         |
-| 4.1   | 4     | foundation  | blocked     | phase:2          |
-| 4.2   | 4     | fan-out     | blocked     | 4.1              |
-| 4.3   | 4     | fan-out     | blocked     | 4.1              |
-| 4.4   | 4     | fan-out     | blocked     | 4.1              |
-| 4.5   | 4     | integration | blocked     | 4.2              |
-| 5.1   | 5     | foundation  | blocked     | 1.4, 1.6         |
-| 5.2   | 5     | integration | blocked     | 5.1              |
-| 6.1   | 6     | foundation  | blocked     | phase:1, phase:2 |
-| 6.2   | 6     | fan-out     | blocked     | 6.1              |
-| 6.3   | 6     | fan-out     | blocked     | 6.1              |
-| 6.4   | 6     | fan-out     | blocked     | 6.1              |
-| 6.5   | 6     | integration | blocked     | 6.2, 6.3         |
-| 7.1   | 7     | foundation  | blocked     | phase:2          |
-| 7.2   | 7     | fan-out     | blocked     | 7.1              |
-| 7.3   | 7     | fan-out     | blocked     | 7.1              |
-| 7.4   | 7     | integration | blocked     | 7.2, 7.3         |
+| Slice | Phase | Type        | State     | Depends on       |
+| ----- | ----- | ----------- | --------- | ---------------- |
+| 0.1   | 0     | foundation  | shipped   | —                |
+| 0.2   | 0     | fan-out     | shipped   | 0.1              |
+| 0.3   | 0     | fan-out     | shipped   | 0.1              |
+| 0.4   | 0     | fan-out     | shipped   | 0.1              |
+| 1.1   | 1     | foundation  | shipped   | phase:0          |
+| 1.2   | 1     | fan-out     | shipped   | 1.1              |
+| 1.3   | 1     | fan-out     | shipped   | 1.1              |
+| 1.4   | 1     | fan-out     | shipped   | 1.1, 1.8         |
+| 1.5   | 1     | fan-out     | shipped   | 1.1              |
+| 1.6   | 1     | integration | available | 1.4, 1.5         |
+| 1.7   | 1     | fan-out     | available | 1.1              |
+| 1.8   | 1     | foundation  | shipped   | 1.1              |
+| 1.9   | 1     | foundation  | shipped   | 1.1              |
+| 1.10  | 1     | fan-out     | shipped   | 1.3, 1.9         |
+| 2.1   | 2     | fan-out     | blocked   | 1.6              |
+| 2.2   | 2     | fan-out     | blocked   | 1.6              |
+| 2.3   | 2     | foundation  | blocked   | 2.1, 2.2         |
+| 2.4   | 2     | fan-out     | blocked   | 2.3              |
+| 2.5   | 2     | fan-out     | blocked   | 2.4              |
+| 2.6   | 2     | integration | blocked   | 2.5              |
+| 3.1   | 3     | foundation  | blocked   | 1.4, 1.5, 1.6    |
+| 3.2   | 3     | fan-out     | blocked   | 3.1              |
+| 3.3   | 3     | fan-out     | blocked   | 3.1              |
+| 3.4   | 3     | integration | blocked   | 3.2, 3.3         |
+| 5.1   | 5     | foundation  | blocked   | 1.4, 1.6         |
+| 5.2   | 5     | integration | blocked   | 5.1              |
+| 6.1   | 6     | foundation  | blocked   | phase:1, phase:2 |
+| 6.2   | 6     | fan-out     | blocked   | 6.1              |
+| 6.3   | 6     | fan-out     | blocked   | 6.1              |
+| 6.4   | 6     | fan-out     | blocked   | 6.1              |
+| 6.5   | 6     | integration | blocked   | 6.2, 6.3         |
+| 7.1   | 7     | foundation  | blocked   | phase:2          |
+| 7.2   | 7     | fan-out     | blocked   | 7.1              |
+| 7.3   | 7     | fan-out     | blocked   | 7.1              |
+| 7.4   | 7     | integration | blocked   | 7.2, 7.3         |
 
 <!-- roadmap:status:end -->
 
@@ -65,16 +60,16 @@ Slicing follows the **Foundation → Fan-out → Integration** pattern documente
 
 ## All phases
 
-| Phase | Focus                                                                          | Status                        | File                                                     |
-| ----- | ------------------------------------------------------------------------------ | ----------------------------- | -------------------------------------------------------- |
-| 0     | Bootstrap (Next.js + Tailwind + shadcn + Prisma + Neon + Vercel + CI)          | 🟢 Complete (0.1–0.4 shipped) | [phase-0-bootstrap.md](./phase-0-bootstrap.md)           |
-| 1     | Foundation (auth + capture/edit/delete + list + month filter)                  | 🟡 Active (1.1 next up)       | [phase-1-foundation.md](./phase-1-foundation.md)         |
-| 2     | Weekly Review (summary + category rollup + settlement workflow + settings)     | 🔒 Locked                     | [phase-2-weekly-review.md](./phase-2-weekly-review.md)   |
-| 3     | Recurring (`isRecurring` checkbox + month-rollover modal + clone logic)        | 🔒 Locked                     | [phase-3-recurring.md](./phase-3-recurring.md)           |
-| 4     | Dashboard (50/25/25 + by-category donut + by-card bar + subcategory drilldown) | 🔒 Locked                     | [phase-4-dashboard.md](./phase-4-dashboard.md)           |
-| 5     | Multi-currency (MXN canonical, USD/EUR reference)                              | 🔒 Locked                     | [phase-5-multi-currency.md](./phase-5-multi-currency.md) |
-| 6     | Mobile Polish (FAB + optimistic UI + PWA install + inline-row capture)         | 🔒 Locked                     | [phase-6-mobile-polish.md](./phase-6-mobile-polish.md)   |
-| 7     | Email Summary (Resend weekly cron, configurable day)                           | 🔒 Locked                     | [phase-7-email-summary.md](./phase-7-email-summary.md)   |
+| Phase | Focus                                                                                                                     | Status                        | File                                                     |
+| ----- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | -------------------------------------------------------- |
+| 0     | Bootstrap (Next.js + Tailwind + shadcn + Prisma + Neon + Vercel + CI)                                                     | 🟢 Complete (0.1–0.4 shipped) | [phase-0-bootstrap.md](./phase-0-bootstrap.md)           |
+| 1     | Foundation (auth + capture/edit/delete + list + month filter)                                                             | 🟡 Active (1.1 next up)       | [phase-1-foundation.md](./phase-1-foundation.md)         |
+| 2     | Confirmed Designs V1 screens (capture/list re-skin + Income + Dashboard + Category detail + Settlement)                   | 🔒 Locked                     | [phase-2-screens.md](./phase-2-screens.md)               |
+| 3     | Recurring (`isRecurring` checkbox + month-rollover modal + clone logic)                                                   | 🔒 Locked                     | [phase-3-recurring.md](./phase-3-recurring.md)           |
+| 4     | Dashboard — **retired**, absorbed into Phase 2 (designs re-slice, [ADR-0013](../decisions/0013-screen-driven-reslice.md)) | ⚪ Retired                    | [phase-4-dashboard.md](./phase-4-dashboard.md)           |
+| 5     | Multi-currency (MXN canonical, USD/EUR reference)                                                                         | 🔒 Locked                     | [phase-5-multi-currency.md](./phase-5-multi-currency.md) |
+| 6     | Mobile Polish (FAB + optimistic UI + PWA install + inline-row capture)                                                    | 🔒 Locked                     | [phase-6-mobile-polish.md](./phase-6-mobile-polish.md)   |
+| 7     | Email Summary (Resend weekly cron, configurable day)                                                                      | 🔒 Locked                     | [phase-7-email-summary.md](./phase-7-email-summary.md)   |
 
 **Status legend**: 🟢 Complete · 🟡 In Progress / Next up · 🔒 Locked (not started) · ⚪ Not started · 📋 Backlog
 

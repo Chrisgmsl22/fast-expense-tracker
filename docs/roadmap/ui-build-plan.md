@@ -5,9 +5,11 @@ The screen-by-screen plan for building the app's UI to the validated designs.
 `Confirmed designs V1` (+ the per-screen PNGs in `screenshots/`). This doc is the
 **order + scope**; the design files are the **visual spec**.
 
-Each screen below is **its own slice / PR** when implementation comes. This PR is
-planning only — no feature code. Convert a section into a formal Plan block (and
-a `slices.json` entry) when that slice is picked up.
+Each screen below is **its own slice / PR**, now tracked in
+[`slices.json`](./slices.json) as **Phase 2** (`2.1`–`2.6`; Login shipped as `1.10`) —
+see [ADR-0013](../decisions/0013-screen-driven-reslice.md). Write the formal Plan
+block ([`slice-planning.md`](../conventions/slice-planning.md)) when a screen is
+picked up; the manifest entry already exists.
 
 ## What's already in place (foundation, slice 1.9)
 
@@ -62,7 +64,7 @@ designs V1` screenshot + this doc's section + any referenced ADR → writes a
 
 ---
 
-## 1. Login — re-skin
+## 1. Login — re-skin (slice 1.10 — shipped)
 
 - **Design:** `login-desktop.png` / `login-mobile.png`.
 - **Type:** re-skin the shipped `/login` (slice 1.3) — keep all credentials logic
@@ -73,7 +75,7 @@ designs V1` screenshot + this doc's section + any referenced ADR → writes a
 - **Out:** any auth behavior change; signup.
 - **Prereqs:** none (foundation done).
 
-## 2. Add expense — re-skin
+## 2. Add expense — re-skin (slice 2.1)
 
 - **Design:** `add-expense-desktop.png` / `add-expense-mobile.png`.
 - **Type:** re-skin the capture modal (slice 1.4). Keep `createExpense` + Zod.
@@ -85,7 +87,7 @@ designs V1` screenshot + this doc's section + any referenced ADR → writes a
 - **Out:** card payments.
 - **Prereqs:** `Expense.subcategoryId` ✓.
 
-## 3. Expenses — re-skin
+## 3. Expenses — re-skin (slice 2.2)
 
 - **Design:** `expenses-desktop.png` / `expenses-mobile.png`.
 - **Type:** re-skin the shipped `/expenses` (slice 1.5) table.
@@ -97,7 +99,7 @@ designs V1` screenshot + this doc's section + any referenced ADR → writes a
   the `Movement` UI (slice 7).
 - **Prereqs:** `Category.color` ✓.
 
-## 4. Income model + Income screen — new (data foundation)
+## 4. Income model + Income screen — new (data foundation) (slice 2.3)
 
 - **Design:** `income-desktop.png` / `income-mobile.png`.
 - **Type:** **new** — the one real data gap. Adds the `Income` model + the screen.
@@ -108,7 +110,7 @@ designs V1` screenshot + this doc's section + any referenced ADR → writes a
 - **Prereqs:** none new (creates the model). Resolves the Income-model follow-up.
 - **Open Qs:** eye-toggle scope (income-only vs global) — see Open questions.
 
-## 5. Dashboard — new (post-login landing)
+## 5. Dashboard — new (post-login landing) (slice 2.4)
 
 - **Design:** `dashboard-desktop.png` / `dashboard-mobile.png`. New `/dashboard`,
   becomes the post-login landing; `/expenses` stays the list.
@@ -124,7 +126,7 @@ month)` service (totals use `actualExpenditure`).
   the Income screen from slice 4); budget-editing UI (separate).
 - **Prereqs:** Income model (slice 4); `Category.monthlyBudget` ✓; Recharts.
 
-## 6. Category detail — new
+## 6. Category detail — new (slice 2.5)
 
 - **Design:** `category-detail-desktop.png` / `category-detail-mobile.png`. Route
   `/category/[slug]` (from a dashboard category card).
@@ -136,7 +138,7 @@ month)` service (totals use `actualExpenditure`).
   its subcategory). Daily-spend chart optional/secondary.
 - **Prereqs:** `Expense.subcategoryId` ✓ (spend-by-subcategory aggregation).
 
-## 7. Settlement — new (+ card-payment / Movement UI)
+## 7. Settlement — new (+ card-payment / Movement UI) (slice 2.6)
 
 - **Design:** `settlement-desktop.png` / `settlement-mobile.png`. Route `/settlement`.
 - **Scope (in):** week range + prev/next; 3-step flow (charged → partner gives 32%
@@ -160,7 +162,9 @@ month)` service (totals use `actualExpenditure`).
 
 These screen-slices supersede the widget-level decomposition the original Phase 2
 (summary/rollup/settlement/settings) and Phase 4 (dashboard/charts/drilldown)
-sketches assumed — the designs reorganize that work screen-by-screen. When each
-slice is picked up, add its `slices.json` entry + Plan block and reconcile the
-affected phase file. Phases 3 (recurring), 5 (multi-currency), 6 (mobile polish),
-7 (email) are unaffected by this plan.
+sketches assumed — the designs reorganize that work screen-by-screen. **That
+reconciliation is done** ([ADR-0013](../decisions/0013-screen-driven-reslice.md)):
+Phase 2 in `slices.json` is now these screens (`2.1`–`2.6`), and old Phase 4 is
+retired. Per-slice Plan blocks are still written when each screen goes next-up.
+Phases 3 (recurring), 5 (multi-currency), 6 (mobile polish), 7 (email) are
+unaffected by this plan.
