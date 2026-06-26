@@ -34,6 +34,32 @@ export function getCurrentMonthCdmx(now: Date = new Date()): string {
     return `${year}-${month}`;
 }
 
+/**
+ * A calendar date → the UTC instant of that day's CDMX local midnight (06:00Z).
+ * Capture and edit store dates this way so month-boundary
+ * queries land in the month the user picked. Reads the date's UTC fields, which
+ * carry the calendar day for a `type="date"` value parsed as UTC.
+ */
+export function cdmxCalendarDateToUtc(date: Date): Date {
+    return new Date(
+        Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate(),
+            CDMX_UTC_OFFSET_HOURS,
+        ),
+    );
+}
+
+/**
+ * A `Date` → the `yyyy-mm-dd` a `type="date"` input expects, read in UTC — the
+ * same frame capture/edit store dates in (see `cdmxCalendarDateToUtc`), so the
+ * round-trip is lossless.
+ */
+export function toDateInputValue(date: Date): string {
+    return date.toISOString().slice(0, 10);
+}
+
 /** `YYYY-MM` shifted by `delta` months, with year rollover. */
 export function shiftMonth(month: string, delta: number): string {
     const year = Number(month.slice(0, 4));

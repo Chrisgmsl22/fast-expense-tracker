@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
 import { getExpensesForMonth } from "@/lib/services/expense/expense.service";
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
-import { ExpenseList } from "@/components/expense/ExpenseList";
+import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteractive";
 import { MonthPicker } from "@/components/expense/MonthPicker";
 
 // Per-request, DB-backed data — never prerender at build (no DB in preview builds, ADR-0004).
@@ -57,7 +57,12 @@ export default async function ExpensesPage({
                 <MonthPicker month={month} />
             </div>
             <div className="mt-4">
-                <ExpenseList expenses={expenses} />
+                <ExpenseListInteractive
+                    expenses={expenses}
+                    categories={categories}
+                    subcategories={subcategories}
+                    cards={cards}
+                />
             </div>
         </main>
     );

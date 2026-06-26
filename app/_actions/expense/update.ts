@@ -1,30 +1,38 @@
 "use server";
 
+import { z } from "zod";
+
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { expenseInputSchema, type ExpenseInput } from "@/lib/schemas/expense";
 import type { ActionResult, FieldErrors } from "@/lib/actions/result";
 
-/** Failure modes the caller can branch on. */
-export type CreateExpenseCode = "validation" | "unauthenticated" | "db_error";
+/** The edit payload carries the row id alongside the expense fields. */
+const idSchema = z.object({ id: z.string().min(1) });
 
-export type CreateExpenseResult = ActionResult<
+/** Failure modes the caller can branch on. `not_found` also covers "not yours". */
+export type UpdateExpenseCode =
+    | "validation"
+    | "unauthenticated"
+    | "not_found"
+    | "db_error";
+
+export type UpdateExpenseResult = ActionResult<
     { id: string },
     ExpenseInput,
-    CreateExpenseCode
+    UpdateExpenseCode
 >;
 
 /**
- * Create an expense for the signed-in user (slice 1.4).
- *
- * `actualExpenditure` is computed server-side and stored, never trusted from the
- * client (spec 0001 §3). `paidBy` is persisted as-is — netting lives in the
- * settlement layer, never in the expense row (spec 0003).
+ * Update an existing expense for the signed-in user. Mirrors `createExpense`
+ * (validate → recompute `actualExpenditure` server-side → CDMX-midnight date),
+ * but the write is **scoped by `userId`** so a mismatch matches zero rows and
+ * returns `not_found` instead of mutating another user's data (IDOR guard).
  */
-export async function createExpense(
+export async function updateExpense(
     input: unknown,
-): Promise<CreateExpenseResult> {
+): Promise<UpdateExpenseResult> {
     const parsed = expenseInputSchema.safeParse(input);
     if (!parsed.success) {
         const fieldErrors: FieldErrors<ExpenseInput> = {};
@@ -42,11 +50,15 @@ export async function createExpense(
             fieldErrors,
         };
     }
+    // Validate the id through Zod too, rather than hand-casting `input` — the
+    // action's argument is `unknown` precisely so nothing is read untyped.
+    const idParsed = idSchema.safeParse(input);
+    if (!idParsed.success) {
+        return { ok: false, code: "validation", message: "Invalid expense" };
+    }
+    const { id } = idParsed.data;
 
     const session = await auth();
-    // `session.user.id` is typed via types/next-auth.d.ts and populated by the
-    // Credentials callbacks in slice 1.3; until then there's no live session, so
-    // this guards rather than assumes.
     const userId = session?.user?.id;
     if (!userId) {
         return {
@@ -62,13 +74,7 @@ export async function createExpense(
         : v.amount;
     const dateUtc = cdmxCalendarDateToUtc(v.date);
 
-    // One try around every DB touch: the subcategory check and the insert both
-    // hit the DB, so a failure in either returns a typed error instead of
-    // throwing (no silent failure).
     try {
-        // A subcategory must belong to the chosen category — both FKs are valid
-        // individually, so without this check a mismatched pair would persist
-        // as silently-wrong data.
         if (v.subcategoryId) {
             const sub = await db.subcategory.findUnique({
                 where: { id: v.subcategoryId },
@@ -88,9 +94,15 @@ export async function createExpense(
             }
         }
 
-        const created = await db.expense.create({
+        // updateMany (not update) so the where-clause can carry `userId` as well
+        // as `id`: Prisma's `update` only accepts unique fields in `where`, so it
+        // can't filter by owner — `updateMany` takes an arbitrary filter, making
+        // the ownership check atomic with the write. A row that isn't the
+        // signed-in user's matches nothing, so count stays 0 and we report
+        // not_found instead of touching someone else's data.
+        const result = await db.expense.updateMany({
+            where: { id, userId },
             data: {
-                userId,
                 categoryId: v.categoryId,
                 subcategoryId: v.subcategoryId ?? null,
                 cardId: v.cardId ?? null,
@@ -102,22 +114,22 @@ export async function createExpense(
                 actualExpenditure,
                 paidBy: v.paidBy,
                 notes: v.notes ?? null,
-                isRecurring: false,
-                originalAmount: null,
-                originalCurrency: null,
             },
-            select: { id: true },
         });
-        return { ok: true, data: { id: created.id } };
+        if (result.count === 0) {
+            return {
+                ok: false,
+                code: "not_found",
+                message: "Expense not found.",
+            };
+        }
+        return { ok: true, data: { id } };
     } catch (e) {
-        // Don't leak DB internals to the client; surface a generic failure and
-        // keep the typed contract so the form shows an error instead of
-        // silently doing nothing.
-        console.error("createExpense: db write failed", e);
+        console.error("updateExpense: db write failed", e);
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the expense. Please try again.",
+            message: "Could not save changes. Please try again.",
         };
     }
 }

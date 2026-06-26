@@ -2,10 +2,12 @@
 import { describe, it, expect } from "vitest";
 
 import {
+    cdmxCalendarDateToUtc,
     getCurrentMonthCdmx,
     getMonthRangeUtc,
     isValidMonth,
     shiftMonth,
+    toDateInputValue,
 } from "@/lib/dates";
 
 describe("isValidMonth", () => {
@@ -65,6 +67,20 @@ describe("getCurrentMonthCdmx", () => {
         expect(getCurrentMonthCdmx(new Date("2027-01-01T03:00:00Z"))).toBe(
             "2026-12",
         );
+    });
+});
+
+describe("toDateInputValue", () => {
+    it("formats a stored CDMX-midnight instant back to its calendar date", () => {
+        // What cdmxCalendarDateToUtc produces for 2026-05-15 is stored at 06:00Z.
+        expect(toDateInputValue(new Date("2026-05-15T06:00:00Z"))).toBe(
+            "2026-05-15",
+        );
+    });
+
+    it("round-trips with cdmxCalendarDateToUtc", () => {
+        const stored = cdmxCalendarDateToUtc(new Date("2026-12-31T00:00:00Z"));
+        expect(toDateInputValue(stored)).toBe("2026-12-31");
     });
 });
 
