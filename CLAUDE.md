@@ -81,6 +81,15 @@ Two persistent subagents live in `.claude/agents/`:
 
 See [docs/conventions/agent-workflow.md](./docs/conventions/agent-workflow.md) for when to invoke which.
 
+**Verify subagent output before trusting it.** When an `implementer` (or any
+subagent) reports "done," do not build on or report that work on faith. Run
+`git status` / `git diff` and confirm the **expected files actually changed**. A
+"done" report with an empty diff means the agent failed to persist anything —
+e.g. it degraded into emitting tool-call syntax as plain text (zero real tool
+calls), so nothing was written. In that case redo the work yourself; never report
+phantom work as complete. (This is how the lost-1.6-implementer run was caught —
+see [`docs/lessons.md`](./docs/lessons.md).)
+
 ### Slice lifecycle (same as MoneyFlow)
 
 Before opening a PR for a slice:

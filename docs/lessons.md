@@ -186,3 +186,31 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
   `pnpm dev`** before judging the result. Don't conclude "components are
   unstyled" from a stale dev server — verify against a fresh build (or
   `tailwindcss` CLI compile) first.
+
+---
+
+### 2026-06-26 — A subagent reported "done" but wrote nothing; and `cd`/echo drift
+
+- **Symptom (lost work):** An `implementer` subagent ran ~20 min / ~76k tokens on
+  slice 1.6 and returned a report, but `git status` was clean — zero changes. Its
+  final message contained raw, unclosed tool-call syntax printed as prose and
+  referenced a file (`ExpenseTable.test.tsx`) that never existed.
+- **Root cause:** The agent degraded into **emitting tool calls as plain text**
+  instead of invoking them (`tool_uses: 0`). Nothing was written anywhere — not a
+  lost worktree, just no real file operations. The filename was hallucinated.
+- **Symptom (drift):** Despite a standing rule, the main agent kept prefixing Bash
+  with `cd <repo> && …` and `echo "=== banner ==="` — memory is advisory and it
+  drifted.
+- **Fix / decision:**
+    1. **Verify subagent output at the boundary** — after any subagent says "done,"
+       run `git status`/`git diff` and confirm the expected files changed before
+       trusting or building on it. Codified in `CLAUDE.md` (Named subagents).
+    2. **Enforce mechanical rules with hooks, not memory** — added a
+       `PreToolUse(Bash)` hook (`.claude/hooks/bash-guard.sh`) that warns on a
+       leading `cd` and `echo "=== … ==="` banners.
+- **Lessons for next time:**
+    1. A "done" report is a claim, not evidence. Check the diff exists.
+    2. When a behavior keeps drifting despite a memory/rule, make it deterministic
+       (a hook the harness enforces) rather than asking the agent to self-police.
+    3. Self-check _prompts_ ("am I doing this right?") don't catch this class of
+       failure — the failing agent believed it was working. Enforce + verify.
