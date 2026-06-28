@@ -140,7 +140,22 @@ Auth.js signs session tokens with this secret.
 
 ---
 
-## 7. Before slice 7.1 — Resend account _(deferred)_
+## 7. Before slice 1.7 — GlitchTip + Speed Insights
+
+Error tracking (GlitchTip) + real-user Web Vitals (Vercel Speed Insights), per
+[ADR-0014](../decisions/0014-glitchtip-replaces-sentry.md) (supersedes ADR-0005).
+
+- [ ] Sign up at https://glitchtip.com (hosted; free-forever tier = 1,000 events/month — far above a 1-user app, no credit card)
+- [ ] Create a project, platform **Next.js**. Name it `fast-expense-tracker`
+- [ ] Copy the **DSN** (`https://<key>@app.glitchtip.com/<project-id>`). It is **publishable, not a secret** — it ships in the browser bundle
+- [ ] Add to `.env.local`: `NEXT_PUBLIC_SENTRY_DSN="<dsn>"` and `SENTRY_DSN="<dsn>"` (same value)
+- [ ] Add both to Vercel env (Production + Preview). The SDK is inert when unset — safe to deploy before this
+- [ ] In the Vercel dashboard, open the project → **Speed Insights** tab → **Enable** (no key; the `<SpeedInsights />` component reports automatically once deployed)
+- [ ] _Deferred:_ `SENTRY_AUTH_TOKEN` (source-map upload) — a real secret, Vercel env only. Skipped in v1; add later to de-minify stack traces
+
+---
+
+## 8. Before slice 7.1 — Resend account _(deferred)_
 
 Only needed when Phase 7 (Email Summary) is in flight. Many months out.
 

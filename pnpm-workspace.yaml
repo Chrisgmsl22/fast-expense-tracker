@@ -1,6 +1,9 @@
 allowBuilds:
   "@prisma/client": true
   "@prisma/engines": true
+  # Source-map upload deferred (ADR-0014) — the upload binary isn't needed in
+  # v1. Flip to true when enabling source maps (with SENTRY_AUTH_TOKEN in Vercel).
+  '@sentry/cli': false
   msw: false
   prisma: true
   sharp: false

@@ -1,7 +1,7 @@
 # ADR-0005: Error Tracking and Observability — Sentry + Vercel Speed Insights
 
 Date: 2026-06-01
-Status: Accepted (implementation deferred to Phase 1, slice 1.7)
+Status: Superseded by [ADR-0014](./0014-glitchtip-replaces-sentry.md) (Sentry's free tier is no longer permanent; GlitchTip adopted instead. Speed Insights for Web Vitals is unchanged.)
 
 ## Context
 
@@ -35,7 +35,7 @@ Options considered:
 3. **Observe** — observability data lake, usage-based enterprise pricing, no
    hobby free tier. Same misfit as Datadog, more so.
 4. **Vercel-native only** (Runtime Logs + Observability + Speed Insights) —
-   already on, zero setup, free, but error *grouping/alerting* is thin. It is
+   already on, zero setup, free, but error _grouping/alerting_ is thin. It is
    logs + perf charts, not an error tracker — fails the primary goal.
 5. **PostHog** — has error tracking now, generous free tier, but it is a
    product-analytics platform; adopting it drags in analytics we don't want.
@@ -62,7 +62,7 @@ wrong price, wrong ergonomics for a single-user app on a $0 budget.
 The repo is public, so the Sentry wiring must respect the secret rules:
 
 - The **Sentry DSN is client-publishable** by design (it ships in the browser
-  bundle). It is *not* a secret — it goes in env as `NEXT_PUBLIC_SENTRY_DSN`
+  bundle). It is _not_ a secret — it goes in env as `NEXT_PUBLIC_SENTRY_DSN`
   and `SENTRY_DSN`, with placeholders in `.env.example`.
 - The **source-map upload auth token IS a secret** (`SENTRY_AUTH_TOKEN`) —
   Vercel env only, never the repo, never logged.
@@ -76,7 +76,7 @@ Implementation is **deferred to Phase 1, slice 1.7 (Observability)** — a
 parallel/fan-out slice. Rationale:
 
 - Real prod traffic begins with Phase 1 (auth + capture = first usage), so
-  error tracking live *with* Phase 1 catches Phase 1's own prod errors.
+  error tracking live _with_ Phase 1 catches Phase 1's own prod errors.
 - It is textbook fan-out work: touches root layout + config + env only, no
   shared state with feature slices → parallel-capable under the 2-agent cap.
 - Doing it earlier than Phase 1 buys nothing (no traffic); doing it at the end

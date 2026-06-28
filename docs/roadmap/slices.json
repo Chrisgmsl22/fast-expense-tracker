@@ -76,7 +76,7 @@
             "id": "1.7",
             "phase": 1,
             "type": "fan-out",
-            "title": "Observability — Sentry + Speed Insights",
+            "title": "Observability — GlitchTip + Speed Insights",
             "dependsOn": ["1.1"]
         },
         {
