@@ -25,6 +25,15 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-06-28 — Two agents shared one checkout → branch switched out from under a slice, trees intermingled
+
+- **Symptom:** Mid-way through shipping slice 1.7, `git add -A` swept up 7 unrelated files (an architecture-DI refactor) alongside the 1.7 work, and the branch had silently changed from `feat/1.7-observability` to `refactor/architecture-di`. A blind commit would have mixed two agents' work and wrongly deleted `expense.service.ts` on the 1.7 PR.
+- **Root cause:** a second agent was launched to work "in parallel" but in the **same working directory** (`git worktree list` showed one checkout). A shared checkout = a shared HEAD + index: the other agent's `git checkout` switched the branch for both sessions, and its uncommitted files landed in the same tree as the 1.7 changes.
+- **Fix / decision:** Recovered by switching back to the slice branch, staging only the 18 known 1.7 files **explicitly** (never `-A`), verifying `git diff --cached --stat`, committing, then restoring the other agent's branch. Codified a **parallel-work policy** (CLAUDE.md §Session startup): survey open slices/branches/PRs before parallel work, and with ≥2 branches active, isolate each agent in its own `git worktree`.
+- **Lesson for next time:** Two agents must never share one working directory — the moment a second concurrent branch exists, give each its own worktree. And before any commit in a shared/dirty tree, review the **staged set explicitly** (`git diff --cached --stat`); `git add -A` is how foreign work sneaks into a PR.
+
+---
+
 ### 2026-06-25 — Coverage reporter silently drops Prisma-importing files → days lost chasing a blocking gate
 
 - **Symptom:** Building the coverage backfill to flip CI from report-only → blocking, executed source modules that import `@/lib/db` (services, DB actions) never appeared in the coverage report — read as absent/0% while unrelated files showed fine. So a 100% `lib`/`app_actions` gate could not be honestly evaluated.
