@@ -3,10 +3,12 @@
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
+import { toFieldErrors } from "@/lib/actions/field-errors";
+import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
+import { computeActualExpenditure } from "@/lib/domain/expense";
+import { expenseRepository } from "@/lib/repositories";
 import { expenseInputSchema, type ExpenseInput } from "@/lib/schemas/expense";
-import type { ActionResult, FieldErrors } from "@/lib/actions/result";
 
 /** The edit payload carries the row id alongside the expense fields. */
 const idSchema = z.object({ id: z.string().min(1) });
@@ -26,28 +28,20 @@ export type UpdateExpenseResult = ActionResult<
 
 /**
  * Update an existing expense for the signed-in user. Mirrors `createExpense`
- * (validate → recompute `actualExpenditure` server-side → CDMX-midnight date),
- * but the write is **scoped by `userId`** so a mismatch matches zero rows and
- * returns `not_found` instead of mutating another user's data (IDOR guard).
+ * (validate → recompute server-side → persist), but the write is **scoped by
+ * `userId`** in the service so a mismatch matches zero rows and returns
+ * `not_found` instead of mutating another user's data (IDOR guard).
  */
 export async function updateExpense(
     input: unknown,
 ): Promise<UpdateExpenseResult> {
     const parsed = expenseInputSchema.safeParse(input);
     if (!parsed.success) {
-        const fieldErrors: FieldErrors<ExpenseInput> = {};
-        for (const issue of parsed.error.issues) {
-            const key = issue.path[0];
-            if (typeof key === "string") {
-                const field = key as keyof ExpenseInput;
-                (fieldErrors[field] ??= []).push(issue.message);
-            }
-        }
         return {
             ok: false,
             code: "validation",
             message: "Invalid expense",
-            fieldErrors,
+            fieldErrors: toFieldErrors<ExpenseInput>(parsed.error),
         };
     }
     // Validate the id through Zod too, rather than hand-casting `input` — the
@@ -69,18 +63,13 @@ export async function updateExpense(
     }
 
     const v = parsed.data;
-    const actualExpenditure = v.isShared
-        ? v.amount * v.yourPercentage
-        : v.amount;
-    const dateUtc = cdmxCalendarDateToUtc(v.date);
 
     try {
         if (v.subcategoryId) {
-            const sub = await db.subcategory.findUnique({
-                where: { id: v.subcategoryId },
-                select: { categoryId: true },
-            });
-            if (!sub || sub.categoryId !== v.categoryId) {
+            const categoryId = await expenseRepository.getSubcategoryCategoryId(
+                v.subcategoryId,
+            );
+            if (categoryId !== v.categoryId) {
                 return {
                     ok: false,
                     code: "validation",
@@ -94,29 +83,20 @@ export async function updateExpense(
             }
         }
 
-        // updateMany (not update) so the where-clause can carry `userId` as well
-        // as `id`: Prisma's `update` only accepts unique fields in `where`, so it
-        // can't filter by owner — `updateMany` takes an arbitrary filter, making
-        // the ownership check atomic with the write. A row that isn't the
-        // signed-in user's matches nothing, so count stays 0 and we report
-        // not_found instead of touching someone else's data.
-        const result = await db.expense.updateMany({
-            where: { id, userId },
-            data: {
-                categoryId: v.categoryId,
-                subcategoryId: v.subcategoryId ?? null,
-                cardId: v.cardId ?? null,
-                date: dateUtc,
-                description: v.description,
-                amount: v.amount,
-                isShared: v.isShared,
-                yourPercentage: v.yourPercentage,
-                actualExpenditure,
-                paidBy: v.paidBy,
-                notes: v.notes ?? null,
-            },
+        const count = await expenseRepository.updateForUser(id, userId, {
+            categoryId: v.categoryId,
+            subcategoryId: v.subcategoryId ?? null,
+            cardId: v.cardId ?? null,
+            date: cdmxCalendarDateToUtc(v.date),
+            description: v.description,
+            amount: v.amount,
+            isShared: v.isShared,
+            yourPercentage: v.yourPercentage,
+            actualExpenditure: computeActualExpenditure(v),
+            paidBy: v.paidBy,
+            notes: v.notes ?? null,
         });
-        if (result.count === 0) {
+        if (count === 0) {
             return {
                 ok: false,
                 code: "not_found",

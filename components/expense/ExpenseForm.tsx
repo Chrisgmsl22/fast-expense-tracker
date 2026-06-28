@@ -13,7 +13,7 @@ import {
 import { toDateInputValue } from "@/lib/dates";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { ExpenseInput } from "@/lib/schemas/expense";
-import type { ExpenseEditable } from "@/lib/services/expense/expense.service";
+import type { ExpenseEditable } from "@/lib/repositories/expense.repository";
 
 export type CategoryOption = { id: string; name: string };
 export type SubcategoryOption = {

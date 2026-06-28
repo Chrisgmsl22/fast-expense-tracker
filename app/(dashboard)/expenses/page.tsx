@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
-import { getExpensesForMonth } from "@/lib/services/expense/expense.service";
+import { expenseRepository } from "@/lib/repositories";
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
 import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteractive";
 import { MonthPicker } from "@/components/expense/MonthPicker";
@@ -40,7 +40,7 @@ export default async function ExpensesPage({
             orderBy: { name: "asc" },
             select: { id: true, name: true },
         }),
-        getExpensesForMonth(userId, month),
+        expenseRepository.getForMonth(userId, month),
     ]);
 
     return (

@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 
 import { db } from "@/lib/db";
-import { getExpensesForMonth } from "@/lib/services/expense/expense.service";
+import { PrismaExpenseRepository } from "@/lib/repositories/expense.repository";
+
+const repo = new PrismaExpenseRepository(db);
 
 // Minimal fixtures for an expense row. Truncation (tests/integration/truncate.ts)
 // gives each test a clean database, so ids/emails don't need to be unique across
@@ -36,10 +38,10 @@ async function seedExpense(opts: {
     });
 }
 
-describe("getExpensesForMonth (integration)", () => {
+describe("PrismaExpenseRepository.getForMonth (integration)", () => {
     it("returns an empty array for a user with no expenses", async () => {
         const user = await seedUser();
-        expect(await getExpensesForMonth(user.id, "2026-05")).toEqual([]);
+        expect(await repo.getForMonth(user.id, "2026-05")).toEqual([]);
     });
 
     it("returns only the user's expenses inside the CDMX month, newest first", async () => {
@@ -73,7 +75,7 @@ describe("getExpensesForMonth (integration)", () => {
             description: "other user",
         });
 
-        const res = await getExpensesForMonth(user.id, "2026-05");
+        const res = await repo.getForMonth(user.id, "2026-05");
 
         expect(res.map((e) => e.description)).toEqual([
             "late may",
@@ -95,7 +97,7 @@ describe("getExpensesForMonth (integration)", () => {
             actualExpenditure: 680,
         });
 
-        const [row] = await getExpensesForMonth(user.id, "2026-05");
+        const [row] = await repo.getForMonth(user.id, "2026-05");
         expect(row?.amount).toBe(1000);
         expect(row?.actualExpenditure).toBe(680);
     });
