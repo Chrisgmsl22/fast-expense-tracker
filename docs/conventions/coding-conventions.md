@@ -77,6 +77,12 @@ These rules are non-negotiable. The repo is public.
 - **Always validate redirect URLs** (open-redirect prevention) if auth flow uses them.
 - **CSRF**: Auth.js handles it; don't bypass with raw fetch from client to server actions that change state.
 - **Rate-limit login** (Phase 2 will add this — vercel/edge or upstash/ratelimit).
+- **Observability env vars** ([ADR-0014](../decisions/0014-glitchtip-replaces-sentry.md)):
+  `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_DSN` are the GlitchTip DSN — **publishable,
+  not secret** (it ships in the client bundle by design); placeholders in
+  `.env.example`. The SDK is **inert when unset**. `SENTRY_AUTH_TOKEN`
+  (source-map upload) **is** a secret — Vercel env only, never the repo, never
+  logged; deferred in v1.
 
 ## Testing
 
