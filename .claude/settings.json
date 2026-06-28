@@ -77,6 +77,16 @@
                         "statusMessage": "Computing roadmap status..."
                     }
                 ]
+            },
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-status.sh\"",
+                        "timeout": 20,
+                        "statusMessage": "Checking worktrees..."
+                    }
+                ]
             }
         ],
         "SubagentStart": [
