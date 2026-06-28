@@ -30,6 +30,15 @@ The `SessionStart` hook [`.claude/hooks/slice-status.sh`](./.claude/hooks/slice-
 - Shipped state is git-inferred via merge-commit grep, which is **blind to squash/rebase merges**. If a slice looks unshipped but a PR may have landed, **MCP-confirm** before acting (`mcp__github__list_pull_requests` / `pull_request_read` by head branch).
 - Run `pnpm roadmap:status` any time mid-session to refresh (parallel state changes after SessionStart).
 
+### Parallel-work policy (launching agents in parallel)
+
+When the user launches an agent to work **in parallel** with another — or any time you're told work is happening alongside yours — establish a clean workspace **before** touching code:
+
+1. **Survey what's in flight first.** Check open slices (`pnpm roadmap:status`), local + remote branches (`git branch -vv`), and open PRs (GitHub MCP). Confirm the work is genuinely _available_ and not already owned by another agent/worktree.
+2. **One branch in play → the shared checkout is fine. Two or more active at once → isolate each agent in its own `git worktree`.** Never let two agents share one working directory: a shared checkout is a shared HEAD + index, so one agent's `git checkout` silently switches the branch out from under the other and intermingles their uncommitted trees. See [`docs/lessons.md`](./docs/lessons.md) (2026-06-28).
+3. `git worktree add ../fast-expense-tracker-<short> -b <branch> origin/main` gives each agent a clean, isolated space off up-to-date `main`.
+4. **Clean up when the work lands.** Once a worktree's PR is merged: `git worktree remove <path>`, then `git branch -d <branch>`. Never remove a worktree with **uncommitted** changes — report it and let the user decide. The `SessionStart` hook [`.claude/hooks/worktree-status.sh`](./.claude/hooks/worktree-status.sh) injects a `[worktrees]` line each session listing active worktrees and flagging merged ones as safe to remove, so a fresh session cleans up stale worktrees on its own.
+
 Then read these to get oriented:
 
 2. **[docs/roadmap/README.md](./docs/roadmap/README.md)** — Single "where are we?" index. The currently active phase/slice is at the top.
