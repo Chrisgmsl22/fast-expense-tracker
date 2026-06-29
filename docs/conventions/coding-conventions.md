@@ -53,13 +53,13 @@ See [`architecture.md`](./architecture.md) for the full layering and the five ru
 
 ## Error handling
 
-- **Throw structured errors from services.** Custom error classes in `lib/errors.ts`:
+- **Throw structured errors from the data layer (repositories).** Custom error classes in `lib/errors.ts`:
     - `ValidationError` (400)
     - `AuthenticationError` (401)
     - `NotFoundError` (404)
     - `ConflictError` (409)
     - `AppError` (abstract base, don't throw directly)
-- **Never throw bare `Error`** from service code. Pick a class.
+- **Never throw bare `Error`** from data-layer code. Pick a class.
 - **Server actions return the shared `ActionResult`** from [`lib/actions/result.ts`](../../lib/actions/result.ts) — never a bespoke shape. It's `{ ok: true, data } | { ok: false, code, message, fieldErrors? }`:
     - **`code`** is a per-action string-literal union (e.g. `"validation" | "unauthenticated" | "db_error"`). Callers branch on `code`, **never** on `message` strings.
     - **`message`** is the human-facing text.
@@ -104,16 +104,19 @@ These rules are non-negotiable. The repo is public.
 `tests/integration/` (DB layer, real Postgres — `pnpm test:integration`).
 One file per source unit; `<kebab-source>.test.ts` / `.test.tsx`.
 
-**Unit vs integration**: anything importing `@/lib/db` (services, DB actions) →
-**integration** test against a real DB (**never `vi.mock("@/lib/db")`**).
+**Unit vs integration**: a **repository adapter** (imports `@/lib/db`) →
+**integration** test against a real DB (**never `vi.mock("@/lib/db")`**). An
+**action** is unit-tested by **injecting a fake repository** (no `db` import, no
+db mock); its real-db path stays integration-covered via the default wiring.
 Everything else (pure logic, schemas, components) → **unit**.
 
 **Coverage**: advisory only (`pnpm test:coverage`, non-blocking) — the reporter
 unreliably drops Prisma-importing files (ADR-0011/0012). **The gate is tests
 passing — unit + integration.**
 
-**Mocking** (unit): mock the layer directly below — the action in component
-tests, `@/auth` in action tests. The DB layer isn't mocked; it's integration-tested.
+**Mocking** (unit): replace the layer directly below — the action in component
+tests; in action tests **inject a fake repository** and mock `@/auth`. The DB
+layer is never mocked; the repository adapter is integration-tested.
 
 **Tools**:
 
