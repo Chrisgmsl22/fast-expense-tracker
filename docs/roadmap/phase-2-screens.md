@@ -14,9 +14,19 @@ Each slice's Plan block (Scope in/out + acceptance) is written when it goes next
 
 Re-skin the capture modal (slice 1.4 + edit from 1.6) to [`ui-build-plan.md §2`](./ui-build-plan.md). Field order per design, subcategory cascades from category, card-color dots, live "your share $X" on shared. No new backend. **Build after 1.6** so edit mode is re-skinned once, not twice.
 
+##### Tasks
+
+- [x] Add `dialog`, `select`, `checkbox` shadcn primitives (Base UI)
+- [x] Re-skin `ExpenseForm` (field order, large amount, cascade, card dots, shared checkbox + live share at the configured split)
+- [x] Read `Settings.defaultSharePercentage` in the page; thread it as `defaultSharePercentage`
+- [x] Migrate Add + Edit + Delete modals to the `Dialog` primitive (desktop dialog / mobile sheet)
+- [x] Thread `color` through `CategoryOption`/`CardOption` + the page query; scope the card query by `userId`
+- [x] Tests (cascade, shared toggle, edit preservation, primitives) + update existing form + list tests
+- [x] Reviewer loop + real-browser check vs screenshots
+
 #### 2.2: Expenses re-skin `[PR]`
 
-Re-skin the list (slice 1.5 + 1.6) to [`ui-build-plan.md §3`](./ui-build-plan.md). Category filter chips, category pill + card-dot cells, charged/my-share amounts, Charged/My-share footer; mobile pinned total bar. Card-payment rows deferred to 2.6 (`Movement` UI).
+Re-skin the list (slice 1.5 + 1.6) to [`ui-build-plan.md §3`](./ui-build-plan.md). Category filter chips, category pill + card-dot cells, charged/my-share amounts, Charged/My-share footer; mobile pinned total bar. Card-payment rows deferred to 2.6 (`Movement` UI). **Also lands the card-color → brand-hex fix** (carried from 2.1): `CARD_SEED` stores semantic names but the model wants per-row hex applied inline (as categories do) — fix the seed to hex + re-seed, shared by every card-dot renderer (2.1/2.2/2.4).
 
 #### 2.3: Income model + Income screen `[PR]`
 
@@ -33,6 +43,10 @@ Route `/category/[slug]` ([`ui-build-plan.md §6`](./ui-build-plan.md)). Headlin
 #### 2.6: Settlement + `Movement` / card-payment UI + e2e `[PR]`
 
 Route `/settlement` ([`ui-build-plan.md §7`](./ui-build-plan.md)) — the phase capstone. Week range, 3-step flow (charged → partner gives 32% cash → you pay the card full), "true cost (68%)" + Mark settled. **Lands the `Movement` / card-payment UI** (blue "+ Card payment" lines) that Expenses (2.2) and Dashboard (2.4) reference. Playwright e2e proving the flow.
+
+#### 2.7: Card management `[PR]`
+
+Add / edit / delete the user's cards (name + color + type) — surfaced from slice 2.1, where the capture form revealed cards are per-user rows with no management UI. **Design pending** (no Confirmed-designs-V1 screen yet); parallel-capable (deps: card model from 1.1 only), so a parallel agent can pick it up independently of the screen sequence. Resolves the "cards should be dynamic" follow-up.
 
 ## Open questions (resolve in the owning slice)
 

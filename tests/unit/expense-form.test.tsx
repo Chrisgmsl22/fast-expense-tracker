@@ -1,23 +1,36 @@
-import { describe, it, expect, vi, type Mock } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import {
+    render,
+    screen,
+    fireEvent,
+    waitFor,
+    within,
+} from "@testing-library/react";
 
 // Isolate the component from the server actions (and their auth/db imports).
 vi.mock("@/app/_actions/expense/create", () => ({ createExpense: vi.fn() }));
 vi.mock("@/app/_actions/expense/update", () => ({ updateExpense: vi.fn() }));
 
 import { ExpenseForm } from "@/components/expense/ExpenseForm";
+import { createExpense } from "@/app/_actions/expense/create";
 import { updateExpense } from "@/app/_actions/expense/update";
 
-const categories = [{ id: "c1", name: "Food" }];
-const subcategories = [{ id: "s1", name: "Groceries", categoryId: "c1" }];
-const cards = [{ id: "card1", name: "Amex" }];
+const categories = [
+    { id: "c1", name: "Food", color: "#ef4444" },
+    { id: "c2", name: "Health", color: "#14b8a6" },
+];
+const subcategories = [
+    { id: "s1", name: "Groceries", categoryId: "c1" },
+    { id: "s2", name: "Doctors appt", categoryId: "c2" },
+];
+const cards = [{ id: "card1", name: "Amex", color: "#9ca3af" }];
 
 const editable = {
     id: "e1",
     date: new Date("2026-05-20T06:00:00Z"),
     amount: 250,
-    categoryId: "c1",
-    subcategoryId: "s1",
+    categoryId: "c2",
+    subcategoryId: "s2",
     cardId: "card1",
     description: "Tacos",
     notes: null,
@@ -26,53 +39,70 @@ const editable = {
     paidBy: "you",
 };
 
-function renderForm() {
+function renderForm(props?: Partial<Parameters<typeof ExpenseForm>[0]>) {
     return render(
         <ExpenseForm
             categories={categories}
             subcategories={subcategories}
             cards={cards}
+            defaultSharePercentage={0.68}
+            {...props}
         />,
     );
 }
 
+beforeEach(() => {
+    (createExpense as unknown as Mock).mockReset();
+    (updateExpense as unknown as Mock).mockReset();
+});
+
 describe("ExpenseForm", () => {
-    it("renders the core capture fields including paidBy", () => {
+    it("renders the capture fields in the design's order", () => {
         renderForm();
         expect(screen.getByLabelText(/date/i)).toBeDefined();
         expect(screen.getByLabelText(/amount/i)).toBeDefined();
         expect(screen.getByLabelText(/^category$/i)).toBeDefined();
-        expect(screen.getByLabelText(/paid by/i)).toBeDefined();
+        expect(screen.getByLabelText(/^subcategory$/i)).toBeDefined();
+        expect(screen.getByLabelText(/^card$/i)).toBeDefined();
         expect(screen.getByLabelText(/description/i)).toBeDefined();
-        // Options come through from props.
-        expect(screen.getByRole("option", { name: "Food" })).toBeDefined();
-        expect(screen.getByRole("option", { name: "Amex" })).toBeDefined();
-    });
-
-    it("offers both payers for paidBy", () => {
-        renderForm();
-        expect(screen.getByRole("option", { name: "You" })).toBeDefined();
+        expect(screen.getByLabelText(/paid by/i)).toBeDefined();
         expect(
-            screen.getByRole("option", { name: "Girlfriend" }),
+            screen.getByRole("checkbox", { name: /shared expense/i }),
         ).toBeDefined();
     });
 
-    it("reveals the share field only when 'Shared expense' is checked", () => {
+    it("disables the subcategory select until a category is chosen", () => {
         renderForm();
-        expect(screen.queryByLabelText(/your share/i)).toBeNull();
-        fireEvent.click(screen.getByLabelText(/shared expense/i));
-        expect(screen.getByLabelText(/your share/i)).toBeDefined();
+        expect(screen.getByLabelText(/^subcategory$/i)).toHaveProperty(
+            "disabled",
+            true,
+        );
     });
 
-    it("prefills fields and switches to 'Save changes' in edit mode", () => {
-        render(
-            <ExpenseForm
-                categories={categories}
-                subcategories={subcategories}
-                cards={cards}
-                expense={editable}
-            />,
+    it("reveals a live 'your share' only when shared is checked", () => {
+        renderForm();
+        fireEvent.change(screen.getByLabelText(/amount/i), {
+            target: { value: "100" },
+        });
+        expect(screen.queryByText(/your share/i)).toBeNull();
+
+        fireEvent.click(
+            screen.getByRole("checkbox", { name: /shared expense/i }),
         );
+
+        // 100 × 0.68 = 68 → formatted as MXN.
+        expect(screen.getByText("your share $68.00")).toBeDefined();
+    });
+
+    it("labels the split from the configured percentage", () => {
+        renderForm({ defaultSharePercentage: 0.5 });
+        expect(screen.getByText("Shared expense · 50/50")).toBeDefined();
+    });
+
+    it("prefills, preserves the stored split, and switches to 'Save changes' in edit mode", () => {
+        // Configured default differs from the stored row — edit must keep 0.68.
+        renderForm({ expense: editable, defaultSharePercentage: 0.5 });
+
         expect(
             (screen.getByLabelText(/description/i) as HTMLInputElement).value,
         ).toBe("Tacos");
@@ -82,13 +112,81 @@ describe("ExpenseForm", () => {
         expect((screen.getByLabelText(/date/i) as HTMLInputElement).value).toBe(
             "2026-05-20",
         );
-        // isShared starts true → the share field is visible and prefilled.
-        expect(
-            (screen.getByLabelText(/your share/i) as HTMLInputElement).value,
-        ).toBe("0.68");
+        // Stored 0.68 split is preserved, not overridden by the 0.5 default.
+        expect(screen.getByText("Shared expense · 68/32")).toBeDefined();
+        // 250 × 0.68 = 170.
+        expect(screen.getByText("your share $170.00")).toBeDefined();
         expect(
             screen.getByRole("button", { name: /save changes/i }),
         ).toBeDefined();
+    });
+
+    it("submits new captures through createExpense", async () => {
+        (createExpense as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { id: "new1" },
+        });
+        const onSuccess = vi.fn();
+        renderForm({ onSuccess });
+
+        fireEvent.change(screen.getByLabelText(/description/i), {
+            target: { value: "Coffee" },
+        });
+        fireEvent.change(screen.getByLabelText(/amount/i), {
+            target: { value: "45" },
+        });
+        fireEvent.submit(screen.getByRole("form", { name: /add expense/i }));
+
+        await waitFor(() =>
+            expect(createExpense).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    description: "Coffee",
+                    amount: "45",
+                }),
+            ),
+        );
+        await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    });
+
+    it("enables the subcategory and shows the stored value in edit mode", () => {
+        renderForm({ expense: editable });
+        const subcategory = screen.getByLabelText(/^subcategory$/i);
+        expect(subcategory).toHaveProperty("disabled", false);
+        // Stored subcategory (s2, belongs to the edited category c2) is shown.
+        expect(within(subcategory).getByText("Doctors appt")).toBeDefined();
+    });
+
+    it("uses the configured split when an unshared row is newly marked shared", async () => {
+        // An unshared row stores yourPercentage = 1; ticking Shared must adopt the
+        // configured split (not carry the 100% that the schema would reject).
+        const unsharedRow = {
+            ...editable,
+            isShared: false,
+            yourPercentage: 1,
+        };
+        (updateExpense as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { id: "e1" },
+        });
+        renderForm({ expense: unsharedRow, defaultSharePercentage: 0.68 });
+
+        // Label reflects the configured split, never "100/0".
+        expect(screen.getByText("Shared expense · 68/32")).toBeDefined();
+
+        fireEvent.click(
+            screen.getByRole("checkbox", { name: /shared expense/i }),
+        );
+        fireEvent.submit(screen.getByRole("form", { name: /edit expense/i }));
+
+        await waitFor(() =>
+            expect(updateExpense).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    id: "e1",
+                    isShared: true,
+                    yourPercentage: "0.68",
+                }),
+            ),
+        );
     });
 
     it("submits edits through updateExpense, carrying the id", async () => {
@@ -97,16 +195,10 @@ describe("ExpenseForm", () => {
             data: { id: "e1" },
         });
         const onSuccess = vi.fn();
-        render(
-            <ExpenseForm
-                categories={categories}
-                subcategories={subcategories}
-                cards={cards}
-                expense={editable}
-                onSuccess={onSuccess}
-            />,
-        );
+        renderForm({ expense: editable, onSuccess });
+
         fireEvent.submit(screen.getByRole("form", { name: /edit expense/i }));
+
         await waitFor(() =>
             expect(updateExpense).toHaveBeenCalledWith(
                 expect.objectContaining({ id: "e1", description: "Tacos" }),
