@@ -44,6 +44,16 @@ In order of severity:
 
 > **Comment quality is a first-class lens** (`coding-conventions.md` §Comments). Challenge **every** comment in the diff: slice tags (`// (slice 1.3)`), step narration, banners, and comments that merely restate the code are noise — flag them. A comment earns its place only by explaining a non-obvious _why_ (a constraint, a gotcha, an ADR link). **Apply this strictly to docblocks on small, self-evident blocks too** — a one-liner or thin wrapper (e.g. an action that's just `await signOut({ redirectTo: "/login" })`) needs no docblock even if the sentence is phrased as "why"; if a competent reader infers it from the names + body, flag it for deletion. Also flag any `TODO`/`FIXME` left pointing at work the slice under review actually completes — a finished feature must not ship a marker aimed at itself.
 
+> **Architecture adherence is a first-class lens** (`docs/conventions/architecture.md` + `frontend.md`). Flag as **Important** — or **Critical** if it ships wrong data or breaks the client/server boundary:
+>
+> - **`db` imported in an action, component, or page** — data access must go through a repository interface (`lib/repositories`), never Prisma directly.
+> - **Business logic inline in an action or in JSX** — money math / decisions belong in `lib/domain` (pure); formatting in `lib/format`.
+> - **A new `lib/services/*`**, or a repository that doesn't depend on an interface / isn't injected (default param, wired at the composition root in `lib/repositories/index.ts`).
+> - **An action doing more than orchestrate** (validate → authenticate → call domain/repo → map `ActionResult`), or a re-implemented Zod→field-error loop instead of `toFieldErrors`.
+> - **Repository types co-located with the Prisma instance** (would leak Prisma into the client bundle — types in `*.repository.ts`, the `new Prisma…(db)` only in `index.ts`).
+> - **Frontend:** needless `"use client"` on a non-interactive component; logic in JSX instead of a helper/hook; a form gating on client-side validation instead of rendering server `fieldErrors`; class-string duplication that should be a `cva` variant; missing input label or `aria-describedby` error link.
+>   Action orchestration must be unit-testable with an **injected fake repository** — a slice whose actions can only be tested against real Postgres failed the seam.
+
 ## Process
 
 1. **Identify the slice scope:**
@@ -55,6 +65,7 @@ In order of severity:
 3. **Read affected files in full.** Diffs lie. A change can look fine in isolation and be broken in context.
 4. **Cross-reference against:**
     - `docs/conventions/coding-conventions.md` (especially Security and Error handling sections)
+    - `docs/conventions/architecture.md` + `docs/conventions/frontend.md` (layering, the five principles, repository/DI, React/Next rules)
     - `docs/conventions/parallel-slicing.md` (slice-type discipline — see "Slice-type-aware scrutiny" below)
     - `docs/specs/0001-initial-design.md` — confirm the slice's scope matches §7
     - The slice's intended Scope (in) and Scope (out)
@@ -101,7 +112,7 @@ Integration ships the phase. Verify:
 
 - **You do not edit code.** Only report. If a fix is obvious, describe it in the issue.
 - **Be specific.** Every issue gets a file:line reference and a one-sentence explanation of what's wrong.
-- **Quote the convention** when reporting a convention violation. E.g., "violates coding-conventions.md §Error handling — bare `throw new Error()` in `lib/services/expense.service.ts:42`".
+- **Quote the convention** when reporting a convention violation. E.g., "violates coding-conventions.md §Error handling — bare `throw new Error()` in `lib/repositories/expense.repository.ts:42`".
 - **Mark Critical for anything that should not merge.** Don't downgrade real bugs to "Important" to seem accommodating.
 - **If the work is good, say so explicitly.** "No critical findings" is a valid report.
 - **Approved means production-ready.** Don't approve "with minor concerns" — either it's ready (approved) or it has changes needed (rejected).

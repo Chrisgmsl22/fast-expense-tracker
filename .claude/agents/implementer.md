@@ -28,14 +28,14 @@ Take a vertical slice from spec to commit-ready PR. End-to-end. Tests included. 
 
 ## What "vertical slice" means here
 
-A vertical slice ships one user-facing flow end-to-end: page + form/UI + server action + Zod schema + service + Prisma calls + unit tests + Playwright smoke (when relevant). Not a horizontal layer. See `docs/conventions/pr-strategy.md`.
+A vertical slice ships one user-facing flow end-to-end: page + form/UI + server action + Zod schema + pure domain logic (`lib/domain`) + repository (data access behind an interface, injected) + unit tests + Playwright smoke (when relevant). Not a horizontal layer. See `docs/conventions/pr-strategy.md` and `docs/conventions/architecture.md`.
 
 ## Required reading at the start of every run
 
 1. `docs/roadmap/README.md` — confirm which slice is active
 2. The active phase file — read the slice's Plan block (full or light) AND note the slice's **Type** (Foundation / Parallel / Integration)
 3. `docs/specs/0001-initial-design.md` — the source-of-truth design spec. Find the slice's row in §7 to confirm scope and dependencies.
-4. `docs/conventions/coding-conventions.md` — follow these strictly
+4. `docs/conventions/coding-conventions.md` — follow these strictly, **including** [`architecture.md`](../../docs/conventions/architecture.md) (layering + the five principles + the data layer) and [`frontend.md`](../../docs/conventions/frontend.md) (React/Next conventions). Both are required reading, not optional.
 5. `docs/conventions/slice-planning.md` — the lifecycle rules
 6. `docs/conventions/parallel-slicing.md` — the slice-type pattern (F→Fan-out→I) and file-boundary discipline
 7. Any ADRs the Plan block references in `docs/decisions/`
@@ -71,7 +71,7 @@ Read the slice's Type label in the phase file. Apply different care:
 
 1. **Sync git, then create a feature branch.** First `git fetch origin` and verify the base is current — for a sequential slice in the canonical repo path, `git checkout main && git pull --ff-only origin main` so you branch off an up-to-date `main` (rule #13). Never trust local refs or the session-start snapshot for the base; a merge may have landed since (see [`docs/lessons.md`](../../docs/lessons.md) 2026-06-01). Then branch: naming `feat/<phase>.<slice>-<short-name>`, e.g. `feat/3.1-create-expense`. In a worktree (parallel slices) the orchestrator already placed you on the right base — just `git fetch origin` to confirm, then `git checkout -b feat/...`. You don't pick the isolation mode; you branch and work where you are. See [`docs/conventions/agent-workflow.md` §Filesystem isolation](../../docs/conventions/agent-workflow.md#filesystem-isolation-single-slice-vs-parallel-slice-flows).
 2. **Implement** the Scope (in) — every file the Plan block lists. Don't expand scope. If you discover something missing, surface it and ask before adding.
-3. **Write tests** with every piece of code. Mock at the right boundary (see `coding-conventions.md` Testing section).
+3. **Write tests** at the right seam (see [`architecture.md`](../../docs/conventions/architecture.md) §Testing the seam): pure domain/helpers → plain unit tests; action orchestration → unit test with an **injected fake repository** (+ mocked `auth()`); repository adapter → integration test; components → Testing Library (query by role/label).
 4. **Run** `pnpm lint`, `pnpm typecheck`, `pnpm test`. Fix until green.
 5. **Smoke-test** the user-facing flow if applicable (`pnpm dev`, click through). Report what you tested.
 6. **Slice-lifecycle cleanup** (single commit, part of the slice's PR):
@@ -84,6 +84,7 @@ Read the slice's Type label in the phase file. Apply different care:
 ## Hard rules
 
 - **Follow `docs/conventions/coding-conventions.md` exactly.** When in doubt, re-read the relevant section.
+- **Follow the layered architecture** (`docs/conventions/architecture.md`): business logic in `lib/domain` (pure); data access behind a repository **interface** in `lib/repositories`, injected into actions (default param, wired at the composition root); actions orchestrate only. **No `db` imports in actions, components, or pages.** Frontend follows `docs/conventions/frontend.md` (Server Components by default, logic out of JSX, uncontrolled forms validated server-side). Copy the canonical expense flow; don't reintroduce `lib/services/*`.
 - **UI matches the design references.** For any UI slice, the implementation follows `docs/designs-screens/` (`Confirmed designs V1` — source of truth for all screens) + the screen's plan in `docs/roadmap/ui-build-plan.md` — layout, component inventory, color systems, and behavior. Carry the color systems through exactly; a deliberate deviation needs a noted reason in your report. Smoke-test (step 5) by comparing the rendered page against the screen's screenshot.
 - **Don't expand the slice's Scope (in).** If you notice unrelated improvement opportunities, list them in your final report as "Follow-ups" — don't bundle.
 - **Don't commit `.env*` files.** If `git status` shows one, STOP and investigate.

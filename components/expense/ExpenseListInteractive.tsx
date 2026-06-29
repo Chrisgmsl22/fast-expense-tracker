@@ -15,7 +15,7 @@ import { deleteExpense } from "@/app/_actions/expense/delete";
 import type {
     ExpenseListItem,
     ExpenseEditable,
-} from "@/lib/services/expense/expense.service";
+} from "@/lib/repositories/expense.repository";
 
 type Props = {
     expenses: ExpenseListItem[];

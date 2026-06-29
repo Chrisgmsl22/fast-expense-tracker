@@ -1,10 +1,8 @@
 "use server";
 
 import { auth } from "@/auth";
-import {
-    getExpenseById,
-    type ExpenseEditable,
-} from "@/lib/services/expense/expense.service";
+import { expenseRepository } from "@/lib/repositories";
+import type { ExpenseEditable } from "@/lib/repositories/expense.repository";
 
 /**
  * Fetch one expense's editable fields for the edit modal. Scoped to
@@ -17,5 +15,5 @@ export async function getExpenseForEdit(
     const session = await auth();
     const userId = session?.user?.id;
     if (!userId || !id) return null;
-    return getExpenseById(userId, id);
+    return expenseRepository.getById(userId, id);
 }
