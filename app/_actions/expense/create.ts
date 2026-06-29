@@ -6,6 +6,7 @@ import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { computeActualExpenditure } from "@/lib/domain/expense";
 import { expenseRepository } from "@/lib/repositories";
+import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
 import { expenseInputSchema, type ExpenseInput } from "@/lib/schemas/expense";
 
 /** Failure modes the caller can branch on. */
@@ -30,6 +31,7 @@ export type CreateExpenseResult = ActionResult<
  */
 export async function createExpense(
     input: unknown,
+    repo: ExpenseRepository = expenseRepository,
 ): Promise<CreateExpenseResult> {
     const parsed = expenseInputSchema.safeParse(input);
     if (!parsed.success) {
@@ -60,7 +62,7 @@ export async function createExpense(
         // individually, so without this check a mismatched pair would persist as
         // silently-wrong data. A missing subcategory returns null and fails too.
         if (v.subcategoryId) {
-            const categoryId = await expenseRepository.getSubcategoryCategoryId(
+            const categoryId = await repo.getSubcategoryCategoryId(
                 v.subcategoryId,
             );
             if (categoryId !== v.categoryId) {
@@ -77,7 +79,7 @@ export async function createExpense(
             }
         }
 
-        const created = await expenseRepository.insert(userId, {
+        const created = await repo.insert(userId, {
             categoryId: v.categoryId,
             subcategoryId: v.subcategoryId ?? null,
             cardId: v.cardId ?? null,

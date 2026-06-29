@@ -8,6 +8,7 @@ import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { computeActualExpenditure } from "@/lib/domain/expense";
 import { expenseRepository } from "@/lib/repositories";
+import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
 import { expenseInputSchema, type ExpenseInput } from "@/lib/schemas/expense";
 
 /** The edit payload carries the row id alongside the expense fields. */
@@ -29,11 +30,12 @@ export type UpdateExpenseResult = ActionResult<
 /**
  * Update an existing expense for the signed-in user. Mirrors `createExpense`
  * (validate → recompute server-side → persist), but the write is **scoped by
- * `userId`** in the service so a mismatch matches zero rows and returns
+ * `userId`** in the repository so a mismatch matches zero rows and returns
  * `not_found` instead of mutating another user's data (IDOR guard).
  */
 export async function updateExpense(
     input: unknown,
+    repo: ExpenseRepository = expenseRepository,
 ): Promise<UpdateExpenseResult> {
     const parsed = expenseInputSchema.safeParse(input);
     if (!parsed.success) {
@@ -66,7 +68,7 @@ export async function updateExpense(
 
     try {
         if (v.subcategoryId) {
-            const categoryId = await expenseRepository.getSubcategoryCategoryId(
+            const categoryId = await repo.getSubcategoryCategoryId(
                 v.subcategoryId,
             );
             if (categoryId !== v.categoryId) {
@@ -83,7 +85,7 @@ export async function updateExpense(
             }
         }
 
-        const count = await expenseRepository.updateForUser(id, userId, {
+        const count = await repo.updateForUser(id, userId, {
             categoryId: v.categoryId,
             subcategoryId: v.subcategoryId ?? null,
             cardId: v.cardId ?? null,
