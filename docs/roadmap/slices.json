@@ -143,6 +143,13 @@
             "title": "Settlement screen + Movement / card-payment UI + e2e",
             "dependsOn": ["2.5"]
         },
+        {
+            "id": "2.7",
+            "phase": 2,
+            "type": "fan-out",
+            "title": "Card management — add / edit / delete user cards (design pending)",
+            "dependsOn": ["1.1"]
+        },
 
         {
             "id": "3.1",

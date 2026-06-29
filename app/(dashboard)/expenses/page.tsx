@@ -28,20 +28,30 @@ export default async function ExpensesPage({
         return null;
     }
 
-    const [categories, subcategories, cards, expenses] = await Promise.all([
-        db.category.findMany({
-            orderBy: { name: "asc" },
-            select: { id: true, name: true },
-        }),
-        db.subcategory.findMany({
-            select: { id: true, name: true, categoryId: true },
-        }),
-        db.card.findMany({
-            orderBy: { name: "asc" },
-            select: { id: true, name: true },
-        }),
-        expenseRepository.getForMonth(userId, month),
-    ]);
+    const [categories, subcategories, cards, expenses, settings] =
+        await Promise.all([
+            db.category.findMany({
+                orderBy: { name: "asc" },
+                select: { id: true, name: true, color: true },
+            }),
+            db.subcategory.findMany({
+                select: { id: true, name: true, categoryId: true },
+            }),
+            db.card.findMany({
+                where: { userId },
+                orderBy: { name: "asc" },
+                select: { id: true, name: true, color: true },
+            }),
+            expenseRepository.getForMonth(userId, month),
+            db.settings.findUnique({
+                where: { userId },
+                select: { defaultSharePercentage: true },
+            }),
+        ]);
+
+    // Fall back to the schema default (Settings.defaultSharePercentage) if the
+    // user has no Settings row yet; the form reads this for new shared expenses.
+    const defaultSharePercentage = settings?.defaultSharePercentage ?? 0.68;
 
     return (
         <main className="p-8">
@@ -51,6 +61,7 @@ export default async function ExpensesPage({
                     categories={categories}
                     subcategories={subcategories}
                     cards={cards}
+                    defaultSharePercentage={defaultSharePercentage}
                 />
             </div>
             <div className="mt-6">
@@ -62,6 +73,7 @@ export default async function ExpensesPage({
                     categories={categories}
                     subcategories={subcategories}
                     cards={cards}
+                    defaultSharePercentage={defaultSharePercentage}
                 />
             </div>
         </main>

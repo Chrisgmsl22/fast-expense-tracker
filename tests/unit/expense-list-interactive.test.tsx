@@ -1,12 +1,4 @@
-import {
-    describe,
-    it,
-    expect,
-    vi,
-    beforeAll,
-    beforeEach,
-    type Mock,
-} from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import {
     render,
     screen,
@@ -46,20 +38,6 @@ import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteract
 import { deleteExpense } from "@/app/_actions/expense/delete";
 import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
 
-beforeAll(() => {
-    // jsdom doesn't implement <dialog> modality. Toggle `open` (which reflects to
-    // the attribute) so the dialog isn't display:none — otherwise getByRole, which
-    // excludes hidden elements, can't see the confirm button. close() fires the
-    // close event the component listens for.
-    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
-        this.open = true;
-    };
-    HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
-        this.open = false;
-        this.dispatchEvent(new Event("close"));
-    };
-});
-
 beforeEach(() => {
     refreshMock.mockReset();
     (deleteExpense as unknown as Mock).mockReset();
@@ -81,9 +59,10 @@ const expenses = [
 ];
 
 const props = {
-    categories: [{ id: "c1", name: "Food" }],
+    categories: [{ id: "c1", name: "Food", color: "#ef4444" }],
     subcategories: [{ id: "s1", name: "Restaurants", categoryId: "c1" }],
-    cards: [{ id: "card1", name: "Amex" }],
+    cards: [{ id: "card1", name: "Amex", color: "#9ca3af" }],
+    defaultSharePercentage: 0.68,
 };
 
 describe("ExpenseListInteractive", () => {
@@ -103,7 +82,7 @@ describe("ExpenseListInteractive", () => {
         ).toBeDefined();
     });
 
-    it("fetches the row then opens a prefilled edit form", async () => {
+    it("fetches the row then opens a prefilled edit dialog", async () => {
         (getExpenseForEdit as unknown as Mock).mockResolvedValue({ id: "e1" });
         render(<ExpenseListInteractive expenses={expenses} {...props} />);
 
@@ -123,7 +102,9 @@ describe("ExpenseListInteractive", () => {
         render(<ExpenseListInteractive expenses={expenses} {...props} />);
 
         fireEvent.click(screen.getByRole("button", { name: "Delete Tacos" }));
-        expect(screen.getByText(/will be permanently removed/i)).toBeDefined();
+        expect(
+            await screen.findByText(/will be permanently removed/i),
+        ).toBeDefined();
 
         // The confirm button's accessible name is exactly "Delete" (row buttons
         // carry the description), so this targets the dialog's confirm.
@@ -144,13 +125,11 @@ describe("ExpenseListInteractive", () => {
         render(<ExpenseListInteractive expenses={expenses} {...props} />);
 
         fireEvent.click(screen.getByRole("button", { name: "Delete Tacos" }));
-        fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+        fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
 
         await waitFor(() => expect(deleteExpense).toHaveBeenCalled());
-        // The error is surfaced inside the still-open confirm dialog (the visible
-        // surface in a real browser — the top-level banner sits behind the backdrop).
         const dialog = await screen.findByRole("dialog", {
-            name: "Confirm delete",
+            name: /delete expense/i,
         });
         await waitFor(() =>
             expect(

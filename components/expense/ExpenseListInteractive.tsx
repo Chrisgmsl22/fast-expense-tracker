@@ -1,9 +1,17 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
     ExpenseForm,
     type CategoryOption,
@@ -22,25 +30,24 @@ type Props = {
     categories: CategoryOption[];
     subcategories: SubcategoryOption[];
     cards: CardOption[];
+    defaultSharePercentage: number;
 };
 
 /**
- * Client list with row-level edit + delete. `ExpenseList` was a
- * server component and can't hold click handlers, so the interactive table lives
- * here. Edit fetches the row's full editable fields on demand (the list query is
- * names-only) and opens a pre-filled modal; delete asks for confirmation in a
- * native <dialog> (same pattern as AddExpenseButton). Both refresh the
- * server-rendered data on success.
+ * Client list with row-level edit + delete. `ExpenseList` was a server component
+ * and can't hold click handlers, so the interactive table lives here. Edit fetches
+ * the row's full editable fields on demand (the list query is names-only) and opens
+ * a pre-filled modal; delete asks for confirmation. Both use the shadcn Dialog
+ * primitive and refresh the server-rendered data on success.
  */
 export function ExpenseListInteractive({
     expenses,
     categories,
     subcategories,
     cards,
+    defaultSharePercentage,
 }: Props) {
     const router = useRouter();
-    const editDialogRef = useRef<HTMLDialogElement>(null);
-    const deleteDialogRef = useRef<HTMLDialogElement>(null);
     const [editing, setEditing] = useState<ExpenseEditable | null>(null);
     const [deleting, setDeleting] = useState<ExpenseListItem | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
@@ -55,14 +62,7 @@ export function ExpenseListInteractive({
                 return;
             }
             setEditing(data);
-            editDialogRef.current?.showModal();
         });
-    }
-
-    function openDelete(expense: ExpenseListItem) {
-        setActionError(null);
-        setDeleting(expense);
-        deleteDialogRef.current?.showModal();
     }
 
     function confirmDelete() {
@@ -70,7 +70,6 @@ export function ExpenseListInteractive({
         startTransition(async () => {
             const res = await deleteExpense({ id: deleting.id });
             if (res.ok) {
-                deleteDialogRef.current?.close();
                 setDeleting(null);
                 router.refresh();
             } else {
@@ -89,8 +88,8 @@ export function ExpenseListInteractive({
 
     return (
         <>
-            {actionError && (
-                <p className="mb-2 text-sm text-red-600" role="alert">
+            {actionError && !deleting && (
+                <p className="mb-2 text-sm text-destructive" role="alert">
                     {actionError}
                 </p>
             )}
@@ -147,8 +146,8 @@ export function ExpenseListInteractive({
                                 <button
                                     type="button"
                                     aria-label={`Delete ${expense.description}`}
-                                    className="ml-3 text-sm font-medium text-red-600 underline-offset-2 hover:underline"
-                                    onClick={() => openDelete(expense)}
+                                    className="ml-3 text-sm font-medium text-destructive underline-offset-2 hover:underline"
+                                    onClick={() => setDeleting(expense)}
                                     disabled={pending}
                                 >
                                     Delete
@@ -159,75 +158,77 @@ export function ExpenseListInteractive({
                 </tbody>
             </table>
 
-            <dialog
-                ref={editDialogRef}
-                className="w-full max-w-md rounded-lg p-6 backdrop:bg-black/40"
-                aria-label="Edit expense"
-                onClose={() => setEditing(null)}
+            <Dialog
+                open={editing !== null}
+                onOpenChange={(open) => {
+                    if (!open) setEditing(null);
+                }}
             >
-                <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Edit expense</h2>
-                    <button
-                        type="button"
-                        aria-label="Close"
-                        className="text-xl leading-none"
-                        onClick={() => editDialogRef.current?.close()}
-                    >
-                        ✕
-                    </button>
-                </div>
-                {editing && (
-                    <ExpenseForm
-                        key={editing.id}
-                        categories={categories}
-                        subcategories={subcategories}
-                        cards={cards}
-                        expense={editing}
-                        onSuccess={() => {
-                            editDialogRef.current?.close();
-                            setEditing(null);
-                            router.refresh();
-                        }}
-                    />
-                )}
-            </dialog>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Edit expense</DialogTitle>
+                    </DialogHeader>
+                    {editing && (
+                        <ExpenseForm
+                            key={editing.id}
+                            categories={categories}
+                            subcategories={subcategories}
+                            cards={cards}
+                            defaultSharePercentage={defaultSharePercentage}
+                            expense={editing}
+                            onCancel={() => setEditing(null)}
+                            onSuccess={() => {
+                                setEditing(null);
+                                router.refresh();
+                            }}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
 
-            <dialog
-                ref={deleteDialogRef}
-                className="w-full max-w-sm rounded-lg p-6 backdrop:bg-black/40"
-                aria-label="Confirm delete"
-                onClose={() => setDeleting(null)}
+            <Dialog
+                open={deleting !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDeleting(null);
+                        setActionError(null);
+                    }
+                }}
             >
-                <h2 className="text-lg font-semibold">Delete expense?</h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                    {deleting
-                        ? `"${deleting.description}" will be permanently removed.`
-                        : ""}
-                </p>
-                {actionError && (
-                    <p className="mt-3 text-sm text-red-600" role="alert">
-                        {actionError}
-                    </p>
-                )}
-                <div className="mt-6 flex justify-end gap-3">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => deleteDialogRef.current?.close()}
-                        disabled={pending}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={confirmDelete}
-                        disabled={pending}
-                    >
-                        {pending ? "Deleting…" : "Delete"}
-                    </Button>
-                </div>
-            </dialog>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete expense?</DialogTitle>
+                        <DialogDescription>
+                            {deleting
+                                ? `"${deleting.description}" will be permanently removed.`
+                                : ""}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {actionError && (
+                        <p className="text-sm text-destructive" role="alert">
+                            {actionError}
+                        </p>
+                    )}
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setDeleting(null)}
+                            disabled={pending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={confirmDelete}
+                            disabled={pending}
+                        >
+                            {pending ? "Deleting…" : "Delete"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
