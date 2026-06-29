@@ -26,7 +26,16 @@ Re-skin the capture modal (slice 1.4 + edit from 1.6) to [`ui-build-plan.md §2`
 
 #### 2.2: Expenses re-skin `[PR]`
 
-Re-skin the list (slice 1.5 + 1.6) to [`ui-build-plan.md §3`](./ui-build-plan.md). Category filter chips, category pill + card-dot cells, charged/my-share amounts, Charged/My-share footer; mobile pinned total bar. Card-payment rows deferred to 2.6 (`Movement` UI). **Also lands the card-color → brand-hex fix** (carried from 2.1): `CARD_SEED` stores semantic names but the model wants per-row hex applied inline (as categories do) — fix the seed to hex + re-seed, shared by every card-dot renderer (2.1/2.2/2.4).
+Re-skin the list (slice 1.5 + 1.6) to [`ui-build-plan.md §3`](./ui-build-plan.md). Category filter chips, category pill + card-dot cells, charged/my-share amounts, Charged/My-share footer; mobile pinned total bar. Card-payment rows deferred to 2.6 (`Movement` UI). **Also lands the card-color → brand-hex fix** (carried from 2.1).
+
+##### Tasks
+
+- [x] Repo: `ExpenseListItem` + `getForMonth` add `category.id`/`category.color` + `card.color`; update the integration test
+- [x] Card-color hex: brand-hex `CARD_SEED` + seed updates existing card colors on re-run; seed test
+- [x] Re-skin the list — filter chips + category pills + card dots + charged/my-share amounts + footer (desktop)
+- [x] Mobile — stacked rows + pinned "Total spent · <month>" bar
+- [x] Tests (chip filter, footer totals over filter, my-share/not-shared, stale-filter reset)
+- [x] Reviewer loop + real-browser check vs screenshots
 
 #### 2.3: Income model + Income screen `[PR]`
 

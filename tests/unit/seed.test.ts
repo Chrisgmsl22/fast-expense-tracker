@@ -70,6 +70,12 @@ function makeDb(
                 };
             }) => Promise<{ id: string }>
         >(async () => ({ id: "card-new" })),
+        update: vi.fn<
+            (args: {
+                where: { id: string };
+                data: { color: string; type: string };
+            }) => Promise<{ id: string }>
+        >(async (args) => ({ id: args.where.id })),
     };
     // Test mock: only the delegates runSeed uses are implemented.
     const db = { category, subcategory, user, card } as unknown as Parameters<
@@ -101,23 +107,31 @@ describe("CATEGORY_SEED data", () => {
 });
 
 describe("CARD_SEED data", () => {
-    it("defines the 5 cards with the domain-reference color mapping (semantic, no hex)", () => {
+    it("defines the 5 cards with per-card brand hex (domain-reference §4)", () => {
         expect(CARD_SEED).toHaveLength(5);
         const byName = Object.fromEntries(CARD_SEED.map((c) => [c.name, c]));
-        // domain-reference.md §4
         expect(byName["Amex Platinum"]).toMatchObject({
-            color: "gray",
+            color: "#6b7280",
             type: "credit",
         });
         expect(byName["Amex Gold"]).toMatchObject({
-            color: "yellow",
+            color: "#ca8a04",
             type: "credit",
         });
-        expect(byName["NU"]).toMatchObject({ color: "purple", type: "credit" });
-        expect(byName["BBVA"]).toMatchObject({ color: "blue", type: "debit" });
-        expect(byName["Cash"]).toMatchObject({ color: "green", type: "cash" });
+        expect(byName["NU"]).toMatchObject({
+            color: "#9333ea",
+            type: "credit",
+        });
+        expect(byName["BBVA"]).toMatchObject({
+            color: "#2563eb",
+            type: "debit",
+        });
+        expect(byName["Cash"]).toMatchObject({
+            color: "#16a34a",
+            type: "cash",
+        });
         for (const c of CARD_SEED) {
-            expect(c.color).toMatch(/^[a-z]+$/);
+            expect(c.color).toMatch(/^#[0-9a-f]{6}$/i);
         }
     });
 });
@@ -184,15 +198,21 @@ describe("runSeed", () => {
         const { db, card } = makeDb({ cardExists: false });
         await runSeed(db, ADMIN);
         expect(card.create).toHaveBeenCalledTimes(5);
+        expect(card.update).not.toHaveBeenCalled();
         for (const call of card.create.mock.calls) {
             expect(call[0].data.userId).toBe("user-1");
+            expect(call[0].data.color).toMatch(/^#[0-9a-f]{6}$/i);
         }
     });
 
-    it("creates no cards when they already exist (idempotent)", async () => {
+    it("updates existing cards' color on re-seed instead of creating (idempotent)", async () => {
         const { db, card } = makeDb({ cardExists: true });
         await runSeed(db, ADMIN);
         expect(card.create).not.toHaveBeenCalled();
+        expect(card.update).toHaveBeenCalledTimes(5);
+        for (const call of card.update.mock.calls) {
+            expect(call[0].data.color).toMatch(/^#[0-9a-f]{6}$/i);
+        }
     });
 
     it("upserts the admin user keyed by email with a bcrypt hash, never plaintext", async () => {

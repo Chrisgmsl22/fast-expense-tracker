@@ -81,8 +81,37 @@ describe("PrismaExpenseRepository.getForMonth (integration)", () => {
             "late may",
             "early may",
         ]);
-        expect(res[0]?.category).toEqual({ name: "Groceries" });
+        expect(res[0]?.category.name).toBe("Groceries");
+        expect(res[0]?.category.color).toBe("#6b7280"); // schema default
+        expect(typeof res[0]?.category.id).toBe("string");
         expect(res[0]?.card).toBeNull();
+    });
+
+    it("surfaces the card name + color", async () => {
+        const user = await seedUser();
+        const cat = await seedCategory();
+        const card = await db.card.create({
+            data: {
+                userId: user.id,
+                name: "BBVA",
+                color: "#2563eb",
+                type: "debit",
+            },
+        });
+        await db.expense.create({
+            data: {
+                userId: user.id,
+                categoryId: cat.id,
+                cardId: card.id,
+                date: new Date("2026-05-08T12:00:00Z"),
+                description: "with card",
+                amount: 100,
+                actualExpenditure: 100,
+            },
+        });
+
+        const [row] = await repo.getForMonth(user.id, "2026-05");
+        expect(row?.card).toEqual({ name: "BBVA", color: "#2563eb" });
     });
 
     it("surfaces the stored shared-split fields", async () => {
