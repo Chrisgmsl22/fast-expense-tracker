@@ -7,6 +7,11 @@ the source of truth where they conflict with this document.
 in Phase 0 when the Next.js app is scaffolded. This file captures the rules
 already decided; specifics get added per slice.
 
+> **Architecture & frontend rules live in dedicated docs** — read both:
+> [`architecture.md`](./architecture.md) (layering, the five principles, the
+> data layer) and [`frontend.md`](./frontend.md) (React/Next conventions). This
+> file defers to them for those areas.
+
 ## TypeScript
 
 - **Strict mode is on** (`tsconfig.json` `strict: true`). Don't disable.
@@ -29,11 +34,14 @@ already decided; specifics get added per slice.
 
 ## Data layer (Prisma)
 
-- **Single Prisma client.** Exported from `lib/db.ts`. Never `new PrismaClient()` outside that file.
-- **All DB access lives in services.** Pages, components, and route handlers call services. Services call Prisma.
-- **Services are pure TypeScript modules.** Located in `lib/services/<resource>/`. One folder per resource.
-- **No direct Prisma calls from components.** If a component needs data, fetch via a server action or RSC data-fetching in the page.
-- **Use transactions** for any multi-table write.
+See [`architecture.md`](./architecture.md) for the full layering and the five rules. The essentials:
+
+- **Single Prisma client.** Exported from `lib/db.ts`. Never `new PrismaClient()` outside that file — it's **injected** into adapters, not imported by them.
+- **All DB access lives behind a repository.** Each aggregate gets an interface in `lib/repositories/<name>.repository.ts`, implemented by a Prisma adapter in the same file. Actions, pages, and route handlers depend on the **interface**, never on `db` directly.
+- **Wire concretes at the composition root** (`lib/repositories/index.ts`) and **inject** the repository into callers (default param) so a fake replaces it in unit tests.
+- **No direct Prisma calls from components or actions.** Components fetch via a server action or RSC; actions call the repository.
+- **Use transactions** for any multi-table write (inside the adapter).
+- _Legacy:_ `lib/services/user/` predates this pattern — migrate it to a repository when next touched; don't add new `lib/services/*`.
 
 ## Validation
 
@@ -121,17 +129,17 @@ tests, `@/auth` in action tests. The DB layer isn't mocked; it's integration-tes
 
 ## Naming
 
-| What                    | Convention                                                   | Example                                 |
-| ----------------------- | ------------------------------------------------------------ | --------------------------------------- |
-| Component               | `PascalCase`                                                 | `ExpenseForm`, `DashboardChart`         |
-| Server Component file   | `kebab-case.tsx` in `app/` (Next.js convention)              | `expenses/page.tsx`                     |
-| Reusable component file | `PascalCase.tsx` in `components/`                            | `components/ExpenseForm.tsx`            |
-| Service                 | `<resource>.service.ts`                                      | `expense.service.ts`                    |
-| Schema                  | `<resource>.schema.ts` exporting `createXSchema`, etc.       | `expense.schema.ts`                     |
-| Test file               | `<source>.test.ts` next to source                            | `expense.service.test.ts`               |
-| Type file               | `types/<domain>.ts`                                          | `types/expense.ts`                      |
-| Interface               | `I<Name>` for service contracts (optional, only when useful) | `IExpenseService`                       |
-| Derived type            | `<Name>` (no `I` prefix)                                     | `ExpenseResponse`, `CreateExpenseInput` |
+| What                    | Convention                                                           | Example                                        |
+| ----------------------- | -------------------------------------------------------------------- | ---------------------------------------------- |
+| Component               | `PascalCase`                                                         | `ExpenseForm`, `DashboardChart`                |
+| Server Component file   | `kebab-case.tsx` in `app/` (Next.js convention)                      | `expenses/page.tsx`                            |
+| Reusable component file | `PascalCase.tsx` in `components/`                                    | `components/ExpenseForm.tsx`                   |
+| Repository              | `<name>.repository.ts` (interface + Prisma adapter)                  | `expense.repository.ts`                        |
+| Schema                  | `<resource>.schema.ts` exporting `createXSchema`, etc.               | `expense.schema.ts`                            |
+| Test file               | `<source>.test.ts` in `tests/unit` or `tests/integration`            | `expense-repository.test.ts`                   |
+| Type file               | `types/<domain>.ts`                                                  | `types/expense.ts`                             |
+| Repository interface    | `<Name>Repository` (no `I` prefix); adapter `Prisma<Name>Repository` | `ExpenseRepository`, `PrismaExpenseRepository` |
+| Derived type            | `<Name>` (no `I` prefix)                                             | `ExpenseResponse`, `CreateExpenseInput`        |
 
 ## REST conventions (for route handlers when used)
 

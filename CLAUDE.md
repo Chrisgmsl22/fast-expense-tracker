@@ -167,13 +167,17 @@ The repo is **public**. Treat everything that lands in the repo as world-readabl
 ## Code Review Standards
 
 Same as MoneyFlow. The full conventions live in
-[docs/conventions/coding-conventions.md](./docs/conventions/coding-conventions.md).
+[docs/conventions/coding-conventions.md](./docs/conventions/coding-conventions.md) —
+including [architecture.md](./docs/conventions/architecture.md) (layering, the five
+clean-code principles, repository + DI) and
+[frontend.md](./docs/conventions/frontend.md) (React/Next conventions).
 
 At a high level, review checks:
 
 - **Security** — input validation, no SQL injection (Prisma handles), OWASP top 10, secret hygiene.
 - **Convention adherence** — naming, file organization, error handling, validation patterns.
-- **Test coverage** — happy path + error paths + edge cases.
+- **Architecture adherence** — pure domain logic, data access behind a repository interface (no `db` in actions/components/pages), DI via default param, actions orchestrate only; frontend per `frontend.md`. See [architecture.md](./docs/conventions/architecture.md).
+- **Test coverage** — happy path + error paths + edge cases (test the seam, not a coverage %).
 - **Silent failures** — swallowed errors, missing error handling, generic `throw new Error()`.
 - **Scope discipline** — did the PR stay inside Scope (in)?
 
