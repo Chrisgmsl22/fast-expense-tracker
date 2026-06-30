@@ -193,14 +193,15 @@ const CATEGORY_COLORS: Record<string, string> = {
     unassigned: "#6b7280",
 };
 
-// 5 cards — semantic color names (mapped to Tailwind tokens in the UI layer),
-// never hex in the DB (domain-reference.md §4).
+// 5 cards — per-card brand hex, applied inline in the UI exactly like
+// Category.color (see globals.css design-tokens note + domain-reference.md §4).
+// Card-color coding: Platinum gray, Gold gold, NU purple, BBVA blue, Cash green.
 export const CARD_SEED: readonly CardSeed[] = [
-    { name: "Amex Platinum", color: "gray", type: "credit" },
-    { name: "Amex Gold", color: "yellow", type: "credit" },
-    { name: "NU", color: "purple", type: "credit" },
-    { name: "BBVA", color: "blue", type: "debit" },
-    { name: "Cash", color: "green", type: "cash" },
+    { name: "Amex Platinum", color: "#6b7280", type: "credit" },
+    { name: "Amex Gold", color: "#ca8a04", type: "credit" },
+    { name: "NU", color: "#9333ea", type: "credit" },
+    { name: "BBVA", color: "#2563eb", type: "debit" },
+    { name: "Cash", color: "#16a34a", type: "cash" },
 ];
 
 export type SeedOptions = {
@@ -278,7 +279,14 @@ export async function runSeed(
         const existing = await db.card.findFirst({
             where: { userId: admin.id, name: card.name },
         });
-        if (!existing) {
+        if (existing) {
+            // Refresh color/type so a re-seed propagates brand-hex changes to
+            // cards created before this fix (find-then-create alone never would).
+            await db.card.update({
+                where: { id: existing.id },
+                data: { color: card.color, type: card.type },
+            });
+        } else {
             await db.card.create({
                 data: {
                     userId: admin.id,

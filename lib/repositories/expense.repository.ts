@@ -9,9 +9,9 @@ export type ExpenseListItem = {
     amount: number;
     actualExpenditure: number;
     isShared: boolean;
-    category: { name: string };
+    category: { id: string; name: string; color: string };
     subcategory: { name: string } | null;
-    card: { name: string } | null;
+    card: { name: string; color: string } | null;
 };
 
 /** Full editable shape of one expense — what the edit form prefills. */
@@ -108,9 +108,9 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 amount: true,
                 actualExpenditure: true,
                 isShared: true,
-                category: { select: { name: true } },
+                category: { select: { id: true, name: true, color: true } },
                 subcategory: { select: { name: true } },
-                card: { select: { name: true } },
+                card: { select: { name: true, color: true } },
             },
         });
     }

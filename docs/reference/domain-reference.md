@@ -7,7 +7,7 @@ specifically `backend/prisma/seed.ts` and `backend/prisma/schema.prisma` at
 commit `80c57c6`) on 2026-05-24. This document is a **frozen snapshot**.
 If MoneyFlow's schema evolves, this doc does not auto-update.
 
-**Why this exists:** fast-expense-tracker mirrors a *subset* of MoneyFlow's
+**Why this exists:** fast-expense-tracker mirrors a _subset_ of MoneyFlow's
 domain so that migration (when MoneyFlow ships) is a clean `pg_dump` →
 `pg_restore` with no schema translation. This doc captures what to mirror
 and what to deliberately exclude.
@@ -23,21 +23,21 @@ of subcategories.
 
 ### Full list
 
-| # | Name | Slug | `isRelevant` | Subcategories |
-|---|---|---|---|---|
-| 1 | Housing | `housing` | ✅ | Rent · Mortgage · House expenses · Repairs/maintenance · Tax/fees |
-| 2 | Groceries | `groceries` | ✅ | Groceries · Restaurants/other |
-| 3 | Charity | `charity` | ✅ | Taxes · Donations |
-| 4 | Transport | `transport` | ✅ | Gasoline · Repairs/tires · License/fees · Parking/tolls · Public transportation · Ubers · Car maintenance |
-| 5 | Insurance | `insurance` | ✅ | Life · Medical expenses · House · Car · Handicap · Theft · Long-term care |
-| 6 | Savings | `savings` | ✅ | Emergency fund · Open savings · Future purchases |
-| 7 | Services | `services` | ✅ | Electricity · Gas · Water · Trash · Phone plan · Internet |
-| 8 | Health | `health` | ✅ | Medicine · Doctors appt · Dentist · Additional medication · Therapy · Other expenses |
-| 9 | Combined Expenses | `combined-expenses` | ✅ | Purchases made by girlfriend · Purchases made between the two · Cats |
-| 10 | Personal | `personal` | ❌ | Courses · Education · Books · Subscriptions · Cash withdrawals · Technology · Accountant · Other |
-| 11 | Debt | `debt` | ✅ | Car loan · Credit card balance · Personal loans · Monthly installments |
-| 12 | Disposable Income | `disposable-income` | ❌ | Entertainment · Hobbies · Dining out · Social events · Tech gadgets · Ecommerce expenses |
-| 13 | Unassigned | `unassigned` | ❌ | (no subcategories — sentinel for orphaned expenses) |
+| #   | Name              | Slug                | `isRelevant` | Subcategories                                                                                             |
+| --- | ----------------- | ------------------- | ------------ | --------------------------------------------------------------------------------------------------------- |
+| 1   | Housing           | `housing`           | ✅           | Rent · Mortgage · House expenses · Repairs/maintenance · Tax/fees                                         |
+| 2   | Groceries         | `groceries`         | ✅           | Groceries · Restaurants/other                                                                             |
+| 3   | Charity           | `charity`           | ✅           | Taxes · Donations                                                                                         |
+| 4   | Transport         | `transport`         | ✅           | Gasoline · Repairs/tires · License/fees · Parking/tolls · Public transportation · Ubers · Car maintenance |
+| 5   | Insurance         | `insurance`         | ✅           | Life · Medical expenses · House · Car · Handicap · Theft · Long-term care                                 |
+| 6   | Savings           | `savings`           | ✅           | Emergency fund · Open savings · Future purchases                                                          |
+| 7   | Services          | `services`          | ✅           | Electricity · Gas · Water · Trash · Phone plan · Internet                                                 |
+| 8   | Health            | `health`            | ✅           | Medicine · Doctors appt · Dentist · Additional medication · Therapy · Other expenses                      |
+| 9   | Combined Expenses | `combined-expenses` | ✅           | Purchases made by girlfriend · Purchases made between the two · Cats                                      |
+| 10  | Personal          | `personal`          | ❌           | Courses · Education · Books · Subscriptions · Cash withdrawals · Technology · Accountant · Other          |
+| 11  | Debt              | `debt`              | ✅           | Car loan · Credit card balance · Personal loans · Monthly installments                                    |
+| 12  | Disposable Income | `disposable-income` | ❌           | Entertainment · Hobbies · Dining out · Social events · Tech gadgets · Ecommerce expenses                  |
+| 13  | Unassigned        | `unassigned`        | ❌           | (no subcategories — sentinel for orphaned expenses)                                                       |
 
 ### Important nuance for 50/25/25 logic
 
@@ -80,6 +80,7 @@ model User {
 ```
 
 **Notes**:
+
 - Single user (Christian) in the temp app. Seed with one row.
 - `defaultCurrency` and `language` fields exist in MoneyFlow but are not
   needed in the temp app (MXN-only, English-only).
@@ -102,6 +103,7 @@ model Category {
 ```
 
 **Notes**:
+
 - All 13 categories are `isSystemCategory: true` in the temp app (no user-created categories in v1).
 - `userId` field exists in MoneyFlow for per-user custom categories — omitted here.
 
@@ -138,6 +140,7 @@ model Card {
 ```
 
 **Notes**:
+
 - `creditLimit` and `dueDate` exist in MoneyFlow but are not needed in temp app.
 
 ### `Expense` (the heart)
@@ -175,6 +178,7 @@ model Expense {
 ```
 
 **Notes**:
+
 - `actualExpenditure` is stored (not computed) so historical splits stay
   correct even if the default `yourPercentage` changes over time.
 - The MoneyFlow schema has additional fields documented in section 3 (excluded).
@@ -243,17 +247,19 @@ These exist in MoneyFlow but are excluded from fast-expense-tracker v1:
 
 ### Cards (seed data, 5 rows)
 
-| Name | Color | Type | Notes |
-|---|---|---|---|
-| Amex Platinum | Gray | credit | |
-| Amex Gold | Yellow | credit | (or "Gold" — UI choice) |
-| NU | Purple | credit | |
-| BBVA | Blue | debit | |
-| Cash | Green | cash | Sentinel row for cash expenses |
+| Name          | Color              | Type   | Notes                          |
+| ------------- | ------------------ | ------ | ------------------------------ |
+| Amex Platinum | `#6b7280` (gray)   | credit |                                |
+| Amex Gold     | `#ca8a04` (gold)   | credit |                                |
+| NU            | `#9333ea` (purple) | credit |                                |
+| BBVA          | `#2563eb` (blue)   | debit  |                                |
+| Cash          | `#16a34a` (green)  | cash   | Sentinel row for cash expenses |
 
-**Color values**: use semantic names (`gray`, `yellow`, `purple`, `blue`,
-`green`). Map to Tailwind classes (or shadcn theme tokens) in the UI layer.
-Don't hardcode hex values in the DB.
+**Color values**: per-card **brand hex**, stored in the DB and applied inline —
+exactly like `Category.color` (see the design-tokens note in `app/globals.css`).
+These are not theme tokens. (Updated in slice 2.2: cards previously held semantic
+names that were never mapped, so dots rendered the raw CSS keyword — e.g. pure
+`yellow` instead of gold.)
 
 ### Budget rule (50/25/25)
 
@@ -272,16 +278,16 @@ The single most important domain invariant. Implement once, test thoroughly.
 ### Formula
 
 ```ts
-actualExpenditure = isShared ? amount * yourPercentage : amount
+actualExpenditure = isShared ? amount * yourPercentage : amount;
 ```
 
 ### Three scenarios
 
-| Scenario | `isShared` | `yourPercentage` | `amount` | `actualExpenditure` |
-|---|---|---|---|---|
-| Solo expense | `false` | (1.0 — ignored) | $200 | **$200** |
-| Standard shared | `true` | 0.68 | $1000 | **$680** |
-| Custom split (one-off) | `true` | 0.50 | $400 | **$200** |
+| Scenario               | `isShared` | `yourPercentage` | `amount` | `actualExpenditure` |
+| ---------------------- | ---------- | ---------------- | -------- | ------------------- |
+| Solo expense           | `false`    | (1.0 — ignored)  | $200     | **$200**            |
+| Standard shared        | `true`     | 0.68             | $1000    | **$680**            |
+| Custom split (one-off) | `true`     | 0.50             | $400     | **$200**            |
 
 ### Display rules
 
@@ -302,9 +308,9 @@ actualExpenditure = isShared ? amount * yourPercentage : amount
 
 1. **Export** each fast-expense-tracker table to CSV (Prisma or `psql \copy`).
 2. **Map columns** to MoneyFlow's Prisma schema:
-   - Direct mapping by field name (most fields match exactly).
-   - `Category` rows match by `slug`.
-   - `Subcategory` rows match by `(categoryId via slug join, name)`.
+    - Direct mapping by field name (most fields match exactly).
+    - `Category` rows match by `slug`.
+    - `Subcategory` rows match by `(categoryId via slug join, name)`.
 3. **Import** via a one-shot Prisma seed script in MoneyFlow.
 4. **Reconnect relations** by re-resolving foreign keys (IDs change; slugs and names don't).
 5. **Decommission** fast-expense-tracker (or archive as read-only).
