@@ -39,7 +39,7 @@ Re-skin the list (slice 1.5 + 1.6) to [`ui-build-plan.md §3`](./ui-build-plan.m
 
 #### 2.3: Income model + Income screen `[PR]`
 
-The one real data gap. Adds the `Income` model (`FIXED` recurring + `VARIABLE` per-month) + migration and the Income screen ([`ui-build-plan.md §4`](./ui-build-plan.md)): eye/privacy toggle, 3 stat cards, variable-income log. **Migrates the dashboard off the `Settings.monthlyIncome` stopgap.** Foundation for 2.4 (budget targets = `totalIncome × {0.5, 0.25, 0.25}`).
+The one real data gap. Adds the `Income` model (`FIXED` recurring + `VARIABLE` per-month) + migration and the Income screen ([`ui-build-plan.md §4`](./ui-build-plan.md)): eye/privacy toggle, 3 stat cards, variable-income log. Establishes `getMonthlySummary` as the income source 2.4's dashboard reads instead of the `Settings.monthlyIncome` stopgap. Foundation for 2.4 (budget targets = `totalIncome × {0.5, 0.25, 0.25}`).
 
 #### 2.4: Dashboard `[PR]`
 

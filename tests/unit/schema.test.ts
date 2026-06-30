@@ -17,16 +17,42 @@ const fieldOf = (model: string, name: string) =>
         ?.fields.find((f) => f.name === name);
 
 describe("Prisma schema", () => {
-    it("Should define the seven core models", () => {
+    it("Should define the eight core models", () => {
         expect([...fieldsByModel.keys()].sort()).toEqual([
             "Card",
             "Category",
             "Expense",
+            "Income",
             "Movement",
             "Settings",
             "Subcategory",
             "User",
         ]);
+    });
+
+    it("Should model Income with a type + nullable variable fields (slice 2.3)", () => {
+        expect(fieldsByModel.get("Income")).toEqual(
+            expect.arrayContaining([
+                "userId",
+                "type",
+                "amount",
+                "source",
+                "date",
+            ]),
+        );
+        // FIXED rows omit source/date, so both are optional.
+        expect(fieldOf("Income", "source")).toMatchObject({
+            type: "String",
+            isRequired: false,
+        });
+        expect(fieldOf("Income", "date")).toMatchObject({
+            type: "DateTime",
+            isRequired: false,
+        });
+        expect(fieldOf("Income", "amount")).toMatchObject({
+            type: "Float",
+            isRequired: true,
+        });
     });
 
     it("Should carry the shared-expense math fields on Expense", () => {

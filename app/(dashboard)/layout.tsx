@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 import { auth } from "@/auth";
 import { LogoutButton } from "@/components/auth/LogoutButton";
@@ -15,7 +16,21 @@ export default async function DashboardLayout({
     return (
         <div className="flex min-h-screen flex-col">
             <header className="flex items-center justify-between border-b px-8 py-3">
-                <span className="text-sm font-medium">Expense Tracker</span>
+                <nav className="flex items-center gap-5 text-sm">
+                    <span className="font-medium">Expense Tracker</span>
+                    <Link
+                        href="/expenses"
+                        className="text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                        Expenses
+                    </Link>
+                    <Link
+                        href="/income"
+                        className="text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                        Income
+                    </Link>
+                </nav>
                 <div className="flex items-center gap-4">
                     {session?.user?.email && (
                         <span className="text-sm text-muted-foreground">

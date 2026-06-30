@@ -17,6 +17,7 @@ function makeDb(
     opts: {
         subExists?: boolean;
         cardExists?: boolean;
+        incomeExists?: boolean;
         existingSubNames?: Set<string>;
     } = {},
 ) {
@@ -77,11 +78,27 @@ function makeDb(
             }) => Promise<{ id: string }>
         >(async (args) => ({ id: args.where.id })),
     };
+    const income = {
+        findFirst: vi.fn<
+            (args: {
+                where: { userId: string; type: string };
+            }) => Promise<{ id: string } | null>
+        >(async () => (opts.incomeExists ? { id: "income-existing" } : null)),
+        create: vi.fn<
+            (args: {
+                data: { userId: string; type: string; amount: number };
+            }) => Promise<{ id: string }>
+        >(async () => ({ id: "income-new" })),
+    };
     // Test mock: only the delegates runSeed uses are implemented.
-    const db = { category, subcategory, user, card } as unknown as Parameters<
-        typeof runSeed
-    >[0];
-    return { db, category, subcategory, user, card };
+    const db = {
+        category,
+        subcategory,
+        user,
+        card,
+        income,
+    } as unknown as Parameters<typeof runSeed>[0];
+    return { db, category, subcategory, user, card, income };
 }
 
 describe("CATEGORY_SEED data", () => {
@@ -213,6 +230,23 @@ describe("runSeed", () => {
         for (const call of card.update.mock.calls) {
             expect(call[0].data.color).toMatch(/^#[0-9a-f]{6}$/i);
         }
+    });
+
+    it("creates a FIXED income row for the admin on a fresh DB", async () => {
+        const { db, income } = makeDb({ incomeExists: false });
+        const summary = await runSeed(db, ADMIN);
+        expect(income.create).toHaveBeenCalledTimes(1);
+        const data = income.create.mock.calls[0]![0].data;
+        expect(data).toMatchObject({ userId: "user-1", type: "FIXED" });
+        expect(data.amount).toBeGreaterThan(0);
+        expect(summary.fixedIncomeCreated).toBe(true);
+    });
+
+    it("does not recreate the FIXED income row on re-seed (idempotent)", async () => {
+        const { db, income } = makeDb({ incomeExists: true });
+        const summary = await runSeed(db, ADMIN);
+        expect(income.create).not.toHaveBeenCalled();
+        expect(summary.fixedIncomeCreated).toBe(false);
     });
 
     it("upserts the admin user keyed by email with a bcrypt hash, never plaintext", async () => {
