@@ -229,9 +229,17 @@ export function ExpenseListInteractive({
                     return (
                         <li
                             key={expense.id}
-                            className={`group grid grid-cols-[minmax(0,1fr)_auto_4rem] items-center gap-x-3 gap-y-0.5 border-l-[3px] py-3 pl-3 sm:gap-4 sm:border-l-0 sm:py-2.5 sm:pl-0 ${ROW_GRID}`}
-                            style={{ borderLeftColor: expense.category.color }}
+                            className={`group relative grid grid-cols-[minmax(0,1fr)_auto_4rem] items-center gap-x-3 gap-y-0.5 py-3 pl-4 sm:gap-4 sm:py-2.5 sm:pl-0 ${ROW_GRID}`}
                         >
+                            {/* Mobile category accent — a short centered bar, not a full-height border */}
+                            <span
+                                aria-hidden
+                                className="absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-full sm:hidden"
+                                style={{
+                                    backgroundColor: expense.category.color,
+                                }}
+                            />
+
                             {/* Date — desktop only */}
                             <span className="hidden whitespace-nowrap text-sm text-muted-foreground sm:block">
                                 {formatExpenseDate(expense.date)}
