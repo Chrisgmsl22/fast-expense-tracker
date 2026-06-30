@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,12 @@ import { shiftMonth } from "@/lib/dates";
 
 export function MonthPicker({ month }: { month: string }) {
     const router = useRouter();
+    // Stay on the current route (e.g. /expenses or /income) — only the month
+    // query param changes, so the same control drives every month-scoped page.
+    const pathname = usePathname();
 
     function go(next: string) {
-        router.push(`/expenses?month=${next}`);
+        router.push(`${pathname}?month=${next}`);
     }
 
     function handleChange(event: ChangeEvent<HTMLInputElement>) {

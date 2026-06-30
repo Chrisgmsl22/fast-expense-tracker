@@ -209,10 +209,15 @@ export type SeedOptions = {
     adminPassword: string;
 };
 
+// Illustrative FIXED monthly income for local dev so the Income screen + (later)
+// the dashboard have data. NOT real personal financial data — the repo is public.
+const FIXED_INCOME_SEED = 40000;
+
 export type SeedSummary = {
     categories: number;
     subcategories: number;
     cards: number;
+    fixedIncomeCreated: boolean;
 };
 
 /**
@@ -299,10 +304,30 @@ export async function runSeed(
         }
     }
 
+    // One FIXED income row per user (the recurring monthly amount). Find-then-
+    // create — no unique constraint on (userId, type) — so a re-seed never
+    // overwrites a value the user has since edited via the Income screen.
+    const existingFixed = await db.income.findFirst({
+        where: { userId: admin.id, type: "FIXED" },
+        select: { id: true },
+    });
+    let fixedIncomeCreated = false;
+    if (!existingFixed) {
+        await db.income.create({
+            data: {
+                userId: admin.id,
+                type: "FIXED",
+                amount: FIXED_INCOME_SEED,
+            },
+        });
+        fixedIncomeCreated = true;
+    }
+
     return {
         categories: CATEGORY_SEED.length,
         subcategories: subcategoryCount,
         cards: cardCount,
+        fixedIncomeCreated,
     };
 }
 
@@ -322,7 +347,8 @@ async function main(): Promise<void> {
         console.log(
             `Seed complete: ${summary.categories} categories, ` +
                 `${summary.subcategories} new subcategories, ` +
-                `${summary.cards} new cards.`,
+                `${summary.cards} new cards, ` +
+                `${summary.fixedIncomeCreated ? "1 new" : "no new"} fixed-income row.`,
         );
     } finally {
         await db.$disconnect();
