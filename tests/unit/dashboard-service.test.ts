@@ -2,28 +2,80 @@
 import { describe, it, expect } from "vitest";
 
 import { getDashboardSummary } from "@/lib/services/dashboard/dashboard.service";
-import type { DashboardRepository } from "@/lib/repositories/dashboard.repository";
+import type {
+    CardSpend,
+    DashboardRepository,
+} from "@/lib/repositories/dashboard.repository";
 import type { CategorySpend } from "@/lib/domain/dashboard";
 import { FakeIncomeRepository } from "@/tests/support/fake-income-repository";
 
-function fakeDashboardRepo(spends: CategorySpend[]): DashboardRepository {
-    return { getCategorySpends: async () => spends };
+function cat(over: Partial<CategorySpend> & { spent: number }): CategorySpend {
+    return {
+        slug: over.slug ?? "housing",
+        name: over.name ?? "Housing",
+        color: over.color ?? "#000000",
+        isRelevant: over.isRelevant ?? true,
+        spent: over.spent,
+    };
+}
+
+function fakeDashboardRepo(
+    spends: CategorySpend[],
+    cards: CardSpend[] = [],
+): DashboardRepository {
+    return {
+        getCategorySpends: async () => spends,
+        getCardSpends: async () => cards,
+    };
 }
 
 describe("getDashboardSummary", () => {
     const spends: CategorySpend[] = [
-        { slug: "housing", isRelevant: true, spent: 14000 },
-        { slug: "savings", isRelevant: true, spent: 12000 },
-        { slug: "disposable-income", isRelevant: false, spent: 1400 },
-        { slug: "unassigned", isRelevant: false, spent: 600 },
+        cat({
+            slug: "housing",
+            name: "Housing",
+            isRelevant: true,
+            spent: 14000,
+        }),
+        cat({
+            slug: "savings",
+            name: "Savings",
+            isRelevant: true,
+            spent: 12000,
+        }),
+        cat({
+            slug: "disposable-income",
+            name: "Fun",
+            isRelevant: false,
+            spent: 1400,
+        }),
+        cat({
+            slug: "unassigned",
+            name: "Unassigned",
+            isRelevant: false,
+            spent: 600,
+        }),
+    ];
+    const cards: CardSpend[] = [
+        { id: "c1", name: "Platinum", color: "#6b7280", spent: 18000 },
+        { id: "cash", name: "Cash", color: "#16a34a", spent: 10000 },
     ];
 
-    function deps(over: { spends?: CategorySpend[]; now?: Date } = {}) {
+    function deps(
+        over: {
+            spends?: CategorySpend[];
+            cards?: CardSpend[];
+            now?: Date;
+        } = {},
+    ) {
         const incomeRepo = new FakeIncomeRepository();
         incomeRepo.seedFixed("u1", 48000);
         return {
             incomeRepo,
-            dashboardRepo: fakeDashboardRepo(over.spends ?? spends),
+            dashboardRepo: fakeDashboardRepo(
+                over.spends ?? spends,
+                over.cards ?? cards,
+            ),
             now: over.now ?? new Date("2026-06-15T12:00:00Z"),
         };
     }
@@ -69,9 +121,22 @@ describe("getDashboardSummary", () => {
             "u1",
             "2026-06",
             deps({
-                spends: [{ slug: "housing", isRelevant: true, spent: 60000 }],
+                spends: [
+                    cat({ slug: "housing", isRelevant: true, spent: 60000 }),
+                ],
             }),
         );
         expect(summary.net).toBe(-12000); // 48000 − 60000
+    });
+
+    it("passes cards through and derives top categories (excluding unassigned)", async () => {
+        const summary = await getDashboardSummary("u1", "2026-06", deps());
+        expect(summary.cards).toEqual(cards);
+        // Housing/Savings/Fun ranked by spend; unassigned excluded from the radar.
+        expect(summary.topCategories.map((c) => c.name)).toEqual([
+            "Housing",
+            "Savings",
+            "Fun",
+        ]);
     });
 });

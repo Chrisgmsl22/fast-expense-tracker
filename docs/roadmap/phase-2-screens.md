@@ -51,7 +51,7 @@ New `/dashboard` route — the post-login landing ([`ui-build-plan.md §5`](./ui
 
 #### 2.4b: Dashboard charts — radar + spend-by-card `[PR]`
 
-Adds **Recharts**. "Where the money went" **radar** (top ~5 categories by my-share spend) + **spend-by-card** stacked bar + legend (per-card totals). Reads from the 2.4a summary; no new backend.
+Adds **Recharts**. "Where the money went" **radar** (top ~5 categories by my-share spend) + **spend-by-card** stacked bar + legend (per-card totals). Extends the read-model with its own aggregation: `getCardSpends` (per-card my-share, Cash rollup for null-card, stable id) + a pure `topCategories` helper (drops zero-spend + unassigned); `getCategorySpends` now carries name/color for the radar.
 
 #### 2.4c: Dashboard categories grid + right-rail feed `[PR]`
 
