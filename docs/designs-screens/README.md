@@ -38,8 +38,9 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 
 ### Files
 
-- `Confirmed designs V1.standalone.html` — self-contained, current/approved version. **The authoritative source.**
+- `Confirmed designs V1.standalone.html` — self-contained, current/approved version. **The authoritative source** for the V1 screens (login, add, expenses, income, dashboard, category detail, settlement).
 - `Confirmed designs V1.dc.html` — source of the above (depends on the project runtime; prefer the standalone).
+- `Settings.html` — **new, standalone** design for the **Settings screen** (not part of V1). Covers budget/monthly-income + the 68/32 split, card management, per-category budgets, privacy toggle, and currency. Authoritative for the Settings screen; grep it for exact values (no PNG — HTML only, per the protocol above). Feeds slices 2.7 (cards), 2.8 (privacy), and budget-editing.
 - `Rough mockups.dc.html` — earlier exploration (two dashboard directions + login). Historical reference only.
 
 ---

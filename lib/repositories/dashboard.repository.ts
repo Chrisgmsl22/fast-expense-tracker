@@ -12,10 +12,27 @@ export type CardSpend = {
     spent: number;
 };
 
+/** One category's budget status for the dashboard grid. */
+export type CategoryBudgetItem = {
+    slug: string;
+    name: string;
+    color: string;
+    /** null = no limit set. */
+    monthlyBudget: number | null;
+    spent: number;
+    /** Total subcategories the category has. */
+    subcatTotal: number;
+    /** Distinct subcategories with spend this month ("N of M subcats"). */
+    subcatWithSpend: number;
+};
+
 /** Cash (null `cardId`) rolls up under this id/label + the seeded Cash green. */
 const CASH_ID = "cash";
 const CASH_NAME = "Cash";
 const CASH_COLOR = "#16a34a";
+
+/** The orphaned-expense sentinel — excluded from the category grid. */
+const UNASSIGNED_SLUG = "unassigned";
 
 /**
  * Read-only aggregates for the dashboard — the "port". Returns raw summed
@@ -35,6 +52,14 @@ export interface DashboardRepository {
      * `cardId`) rolls up as one "Cash" row. Cards with no spend are omitted.
      */
     getCardSpends(userId: string, month: string): Promise<CardSpend[]>;
+    /**
+     * Per-category budget status for categories with spend this month
+     * (Unassigned excluded), high→low: budget, spent, and "N of M subcats".
+     */
+    getCategoryBreakdown(
+        userId: string,
+        month: string,
+    ): Promise<CategoryBudgetItem[]>;
 }
 
 export class PrismaDashboardRepository implements DashboardRepository {
@@ -110,6 +135,63 @@ export class PrismaDashboardRepository implements DashboardRepository {
                     name: card?.name ?? CASH_NAME,
                     color: card?.color ?? CASH_COLOR,
                     spent,
+                };
+            })
+            .sort((a, b) => b.spent - a.spent);
+    }
+
+    async getCategoryBreakdown(
+        userId: string,
+        month: string,
+    ): Promise<CategoryBudgetItem[]> {
+        const { start, end } = getMonthRangeUtc(month);
+        // Group by category + subcategory in one pass: category spend is the sum,
+        // and distinct non-null subcategoryIds give "N subcats with spend".
+        const grouped = await this.db.expense.groupBy({
+            by: ["categoryId", "subcategoryId"],
+            where: { userId, date: { gte: start, lt: end } },
+            _sum: { actualExpenditure: true },
+        });
+        if (grouped.length === 0) return [];
+
+        const perCategory = new Map<
+            string,
+            { spent: number; subcats: Set<string> }
+        >();
+        for (const g of grouped) {
+            const entry = perCategory.get(g.categoryId) ?? {
+                spent: 0,
+                subcats: new Set<string>(),
+            };
+            entry.spent += g._sum.actualExpenditure ?? 0;
+            if (g.subcategoryId) entry.subcats.add(g.subcategoryId);
+            perCategory.set(g.categoryId, entry);
+        }
+
+        const categories = await this.db.category.findMany({
+            where: { id: { in: [...perCategory.keys()] } },
+            select: {
+                id: true,
+                slug: true,
+                name: true,
+                color: true,
+                monthlyBudget: true,
+                _count: { select: { subcategories: true } },
+            },
+        });
+
+        return categories
+            .filter((c) => c.slug !== UNASSIGNED_SLUG)
+            .map((c) => {
+                const entry = perCategory.get(c.id);
+                return {
+                    slug: c.slug,
+                    name: c.name,
+                    color: c.color,
+                    monthlyBudget: c.monthlyBudget,
+                    spent: entry?.spent ?? 0,
+                    subcatTotal: c._count.subcategories,
+                    subcatWithSpend: entry?.subcats.size ?? 0,
                 };
             })
             .sort((a, b) => b.spent - a.spent);

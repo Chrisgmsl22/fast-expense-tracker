@@ -8,6 +8,7 @@ import {
 import { dashboardRepository, incomeRepository } from "@/lib/repositories";
 import type {
     CardSpend,
+    CategoryBudgetItem,
     DashboardRepository,
 } from "@/lib/repositories/dashboard.repository";
 import type {
@@ -31,6 +32,8 @@ export type DashboardSummary = {
     cards: CardSpend[];
     /** Top ~5 categories by my-share spend (radar). */
     topCategories: TopCategory[];
+    /** Per-category budget status, high→low (categories grid). */
+    categoryBudgets: CategoryBudgetItem[];
 };
 
 /** Injectable seams so the assembly is unit-testable without a DB or the clock. */
@@ -58,10 +61,11 @@ export async function getDashboardSummary(
     const incomeRepo = deps.incomeRepo ?? incomeRepository;
     const now = deps.now ?? new Date();
 
-    const [income, categorySpends, cards] = await Promise.all([
+    const [income, categorySpends, cards, categoryBudgets] = await Promise.all([
         incomeRepo.getMonthlySummary(userId, month),
         dashboardRepo.getCategorySpends(userId, month),
         dashboardRepo.getCardSpends(userId, month),
+        dashboardRepo.getCategoryBreakdown(userId, month),
     ]);
 
     const buckets = computeBuckets(categorySpends, income.total);
@@ -78,5 +82,6 @@ export async function getDashboardSummary(
         daysLeft,
         cards,
         topCategories: topCategories(categorySpends),
+        categoryBudgets,
     };
 }

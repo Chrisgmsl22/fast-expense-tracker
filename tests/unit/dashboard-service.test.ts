@@ -4,6 +4,7 @@ import { describe, it, expect } from "vitest";
 import { getDashboardSummary } from "@/lib/services/dashboard/dashboard.service";
 import type {
     CardSpend,
+    CategoryBudgetItem,
     DashboardRepository,
 } from "@/lib/repositories/dashboard.repository";
 import type { CategorySpend } from "@/lib/domain/dashboard";
@@ -22,10 +23,12 @@ function cat(over: Partial<CategorySpend> & { spent: number }): CategorySpend {
 function fakeDashboardRepo(
     spends: CategorySpend[],
     cards: CardSpend[] = [],
+    categoryBudgets: CategoryBudgetItem[] = [],
 ): DashboardRepository {
     return {
         getCategorySpends: async () => spends,
         getCardSpends: async () => cards,
+        getCategoryBreakdown: async () => categoryBudgets,
     };
 }
 
@@ -60,11 +63,23 @@ describe("getDashboardSummary", () => {
         { id: "c1", name: "Platinum", color: "#6b7280", spent: 18000 },
         { id: "cash", name: "Cash", color: "#16a34a", spent: 10000 },
     ];
+    const categoryBudgets: CategoryBudgetItem[] = [
+        {
+            slug: "housing",
+            name: "Housing",
+            color: "#4f46e5",
+            monthlyBudget: 14000,
+            spent: 14000,
+            subcatTotal: 5,
+            subcatWithSpend: 1,
+        },
+    ];
 
     function deps(
         over: {
             spends?: CategorySpend[];
             cards?: CardSpend[];
+            categoryBudgets?: CategoryBudgetItem[];
             now?: Date;
         } = {},
     ) {
@@ -75,6 +90,7 @@ describe("getDashboardSummary", () => {
             dashboardRepo: fakeDashboardRepo(
                 over.spends ?? spends,
                 over.cards ?? cards,
+                over.categoryBudgets ?? categoryBudgets,
             ),
             now: over.now ?? new Date("2026-06-15T12:00:00Z"),
         };
@@ -138,5 +154,10 @@ describe("getDashboardSummary", () => {
             "Savings",
             "Fun",
         ]);
+    });
+
+    it("passes the category-budget breakdown through", async () => {
+        const summary = await getDashboardSummary("u1", "2026-06", deps());
+        expect(summary.categoryBudgets).toEqual(categoryBudgets);
     });
 });
