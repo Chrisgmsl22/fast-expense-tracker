@@ -7,10 +7,23 @@
 
 export type BucketKey = "essentials" | "discretionary" | "savings";
 
-/** One category's my-share spend for the month + the fields that classify it. */
+/**
+ * One category's my-share spend for the month + the fields that classify it.
+ * `name`/`color` are carried for the radar (top-categories); the bucket math
+ * only reads `slug`/`isRelevant`/`spent`.
+ */
 export type CategorySpend = {
     slug: string;
+    name: string;
+    color: string;
     isRelevant: boolean;
+    spent: number;
+};
+
+/** A category's slice of the radar — name + color + my-share spend. */
+export type TopCategory = {
+    name: string;
+    color: string;
     spent: number;
 };
 
@@ -68,4 +81,20 @@ export function computeBuckets(
         spent: spentByKey[key],
         target: incomeTotal * BUCKET_RATIO[key],
     }));
+}
+
+/**
+ * The `limit` highest-spend categories for the radar ("where the money went"),
+ * high→low. Zero-spend categories are dropped — a radar spoke at 0 is noise. The
+ * Unassigned sentinel is excluded (it's not a real spending area).
+ */
+export function topCategories(
+    categorySpends: CategorySpend[],
+    limit = 5,
+): TopCategory[] {
+    return categorySpends
+        .filter((c) => c.spent > 0 && c.slug !== UNASSIGNED_SLUG)
+        .sort((a, b) => b.spent - a.spent)
+        .slice(0, limit)
+        .map((c) => ({ name: c.name, color: c.color, spent: c.spent }));
 }

@@ -4,6 +4,8 @@ import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
 import { getDashboardSummary } from "@/lib/services/dashboard/dashboard.service";
 import { BucketsHero } from "@/components/dashboard/BucketsHero";
 import { DashboardTopbar } from "@/components/dashboard/DashboardTopbar";
+import { SpendByCard } from "@/components/dashboard/SpendByCard";
+import { SpendRadar } from "@/components/dashboard/SpendRadar";
 import { StatStrip } from "@/components/dashboard/StatStrip";
 
 // Per-request, DB-backed data — never prerender at build (no DB in preview builds, ADR-0004).
@@ -71,6 +73,12 @@ export default async function DashboardPage({
             />
             <div className="mt-6">
                 <BucketsHero buckets={summary.buckets} />
+            </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                <div className="lg:col-span-2">
+                    <SpendRadar categories={summary.topCategories} />
+                </div>
+                <SpendByCard cards={summary.cards} />
             </div>
             <div className="mt-4">
                 <StatStrip

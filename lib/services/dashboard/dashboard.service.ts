@@ -1,13 +1,21 @@
 import { getMonthProgress } from "@/lib/dates";
-import { computeBuckets, type Bucket } from "@/lib/domain/dashboard";
+import {
+    computeBuckets,
+    topCategories,
+    type Bucket,
+    type TopCategory,
+} from "@/lib/domain/dashboard";
 import { dashboardRepository, incomeRepository } from "@/lib/repositories";
-import type { DashboardRepository } from "@/lib/repositories/dashboard.repository";
+import type {
+    CardSpend,
+    DashboardRepository,
+} from "@/lib/repositories/dashboard.repository";
 import type {
     IncomeMonthlySummary,
     IncomeRepository,
 } from "@/lib/repositories/income.repository";
 
-/** Everything the dashboard's headline (buckets + stat strip) renders. */
+/** Everything the dashboard renders (buckets + stat strip + charts). */
 export type DashboardSummary = {
     income: IncomeMonthlySummary;
     buckets: Bucket[];
@@ -19,6 +27,10 @@ export type DashboardSummary = {
     dailyAvg: number;
     /** Calendar days remaining in the viewed month. */
     daysLeft: number;
+    /** Per-card my-share spend, high→low (spend-by-card chart). */
+    cards: CardSpend[];
+    /** Top ~5 categories by my-share spend (radar). */
+    topCategories: TopCategory[];
 };
 
 /** Injectable seams so the assembly is unit-testable without a DB or the clock. */
@@ -46,9 +58,10 @@ export async function getDashboardSummary(
     const incomeRepo = deps.incomeRepo ?? incomeRepository;
     const now = deps.now ?? new Date();
 
-    const [income, categorySpends] = await Promise.all([
+    const [income, categorySpends, cards] = await Promise.all([
         incomeRepo.getMonthlySummary(userId, month),
         dashboardRepo.getCategorySpends(userId, month),
+        dashboardRepo.getCardSpends(userId, month),
     ]);
 
     const buckets = computeBuckets(categorySpends, income.total);
@@ -63,5 +76,7 @@ export async function getDashboardSummary(
         net: income.total - spentTotal,
         dailyAvg,
         daysLeft,
+        cards,
+        topCategories: topCategories(categorySpends),
     };
 }

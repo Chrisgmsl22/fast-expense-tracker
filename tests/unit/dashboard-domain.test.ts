@@ -1,7 +1,25 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 
-import { bucketOf, computeBuckets } from "@/lib/domain/dashboard";
+import {
+    bucketOf,
+    computeBuckets,
+    topCategories,
+    type CategorySpend,
+} from "@/lib/domain/dashboard";
+
+/** Fixture builder — name/color are irrelevant to bucket math, filled for the type. */
+function spend(
+    over: Partial<CategorySpend> & { spent: number },
+): CategorySpend {
+    return {
+        slug: over.slug ?? "housing",
+        name: over.name ?? "Housing",
+        color: over.color ?? "#000000",
+        isRelevant: over.isRelevant ?? true,
+        spent: over.spent,
+    };
+}
 
 describe("bucketOf", () => {
     it("puts savings in its own bucket even though it's relevant", () => {
@@ -23,12 +41,12 @@ describe("bucketOf", () => {
 });
 
 describe("computeBuckets", () => {
-    const spends = [
-        { slug: "housing", isRelevant: true, spent: 14000 }, // essentials
-        { slug: "groceries", isRelevant: true, spent: 3200 }, // essentials
-        { slug: "savings", isRelevant: true, spent: 12000 }, // savings
-        { slug: "disposable-income", isRelevant: false, spent: 1400 }, // discretionary
-        { slug: "unassigned", isRelevant: false, spent: 500 }, // excluded
+    const spends: CategorySpend[] = [
+        spend({ slug: "housing", isRelevant: true, spent: 14000 }), // essentials
+        spend({ slug: "groceries", isRelevant: true, spent: 3200 }), // essentials
+        spend({ slug: "savings", isRelevant: true, spent: 12000 }), // savings
+        spend({ slug: "disposable-income", isRelevant: false, spent: 1400 }), // discretionary
+        spend({ slug: "unassigned", isRelevant: false, spent: 500 }), // excluded
     ];
 
     it("sums into essentials/discretionary/savings, excluding unassigned", () => {
@@ -54,5 +72,39 @@ describe("computeBuckets", () => {
         expect(buckets.every((b) => b.spent === 0 && b.target === 0)).toBe(
             true,
         );
+    });
+});
+
+describe("topCategories", () => {
+    const spends: CategorySpend[] = [
+        spend({ slug: "housing", name: "Housing", spent: 14000 }),
+        spend({ slug: "groceries", name: "Groceries", spent: 3200 }),
+        spend({ slug: "transport", name: "Transport", spent: 2100 }),
+        spend({ slug: "disposable-income", name: "Fun", spent: 1400 }),
+        spend({ slug: "health", name: "Health", spent: 900 }),
+        spend({ slug: "charity", name: "Charity", spent: 300 }),
+        spend({ slug: "debt", name: "Debt", spent: 0 }), // zero-spend → dropped
+        spend({ slug: "unassigned", name: "Unassigned", spent: 5000 }), // excluded
+    ];
+
+    it("returns the highest-spend categories high→low, capped at the limit", () => {
+        const top = topCategories(spends, 5);
+        expect(top.map((c) => c.name)).toEqual([
+            "Housing",
+            "Groceries",
+            "Transport",
+            "Fun",
+            "Health",
+        ]);
+    });
+
+    it("drops zero-spend categories and the unassigned sentinel", () => {
+        const names = topCategories(spends, 20).map((c) => c.name);
+        expect(names).not.toContain("Debt"); // zero spend
+        expect(names).not.toContain("Unassigned"); // sentinel, despite $5000
+    });
+
+    it("returns an empty array when nothing has spend", () => {
+        expect(topCategories([], 5)).toEqual([]);
     });
 });
