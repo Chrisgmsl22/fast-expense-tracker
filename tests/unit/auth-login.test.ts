@@ -70,6 +70,19 @@ describe("loginAction", () => {
         }
     });
 
+    it("signs in with the dashboard as the post-login landing", async () => {
+        // signIn throws the redirect on success; swallow it and assert the target.
+        signInMock.mockRejectedValue(new Error("NEXT_REDIRECT"));
+        await loginAction({
+            email: "admin@example.com",
+            password: "hunter2",
+        }).catch(() => {});
+        expect(signInMock).toHaveBeenCalledWith(
+            "credentials",
+            expect.objectContaining({ redirectTo: "/dashboard" }),
+        );
+    });
+
     it("re-throws the success redirect (non-AuthError) so Next can navigate", async () => {
         const redirect = new Error("NEXT_REDIRECT");
         signInMock.mockRejectedValue(redirect);

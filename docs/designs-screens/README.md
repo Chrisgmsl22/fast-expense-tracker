@@ -26,10 +26,20 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 
 **Low-fidelity (lofi).** Use these for **layout, hierarchy, component inventory, and behavior**. Apply your own/ shadcn design system for final styling (radii, shadows, spacing). The color _systems_ below (cards, buckets, categories) ARE intentional and should be carried through; the neutral greys/typography are placeholders — replace with your Tailwind theme.
 
-## How to view the wireframes
+## Reading the designs (source of truth = the HTML, not the PNGs)
 
-- `Confirmed designs V1.standalone.html` — self-contained, **open directly in a browser** (no server needed). This is the current/approved version. It is a pannable canvas: scroll/drag to move, pinch/scroll to zoom. The income "Total income" chip and the income "eye" toggle are interactive — click them.
-- `Confirmed designs V1.dc.html` — source of the above (depends on the project runtime; prefer the standalone for viewing).
+**Always read `Confirmed designs V1.standalone.html` for a screen before building it — it is authoritative for exact values.** The PNG screenshots are a lossy, downscaled render: they're reliable for **layout, hierarchy, and flow**, but they hide exact colors, borders, spacing, and radii. Reading the PNG alone has caused wrong-value mistakes (e.g. a border read as "black" that the HTML defines as `#e6e8eb`). Use **both**, in this order:
+
+1. **HTML first, for exact values.** `Grep` the standalone HTML for the screen's section, then read the matched block to get the real CSS — colors (`#…`), `border` / `border-top`, `padding`/`gap`, `border-radius`, font sizes. When a value matters (any color, border, spacing), quote it from the HTML, don't eyeball the PNG.
+2. **Screenshots to cross-check.** Open the matching `screenshots/<screen>-{desktop,mobile}.png` for layout/gestalt and to confirm your build matches the intended composition.
+3. **Reconcile with the theme.** The neutral greys/typography in the HTML are lofi placeholders — map them to the Tailwind tokens in §Design Tokens. The color _systems_ (cards, buckets, categories, semantic) + the exact hex in §Design Tokens ARE authoritative.
+
+**Rendering the HTML in a browser (optional, for interaction):** the agent browser blocks `file://`, so serve it over http first — `python3 -m http.server <port> --directory docs/designs-screens`, then open `http://localhost:<port>/Confirmed%20designs%20V1.standalone.html`. It's a pannable canvas (scroll/drag, pinch-zoom); the income "Total income" chip and "eye" toggle are interactive. For most work, grepping the HTML for exact values is faster than rendering it.
+
+### Files
+
+- `Confirmed designs V1.standalone.html` — self-contained, current/approved version. **The authoritative source.**
+- `Confirmed designs V1.dc.html` — source of the above (depends on the project runtime; prefer the standalone).
 - `Rough mockups.dc.html` — earlier exploration (two dashboard directions + login). Historical reference only.
 
 ---
@@ -179,12 +189,6 @@ Per-screen PNGs in `screenshots/` (rendered from the current wireframes):
 - `income-desktop.png` / `income-mobile.png`
 - `add-expense-mobile.png` / `add-expense-desktop.png`
 - `color-systems.png` — the card / bucket / category color legend
-
-## Files
-
-- `Confirmed designs V1.standalone.html` — open in a browser to view the full canvas (current/approved version).
-- `Confirmed designs V1.dc.html` — source for the above.
-- `Rough mockups.dc.html` — earlier two-direction exploration (reference only).
 
 ## Open questions to confirm before building
 

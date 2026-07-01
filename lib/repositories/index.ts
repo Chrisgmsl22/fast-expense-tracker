@@ -5,6 +5,10 @@ import {
     type ExpenseRepository,
 } from "./expense.repository";
 import {
+    PrismaDashboardRepository,
+    type DashboardRepository,
+} from "./dashboard.repository";
+import {
     PrismaIncomeRepository,
     type IncomeRepository,
 } from "./income.repository";
@@ -22,3 +26,6 @@ export const expenseRepository: ExpenseRepository = new PrismaExpenseRepository(
 export const incomeRepository: IncomeRepository = new PrismaIncomeRepository(
     db,
 );
+
+export const dashboardRepository: DashboardRepository =
+    new PrismaDashboardRepository(db);

@@ -4,6 +4,7 @@ import { describe, it, expect } from "vitest";
 import {
     cdmxCalendarDateToUtc,
     getCurrentMonthCdmx,
+    getMonthProgress,
     getMonthRangeUtc,
     isValidMonth,
     shiftMonth,
@@ -81,6 +82,35 @@ describe("toDateInputValue", () => {
     it("round-trips with cdmxCalendarDateToUtc", () => {
         const stored = cdmxCalendarDateToUtc(new Date("2026-12-31T00:00:00Z"));
         expect(toDateInputValue(stored)).toBe("2026-12-31");
+    });
+});
+
+describe("getMonthProgress", () => {
+    it("counts up to today's CDMX day in the current month", () => {
+        // 2026-06-15 12:00Z = the 15th in CDMX; June has 30 days.
+        const p = getMonthProgress("2026-06", new Date("2026-06-15T12:00:00Z"));
+        expect(p).toEqual({ daysInMonth: 30, daysElapsed: 15, daysLeft: 15 });
+    });
+
+    it("treats a past month as fully elapsed (0 left)", () => {
+        const p = getMonthProgress("2026-05", new Date("2026-06-15T12:00:00Z"));
+        expect(p).toEqual({ daysInMonth: 31, daysElapsed: 31, daysLeft: 0 });
+    });
+
+    it("treats a future month as not started (0 elapsed)", () => {
+        const p = getMonthProgress("2026-07", new Date("2026-06-15T12:00:00Z"));
+        expect(p).toEqual({ daysInMonth: 31, daysElapsed: 0, daysLeft: 31 });
+    });
+
+    it("respects the CDMX boundary on the 1st (still prior day before 06:00Z)", () => {
+        // 2026-06-01T03:00Z is still May 31 in CDMX → May is the current month.
+        const p = getMonthProgress("2026-05", new Date("2026-06-01T03:00:00Z"));
+        expect(p).toEqual({ daysInMonth: 31, daysElapsed: 31, daysLeft: 0 });
+    });
+
+    it("handles February day-count", () => {
+        const p = getMonthProgress("2026-02", new Date("2026-02-10T12:00:00Z"));
+        expect(p).toEqual({ daysInMonth: 28, daysElapsed: 10, daysLeft: 18 });
     });
 });
 

@@ -123,18 +123,32 @@
             "dependsOn": ["2.1", "2.2"]
         },
         {
-            "id": "2.4",
+            "id": "2.4a",
+            "phase": 2,
+            "type": "foundation",
+            "title": "Dashboard foundation — getDashboardSummary + route + topbar + landing + buckets hero + stat strip",
+            "dependsOn": ["2.3"]
+        },
+        {
+            "id": "2.4b",
             "phase": 2,
             "type": "fan-out",
-            "title": "Dashboard — buckets hero + radar + spend-by-card + categories + month feed",
-            "dependsOn": ["2.3"]
+            "title": "Dashboard charts — Recharts radar + spend-by-card stacked bar",
+            "dependsOn": ["2.4a"]
+        },
+        {
+            "id": "2.4c",
+            "phase": 2,
+            "type": "fan-out",
+            "title": "Dashboard categories grid + right-rail month feed",
+            "dependsOn": ["2.4a"]
         },
         {
             "id": "2.5",
             "phase": 2,
             "type": "fan-out",
             "title": "Category detail — spend-by-subcategory breakdown",
-            "dependsOn": ["2.4"]
+            "dependsOn": ["2.4b", "2.4c"]
         },
         {
             "id": "2.6",
@@ -149,6 +163,13 @@
             "type": "fan-out",
             "title": "Card management — add / edit / delete user cards (design pending)",
             "dependsOn": ["1.1"]
+        },
+        {
+            "id": "2.8",
+            "phase": 2,
+            "type": "fan-out",
+            "title": "Global privacy toggle — persisted PrivacyProvider masks money app-wide (reverses 2.3 income-only eye toggle)",
+            "dependsOn": ["2.4a"]
         },
 
         {
