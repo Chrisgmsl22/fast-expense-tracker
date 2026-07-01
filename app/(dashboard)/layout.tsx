@@ -19,6 +19,12 @@ export default async function DashboardLayout({
                 <nav className="flex items-center gap-5 text-sm">
                     <span className="font-medium">Expense Tracker</span>
                     <Link
+                        href="/dashboard"
+                        className="text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                        Dashboard
+                    </Link>
+                    <Link
                         href="/expenses"
                         className="text-muted-foreground transition-colors hover:text-foreground"
                     >

@@ -41,9 +41,21 @@ Re-skin the list (slice 1.5 + 1.6) to [`ui-build-plan.md §3`](./ui-build-plan.m
 
 The one real data gap. Adds the `Income` model (`FIXED` recurring + `VARIABLE` per-month) + migration and the Income screen ([`ui-build-plan.md §4`](./ui-build-plan.md)): eye/privacy toggle, 3 stat cards, variable-income log. Establishes `getMonthlySummary` as the income source 2.4's dashboard reads instead of the `Settings.monthlyIncome` stopgap. Foundation for 2.4 (budget targets = `totalIncome × {0.5, 0.25, 0.25}`).
 
-#### 2.4: Dashboard `[PR]`
+### 2.4: Dashboard — split into 3 mini-slices `[PR×3]`
 
-New `/dashboard` route — the post-login landing ([`ui-build-plan.md §5`](./ui-build-plan.md)). Buckets hero (Essentials/Discretionary/Savings; Savings is its own bucket per CLAUDE.md), radar (Recharts, top ~5 categories), spend-by-card stacked bar, categories grid vs `Category.monthlyBudget`, right-rail month feed. New `getDashboardSummary(userId, month)` (totals via `actualExpenditure`). Card-payment rail lines deferred to 2.6.
+New `/dashboard` route — the post-login landing ([`ui-build-plan.md §5`](./ui-build-plan.md)). Sliced into three independently-mergeable PRs so the diff stays reviewable; each leaves the page shippable. Card-payment rail lines + budget-editing UI deferred to 2.6/later.
+
+#### 2.4a: Dashboard foundation — service + shell + buckets + stat strip `[PR]`
+
+`getDashboardSummary(userId, month)` aggregation (totals via `actualExpenditure`) + the `/dashboard` route + topbar (month nav, Total income chip, "My view · 68%", + Add) + post-login landing change (`/expenses` → `/dashboard`). Renders the **buckets hero** (Essentials/Discretionary/Savings — colored top border, amount, "of $X · $Y left", Progress; over → danger) + the **stat strip** (Income in / Spent my-share / Net so far / Daily avg · N left). Bucket classification (CLAUDE.md): Essentials = `isRelevant` − Savings; Discretionary = non-relevant − Unassigned; **Savings = its own bucket** ("Savings/Inv" = one bucket, resolves open-Q #4). Foundation 2.4b/2.4c hang off.
+
+#### 2.4b: Dashboard charts — radar + spend-by-card `[PR]`
+
+Adds **Recharts**. "Where the money went" **radar** (top ~5 categories by my-share spend) + **spend-by-card** stacked bar + legend (per-card totals). Reads from the 2.4a summary; no new backend.
+
+#### 2.4c: Dashboard categories grid + right-rail feed `[PR]`
+
+**Categories grid** (per-category card: dot + spent + Progress vs `Category.monthlyBudget`, null → "no limit", over → danger, "N of M subcats", links to 2.5 detail) + **right-rail month feed** (the month's expenses + Charged/My-share footer; card-payment lines still deferred to 2.6) + the mobile dashboard layout (compact buckets, categories list, recent feed, FAB). Reads from the 2.4a summary + `getForMonth`.
 
 #### 2.5: Category detail `[PR]`
 
@@ -57,6 +69,14 @@ Route `/settlement` ([`ui-build-plan.md §7`](./ui-build-plan.md)) — the phase
 
 Add / edit / delete the user's cards (name + color + type) — surfaced from slice 2.1, where the capture form revealed cards are per-user rows with no management UI. **Design pending** (no Confirmed-designs-V1 screen yet); parallel-capable (deps: card model from 1.1 only), so a parallel agent can pick it up independently of the screen sequence. Resolves the "cards should be dynamic" follow-up.
 
+#### 2.8: Global privacy toggle `[PR]`
+
+Make the eye/privacy toggle **app-wide** — a persisted `PrivacyProvider` masking money (`$ ••••••`) across the dashboard income chip, the Income screen, dashboard totals, and (optionally) expenses, driven by one toggle. **Reverses the 2.3 income-only decision** (open-Q #1) now that the app is dashboard-centric and income lives at the top. Depends on 2.4a (the dashboard/income surfaces to mask).
+
+## Navigation model (decided 2026-07-01)
+
+**Dashboard-as-hub + nav + drill-in.** `/dashboard` is the home/landing; a top nav links each screen (Dashboard / Expenses / Income); **and** clicking a section _on_ the dashboard drills into its detail screen (category card → `/category/[slug]` (2.5); Total income chip → income popover/`/income`; month-feed → expenses). The chip's income **popover** (add-inline) is deferred (2.4a ships a static Total-income chip); income capture lives on the Income screen (2.3) meanwhile.
+
 ## Open questions (resolve in the owning slice)
 
-Carried from [`ui-build-plan.md`](./ui-build-plan.md): eye-toggle scope (→ 2.3), settlement rollup (→ 2.6), category-color palette lock, Savings-vs-Investments bucket (→ 2.4). **No dedicated Settings screen exists in V1** — the recurring-prompt-suppression setting (slice 3.3) and budget-editing UI need a settings surface that the designs don't yet specify; decide when those slices go next-up.
+Carried from [`ui-build-plan.md`](./ui-build-plan.md): ~~eye-toggle scope~~ (**resolved → global, slice 2.8**), settlement rollup (→ 2.6), category-color palette lock, Savings-vs-Investments bucket (**resolved → one "Savings/Inv" bucket, slice 2.4a**). **No dedicated Settings screen exists in V1** — the recurring-prompt-suppression setting (slice 3.3) and budget-editing UI need a settings surface that the designs don't yet specify; decide when those slices go next-up.

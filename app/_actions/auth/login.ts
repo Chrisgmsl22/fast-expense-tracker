@@ -14,7 +14,7 @@ export type LoginResult = ActionResult<void, LoginInput, LoginCode>;
 /**
  * Authenticate with email + password.
  *
- * On success `signIn` throws a redirect to `/expenses` — Next propagates it to
+ * On success `signIn` throws a redirect to `/dashboard` — Next propagates it to
  * the browser, so the success branch below is effectively unreachable and only
  * exists to satisfy the return type. On bad credentials `authorize` returns
  * `null`, which Auth.js surfaces as a `CredentialsSignin` `AuthError`; any other
@@ -43,7 +43,7 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
         await signIn("credentials", {
             email: parsed.data.email,
             password: parsed.data.password,
-            redirectTo: "/expenses",
+            redirectTo: "/dashboard",
         });
     } catch (error) {
         if (error instanceof AuthError) {

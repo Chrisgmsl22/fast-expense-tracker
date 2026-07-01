@@ -60,6 +60,37 @@ export function toDateInputValue(date: Date): string {
     return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Days elapsed / left for a `YYYY-MM` month, relative to `now` in CDMX
+ * wall-clock. A past month is fully elapsed (0 left); a future month has 0
+ * elapsed; the current month counts up to today's CDMX day-of-month. `now` is
+ * injectable so the "daily average / N days left" dashboard math is testable.
+ */
+export function getMonthProgress(
+    month: string,
+    now: Date = new Date(),
+): { daysInMonth: number; daysElapsed: number; daysLeft: number } {
+    const year = Number(month.slice(0, 4));
+    const monthIndex = Number(month.slice(5, 7)) - 1;
+    // Day 0 of the next month is the last day of this one.
+    const daysInMonth = new Date(
+        Date.UTC(year, monthIndex + 1, 0),
+    ).getUTCDate();
+
+    const currentMonth = getCurrentMonthCdmx(now);
+    if (month < currentMonth) {
+        return { daysInMonth, daysElapsed: daysInMonth, daysLeft: 0 };
+    }
+    if (month > currentMonth) {
+        return { daysInMonth, daysElapsed: 0, daysLeft: daysInMonth };
+    }
+    const cdmx = new Date(
+        now.getTime() - CDMX_UTC_OFFSET_HOURS * 60 * 60 * 1000,
+    );
+    const daysElapsed = Math.min(cdmx.getUTCDate(), daysInMonth);
+    return { daysInMonth, daysElapsed, daysLeft: daysInMonth - daysElapsed };
+}
+
 /** `YYYY-MM` shifted by `delta` months, with year rollover. */
 export function shiftMonth(month: string, delta: number): string {
     const year = Number(month.slice(0, 4));

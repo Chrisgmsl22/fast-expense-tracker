@@ -13,7 +13,7 @@ import type { NextAuthConfig } from "next-auth";
  * shallow-override and silently drop `authorized`.
  */
 const LOGIN_PATH = "/login";
-const DEFAULT_AUTHED_PATH = "/expenses";
+const DEFAULT_AUTHED_PATH = "/dashboard";
 
 export const authConfig = {
     pages: {

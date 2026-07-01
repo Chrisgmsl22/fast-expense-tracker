@@ -53,8 +53,10 @@ So implementers never have to guess:
   (Income before Dashboard; the `Movement` UI lands with Settlement). One screen at
   a time. Independent re-skins _may_ run in parallel (cap 2, `parallel-slicing.md`),
   but default to sequential.
-- **Per-slice flow:** pick the next screen → implementer reads its `Confirmed
-designs V1` screenshot + this doc's section + any referenced ADR → writes a
+- **Per-slice flow:** pick the next screen → implementer reads the screen's
+  **HTML in `Confirmed designs V1.standalone.html` (authoritative for exact
+  colors/borders/spacing — grep it), cross-checked with the `screenshots/` PNG
+  for layout** (see [`designs-screens/README.md` §Reading the designs](../designs-screens/README.md)) + this doc's section + any referenced ADR → writes a
   **Plan block** ([`slice-planning.md`](../conventions/slice-planning.md): Scope
   in/out + acceptance) + a `slices.json` entry → implements end-to-end →
   **reviewer** loop incl. a real-browser check vs the screenshot → PR.

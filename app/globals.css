@@ -78,6 +78,18 @@
     --font-mono: var(--font-geist-mono);
 }
 
+/*
+ * Tailwind v4 defaults the bare `border` utility to `currentColor`; without this
+ * every `border` would render in the near-black text color instead of the
+ * design's light-gray hairline. Pin the default to the `--border` token so cards,
+ * dividers, and inputs match the design system.
+ */
+@layer base {
+    * {
+        border-color: var(--border);
+    }
+}
+
 body {
     background: var(--background);
     color: var(--foreground);
