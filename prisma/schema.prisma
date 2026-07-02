@@ -53,6 +53,24 @@ model Category {
 
   subcategories Subcategory[]
   expenses      Expense[]
+  budgets       CategoryBudget[]
+}
+
+// Per-month budget override for a category. `Category.monthlyBudget`
+// is the DEFAULT applied to any month without a row here; a row here supersedes
+// it for its `month`. Budgets follow the global/system model of Category itself
+// (no `userId`) — this is a single-user app; per-user budgets are out of scope.
+// See ADR-0016.
+model CategoryBudget {
+  id         String   @id @default(uuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  month      String // "YYYY-MM" — the month this override applies to (CDMX frame)
+  amount     Float // MXN limit for that month
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([categoryId, month])
 }
 
 model Subcategory {

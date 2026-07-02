@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
+import { budgetForMonth } from "@/lib/domain/category";
 import { SAVINGS_SLUG, type CategorySpend } from "@/lib/domain/dashboard";
 
 /** One card's my-share spend for the month (the spend-by-card bar/legend). */
@@ -17,7 +18,7 @@ export type CategoryBudgetItem = {
     slug: string;
     name: string;
     color: string;
-    /** null = no limit set. */
+    /** Effective limit for the viewed month (override ?? default); null = no limit. */
     monthlyBudget: number | null;
     spent: number;
     /** Total subcategories the category has. */
@@ -174,17 +175,28 @@ export class PrismaDashboardRepository implements DashboardRepository {
             perCategory.set(g.categoryId, entry);
         }
 
-        const categories = await this.db.category.findMany({
-            where: { id: { in: [...perCategory.keys()] } },
-            select: {
-                id: true,
-                slug: true,
-                name: true,
-                color: true,
-                monthlyBudget: true,
-                _count: { select: { subcategories: true } },
-            },
-        });
+        const categoryIds = [...perCategory.keys()];
+        const [categories, overrideRows] = await Promise.all([
+            this.db.category.findMany({
+                where: { id: { in: categoryIds } },
+                select: {
+                    id: true,
+                    slug: true,
+                    name: true,
+                    color: true,
+                    monthlyBudget: true,
+                    _count: { select: { subcategories: true } },
+                },
+            }),
+            // Per-month budget overrides for these categories (ADR-0016).
+            this.db.categoryBudget.findMany({
+                where: { month, categoryId: { in: categoryIds } },
+                select: { categoryId: true, amount: true },
+            }),
+        ]);
+        const overrides = new Map(
+            overrideRows.map((o) => [o.categoryId, o.amount]),
+        );
 
         return categories
             .filter((c) => c.slug !== UNASSIGNED_SLUG)
@@ -194,7 +206,11 @@ export class PrismaDashboardRepository implements DashboardRepository {
                     slug: c.slug,
                     name: c.name,
                     color: c.color,
-                    monthlyBudget: c.monthlyBudget,
+                    // Effective limit for the viewed month: override ?? default.
+                    monthlyBudget: budgetForMonth(
+                        c.monthlyBudget,
+                        overrides.get(c.id) ?? null,
+                    ),
                     spent: entry?.spent ?? 0,
                     subcatTotal: c._count.subcategories,
                     subcatWithSpend: entry?.subcats.size ?? 0,

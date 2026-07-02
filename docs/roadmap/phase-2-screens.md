@@ -57,9 +57,20 @@ Adds **Recharts**. "Where the money went" **radar** (top ~5 categories by my-sha
 
 **Categories grid** (per-category card: dot + spent + Progress vs `Category.monthlyBudget`, null → "no limit", over → danger, "N of M subcats") + **right-rail month feed** (the month's expenses + Charged/My-share footer). Reworks the page into the design's two-column layout (main + right rail), stacking on mobile. Reads the 2.4a summary + a new category-budget breakdown + `getForMonth`. Card-payment feed lines → 2.6; category→detail link → 2.5; mobile-exact reflow (compact buckets, FAB) → Phase 6.
 
-#### 2.5: Category detail `[PR]`
+#### 2.5: Category detail + per-month budgets `[PR]`
 
-Route `/category/[slug]` ([`ui-build-plan.md §6`](./ui-build-plan.md)). Headline is **spend-by-subcategory** (one bar per subcategory, high→low); stat cards (Spent my-share / Limit / Remaining), over/under badge, then the category's expenses showing each row's subcategory.
+Route `/category/[slug]` ([`ui-build-plan.md §6`](./ui-build-plan.md)): a **spend-by-subcategory** headline (one bar per subcategory, high→low, zero-spend faint), stat cards (Spent my-share / Monthly limit / Remaining), an over/under badge, the category's expenses, and a **distinct mobile hero**. **Also lands per-month category budgets** ([ADR-0016](../decisions/0016-per-month-category-budgets.md)): a pencil on the limit edits _this month_ + the _default_, resolved (`override ?? default`) on both this screen and the dashboard grid.
+
+##### Tasks
+
+- [x] Pure domain `subcategoryBreakdown` + `budgetForMonth` + unit tests
+- [x] `CategoryRepository` (getBySlug / getSubcategorySpends / getExpensesForCategoryMonth) + integration tests; wired into the composition root
+- [x] `CategoryBudget` model + migration; `CategoryBudgetRepository` with an atomic `setBudget` (single `$transaction`) + integration tests (ADR-0016)
+- [x] `getCategoryDetail` service (resolves the per-month limit) + `setCategoryBudget` action + Zod + unit tests
+- [x] Dashboard grid resolves the per-month override (`getCategoryBreakdown`)
+- [x] Route + components (header / stats / progress / breakdown / expenses / mobile hero / `CategoryLimitEditor`) + component tests
+- [x] Drill-in link from `CategoriesGrid` (threads `month`)
+- [x] Reviewer loop + real-browser check vs screenshots (desktop + mobile hero + edit flow)
 
 #### 2.6: Settlement + `Movement` / card-payment UI + e2e `[PR]`
 

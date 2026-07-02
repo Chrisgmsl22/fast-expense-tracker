@@ -17,10 +17,11 @@ const fieldOf = (model: string, name: string) =>
         ?.fields.find((f) => f.name === name);
 
 describe("Prisma schema", () => {
-    it("Should define the eight core models", () => {
+    it("Should define the nine core models", () => {
         expect([...fieldsByModel.keys()].sort()).toEqual([
             "Card",
             "Category",
+            "CategoryBudget",
             "Expense",
             "Income",
             "Movement",

@@ -322,4 +322,26 @@ describe("PrismaDashboardRepository.getCategoryBreakdown (integration)", () => {
         expect(row?.monthlyBudget).toBeNull();
         expect(row?.spent).toBe(900);
     });
+
+    it("resolves the per-month budget override over the default (ADR-0016)", async () => {
+        const user = await seedUser();
+        const groceries = await seedCategory("groceries", true, 5000); // default
+        await db.categoryBudget.create({
+            data: { categoryId: groceries.id, month: "2026-06", amount: 6500 },
+        });
+        // Override for a different month must NOT affect June.
+        await db.categoryBudget.create({
+            data: { categoryId: groceries.id, month: "2026-05", amount: 1000 },
+        });
+        await seedExpense({
+            userId: user.id,
+            categoryId: groceries.id,
+            date: "2026-06-10T12:00:00Z",
+            amount: 3200,
+            actualExpenditure: 3200,
+        });
+
+        const [june] = await repo.getCategoryBreakdown(user.id, "2026-06");
+        expect(june?.monthlyBudget).toBe(6500); // override wins for June
+    });
 });

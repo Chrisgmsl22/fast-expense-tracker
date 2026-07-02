@@ -12,6 +12,14 @@ import {
     PrismaIncomeRepository,
     type IncomeRepository,
 } from "./income.repository";
+import {
+    PrismaCategoryRepository,
+    type CategoryRepository,
+} from "./category.repository";
+import {
+    PrismaCategoryBudgetRepository,
+    type CategoryBudgetRepository,
+} from "./category-budget.repository";
 
 /**
  * Composition root — the single place the concrete Prisma adapters are wired to
@@ -29,3 +37,9 @@ export const incomeRepository: IncomeRepository = new PrismaIncomeRepository(
 
 export const dashboardRepository: DashboardRepository =
     new PrismaDashboardRepository(db);
+
+export const categoryRepository: CategoryRepository =
+    new PrismaCategoryRepository(db);
+
+export const categoryBudgetRepository: CategoryBudgetRepository =
+    new PrismaCategoryBudgetRepository(db);
