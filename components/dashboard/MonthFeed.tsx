@@ -1,3 +1,4 @@
+import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
@@ -5,7 +6,9 @@ const CASH_COLOR = "#16a34a";
 
 /**
  * Right-rail month feed — a read-only, scrollable list of the month's expenses
- * with a pinned Charged / My-share footer (the same totals as the stat strip).
+ * with a pinned footer. The footer splits money into Charged / My share
+ * (consumption — matches the dashboard's Spent) and, when savings is present,
+ * Set aside (savings) + Total (money that actually left = my share + set aside).
  * Card-payment (blue) lines are deferred to 2.6; this shows expenses only.
  */
 export function MonthFeed({
@@ -15,8 +18,21 @@ export function MonthFeed({
     expenses: ExpenseListItem[];
     monthLabel: string;
 }) {
-    const charged = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const myShare = expenses.reduce((sum, e) => sum + e.actualExpenditure, 0);
+    // Split consumption from savings so "My share" matches the dashboard's
+    // Spent (consumption only) and savings is surfaced on its own line.
+    let charged = 0;
+    let myShare = 0;
+    let saved = 0;
+    for (const e of expenses) {
+        if (e.category.slug === SAVINGS_SLUG) {
+            saved += e.actualExpenditure;
+        } else {
+            charged += e.amount;
+            myShare += e.actualExpenditure;
+        }
+    }
+    // Money that actually left this month = my-share consumption + savings.
+    const total = myShare + saved;
 
     return (
         // Desktop: a sticky rail capped at ~viewport height so the feed is a
@@ -42,6 +58,8 @@ export function MonthFeed({
             ) : (
                 <ul className="min-h-0 flex-1 divide-y overflow-y-auto">
                     {expenses.map((e) => {
+                        // Savings is a transfer — it has no card (never "Cash").
+                        const isSavings = e.category.slug === SAVINGS_SLUG;
                         const cardColor = e.card?.color ?? CASH_COLOR;
                         const cardName = e.card?.name ?? "Cash";
                         return (
@@ -61,15 +79,21 @@ export function MonthFeed({
                                         {e.description}
                                     </span>
                                     <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                        {formatExpenseDate(e.date)} ·
-                                        <span
-                                            aria-hidden
-                                            className="size-2 shrink-0 rounded-full"
-                                            style={{
-                                                backgroundColor: cardColor,
-                                            }}
-                                        />
-                                        {cardName}
+                                        {formatExpenseDate(e.date)}
+                                        {isSavings ? null : (
+                                            <>
+                                                {" · "}
+                                                <span
+                                                    aria-hidden
+                                                    className="size-2 shrink-0 rounded-full"
+                                                    style={{
+                                                        backgroundColor:
+                                                            cardColor,
+                                                    }}
+                                                />
+                                                {cardName}
+                                            </>
+                                        )}
                                     </span>
                                 </span>
                                 <span className="text-right whitespace-nowrap">
@@ -93,7 +117,10 @@ export function MonthFeed({
             )}
 
             {expenses.length > 0 && (
-                <div className="border-t p-4 text-sm">
+                <div
+                    data-testid="feed-totals"
+                    className="space-y-1 border-t p-4 text-sm"
+                >
                     <div className="flex justify-between">
                         <span className="font-medium text-foreground">
                             Charged
@@ -102,7 +129,7 @@ export function MonthFeed({
                             {formatMxn(charged)}
                         </span>
                     </div>
-                    <div className="mt-1 flex justify-between">
+                    <div className="flex justify-between">
                         <span className="font-medium text-foreground">
                             My share
                         </span>
@@ -110,6 +137,26 @@ export function MonthFeed({
                             {formatMxn(myShare)}
                         </span>
                     </div>
+                    {saved > 0 && (
+                        <>
+                            <div className="flex justify-between">
+                                <span className="font-medium text-foreground">
+                                    Set aside
+                                </span>
+                                <span className="font-semibold text-bucket-savings">
+                                    {formatMxn(saved)}
+                                </span>
+                            </div>
+                            <div className="flex justify-between border-t pt-1">
+                                <span className="font-medium text-foreground">
+                                    Total
+                                </span>
+                                <span className="font-semibold text-foreground">
+                                    {formatMxn(total)}
+                                </span>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
         </div>

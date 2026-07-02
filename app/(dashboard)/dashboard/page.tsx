@@ -39,7 +39,7 @@ export default async function DashboardPage({
             expenseRepository.getForMonth(userId, month),
             db.category.findMany({
                 orderBy: { name: "asc" },
-                select: { id: true, name: true, color: true },
+                select: { id: true, slug: true, name: true, color: true },
             }),
             db.subcategory.findMany({
                 select: { id: true, name: true, categoryId: true },
@@ -87,7 +87,7 @@ export default async function DashboardPage({
                     </div>
                     <StatStrip
                         income={summary.income.total}
-                        spent={summary.spentTotal}
+                        spent={summary.consumptionSpent}
                         net={summary.net}
                         dailyAvg={summary.dailyAvg}
                         daysLeft={summary.daysLeft}

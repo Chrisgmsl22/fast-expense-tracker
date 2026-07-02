@@ -108,18 +108,20 @@ describe("getDashboardSummary", () => {
         expect(byKey.discretionary!.spent).toBe(1400);
     });
 
-    it("counts ALL category spend in spentTotal/net (including unassigned)", async () => {
+    it("splits consumption vs savings; net still counts savings as outflow", async () => {
         const summary = await getDashboardSummary("u1", "2026-06", deps());
-        // 14000 + 12000 + 1400 + 600 = 28000
-        expect(summary.spentTotal).toBe(28000);
+        // consumption = housing 14000 + Fun 1400 + unassigned 600 = 16000
+        expect(summary.consumptionSpent).toBe(16000);
+        expect(summary.savingsSpent).toBe(12000); // excluded from "spent"…
+        // …but net still subtracts the full outflow (16000 + 12000).
         expect(summary.net).toBe(20000); // 48000 − 28000
     });
 
-    it("computes daily average over elapsed days and days left", async () => {
+    it("computes daily average over CONSUMPTION and days left", async () => {
         const summary = await getDashboardSummary("u1", "2026-06", deps());
-        // 15 days elapsed in June → 28000 / 15
+        // 15 days elapsed in June → consumption 16000 / 15 (savings excluded)
         expect(summary.daysLeft).toBe(15);
-        expect(summary.dailyAvg).toBeCloseTo(28000 / 15, 5);
+        expect(summary.dailyAvg).toBeCloseTo(16000 / 15, 5);
     });
 
     it("avoids divide-by-zero for a future month (0 elapsed)", async () => {
@@ -145,13 +147,12 @@ describe("getDashboardSummary", () => {
         expect(summary.net).toBe(-12000); // 48000 − 60000
     });
 
-    it("passes cards through and derives top categories (excluding unassigned)", async () => {
+    it("passes cards through and derives top categories (excluding savings + unassigned)", async () => {
         const summary = await getDashboardSummary("u1", "2026-06", deps());
         expect(summary.cards).toEqual(cards);
-        // Housing/Savings/Fun ranked by spend; unassigned excluded from the radar.
+        // Radar excludes savings (allocation, not spend) AND the unassigned sentinel.
         expect(summary.topCategories.map((c) => c.name)).toEqual([
             "Housing",
-            "Savings",
             "Fun",
         ]);
     });

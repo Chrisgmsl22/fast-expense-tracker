@@ -178,6 +178,13 @@
             "title": "Settings screen — budget/income + 68/32 split, per-category budgets, currency (shell for cards 2.7 + privacy 2.8); low priority",
             "dependsOn": ["2.3"]
         },
+        {
+            "id": "2.10",
+            "phase": 2,
+            "type": "fan-out",
+            "title": "Savings as allocation — exclude from Spent/radar/spend-by-card; disable the card field on savings capture (still reduces remaining)",
+            "dependsOn": ["2.4c"]
+        },
 
         {
             "id": "3.1",

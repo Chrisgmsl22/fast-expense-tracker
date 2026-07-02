@@ -73,6 +73,10 @@ Add / edit / delete the user's cards (name + color + type) — surfaced from sli
 
 Make the eye/privacy toggle **app-wide** — a persisted `PrivacyProvider` masking money (`$ ••••••`) across the dashboard income chip, the Income screen, dashboard totals, and (optionally) expenses, driven by one toggle. **Reverses the 2.3 income-only decision** (open-Q #1) now that the app is dashboard-centric and income lives at the top. Depends on 2.4a (the dashboard/income surfaces to mask).
 
+#### 2.10: Savings as allocation (not spend) `[PR]`
+
+Savings is a **transfer** (money moved to your savings, still yours), not consumption — so it should stop behaving like a spend. Money still _left_ checking, so it keeps reducing "remaining." Excluded from Spent/radar/spend-by-card; the card field is disabled on savings capture; the feed footer splits into Charged · My share · Set aside · Total.
+
 #### 2.9: Settings screen `[PR]` — low priority
 
 Route `/settings` — the settings surface the V1 designs lacked. Design: [`designs-screens/Settings.html`](../designs-screens/Settings.html) (HTML-only, authoritative). Covers budget/**monthly-income** editing + the **68/32 split** (`Settings.defaultSharePercentage`), **per-category budgets** (`Category.monthlyBudget`), and **currency**. Acts as the **shell** that surfaces card management (2.7) and the privacy toggle (2.8) — those may land within it or link to it. **Not high priority**; slot after the core screens (dashboard/category/settlement). Also the natural home for the recurring-prompt-suppression setting (slice 3.3).

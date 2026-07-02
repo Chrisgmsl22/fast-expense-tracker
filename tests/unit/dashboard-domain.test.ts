@@ -4,6 +4,7 @@ import { describe, it, expect } from "vitest";
 import {
     bucketOf,
     computeBuckets,
+    savingsSpend,
     topCategories,
     type CategorySpend,
 } from "@/lib/domain/dashboard";
@@ -85,6 +86,7 @@ describe("topCategories", () => {
         spend({ slug: "charity", name: "Charity", spent: 300 }),
         spend({ slug: "debt", name: "Debt", spent: 0 }), // zero-spend → dropped
         spend({ slug: "unassigned", name: "Unassigned", spent: 5000 }), // excluded
+        spend({ slug: "savings", name: "Savings", spent: 9000 }), // allocation, excluded
     ];
 
     it("returns the highest-spend categories high→low, capped at the limit", () => {
@@ -98,13 +100,29 @@ describe("topCategories", () => {
         ]);
     });
 
-    it("drops zero-spend categories and the unassigned sentinel", () => {
+    it("drops zero-spend, unassigned, and savings (an allocation, not spend)", () => {
         const names = topCategories(spends, 20).map((c) => c.name);
         expect(names).not.toContain("Debt"); // zero spend
         expect(names).not.toContain("Unassigned"); // sentinel, despite $5000
+        expect(names).not.toContain("Savings"); // allocation, despite $9000
     });
 
     it("returns an empty array when nothing has spend", () => {
         expect(topCategories([], 5)).toEqual([]);
+    });
+});
+
+describe("savingsSpend", () => {
+    it("sums only the savings category", () => {
+        const spends: CategorySpend[] = [
+            spend({ slug: "savings", spent: 5000 }),
+            spend({ slug: "savings", spent: 1000 }),
+            spend({ slug: "housing", spent: 8000 }),
+        ];
+        expect(savingsSpend(spends)).toBe(6000);
+    });
+
+    it("is 0 with no savings spend", () => {
+        expect(savingsSpend([spend({ slug: "housing", spent: 8000 })])).toBe(0);
     });
 });

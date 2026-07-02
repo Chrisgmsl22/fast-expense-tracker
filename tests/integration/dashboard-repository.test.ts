@@ -211,6 +211,33 @@ describe("PrismaDashboardRepository.getCardSpends (integration)", () => {
             { id: "cash", name: "Cash", color: "#16a34a", spent: 100 },
         ]);
     });
+
+    it("excludes savings (a transfer, not card spend)", async () => {
+        const user = await seedUser();
+        const groceries = await seedCategory("groceries", true);
+        const savings = await seedCategory("savings", true);
+
+        await seedExpense({
+            userId: user.id,
+            categoryId: groceries.id,
+            date: "2026-06-10T12:00:00Z",
+            amount: 300,
+            actualExpenditure: 300,
+        });
+        // Savings contribution (null card) — must NOT appear as a Cash segment.
+        await seedExpense({
+            userId: user.id,
+            categoryId: savings.id,
+            date: "2026-06-11T12:00:00Z",
+            amount: 5000,
+            actualExpenditure: 5000,
+        });
+
+        const rows = await repo.getCardSpends(user.id, "2026-06");
+        expect(rows).toEqual([
+            { id: "cash", name: "Cash", color: "#16a34a", spent: 300 },
+        ]);
+    });
 });
 
 describe("PrismaDashboardRepository.getCategoryBreakdown (integration)", () => {

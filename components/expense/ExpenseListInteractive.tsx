@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
+import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
@@ -224,6 +225,8 @@ export function ExpenseListInteractive({
             {/* Rows — one responsive tree (mobile: card with left color border) */}
             <ul className="divide-y">
                 {filtered.map((expense) => {
+                    // Savings is a transfer — no card (never "Cash").
+                    const isSavings = expense.category.slug === SAVINGS_SLUG;
                     const cardColor = expense.card?.color ?? CASH_COLOR;
                     const cardName = expense.card?.name ?? "Cash";
                     return (
@@ -251,9 +254,14 @@ export function ExpenseListInteractive({
                                     {expense.description}
                                 </span>
                                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground sm:hidden">
-                                    {formatExpenseDate(expense.date)} ·
-                                    <Dot color={cardColor} />
-                                    {cardName}
+                                    {formatExpenseDate(expense.date)}
+                                    {isSavings ? null : (
+                                        <>
+                                            {" · "}
+                                            <Dot color={cardColor} />
+                                            {cardName}
+                                        </>
+                                    )}
                                 </span>
                             </span>
 
@@ -267,8 +275,16 @@ export function ExpenseListInteractive({
 
                             {/* Card — desktop only */}
                             <span className="hidden items-center gap-2 text-sm sm:flex">
-                                <Dot color={cardColor} />
-                                {cardName}
+                                {isSavings ? (
+                                    <span className="text-muted-foreground">
+                                        —
+                                    </span>
+                                ) : (
+                                    <>
+                                        <Dot color={cardColor} />
+                                        {cardName}
+                                    </>
+                                )}
                             </span>
 
                             {/* Amount + my-share */}

@@ -9,7 +9,7 @@ export type ExpenseListItem = {
     amount: number;
     actualExpenditure: number;
     isShared: boolean;
-    category: { id: string; name: string; color: string };
+    category: { id: string; slug: string; name: string; color: string };
     subcategory: { name: string } | null;
     card: { name: string; color: string } | null;
 };
@@ -108,7 +108,9 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 amount: true,
                 actualExpenditure: true,
                 isShared: true,
-                category: { select: { id: true, name: true, color: true } },
+                category: {
+                    select: { id: true, slug: true, name: true, color: true },
+                },
                 subcategory: { select: { name: true } },
                 card: { select: { name: true, color: true } },
             },

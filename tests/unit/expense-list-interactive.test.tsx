@@ -52,7 +52,7 @@ const expenses = [
         amount: 200,
         actualExpenditure: 136,
         isShared: true,
-        category: { id: "c1", name: "Food", color: "#ef4444" },
+        category: { id: "c1", slug: "food", name: "Food", color: "#ef4444" },
         subcategory: { name: "Restaurants" },
         card: { name: "Amex", color: "#ca8a04" },
     },
@@ -63,14 +63,19 @@ const expenses = [
         amount: 1000,
         actualExpenditure: 1000,
         isShared: false,
-        category: { id: "c2", name: "Transport", color: "#7c3aed" },
+        category: {
+            id: "c2",
+            slug: "transport",
+            name: "Transport",
+            color: "#7c3aed",
+        },
         subcategory: null,
         card: null,
     },
 ];
 
 const props = {
-    categories: [{ id: "c1", name: "Food", color: "#ef4444" }],
+    categories: [{ id: "c1", slug: "food", name: "Food", color: "#ef4444" }],
     subcategories: [{ id: "s1", name: "Restaurants", categoryId: "c1" }],
     cards: [{ id: "card1", name: "Amex", color: "#ca8a04" }],
     defaultSharePercentage: 0.68,
@@ -104,6 +109,32 @@ describe("ExpenseListInteractive", () => {
         render(<ExpenseListInteractive expenses={expenses} {...props} />);
         // Uber has no card → rendered as Cash (desktop card cell + mobile subline).
         expect(screen.getAllByText("Cash").length).toBeGreaterThan(0);
+    });
+
+    it("renders no card (—, never Cash) for a savings row", () => {
+        const savings = [
+            {
+                id: "sv1",
+                date: new Date("2026-05-02T06:00:00Z"),
+                description: "Emergency fund",
+                amount: 5000,
+                actualExpenditure: 5000,
+                isShared: false,
+                category: {
+                    id: "cs",
+                    slug: "savings",
+                    name: "Savings",
+                    color: "#0d9488",
+                },
+                subcategory: null,
+                card: null,
+            },
+        ];
+        render(<ExpenseListInteractive expenses={savings} {...props} />);
+        expect(screen.getByText("Emergency fund")).toBeDefined();
+        // Savings is a transfer — no card, and must not show the Cash fallback.
+        expect(screen.queryByText("Cash")).toBeNull();
+        expect(screen.getAllByText("—").length).toBeGreaterThan(0);
     });
 
     it("totals Charged and My-share over the visible rows", () => {
