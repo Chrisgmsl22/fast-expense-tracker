@@ -55,7 +55,7 @@ Adds **Recharts**. "Where the money went" **radar** (top ~5 categories by my-sha
 
 #### 2.4c: Dashboard categories grid + right-rail feed `[PR]`
 
-**Categories grid** (per-category card: dot + spent + Progress vs `Category.monthlyBudget`, null → "no limit", over → danger, "N of M subcats", links to 2.5 detail) + **right-rail month feed** (the month's expenses + Charged/My-share footer; card-payment lines still deferred to 2.6) + the mobile dashboard layout (compact buckets, categories list, recent feed, FAB). Reads from the 2.4a summary + `getForMonth`.
+**Categories grid** (per-category card: dot + spent + Progress vs `Category.monthlyBudget`, null → "no limit", over → danger, "N of M subcats") + **right-rail month feed** (the month's expenses + Charged/My-share footer). Reworks the page into the design's two-column layout (main + right rail), stacking on mobile. Reads the 2.4a summary + a new category-budget breakdown + `getForMonth`. Card-payment feed lines → 2.6; category→detail link → 2.5; mobile-exact reflow (compact buckets, FAB) → Phase 6.
 
 #### 2.5: Category detail `[PR]`
 
@@ -73,10 +73,14 @@ Add / edit / delete the user's cards (name + color + type) — surfaced from sli
 
 Make the eye/privacy toggle **app-wide** — a persisted `PrivacyProvider` masking money (`$ ••••••`) across the dashboard income chip, the Income screen, dashboard totals, and (optionally) expenses, driven by one toggle. **Reverses the 2.3 income-only decision** (open-Q #1) now that the app is dashboard-centric and income lives at the top. Depends on 2.4a (the dashboard/income surfaces to mask).
 
+#### 2.9: Settings screen `[PR]` — low priority
+
+Route `/settings` — the settings surface the V1 designs lacked. Design: [`designs-screens/Settings.html`](../designs-screens/Settings.html) (HTML-only, authoritative). Covers budget/**monthly-income** editing + the **68/32 split** (`Settings.defaultSharePercentage`), **per-category budgets** (`Category.monthlyBudget`), and **currency**. Acts as the **shell** that surfaces card management (2.7) and the privacy toggle (2.8) — those may land within it or link to it. **Not high priority**; slot after the core screens (dashboard/category/settlement). Also the natural home for the recurring-prompt-suppression setting (slice 3.3).
+
 ## Navigation model (decided 2026-07-01)
 
 **Dashboard-as-hub + nav + drill-in.** `/dashboard` is the home/landing; a top nav links each screen (Dashboard / Expenses / Income); **and** clicking a section _on_ the dashboard drills into its detail screen (category card → `/category/[slug]` (2.5); Total income chip → income popover/`/income`; month-feed → expenses). The chip's income **popover** (add-inline) is deferred (2.4a ships a static Total-income chip); income capture lives on the Income screen (2.3) meanwhile.
 
 ## Open questions (resolve in the owning slice)
 
-Carried from [`ui-build-plan.md`](./ui-build-plan.md): ~~eye-toggle scope~~ (**resolved → global, slice 2.8**), settlement rollup (→ 2.6), category-color palette lock, Savings-vs-Investments bucket (**resolved → one "Savings/Inv" bucket, slice 2.4a**). **No dedicated Settings screen exists in V1** — the recurring-prompt-suppression setting (slice 3.3) and budget-editing UI need a settings surface that the designs don't yet specify; decide when those slices go next-up.
+Carried from [`ui-build-plan.md`](./ui-build-plan.md): ~~eye-toggle scope~~ (**resolved → global, slice 2.8**), settlement rollup (→ 2.6), category-color palette lock, Savings-vs-Investments bucket (**resolved → one "Savings/Inv" bucket, slice 2.4a**). **A Settings screen design now exists** ([`designs-screens/Settings.html`](../designs-screens/Settings.html), added 2026-07-01) — covers budget/monthly-income + 68/32 split, card management, per-category budgets, privacy, currency. It's the home for the recurring-prompt-suppression setting (slice 3.3), budget-editing UI, card management (2.7), and the privacy toggle (2.8). Not yet sliced as its own screen build; fold pieces in via those slices or scope a dedicated Settings slice when picked up.

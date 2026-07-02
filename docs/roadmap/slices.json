@@ -171,6 +171,13 @@
             "title": "Global privacy toggle — persisted PrivacyProvider masks money app-wide (reverses 2.3 income-only eye toggle)",
             "dependsOn": ["2.4a"]
         },
+        {
+            "id": "2.9",
+            "phase": 2,
+            "type": "fan-out",
+            "title": "Settings screen — budget/income + 68/32 split, per-category budgets, currency (shell for cards 2.7 + privacy 2.8); low priority",
+            "dependsOn": ["2.3"]
+        },
 
         {
             "id": "3.1",

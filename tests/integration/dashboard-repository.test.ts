@@ -9,8 +9,14 @@ async function seedUser(email = "u@example.com") {
     return db.user.create({ data: { email, password: "x", name: "Test" } });
 }
 
-async function seedCategory(slug: string, isRelevant = true) {
-    return db.category.create({ data: { slug, name: slug, isRelevant } });
+async function seedCategory(
+    slug: string,
+    isRelevant = true,
+    monthlyBudget: number | null = null,
+) {
+    return db.category.create({
+        data: { slug, name: slug, isRelevant, monthlyBudget },
+    });
 }
 
 async function seedExpense(opts: {
@@ -19,11 +25,13 @@ async function seedExpense(opts: {
     date: string;
     amount: number;
     actualExpenditure: number;
+    subcategoryId?: string;
 }) {
     return db.expense.create({
         data: {
             userId: opts.userId,
             categoryId: opts.categoryId,
+            subcategoryId: opts.subcategoryId ?? null,
             date: new Date(opts.date),
             description: "x",
             amount: opts.amount,
@@ -202,5 +210,89 @@ describe("PrismaDashboardRepository.getCardSpends (integration)", () => {
         expect(rows).toEqual([
             { id: "cash", name: "Cash", color: "#16a34a", spent: 100 },
         ]);
+    });
+});
+
+describe("PrismaDashboardRepository.getCategoryBreakdown (integration)", () => {
+    async function seedSubcategory(categoryId: string, name: string) {
+        return db.subcategory.create({ data: { categoryId, name } });
+    }
+
+    it("returns budget + spend + N-of-M subcats, excluding Unassigned, high→low", async () => {
+        const user = await seedUser();
+        const housing = await seedCategory("housing", true, 14000);
+        const rent = await seedSubcategory(housing.id, "Rent");
+        await seedSubcategory(housing.id, "Mortgage"); // exists, no spend
+        const groceries = await seedCategory("groceries", true, 5000);
+        const gro = await seedSubcategory(groceries.id, "Groceries");
+        const unassigned = await seedCategory("unassigned", false);
+
+        // Housing: two rows, one subcategorized (Rent), one not → 1 of 2 subcats.
+        await seedExpense({
+            userId: user.id,
+            categoryId: housing.id,
+            subcategoryId: rent.id,
+            date: "2026-06-05T12:00:00Z",
+            amount: 8000,
+            actualExpenditure: 8000,
+        });
+        await seedExpense({
+            userId: user.id,
+            categoryId: housing.id,
+            date: "2026-06-06T12:00:00Z",
+            amount: 500,
+            actualExpenditure: 500,
+        });
+        await seedExpense({
+            userId: user.id,
+            categoryId: groceries.id,
+            subcategoryId: gro.id,
+            date: "2026-06-10T12:00:00Z",
+            amount: 3200,
+            actualExpenditure: 3200,
+        });
+        // Unassigned spend — must be excluded from the grid.
+        await seedExpense({
+            userId: user.id,
+            categoryId: unassigned.id,
+            date: "2026-06-11T12:00:00Z",
+            amount: 999,
+            actualExpenditure: 999,
+        });
+
+        const rows = await repo.getCategoryBreakdown(user.id, "2026-06");
+        expect(rows.map((r) => r.slug)).toEqual(["housing", "groceries"]); // high→low, no unassigned
+        expect(rows[0]).toEqual({
+            slug: "housing",
+            name: "housing",
+            color: "#6b7280",
+            monthlyBudget: 14000,
+            spent: 8500,
+            subcatTotal: 2,
+            subcatWithSpend: 1,
+        });
+        expect(rows[1]).toMatchObject({
+            slug: "groceries",
+            monthlyBudget: 5000,
+            spent: 3200,
+            subcatTotal: 1,
+            subcatWithSpend: 1,
+        });
+    });
+
+    it("carries a null budget through as null", async () => {
+        const user = await seedUser();
+        const debt = await seedCategory("debt", true, null);
+        await seedExpense({
+            userId: user.id,
+            categoryId: debt.id,
+            date: "2026-06-10T12:00:00Z",
+            amount: 900,
+            actualExpenditure: 900,
+        });
+
+        const [row] = await repo.getCategoryBreakdown(user.id, "2026-06");
+        expect(row?.monthlyBudget).toBeNull();
+        expect(row?.spent).toBe(900);
     });
 });

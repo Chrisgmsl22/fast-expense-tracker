@@ -1,9 +1,12 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
+import { expenseRepository } from "@/lib/repositories";
 import { getDashboardSummary } from "@/lib/services/dashboard/dashboard.service";
 import { BucketsHero } from "@/components/dashboard/BucketsHero";
+import { CategoriesGrid } from "@/components/dashboard/CategoriesGrid";
 import { DashboardTopbar } from "@/components/dashboard/DashboardTopbar";
+import { MonthFeed } from "@/components/dashboard/MonthFeed";
 import { SpendByCard } from "@/components/dashboard/SpendByCard";
 import { SpendRadar } from "@/components/dashboard/SpendRadar";
 import { StatStrip } from "@/components/dashboard/StatStrip";
@@ -30,9 +33,10 @@ export default async function DashboardPage({
         return null;
     }
 
-    const [summary, categories, subcategories, cards, settings] =
+    const [summary, expenses, categories, subcategories, cards, settings] =
         await Promise.all([
             getDashboardSummary(userId, month),
+            expenseRepository.getForMonth(userId, month),
             db.category.findMany({
                 orderBy: { name: "asc" },
                 select: { id: true, name: true, color: true },
@@ -61,7 +65,7 @@ export default async function DashboardPage({
     }).format(new Date(`${month}-01T12:00:00Z`));
 
     return (
-        <main className="p-8">
+        <main className="p-6 lg:p-8">
             <DashboardTopbar
                 month={month}
                 monthLabel={monthLabel}
@@ -71,23 +75,30 @@ export default async function DashboardPage({
                 subcategories={subcategories}
                 cards={cards}
             />
-            <div className="mt-6">
-                <BucketsHero buckets={summary.buckets} />
-            </div>
-            <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                <div className="lg:col-span-2">
-                    <SpendRadar categories={summary.topCategories} />
+            <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem] xl:grid-cols-[1fr_24rem]">
+                {/* Main column */}
+                <div className="space-y-4">
+                    <BucketsHero buckets={summary.buckets} />
+                    <div className="grid gap-4 lg:grid-cols-3">
+                        <div className="lg:col-span-2">
+                            <SpendRadar categories={summary.topCategories} />
+                        </div>
+                        <SpendByCard cards={summary.cards} />
+                    </div>
+                    <StatStrip
+                        income={summary.income.total}
+                        spent={summary.spentTotal}
+                        net={summary.net}
+                        dailyAvg={summary.dailyAvg}
+                        daysLeft={summary.daysLeft}
+                    />
+                    <CategoriesGrid categories={summary.categoryBudgets} />
                 </div>
-                <SpendByCard cards={summary.cards} />
-            </div>
-            <div className="mt-4">
-                <StatStrip
-                    income={summary.income.total}
-                    spent={summary.spentTotal}
-                    net={summary.net}
-                    dailyAvg={summary.dailyAvg}
-                    daysLeft={summary.daysLeft}
-                />
+
+                {/* Right rail — month feed */}
+                <aside>
+                    <MonthFeed expenses={expenses} monthLabel={monthLabel} />
+                </aside>
             </div>
         </main>
     );
