@@ -92,7 +92,10 @@ export default async function DashboardPage({
                         dailyAvg={summary.dailyAvg}
                         daysLeft={summary.daysLeft}
                     />
-                    <CategoriesGrid categories={summary.categoryBudgets} />
+                    <CategoriesGrid
+                        categories={summary.categoryBudgets}
+                        month={month}
+                    />
                 </div>
 
                 {/* Right rail — month feed */}
