@@ -32,7 +32,7 @@ export default async function ExpensesPage({
         await Promise.all([
             db.category.findMany({
                 orderBy: { name: "asc" },
-                select: { id: true, name: true, color: true },
+                select: { id: true, slug: true, name: true, color: true },
             }),
             db.subcategory.findMany({
                 select: { id: true, name: true, categoryId: true },

@@ -34,7 +34,7 @@ export type Bucket = {
     target: number;
 };
 
-const SAVINGS_SLUG = "savings";
+export const SAVINGS_SLUG = "savings";
 const UNASSIGNED_SLUG = "unassigned";
 
 /** Target share of income per bucket — the 50/25/25 rule. */
@@ -86,15 +86,28 @@ export function computeBuckets(
 /**
  * The `limit` highest-spend categories for the radar ("where the money went"),
  * high→low. Zero-spend categories are dropped — a radar spoke at 0 is noise. The
- * Unassigned sentinel is excluded (it's not a real spending area).
+ * Unassigned sentinel and Savings are excluded: the radar shows where money was
+ * *spent*, and savings is an allocation (a transfer), not consumption.
  */
 export function topCategories(
     categorySpends: CategorySpend[],
     limit = 5,
 ): TopCategory[] {
     return categorySpends
-        .filter((c) => c.spent > 0 && c.slug !== UNASSIGNED_SLUG)
+        .filter(
+            (c) =>
+                c.spent > 0 &&
+                c.slug !== UNASSIGNED_SLUG &&
+                c.slug !== SAVINGS_SLUG,
+        )
         .sort((a, b) => b.spent - a.spent)
         .slice(0, limit)
         .map((c) => ({ name: c.name, color: c.color, spent: c.spent }));
+}
+
+/** Sum of my-share spend allocated to the Savings category this month. */
+export function savingsSpend(categorySpends: CategorySpend[]): number {
+    return categorySpends
+        .filter((c) => c.slug === SAVINGS_SLUG)
+        .reduce((sum, c) => sum + c.spent, 0);
 }

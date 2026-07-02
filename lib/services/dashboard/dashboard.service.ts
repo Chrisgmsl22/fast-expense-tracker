@@ -1,6 +1,7 @@
 import { getMonthProgress } from "@/lib/dates";
 import {
     computeBuckets,
+    savingsSpend,
     topCategories,
     type Bucket,
     type TopCategory,
@@ -20,11 +21,19 @@ import type {
 export type DashboardSummary = {
     income: IncomeMonthlySummary;
     buckets: Bucket[];
-    /** Total my-share spend (`actualExpenditure`) across all categories. */
-    spentTotal: number;
-    /** income.total − spentTotal (can be negative when overspending). */
+    /**
+     * Consumption my-share spend — every category EXCEPT Savings. Savings is an
+     * allocation (a transfer), not a spend, so it's excluded from "Spent".
+     */
+    consumptionSpent: number;
+    /** My-share moved to Savings this month (its own allocation, not "spent"). */
+    savingsSpent: number;
+    /**
+     * income.total − (consumptionSpent + savingsSpent). Savings still left the
+     * account, so it reduces what's remaining even though it isn't "spent".
+     */
     net: number;
-    /** spentTotal ÷ days elapsed this month (0 before any day elapses). */
+    /** consumptionSpent ÷ days elapsed this month (0 before any day elapses). */
     dailyAvg: number;
     /** Calendar days remaining in the viewed month. */
     daysLeft: number;
@@ -49,8 +58,9 @@ export type DashboardDeps = {
  * average / days left). Pure math lives in `lib/domain/dashboard`; this only
  * orchestrates the two repositories and the month-progress clock.
  *
- * `spentTotal` is every category's my-share spend (including Unassigned), so it
- * reflects real cash out even though Unassigned has no 50/25/25 bucket.
+ * "Spent" is consumption only (all categories minus Savings). Savings is a
+ * transfer, not a spend — but it still leaves the account, so `net` subtracts
+ * both consumption and savings (total outflow), keeping "remaining" honest.
  */
 export async function getDashboardSummary(
     userId: string,
@@ -69,15 +79,18 @@ export async function getDashboardSummary(
     ]);
 
     const buckets = computeBuckets(categorySpends, income.total);
-    const spentTotal = categorySpends.reduce((sum, c) => sum + c.spent, 0);
+    const totalOutflow = categorySpends.reduce((sum, c) => sum + c.spent, 0);
+    const savings = savingsSpend(categorySpends);
+    const consumptionSpent = totalOutflow - savings;
     const { daysElapsed, daysLeft } = getMonthProgress(month, now);
-    const dailyAvg = daysElapsed > 0 ? spentTotal / daysElapsed : 0;
+    const dailyAvg = daysElapsed > 0 ? consumptionSpent / daysElapsed : 0;
 
     return {
         income,
         buckets,
-        spentTotal,
-        net: income.total - spentTotal,
+        consumptionSpent,
+        savingsSpent: savings,
+        net: income.total - totalOutflow,
         dailyAvg,
         daysLeft,
         cards,

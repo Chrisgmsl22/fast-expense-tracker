@@ -16,8 +16,9 @@ import { createExpense } from "@/app/_actions/expense/create";
 import { updateExpense } from "@/app/_actions/expense/update";
 
 const categories = [
-    { id: "c1", name: "Food", color: "#ef4444" },
-    { id: "c2", name: "Health", color: "#14b8a6" },
+    { id: "c1", slug: "food", name: "Food", color: "#ef4444" },
+    { id: "c2", slug: "health", name: "Health", color: "#14b8a6" },
+    { id: "c3", slug: "savings", name: "Savings", color: "#0d9488" },
 ];
 const subcategories = [
     { id: "s1", name: "Groceries", categoryId: "c1" },
@@ -205,5 +206,38 @@ describe("ExpenseForm", () => {
             ),
         );
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    });
+
+    it("disables the card field for the Savings category (a transfer, no card)", () => {
+        renderForm({
+            expense: {
+                ...editable,
+                categoryId: "c3", // savings
+                cardId: null,
+            },
+        });
+        // The "Savings — no card" placeholder + hint render only in the savings
+        // branch, which is exactly where the card Select is disabled.
+        expect(screen.getByText("Savings — no card")).toBeDefined();
+        expect(screen.getByText(/not needed for savings/i)).toBeDefined();
+    });
+
+    it("nulls the card when saving a savings row that still carries one", async () => {
+        (updateExpense as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { id: "e1" },
+        });
+        // Legacy savings row edited: it has a card, but savings must save with none.
+        renderForm({
+            expense: { ...editable, categoryId: "c3", cardId: "card1" },
+        });
+
+        fireEvent.submit(screen.getByRole("form", { name: /edit expense/i }));
+
+        await waitFor(() =>
+            expect(updateExpense).toHaveBeenCalledWith(
+                expect.objectContaining({ id: "e1", cardId: undefined }),
+            ),
+        );
     });
 });

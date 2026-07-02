@@ -19,13 +19,19 @@ import {
     updateExpense,
     type UpdateExpenseResult,
 } from "@/app/_actions/expense/update";
+import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { toDateInputValue } from "@/lib/dates";
 import { formatMxn } from "@/lib/format";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { ExpenseInput } from "@/lib/schemas/expense";
 import type { ExpenseEditable } from "@/lib/repositories/expense.repository";
 
-export type CategoryOption = { id: string; name: string; color: string };
+export type CategoryOption = {
+    id: string;
+    slug: string;
+    name: string;
+    color: string;
+};
 export type SubcategoryOption = {
     id: string;
     name: string;
@@ -113,6 +119,8 @@ export function ExpenseForm({
     );
 
     const selectedCategory = categories.find((c) => c.id === categoryId);
+    // Savings is a transfer, not a card purchase — no payment method applies.
+    const isSavings = selectedCategory?.slug === SAVINGS_SLUG;
     const selectedSubcategory = availableSubcategories.find(
         (s) => s.id === subcategoryId,
     );
@@ -132,6 +140,9 @@ export function ExpenseForm({
             (s) => s.id === subcategoryId && s.categoryId === value,
         );
         if (!stillValid) setSubcategoryId("");
+        // Savings has no card — clear any selected card when switching to it.
+        const next = categories.find((c) => c.id === value);
+        if (next?.slug === SAVINGS_SLUG) setCardId("");
     }
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -142,7 +153,9 @@ export function ExpenseForm({
             amount,
             categoryId,
             subcategoryId: subcategoryId || undefined,
-            cardId: cardId || undefined,
+            // Savings is a transfer — force no card, even when editing a legacy
+            // savings row that still carries one (the field is disabled).
+            cardId: isSavings ? undefined : cardId || undefined,
             description,
             notes: notes || undefined,
             isShared,
@@ -310,17 +323,30 @@ export function ExpenseForm({
                 </div>
 
                 <div>
-                    <Label htmlFor="cardId">Card</Label>
+                    <Label htmlFor="cardId">
+                        Card
+                        {isSavings ? (
+                            <span className="font-normal text-muted-foreground">
+                                {" "}
+                                (not needed for savings)
+                            </span>
+                        ) : null}
+                    </Label>
                     <Select
                         value={cardId}
                         onValueChange={(value) => setCardId(value ?? "")}
+                        disabled={isSavings}
                     >
                         <SelectTrigger
                             id="cardId"
                             aria-label="Card"
                             className="mt-1.5 w-full"
                         >
-                            {selectedCard ? (
+                            {isSavings ? (
+                                <span className="text-muted-foreground">
+                                    Savings — no card
+                                </span>
+                            ) : selectedCard ? (
                                 <Dotted color={selectedCard.color}>
                                     {selectedCard.name}
                                 </Dotted>

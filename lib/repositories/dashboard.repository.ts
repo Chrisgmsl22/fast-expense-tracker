@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
-import type { CategorySpend } from "@/lib/domain/dashboard";
+import { SAVINGS_SLUG, type CategorySpend } from "@/lib/domain/dashboard";
 
 /** One card's my-share spend for the month (the spend-by-card bar/legend). */
 export type CardSpend = {
@@ -110,7 +110,13 @@ export class PrismaDashboardRepository implements DashboardRepository {
         const { start, end } = getMonthRangeUtc(month);
         const grouped = await this.db.expense.groupBy({
             by: ["cardId"],
-            where: { userId, date: { gte: start, lt: end } },
+            // Savings is a transfer, not card spend — exclude it so it doesn't
+            // show as a phantom "Cash" segment.
+            where: {
+                userId,
+                date: { gte: start, lt: end },
+                category: { slug: { not: SAVINGS_SLUG } },
+            },
             _sum: { actualExpenditure: true },
         });
         if (grouped.length === 0) return [];
