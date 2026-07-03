@@ -19,13 +19,16 @@ export const metadata: Metadata = {
         "Personal expense tracker — MXN, shared-split aware, weekly review.",
 };
 
-// `minimumScale: 1` blocks zoom-OUT (the page never shrinks below a 1:1 fit, so
-// no "mini desktop"); omitting `maximumScale` keeps pinch-zoom-IN available for
-// accessibility. See ADR-0017.
+// Scale pinned to 1 (no zoom in or out). `minimumScale: 1` stops the "mini
+// desktop" zoom-out; `maximumScale: 1` locks zoom-in per the user's request.
+// NOTE: WebKit (iOS Safari + Chrome-on-iOS) ignores maximumScale for the input
+// focus-zoom — that's prevented by 16px form fields (text-base on mobile), not
+// this. maximumScale still applies on Android/touch. See ADR-0017.
 export const viewport: Viewport = {
     width: "device-width",
     initialScale: 1,
     minimumScale: 1,
+    maximumScale: 1,
 };
 
 export default function RootLayout({

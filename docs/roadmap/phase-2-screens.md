@@ -94,7 +94,7 @@ The app was desktop-first and unusable on a phone (zoom-out "mini desktop", hori
 
 ##### Tasks
 
-- [x] Viewport export (`width=device-width, initialScale 1, minimumScale 1` — blocks zoom-out, keeps pinch-zoom-in)
+- [x] Viewport export (`width=device-width, initialScale 1, minimumScale 1`; later `maximumScale 1` — zoom locked, see ADR-0017 + `fix/ios-input-zoom`)
 - [x] `overflow-x: clip` (+ `overflow-y: visible`) backstop — kills horizontal scroll while preserving desktop `lg:sticky`; 390px offender audit (fixed the dashboard topbar overflow)
 - [x] `Sheet` primitive + `AppNav` (burger drawer on mobile / inline row on desktop, active-link highlight) + tests
 - [x] Fixed-income editable on mobile + test
