@@ -21,11 +21,19 @@ Ship a focused **mobile-foundation** slice (2.11) that pulls the mobile
 _fundamentals_ forward from Phase 6's audit, leaving the richer polish in Phase 6.
 
 1. **Viewport / zoom policy** — `export const viewport` in the root layout with
-   `width: "device-width", initialScale: 1, minimumScale: 1`. `minimumScale: 1`
-   blocks zoom-**out** (the page can never render below a 1:1 fit → no "mini
-   desktop"); `maximumScale` is intentionally omitted so pinch-zoom-**in** stays
-   available for accessibility. (User ask: "pinch-zoom in fine; it should not
-   shrink the page when I zoom out.")
+   `width: "device-width", initialScale: 1, minimumScale: 1, maximumScale: 1`
+   (scale pinned to 1 — no zoom in or out). **Superseded the earlier
+   pinch-zoom-in allowance**: the user reported iOS zooming _in_ on every input
+   focus, leaving the app zoomed. Zoom is now locked at the user's request.
+    - **Critical caveat:** WebKit (iOS Safari **and** Chrome-on-iOS) _ignores_
+      `maximum-scale`/`user-scalable` for the input **focus-zoom**. So the lock
+      alone does **not** stop it — the actual fix is font-size **≥16px on focused
+      form controls** (WebKit only focus-zooms fields under 16px). Inputs/textarea
+      are therefore `text-base` (16px) on mobile, `sm:text-sm` from `sm` up (see
+      `components/ui/input.tsx`, `MonthPicker`, the `ExpenseForm` notes textarea).
+      `maximumScale: 1` still applies on Android/touch where it is honored.
+    - Accessibility trade-off (locking zoom) is accepted per the user's explicit
+      choice for this personal single-user app.
 2. **No horizontal scroll** — the _page_ must never scroll sideways. The real
    offenders are fixed at the source (a 390px audit caught the dashboard topbar);
    `html, body { overflow-x: clip; overflow-y: visible }` is a backstop. `clip`

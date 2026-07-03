@@ -38,7 +38,8 @@ export function MonthPicker({ month }: { month: string }) {
                 value={month}
                 onChange={handleChange}
                 aria-label="Filter by month"
-                className="rounded border p-1.5"
+                // text-base on mobile so iOS Safari doesn't auto-zoom on focus.
+                className="rounded border p-1.5 text-base sm:text-sm"
             />
             <Button
                 variant="outline"
