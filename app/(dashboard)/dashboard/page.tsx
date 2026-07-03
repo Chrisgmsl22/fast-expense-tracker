@@ -65,7 +65,7 @@ export default async function DashboardPage({
     }).format(new Date(`${month}-01T12:00:00Z`));
 
     return (
-        <main className="p-6 lg:p-8">
+        <main className="p-4 sm:p-6 lg:p-8">
             <DashboardTopbar
                 month={month}
                 monthLabel={monthLabel}

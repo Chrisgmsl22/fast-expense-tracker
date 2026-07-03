@@ -184,6 +184,41 @@ export function IncomeScreen({
                 </p>
             </div>
 
+            {/* Mobile fixed-income editor — the desktop Fixed card is hidden on
+                mobile, so surface the same inline editor here (else there's no
+                way to set monthly income on a phone). */}
+            <div className="mt-3 rounded-lg border p-4 sm:hidden">
+                <p className="text-xs text-muted-foreground">
+                    Fixed income · monthly
+                </p>
+                {editingFixed ? (
+                    <FixedEditor
+                        current={fixed}
+                        onCancel={() => setEditingFixed(false)}
+                        onSaved={() => {
+                            setEditingFixed(false);
+                            router.refresh();
+                        }}
+                    />
+                ) : (
+                    <div className="mt-1 flex items-center gap-2">
+                        <p className="text-2xl font-bold">{money(fixed)}</p>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Edit fixed income"
+                            onClick={() => {
+                                setActionError(null);
+                                setEditingFixed(true);
+                            }}
+                        >
+                            <Pencil />
+                        </Button>
+                    </div>
+                )}
+            </div>
+
             {/* Variable income log */}
             <div className="mt-8 flex items-center justify-between">
                 <h2 className="text-sm font-semibold">

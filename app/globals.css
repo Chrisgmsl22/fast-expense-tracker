@@ -95,3 +95,21 @@ body {
     color: var(--foreground);
     font-family: var(--font-sans), system-ui, sans-serif;
 }
+
+/*
+ * Backstop against horizontal scroll on mobile: the page must never scroll
+ * sideways (ADR-0017). Individual wide elements (if any) get their own
+ * `overflow-x-auto` scroller so only they scroll, not the whole page.
+ *
+ * Use `clip` + explicit `overflow-y: visible`, NOT `hidden`: `overflow-x: hidden`
+ * (or a bare `clip`, whose sibling axis then computes to `auto` and normalizes
+ * the clip back to `hidden`) turns the root into a scroll container and breaks
+ * viewport-relative `position: sticky` (the desktop dashboard right-rail feed).
+ * `clip` paired with `visible` is the one combination CSS preserves: horizontal
+ * is clipped, vertical stays the normal viewport scroll, no scroll container.
+ */
+html,
+body {
+    overflow-x: clip;
+    overflow-y: visible;
+}
