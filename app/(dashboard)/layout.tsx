@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 
 import { auth } from "@/auth";
-import { LogoutButton } from "@/components/auth/LogoutButton";
+import { AppNav } from "@/components/nav/AppNav";
 
 // The proxy route gate guarantees a session here; the email is a "who am I"
-// cue next to the logout control.
+// cue next to the logout control. The nav is responsive (inline row on desktop,
+// a burger + drawer on mobile) — see AppNav.
 export default async function DashboardLayout({
     children,
 }: {
@@ -15,36 +15,8 @@ export default async function DashboardLayout({
 
     return (
         <div className="flex min-h-screen flex-col">
-            <header className="flex items-center justify-between border-b px-8 py-3">
-                <nav className="flex items-center gap-5 text-sm">
-                    <span className="font-medium">Expense Tracker</span>
-                    <Link
-                        href="/dashboard"
-                        className="text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                        Dashboard
-                    </Link>
-                    <Link
-                        href="/expenses"
-                        className="text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                        Expenses
-                    </Link>
-                    <Link
-                        href="/income"
-                        className="text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                        Income
-                    </Link>
-                </nav>
-                <div className="flex items-center gap-4">
-                    {session?.user?.email && (
-                        <span className="text-sm text-muted-foreground">
-                            {session.user.email}
-                        </span>
-                    )}
-                    <LogoutButton />
-                </div>
+            <header className="border-b">
+                <AppNav email={session?.user?.email ?? undefined} />
             </header>
             {children}
         </div>

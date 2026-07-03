@@ -134,19 +134,30 @@ describe("IncomeScreen", () => {
         });
         renderScreen();
 
+        // The Fixed card renders in both layouts (desktop grid + mobile card),
+        // so there are two edit controls in the DOM — drive the first (desktop).
         fireEvent.click(
-            screen.getByRole("button", { name: /edit fixed income/i }),
+            screen.getAllByRole("button", { name: /edit fixed income/i })[0]!,
         );
-        const input = screen.getByLabelText(/fixed monthly income/i);
+        const input = screen.getAllByLabelText(/fixed monthly income/i)[0]!;
         fireEvent.change(input, { target: { value: "50000" } });
         fireEvent.click(
-            screen.getByRole("button", { name: /save fixed income/i }),
+            screen.getAllByRole("button", { name: /save fixed income/i })[0]!,
         );
 
         await waitFor(() =>
             expect(setFixedIncome).toHaveBeenCalledWith({ amount: "50000" }),
         );
         await waitFor(() => expect(refreshMock).toHaveBeenCalled());
+    });
+
+    it("exposes a fixed-income editor in both layouts (desktop + mobile)", () => {
+        renderScreen();
+        // The desktop grid card is hidden on mobile, so a second editable card
+        // is rendered for phones — both mount in the DOM.
+        expect(
+            screen.getAllByRole("button", { name: /edit fixed income/i }),
+        ).toHaveLength(2);
     });
 
     it("defaults the add-form date to the first of the viewed month", () => {

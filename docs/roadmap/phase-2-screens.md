@@ -88,6 +88,18 @@ Make the eye/privacy toggle **app-wide** — a persisted `PrivacyProvider` maski
 
 Savings is a **transfer** (money moved to your savings, still yours), not consumption — so it should stop behaving like a spend. Money still _left_ checking, so it keeps reducing "remaining." Excluded from Spent/radar/spend-by-card; the card field is disabled on savings capture; the feed footer splits into Charged · My share · Set aside · Total.
 
+#### 2.11: Mobile foundation `[PR]`
+
+The app was desktop-first and unusable on a phone (zoom-out "mini desktop", horizontal scroll, overflowing nav, uneditable fixed income). Pulls the mobile **fundamentals** forward from Phase 6's audit ([ADR-0017](../decisions/0017-mobile-foundation.md)); Phase 6 keeps the richer polish (FAB, optimistic UI, PWA, capture-split, e2e sweep).
+
+##### Tasks
+
+- [x] Viewport export (`width=device-width, initialScale 1, minimumScale 1` — blocks zoom-out, keeps pinch-zoom-in)
+- [x] `overflow-x: clip` (+ `overflow-y: visible`) backstop — kills horizontal scroll while preserving desktop `lg:sticky`; 390px offender audit (fixed the dashboard topbar overflow)
+- [x] `Sheet` primitive + `AppNav` (burger drawer on mobile / inline row on desktop, active-link highlight) + tests
+- [x] Fixed-income editable on mobile + test
+- [x] Reviewer loop + real-browser pass (390px no-scroll + desktop sticky re-verified)
+
 #### 2.9: Settings screen `[PR]` — low priority
 
 Route `/settings` — the settings surface the V1 designs lacked. Design: [`designs-screens/Settings.html`](../designs-screens/Settings.html) (HTML-only, authoritative). Covers budget/**monthly-income** editing + the **68/32 split** (`Settings.defaultSharePercentage`), **per-category budgets** (`Category.monthlyBudget`), and **currency**. Acts as the **shell** that surfaces card management (2.7) and the privacy toggle (2.8) — those may land within it or link to it. **Not high priority**; slot after the core screens (dashboard/category/settlement). Also the natural home for the recurring-prompt-suppression setting (slice 3.3).

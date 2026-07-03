@@ -32,8 +32,8 @@ export function DashboardTopbar({
 }) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-semibold whitespace-nowrap">
+            <div className="flex items-center gap-2 sm:gap-4">
+                <h1 className="text-xl font-semibold whitespace-nowrap sm:text-2xl">
                     {monthLabel}
                 </h1>
                 <MonthPicker month={month} />
