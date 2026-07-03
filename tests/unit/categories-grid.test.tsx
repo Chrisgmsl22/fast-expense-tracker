@@ -22,6 +22,7 @@ describe("CategoriesGrid", () => {
     it("shows money left + subcat count for an under-budget category", () => {
         render(
             <CategoriesGrid
+                month="2026-06"
                 categories={[
                     cat({
                         name: "Groceries",
@@ -45,6 +46,7 @@ describe("CategoriesGrid", () => {
     it("shows an over-by amount when spent exceeds the budget", () => {
         render(
             <CategoriesGrid
+                month="2026-06"
                 categories={[
                     cat({
                         name: "Housing",
@@ -64,6 +66,7 @@ describe("CategoriesGrid", () => {
     it("reads 'no limit' when the category has no budget", () => {
         render(
             <CategoriesGrid
+                month="2026-06"
                 categories={[
                     cat({ name: "Debt", monthlyBudget: null, spent: 900 }),
                 ]}
@@ -72,8 +75,23 @@ describe("CategoriesGrid", () => {
         expect(screen.getByText(/no limit/)).toBeDefined();
     });
 
+    it("links each card to its detail route for the viewed month", () => {
+        render(
+            <CategoriesGrid
+                month="2026-06"
+                categories={[
+                    cat({ name: "Groceries", slug: "groceries", spent: 100 }),
+                ]}
+            />,
+        );
+        const link = screen.getByRole("link", { name: /Groceries/ });
+        expect(link.getAttribute("href")).toBe(
+            "/category/groceries?month=2026-06",
+        );
+    });
+
     it("shows an empty state with no category spend", () => {
-        render(<CategoriesGrid categories={[]} />);
+        render(<CategoriesGrid month="2026-06" categories={[]} />);
         expect(screen.getByText(/no category spend this month/i)).toBeDefined();
     });
 });

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { formatMxn } from "@/lib/format";
 import type { CategoryBudgetItem } from "@/lib/repositories/dashboard.repository";
 
@@ -7,13 +9,15 @@ const DANGER = "#dc2626";
  * Per-category budget grid — one card per spent category (high→low): a
  * rounded-square color dot + name + my-share spent, a progress bar vs the
  * category's `monthlyBudget` (danger when over), the limit/left/over status,
- * and "N of M subcats". A null budget reads "no limit" (no fill). Display-only;
- * the drill-in link to `/category/[slug]` lands with the detail route (2.5).
+ * and "N of M subcats". A null budget reads "no limit" (no fill). Each card
+ * links to `/category/[slug]` for the viewed month.
  */
 export function CategoriesGrid({
     categories,
+    month,
 }: {
     categories: CategoryBudgetItem[];
+    month: string;
 }) {
     if (categories.length === 0) {
         return (
@@ -33,14 +37,20 @@ export function CategoriesGrid({
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {categories.map((c) => (
-                    <CategoryCard key={c.slug} category={c} />
+                    <CategoryCard key={c.slug} category={c} month={month} />
                 ))}
             </div>
         </div>
     );
 }
 
-function CategoryCard({ category: c }: { category: CategoryBudgetItem }) {
+function CategoryCard({
+    category: c,
+    month,
+}: {
+    category: CategoryBudgetItem;
+    month: string;
+}) {
     const hasBudget = c.monthlyBudget !== null && c.monthlyBudget > 0;
     const remaining = hasBudget ? c.monthlyBudget! - c.spent : 0;
     const over = hasBudget && remaining < 0;
@@ -49,7 +59,10 @@ function CategoryCard({ category: c }: { category: CategoryBudgetItem }) {
         : 0;
 
     return (
-        <div className="rounded-lg border p-3">
+        <Link
+            href={`/category/${c.slug}?month=${month}`}
+            className="rounded-lg border p-3 transition-colors hover:bg-muted/50"
+        >
             <div className="flex items-center gap-2">
                 <span
                     aria-hidden
@@ -89,6 +102,6 @@ function CategoryCard({ category: c }: { category: CategoryBudgetItem }) {
                 {" · "}
                 {c.subcatWithSpend} of {c.subcatTotal} subcats
             </p>
-        </div>
+        </Link>
     );
 }
