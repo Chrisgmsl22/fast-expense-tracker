@@ -39,8 +39,6 @@ type Props = {
     subcategories: SubcategoryOption[];
     cards: CardOption[];
     defaultSharePercentage: number;
-    /** Formatted month for the mobile total bar (e.g. "June 2026"). */
-    monthLabel: string;
 };
 
 /** Cash is the fallback for a null card (legacy rows); the seeded Cash card is green. */
@@ -85,7 +83,6 @@ export function ExpenseListInteractive({
     subcategories,
     cards,
     defaultSharePercentage,
-    monthLabel,
 }: Props) {
     const router = useRouter();
     const [editing, setEditing] = useState<ExpenseEditable | null>(null);
@@ -291,58 +288,94 @@ export function ExpenseListInteractive({
                 </p>
             )}
 
-            {/* Totals — desktop footer */}
+            {/* Totals — desktop footer (dark bar, mirrors the mobile pinned bar) */}
             <div
                 data-testid="totals-desktop"
-                className="mt-4 hidden items-center justify-end gap-8 border-t pt-3 text-sm sm:flex"
+                className="mt-4 hidden items-center justify-end gap-6 rounded-lg bg-foreground px-5 py-3 text-sm text-background sm:flex"
             >
-                <span className="text-muted-foreground">
+                <span className="text-background/70">
                     Charged{" "}
-                    <span className="font-semibold text-foreground">
+                    <span className="font-semibold text-background">
                         {formatMxn(totals.charged)}
                     </span>
                 </span>
                 {totals.setAside > 0 && (
-                    <span className="text-muted-foreground">
+                    <span className="text-background/70">
                         Set aside{" "}
-                        <span className="font-semibold text-bucket-savings">
+                        <span className="font-semibold text-background">
                             {formatMxn(totals.setAside)}
                         </span>
                     </span>
                 )}
                 {totals.paidToPartner > 0 && (
-                    <span className="text-muted-foreground">
+                    <span className="text-background/70">
                         Paid to {PARTNER_NAME}{" "}
-                        <span className="font-semibold text-transfer">
+                        <span className="font-semibold text-background">
                             {formatMxn(totals.paidToPartner)}
                         </span>
                     </span>
                 )}
-                <span className="text-muted-foreground">
+                <span className="text-background/70">
                     What I really spent{" "}
                     <span className="rounded-full bg-spent-tint px-2 py-0.5 font-semibold text-spent">
                         {formatMxn(totals.whatIReallySpent)}
                     </span>
                 </span>
+                {(totals.setAside > 0 || totals.paidToPartner > 0) && (
+                    <span className="border-l border-background/20 pl-6 text-background/70">
+                        Total{" "}
+                        <span className="ml-1 text-base font-semibold text-background">
+                            {formatMxn(totals.total)}
+                        </span>
+                    </span>
+                )}
             </div>
 
             {/* Totals — mobile pinned bar */}
             <div
                 data-testid="totals-mobile"
-                className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between bg-foreground px-5 py-3 text-background sm:hidden"
+                className="fixed inset-x-0 bottom-0 z-40 space-y-1.5 bg-foreground px-5 py-2.5 text-background sm:hidden"
             >
-                <span className="text-xs text-background/70">
-                    Charged · {monthLabel}
-                    <span className="mt-0.5 block text-lg font-semibold text-background">
-                        {formatMxn(totals.charged)}
+                <div className="flex items-center justify-between gap-3 text-xs text-background/70">
+                    <span>
+                        Charged{" "}
+                        <span className="font-medium text-background">
+                            {formatMxn(totals.charged)}
+                        </span>
                     </span>
-                </span>
-                <span className="text-right text-xs text-background/70">
-                    What I really spent
-                    <span className="mt-0.5 block text-base font-semibold text-background">
-                        {formatMxn(totals.whatIReallySpent)}
+                    {totals.setAside > 0 && (
+                        <span>
+                            Set aside{" "}
+                            <span className="font-medium text-background">
+                                {formatMxn(totals.setAside)}
+                            </span>
+                        </span>
+                    )}
+                    {totals.paidToPartner > 0 && (
+                        <span>
+                            Paid{" "}
+                            <span className="font-medium text-background">
+                                {formatMxn(totals.paidToPartner)}
+                            </span>
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-end justify-between">
+                    <span className="text-xs text-background/70">
+                        What I really spent
+                        <span className="mt-0.5 block text-base font-semibold text-background">
+                            {formatMxn(totals.whatIReallySpent)}
+                        </span>
                     </span>
-                </span>
+                    {(totals.setAside > 0 || totals.paidToPartner > 0) && (
+                        <span className="text-right text-xs text-background/70">
+                            Total
+                            <span className="mt-0.5 block text-lg font-semibold text-background">
+                                {formatMxn(totals.total)}
+                            </span>
+                        </span>
+                    )}
+                </div>
             </div>
 
             <Dialog
@@ -488,14 +521,17 @@ function ExpenseRow({
     const cardName = expense.card?.name ?? "Cash";
     return (
         <li
-            className={`group relative grid grid-cols-[minmax(0,1fr)_auto_4rem] items-center gap-x-3 gap-y-0.5 py-3 pl-4 sm:gap-4 sm:py-2.5 sm:pl-0 ${ROW_GRID}`}
+            className={`group relative grid grid-cols-[minmax(0,1fr)_auto_4rem] items-center gap-x-3 gap-y-0.5 py-3 pl-4 sm:gap-4 sm:py-2.5 sm:pl-0 ${ROW_GRID} ${isSavings ? "border-l-[3px] border-positive bg-positive-tint sm:pl-4" : ""}`}
         >
-            {/* Mobile category accent — a short centered bar, not a full-height border */}
-            <span
-                aria-hidden
-                className="absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-full sm:hidden"
-                style={{ backgroundColor: expense.category.color }}
-            />
+            {/* Mobile category accent — a short centered bar (savings gets a full
+                green left border + tint instead, so skip its bar). */}
+            {isSavings ? null : (
+                <span
+                    aria-hidden
+                    className="absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-full sm:hidden"
+                    style={{ backgroundColor: expense.category.color }}
+                />
+            )}
 
             {/* Date — desktop only */}
             <span className="hidden whitespace-nowrap text-sm text-muted-foreground sm:block">
@@ -541,10 +577,16 @@ function ExpenseRow({
 
             {/* Amount + my-share */}
             <span className="text-right whitespace-nowrap">
-                <span className="block font-semibold">
+                <span
+                    className={`block font-semibold ${isSavings ? "text-positive" : ""}`}
+                >
                     {formatMxn(expense.amount)}
                 </span>
-                {expense.isShared ? (
+                {isSavings ? (
+                    <span className="block text-xs text-positive">
+                        set aside
+                    </span>
+                ) : expense.isShared ? (
                     <span className="block text-xs text-positive">
                         {`my share ${formatMxn(expense.actualExpenditure)}`}
                     </span>
@@ -593,7 +635,11 @@ function MovementRow({
     onDelete: () => void;
 }) {
     const isCardPayment = m.type === "card_payment";
-    const accent = isCardPayment ? "bg-payment" : "bg-transfer";
+    // Whole row tinted in its type colour with a solid left border, so movements
+    // read as clearly distinct from expenses (per design).
+    const rowTint = isCardPayment
+        ? "border-payment bg-payment-tint"
+        : "border-transfer bg-transfer-tint";
     const amountColor = isCardPayment ? "text-payment" : "text-transfer";
     const label = isCardPayment ? "Card payment" : `Paid ${PARTNER_NAME}`;
     const subline = isCardPayment
@@ -603,15 +649,9 @@ function MovementRow({
         : (m.note ?? "");
 
     return (
-        <li className="group relative flex items-center gap-3 py-3 pr-1 pl-4 sm:py-2.5 sm:pl-0">
-            <span
-                aria-hidden
-                className={`absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-full sm:hidden ${accent}`}
-            />
-            <span
-                aria-hidden
-                className={`hidden size-2.5 shrink-0 rounded-full sm:block ${accent}`}
-            />
+        <li
+            className={`group flex items-center gap-3 border-l-[3px] py-3 pr-1 pl-4 sm:py-2.5 ${rowTint}`}
+        >
             <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{label}</span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">

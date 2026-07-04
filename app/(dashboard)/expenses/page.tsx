@@ -54,14 +54,6 @@ export default async function ExpensesPage({
     // user has no Settings row yet; the form reads this for new shared expenses.
     const defaultSharePercentage = settings?.defaultSharePercentage ?? 0.68;
 
-    // "2026-06" → "June 2026" for the mobile total bar (UTC: the value is a
-    // calendar month, not a timestamp to shift).
-    const monthLabel = new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-    }).format(new Date(`${month}-01T12:00:00Z`));
-
     return (
         // Bottom padding on mobile so the pinned total bar never covers rows.
         <main className="p-8 pb-24 sm:pb-8">
@@ -85,7 +77,6 @@ export default async function ExpensesPage({
                     subcategories={subcategories}
                     cards={cards}
                     defaultSharePercentage={defaultSharePercentage}
-                    monthLabel={monthLabel}
                 />
             </div>
         </main>

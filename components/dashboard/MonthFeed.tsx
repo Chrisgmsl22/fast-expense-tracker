@@ -131,13 +131,12 @@ export function MonthFeed({
                         </div>
                     )}
                     {/* Total only when it says something beyond "what I really
-                        spent" — i.e. savings or a transfer added to it. */}
+                        spent" — i.e. savings or a transfer added to it. Dark band
+                        so the bottom-line number is easy to spot. */}
                     {(totals.setAside > 0 || totals.paidToPartner > 0) && (
-                        <div className="flex justify-between border-t pt-1">
-                            <span className="font-medium text-foreground">
-                                Total
-                            </span>
-                            <span className="font-semibold text-foreground">
+                        <div className="mt-1 flex items-center justify-between rounded-md bg-foreground px-3 py-1.5 text-background">
+                            <span className="font-medium">Total</span>
+                            <span className="font-semibold">
                                 {formatMxn(totals.total)}
                             </span>
                         </div>
@@ -160,12 +159,16 @@ function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
     const cardColor = e.card?.color ?? CASH_COLOR;
     const cardName = e.card?.name ?? "Cash";
     return (
-        <li className="relative flex items-center gap-3 py-2.5 pr-4 pl-4">
-            <span
-                aria-hidden
-                className="absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-full"
-                style={{ backgroundColor: e.category.color }}
-            />
+        <li
+            className={`flex items-center gap-3 py-2.5 pr-4 pl-4 ${isSavings ? "border-l-[3px] border-positive bg-positive-tint" : "relative"}`}
+        >
+            {isSavings ? null : (
+                <span
+                    aria-hidden
+                    className="absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-full"
+                    style={{ backgroundColor: e.category.color }}
+                />
+            )}
             <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">
                     {e.description}
@@ -186,10 +189,16 @@ function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
                 </span>
             </span>
             <span className="text-right whitespace-nowrap">
-                <span className="block text-sm font-semibold">
+                <span
+                    className={`block text-sm font-semibold ${isSavings ? "text-positive" : ""}`}
+                >
                     {formatMxn(e.amount)}
                 </span>
-                {e.isShared ? (
+                {isSavings ? (
+                    <span className="block text-xs text-positive">
+                        set aside
+                    </span>
+                ) : e.isShared ? (
                     <span className="block text-xs text-positive">
                         {`share ${formatMxn(e.actualExpenditure)}`}
                     </span>
@@ -206,7 +215,11 @@ function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
 /** One money-movement line — colour-tagged by type (ADR-0018). */
 function MovementRow({ movement: m }: { movement: MovementListItem }) {
     const isCardPayment = m.type === "card_payment";
-    const accent = isCardPayment ? "bg-payment" : "bg-transfer";
+    // Whole row tinted in its type colour, with a solid left border — the
+    // money-movement rows stand out clearly from expenses (per design).
+    const rowTint = isCardPayment
+        ? "border-payment bg-payment-tint"
+        : "border-transfer bg-transfer-tint";
     const amountColor = isCardPayment ? "text-payment" : "text-transfer";
     const label = isCardPayment ? "Card payment" : `Paid ${PARTNER_NAME}`;
     const subline = isCardPayment
@@ -216,11 +229,9 @@ function MovementRow({ movement: m }: { movement: MovementListItem }) {
         : (m.note ?? "");
 
     return (
-        <li className="relative flex items-center gap-3 py-2.5 pr-4 pl-4">
-            <span
-                aria-hidden
-                className={`absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-full ${accent}`}
-            />
+        <li
+            className={`flex items-center gap-3 border-l-[3px] py-2.5 pr-4 pl-4 ${rowTint}`}
+        >
             <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">
                     {label}
