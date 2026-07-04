@@ -14,7 +14,10 @@ async function login(page: Page) {
     await page.getByLabel("Email").fill(EMAIL);
     await page.getByLabel("Password").fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await page.waitForURL("**/expenses");
+    // Login lands on the dashboard (post-login landing, slice 2.4a); the
+    // create/edit/delete controls live on the Expenses page.
+    await page.waitForURL("**/dashboard");
+    await page.goto("/expenses");
 }
 
 test("expense lifecycle: login → create → edit → delete → logout", async ({
@@ -24,13 +27,16 @@ test("expense lifecycle: login → create → edit → delete → logout", async
 
     // CREATE
     await page.getByRole("button", { name: "+ Add" }).click();
+    // The Add menu is a type picker now (ADR-0018) — choose Expense first.
+    await page.getByRole("button", { name: "Expense", exact: false }).click();
     const addDialog = page.getByRole("dialog", { name: "Add expense" });
     await addDialog.getByLabel("Date").fill(todayIso());
     await addDialog.getByLabel("Amount").fill("123");
-    // "Category" exact — otherwise it also matches "Subcategory (optional)".
+    // Base UI Select isn't a native <select> — open it and click an option.
     await addDialog
-        .getByLabel("Category", { exact: true })
-        .selectOption({ index: 1 });
+        .getByRole("combobox", { name: "Category", exact: true })
+        .click();
+    await page.getByRole("option", { name: "Groceries" }).click();
     await addDialog.getByLabel("Description").fill("E2E expense");
     await addDialog.getByRole("button", { name: "Add expense" }).click();
 
@@ -50,7 +56,7 @@ test("expense lifecycle: login → create → edit → delete → logout", async
 
     // DELETE
     await page.getByRole("button", { name: "Delete E2E edited" }).click();
-    const deleteDialog = page.getByRole("dialog", { name: "Confirm delete" });
+    const deleteDialog = page.getByRole("dialog", { name: /Delete expense/ });
     await deleteDialog.getByRole("button", { name: "Delete" }).click();
 
     await expect(page.getByText("E2E edited")).toHaveCount(0);

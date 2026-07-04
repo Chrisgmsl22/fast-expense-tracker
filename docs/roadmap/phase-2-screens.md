@@ -72,9 +72,15 @@ Route `/category/[slug]` ([`ui-build-plan.md §6`](./ui-build-plan.md)): a **spe
 - [x] Drill-in link from `CategoriesGrid` (threads `month`)
 - [x] Reviewer loop + real-browser check vs screenshots (desktop + mobile hero + edit flow)
 
-#### 2.6: Settlement + `Movement` / card-payment UI + e2e `[PR]`
+#### 2.6: Money movements — card-payment + partner-transfer journal + e2e `[PR]`
 
-Route `/settlement` ([`ui-build-plan.md §7`](./ui-build-plan.md)) — the phase capstone. Week range, 3-step flow (charged → partner gives 32% cash → you pay the card full), "true cost (68%)" + Mark settled. **Lands the `Movement` / card-payment UI** (blue "+ Card payment" lines) that Expenses (2.2) and Dashboard (2.4) reference. Playwright e2e proving the flow.
+Reframed from the retired 3-step settlement ritual to a **personal money-movement
+journal** — see [ADR-0018](../decisions/0018-money-movements-not-settlement-ritual.md).
+Lands the `Movement` / card-payment UI (blue lines) that Expenses (2.2) and
+Dashboard (2.4) reference, plus partner-transfer logging, colour-coded feeds, and
+the two-numbers footer.
+
+Partner name lives in `lib/partner.ts` (`PARTNER_NAME`, currently "Brenda") — a single source, no hardcoded "girlfriend" copy in the new UI.
 
 #### 2.7: Card management `[PR]`
 

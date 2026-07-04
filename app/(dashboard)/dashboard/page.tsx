@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
-import { expenseRepository } from "@/lib/repositories";
+import { expenseRepository, movementRepository } from "@/lib/repositories";
 import { getDashboardSummary } from "@/lib/services/dashboard/dashboard.service";
 import { BucketsHero } from "@/components/dashboard/BucketsHero";
 import { CategoriesGrid } from "@/components/dashboard/CategoriesGrid";
@@ -33,27 +33,35 @@ export default async function DashboardPage({
         return null;
     }
 
-    const [summary, expenses, categories, subcategories, cards, settings] =
-        await Promise.all([
-            getDashboardSummary(userId, month),
-            expenseRepository.getForMonth(userId, month),
-            db.category.findMany({
-                orderBy: { name: "asc" },
-                select: { id: true, slug: true, name: true, color: true },
-            }),
-            db.subcategory.findMany({
-                select: { id: true, name: true, categoryId: true },
-            }),
-            db.card.findMany({
-                where: { userId },
-                orderBy: { name: "asc" },
-                select: { id: true, name: true, color: true },
-            }),
-            db.settings.findUnique({
-                where: { userId },
-                select: { defaultSharePercentage: true },
-            }),
-        ]);
+    const [
+        summary,
+        expenses,
+        movements,
+        categories,
+        subcategories,
+        cards,
+        settings,
+    ] = await Promise.all([
+        getDashboardSummary(userId, month),
+        expenseRepository.getForMonth(userId, month),
+        movementRepository.getForMonth(userId, month),
+        db.category.findMany({
+            orderBy: { name: "asc" },
+            select: { id: true, slug: true, name: true, color: true },
+        }),
+        db.subcategory.findMany({
+            select: { id: true, name: true, categoryId: true },
+        }),
+        db.card.findMany({
+            where: { userId },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, color: true },
+        }),
+        db.settings.findUnique({
+            where: { userId },
+            select: { defaultSharePercentage: true },
+        }),
+    ]);
 
     const sharePercentage = settings?.defaultSharePercentage ?? 0.68;
 
@@ -100,7 +108,11 @@ export default async function DashboardPage({
 
                 {/* Right rail — month feed */}
                 <aside>
-                    <MonthFeed expenses={expenses} monthLabel={monthLabel} />
+                    <MonthFeed
+                        expenses={expenses}
+                        movements={movements}
+                        monthLabel={monthLabel}
+                    />
                 </aside>
             </div>
         </main>

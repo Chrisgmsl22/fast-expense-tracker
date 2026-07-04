@@ -154,7 +154,7 @@
             "id": "2.6",
             "phase": 2,
             "type": "integration",
-            "title": "Settlement screen + Movement / card-payment UI + e2e",
+            "title": "Money movements — card-payment + partner-transfer journal + e2e",
             "dependsOn": ["2.5"]
         },
         {

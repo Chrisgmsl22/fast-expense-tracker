@@ -66,10 +66,14 @@ describe("ExpenseForm", () => {
         expect(screen.getByLabelText(/^subcategory$/i)).toBeDefined();
         expect(screen.getByLabelText(/^card$/i)).toBeDefined();
         expect(screen.getByLabelText(/description/i)).toBeDefined();
-        expect(screen.getByLabelText(/paid by/i)).toBeDefined();
         expect(
             screen.getByRole("checkbox", { name: /shared expense/i }),
         ).toBeDefined();
+    });
+
+    it("no longer renders a 'Paid by' control (every expense is the user's, ADR-0018)", () => {
+        renderForm();
+        expect(screen.queryByLabelText(/paid by/i)).toBeNull();
     });
 
     it("disables the subcategory select until a category is chosen", () => {

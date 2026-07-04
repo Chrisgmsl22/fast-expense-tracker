@@ -97,7 +97,6 @@ export function ExpenseForm({
     const [cardId, setCardId] = useState(expense?.cardId ?? "");
     const [description, setDescription] = useState(expense?.description ?? "");
     const [notes, setNotes] = useState(expense?.notes ?? "");
-    const [paidBy, setPaidBy] = useState(expense?.paidBy ?? "you");
     const [isShared, setIsShared] = useState(expense?.isShared ?? false);
     // An already-shared row keeps its stored split so historical splits stay
     // correct (CLAUDE.md domain note). Everything else — a new expense, or an
@@ -160,7 +159,8 @@ export function ExpenseForm({
             notes: notes || undefined,
             isShared,
             yourPercentage: String(yourPercentage),
-            paidBy,
+            // Every expense is the user's (ADR-0018); `paidBy` defaults "you"
+            // in the schema, so the form no longer sends it.
         };
         startTransition(async () => {
             try {
@@ -179,7 +179,6 @@ export function ExpenseForm({
                         setCardId("");
                         setDescription("");
                         setNotes("");
-                        setPaidBy("you");
                         setIsShared(false);
                     }
                     onSuccess?.();
@@ -227,7 +226,7 @@ export function ExpenseForm({
                     <div className="relative mt-1.5">
                         <span
                             aria-hidden
-                            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-xl font-semibold text-muted-foreground"
+                            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground"
                         >
                             $
                         </span>
@@ -242,7 +241,7 @@ export function ExpenseForm({
                             placeholder="0.00"
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
-                            className="h-12 pl-8 text-xl font-semibold"
+                            className="pl-7"
                         />
                     </div>
                     {fieldError("amount")}
@@ -398,48 +397,26 @@ export function ExpenseForm({
                 />
             </div>
 
-            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-                <div>
-                    <Label htmlFor="paidBy">Paid by</Label>
-                    <Select
-                        value={paidBy}
-                        onValueChange={(value) => setPaidBy(value ?? "you")}
-                    >
-                        <SelectTrigger
-                            id="paidBy"
-                            aria-label="Paid by"
-                            className="mt-1.5 w-full"
-                        >
-                            {paidBy === "gf" ? "Girlfriend" : "You"}
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="you">You</SelectItem>
-                            <SelectItem value="gf">Girlfriend</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="sm:mt-7">
-                    <label className="flex items-start gap-2.5">
-                        <Checkbox
-                            checked={isShared}
-                            onCheckedChange={(checked) => setIsShared(checked)}
-                            aria-label="Shared expense"
-                            className="mt-0.5 data-checked:border-positive data-checked:bg-positive"
-                        />
-                        <span className="text-sm">
-                            <span className="block font-medium">
-                                {`Shared expense · ${yourPct}/${partnerPct}`}
-                            </span>
-                            {isShared ? (
-                                <span className="block text-positive">
-                                    {`your share ${formatMxn(yourShare)}`}
-                                </span>
-                            ) : null}
+            <div>
+                <label className="flex items-start gap-2.5">
+                    <Checkbox
+                        checked={isShared}
+                        onCheckedChange={(checked) => setIsShared(checked)}
+                        aria-label="Shared expense"
+                        className="mt-0.5 data-checked:border-positive data-checked:bg-positive"
+                    />
+                    <span className="text-sm">
+                        <span className="block font-medium">
+                            {`Shared expense · ${yourPct}/${partnerPct}`}
                         </span>
-                    </label>
-                    {fieldError("yourPercentage")}
-                </div>
+                        {isShared ? (
+                            <span className="block text-positive">
+                                {`your share ${formatMxn(yourShare)}`}
+                            </span>
+                        ) : null}
+                    </span>
+                </label>
+                {fieldError("yourPercentage")}
             </div>
 
             {formError && (

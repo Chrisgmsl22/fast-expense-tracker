@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
-import { expenseRepository } from "@/lib/repositories";
+import { expenseRepository, movementRepository } from "@/lib/repositories";
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
 import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteractive";
 import { MonthPicker } from "@/components/expense/MonthPicker";
@@ -28,7 +28,7 @@ export default async function ExpensesPage({
         return null;
     }
 
-    const [categories, subcategories, cards, expenses, settings] =
+    const [categories, subcategories, cards, expenses, movements, settings] =
         await Promise.all([
             db.category.findMany({
                 orderBy: { name: "asc" },
@@ -43,6 +43,7 @@ export default async function ExpensesPage({
                 select: { id: true, name: true, color: true },
             }),
             expenseRepository.getForMonth(userId, month),
+            movementRepository.getForMonth(userId, month),
             db.settings.findUnique({
                 where: { userId },
                 select: { defaultSharePercentage: true },
@@ -79,6 +80,7 @@ export default async function ExpensesPage({
             <div className="mt-4">
                 <ExpenseListInteractive
                     expenses={expenses}
+                    movements={movements}
                     categories={categories}
                     subcategories={subcategories}
                     cards={cards}
