@@ -110,20 +110,56 @@ The app was desktop-first and unusable on a phone (zoom-out "mini desktop", hori
 
 Route `/settings` — the settings surface the V1 designs lacked. Design: [`designs-screens/Settings.html`](../designs-screens/Settings.html) (HTML-only, authoritative). Covers budget/**monthly-income** editing + the **68/32 split** (`Settings.defaultSharePercentage`), **per-category budgets** (`Category.monthlyBudget`), and **currency**. Acts as the **shell** that surfaces card management (2.7) and the privacy toggle (2.8) — those may land within it or link to it. **Not high priority**; slot after the core screens (dashboard/category/settlement). Also the natural home for the recurring-prompt-suppression setting (slice 3.3).
 
-#### 2.12: Settlement / couple balance `[PR]` — brainstorm on pickup
+#### 2.12: Settlement / couple balance `[PR]`
 
-Brings back a **settlement surface** with a **two-sided net balance** — the piece 2.6 deliberately deferred (2.6 removed the one-sided "{partner} owes you" reminder; this supersedes [ADR-0018](../decisions/0018-money-movements-not-settlement-ritual.md) §4). Depends on 2.6 (`Movement` journal + `fundedByPartner`).
+A **settlement surface** with a **two-sided net balance** — the piece 2.6 deferred (it removed the one-sided "{partner} owes you" reminder). Depends on 2.6 (`Movement` journal + `fundedByPartner`). Full design, balance formula, and worked scenarios: **[spec 0004](../specs/0004-settlement-couple-balance.md)** (design approved with the user 2026-07-06). Supersedes [ADR-0018](../decisions/0018-money-movements-not-settlement-ritual.md) §4; amends §5.
 
-**The agreed model** (confirmed with the user 2026-07-06 — the full design/ADR is written when this slice is picked up):
+##### Plan
 
-- A single running **balance**:
-  `balance = (her 32% share of the shared expenses YOU logged) − (what you log as "I owe {partner}") − (money she's paid you: gf_received / funded-by-her card payments) + (money you've paid her: gf_paid)`.
-  Positive → she owes you; negative → you owe her; **0 → settled** (bar empty).
-- The **one new concept**: an **"I owe {partner}" entry** — a lump debt you log (your share of stuff she fronted, un-itemized), since the app never tracks her receipts. It nets against what she owes you; a real `gf_paid`/`gf_received` then clears the balance.
-- Reuses `partnerShareTotal` (`lib/domain/movement.ts`) for the "she owes you" side; the `fundedByPartner` flag + `gf_received`/`gf_paid` movements already exist.
-- Worked scenarios (all settle to 0): she owes 1000, pays 1000 → 0 · she owes 1000, you owe 300 → she pays 700 → 0 · she owes 500, you owe 700 → you pay 200 → 0.
+**Scope (in)**
 
-**Open questions for the brainstorm:** dedicated `/settlement` route vs a dashboard widget; where the "I owe {partner}" entry is logged (Add menu? the settlement surface?); whether that logged debt should also feed "What I really spent" (it's arguably your cost) or stay balance-only; how `income`/`other` movements fit. **Scope out:** itemising the partner's expenses (still never tracked); auto-settlement.
+- `lib/domain/settlement.ts` — pure `computeCoupleBalance(inputs)` → `{ balance, direction, breakdown[] }`; reuses `partnerShareTotal`.
+- Repository — `getSettlementInputs(userId)` (2-month-window sums + journal rows) behind the existing repo interfaces + fake for tests.
+- `lib/services` — `getSettlement(userId)` (balance + breakdown + journal, tags `carriedOver`).
+- Actions — `app/_actions/movement/add-partner-debt.ts` (creates `Expense{paidBy:"brenda"}`) + extend transfer action/schema for `gf_received`.
+- `app/(dashboard)/settlement/page.tsx` + components: balance hero (3 states), "How this balance is made" breakdown, movement journal (with an "Earlier months" divider), `Log a transfer` + `+ I owe Brenda` buttons, `PartnerDebtForm`, quick-settle prefill, mobile layout.
+- `AddExpenseButton` — add "Brenda paid me" (`gf_received`); generalize `TransferForm` to a direction.
+- `MonthFeed` footer — color-coded settlement chip → `/settlement`; wire `getSettlement()` into the dashboard page.
+- `docs/decisions/0019-*.md` (ADR); tests at every layer + e2e.
+
+**Scope (out)**
+
+- Per-card outstanding balance (spec 0003 §4.4 — still deferred).
+- Itemizing Brenda's purchases (the "I owe Brenda" lump is enough); auto-settlement.
+- `income`/`other` movements feeding the balance or spend (journal-only).
+- Settlement chip on the expenses-page feed (dashboard only).
+
+**Design decisions** (detail in [spec 0004](../specs/0004-settlement-couple-balance.md))
+
+- **Window**: rolling **current + previous month** (not all-time, not single-month); previous-month portion called out in the UI.
+- **"I owe Brenda" = `Expense{paidBy:"brenda"}`** (amount = your share, `actualExpenditure = amount`, `isShared:false`, category default-essentials) — flows into spend + buckets for free. Logged **only** from the settlement page.
+- **`fundedByPartner` card payments** count as "Brenda paid you" (draw down the balance); normal card payments do not touch it. No double-count (card payments never enter spend).
+- **No migration** — `paidBy` / `Movement` / `fundedByPartner` / `gf_received` all already in the schema.
+
+**Acceptance criteria**
+
+- `computeCoupleBalance` unit tests cover the 3 worked scenarios + settled + carried-over + the 2-month cutoff.
+- Balance direction drives hero + chip color (blue she-owes / orange you-owe / gray settled).
+- e2e: log "I owe Brenda" → chip flips orange → log a transfer → settles to $0.
+- Lint + typecheck + tests green; `pnpm test:coverage` meets thresholds; reviewer loop clean; real-browser check vs the mock (desktop + mobile + 3 states).
+
+##### Tasks
+
+- [ ] Domain `computeCoupleBalance` + unit tests (3 scenarios, settled, direction, 2-month cutoff)
+- [ ] `getSettlementInputs` repo method (2-month window) + fake + integration test
+- [ ] `getSettlement` service (breakdown + journal + `carriedOver`) + unit test
+- [ ] `add-partner-debt` action + `gf_received` on the transfer action + Zod + tests
+- [ ] `AddExpenseButton` "Brenda paid me" + direction-generalized `TransferForm` + component tests
+- [ ] `/settlement` route + components (hero 3 states, breakdown, journal + Earlier-months divider, buttons, `PartnerDebtForm`, quick-settle prefill, mobile) + component tests
+- [ ] `MonthFeed` settlement chip + wire `getSettlement` into the dashboard page + tests
+- [ ] ADR-0019 (two-sided balance; `paidBy="brenda"` amendment; 2-month window; `fundedByPartner` bridge)
+- [ ] e2e (log "I owe Brenda" → orange → transfer → settled)
+- [ ] Reviewer loop + real-browser check + `pnpm test:coverage` + slice-lifecycle cleanup
 
 ## Navigation model (decided 2026-07-01)
 
