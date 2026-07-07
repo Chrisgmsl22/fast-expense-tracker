@@ -80,7 +80,7 @@ describe("getSettlement", () => {
         expect(s.journal).toHaveLength(3);
     });
 
-    it("a Brenda-funded card payment draws down the balance but is not a journal row", async () => {
+    it("a Brenda-funded card payment draws down the balance and shows as a journal row", async () => {
         const s = await run(
             [expense()], // she owes 320
             [
@@ -93,7 +93,21 @@ describe("getSettlement", () => {
             ],
         );
         expect(s.balance.direction).toBe("settled");
-        expect(s.journal).toHaveLength(1); // only the expense, not the card payment
+        expect(s.journal).toHaveLength(2); // the expense + the funded card payment
+        expect(s.journal.some((j) => j.kind === "funded_card_payment")).toBe(
+            true,
+        );
+    });
+
+    it("a plain (own-money) card payment is not a journal row", async () => {
+        const s = await run(
+            [expense()],
+            [movement({ id: "m4", type: "card_payment", amount: 320 })],
+        );
+        expect(s.journal).toHaveLength(1); // only the expense
+        expect(s.journal.some((j) => j.kind === "funded_card_payment")).toBe(
+            false,
+        );
     });
 
     it("a normal (own-money) card payment does not touch the balance", async () => {

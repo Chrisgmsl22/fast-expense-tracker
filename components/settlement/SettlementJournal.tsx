@@ -1,4 +1,4 @@
-import { ArrowLeftRight, BarChart3, Check } from "lucide-react";
+import { ArrowLeftRight, BarChart3, Check, CreditCard } from "lucide-react";
 
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { PARTNER_NAME } from "@/lib/partner";
@@ -76,6 +76,18 @@ function JournalRow({ item }: { item: SettlementJournalItem }) {
                 subtitle={`${formatExpenseDate(item.date)} · un-itemized`}
                 amount={`−${formatMxn(item.amount)}`}
                 amountClass="text-transfer"
+            />
+        );
+    }
+    if (item.kind === "funded_card_payment") {
+        return (
+            <Row
+                icon={<CreditCard className="size-4" />}
+                iconClass="bg-positive-tint text-positive"
+                title={`${PARTNER_NAME}'s money → card payment`}
+                subtitle={`${formatExpenseDate(item.date)} · settles what she owes`}
+                amount={formatMxn(item.amount)}
+                amountClass="text-positive"
             />
         );
     }

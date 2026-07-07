@@ -96,9 +96,10 @@ _(Mockups use "Ana"; the build keeps `PARTNER_NAME = "Brenda"`.)_
 - **Buttons** (all states): `Log a transfer` (primary) + `+ I owe Brenda`.
 - **"How this balance is made"**: the four signed lines (§2.4) → Net balance.
 - **Movement journal**: shared expenses (green ✓, +her 32%), "I owe Brenda"
-  (un-itemized, −orange), transfers. An **"Earlier months"** divider separates
-  previous-month entries; the hero shows _"includes $X from last month"_ when a
-  previous-month unsettled portion exists.
+  (un-itemized, −orange), transfers, and **Brenda-funded card payments** (one
+  entry for the real-world "she paid you → you paid the card"; money in, green).
+  An **"Earlier months"** divider separates previous-month entries; the hero shows
+  _"includes $X from last month"_ when a previous-month unsettled portion exists.
 - **Mobile**: compact hero, stacked buttons, condensed breakdown + journal.
 
 ### 3.2 Dashboard settlement chip
