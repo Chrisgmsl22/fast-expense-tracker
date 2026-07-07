@@ -1,9 +1,5 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
-import {
-    computeFeedTotals,
-    partnerOwesYou,
-    type MovementType,
-} from "@/lib/domain/movement";
+import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
 import { buildFeed } from "@/lib/feed";
 import { PARTNER_NAME } from "@/lib/partner";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
@@ -18,7 +14,8 @@ const CASH_COLOR = "#16a34a";
  * pinned footer. Movements are colour-tagged (card payment blue, "I paid
  * {partner}" amber) and never enter the spend total. The footer splits money into
  * Charged / What I really spent (consumption) / Set aside (savings) / Paid to
- * {partner} / Total. A soft "{partner} owes you" reminder sits on top (ADR-0018).
+ * {partner} / Total. Who-owes-whom lives in the settlement slice, not here
+ * (ADR-0018).
  */
 export function MonthFeed({
     expenses,
@@ -32,10 +29,6 @@ export function MonthFeed({
     const feed = buildFeed(expenses, movements);
 
     const paidToPartner = sumByType(movements, "gf_paid");
-    const fundedByPartner = movements
-        .filter((m) => m.type === "card_payment" && m.fundedByPartner)
-        .reduce((sum, m) => sum + m.amount, 0);
-    const partnerOwes = partnerOwesYou(expenses, fundedByPartner);
     const totals = computeFeedTotals(expenses, paidToPartner);
 
     const count = feed.length;
@@ -51,21 +44,6 @@ export function MonthFeed({
                     {count > 0 ? " · scroll" : ""}
                 </p>
             </div>
-
-            {partnerOwes > 0 ? (
-                <div className="border-b bg-muted/40 px-4 py-2.5 text-xs">
-                    <span className="text-muted-foreground">
-                        {PARTNER_NAME} owes you
-                    </span>{" "}
-                    <span className="font-semibold text-foreground">
-                        {formatMxn(partnerOwes)}
-                    </span>
-                    <span className="mt-0.5 block text-muted-foreground">
-                        est. — her share of shared expenses, minus what
-                        she&rsquo;s covered
-                    </span>
-                </div>
-            ) : null}
 
             {count === 0 ? (
                 <p className="flex-1 p-8 text-center text-sm text-muted-foreground">
@@ -92,13 +70,17 @@ export function MonthFeed({
             {count > 0 && (
                 <div
                     data-testid="feed-totals"
-                    className="space-y-1 border-t p-4 text-sm"
+                    className="space-y-1.5 border-t p-4 text-sm"
                 >
-                    <div className="flex justify-between">
+                    {/* Every amount carries the same px-2 + tabular-nums so the
+                        digits line up in one right-aligned column — even the
+                        "spent" pill and the Total band (which bleeds to the card
+                        edges but re-insets its content to match). */}
+                    <div className="flex items-center justify-between">
                         <span className="font-medium text-foreground">
                             Charged
                         </span>
-                        <span className="font-semibold text-foreground">
+                        <span className="px-2 font-semibold text-foreground tabular-nums">
                             {formatMxn(totals.charged)}
                         </span>
                     </div>
@@ -106,37 +88,37 @@ export function MonthFeed({
                         <span className="font-medium text-foreground">
                             What I really spent
                         </span>
-                        <span className="rounded-full bg-spent-tint px-2 py-0.5 font-semibold text-spent">
+                        <span className="rounded-full bg-spent-tint px-2 py-0.5 font-semibold text-spent tabular-nums">
                             {formatMxn(totals.whatIReallySpent)}
                         </span>
                     </div>
                     {totals.setAside > 0 && (
-                        <div className="flex justify-between">
+                        <div className="flex items-center justify-between">
                             <span className="font-medium text-foreground">
                                 Set aside
                             </span>
-                            <span className="font-semibold text-bucket-savings">
+                            <span className="px-2 font-semibold text-bucket-savings tabular-nums">
                                 {formatMxn(totals.setAside)}
                             </span>
                         </div>
                     )}
                     {totals.paidToPartner > 0 && (
-                        <div className="flex justify-between">
+                        <div className="flex items-center justify-between">
                             <span className="font-medium text-foreground">
                                 Paid to {PARTNER_NAME}
                             </span>
-                            <span className="font-semibold text-transfer">
+                            <span className="px-2 font-semibold text-transfer tabular-nums">
                                 {formatMxn(totals.paidToPartner)}
                             </span>
                         </div>
                     )}
                     {/* Total only when it says something beyond "what I really
                         spent" — i.e. savings or a transfer added to it. Dark band
-                        so the bottom-line number is easy to spot. */}
+                        (flush to the card bottom) so it's easy to spot. */}
                     {(totals.setAside > 0 || totals.paidToPartner > 0) && (
-                        <div className="mt-1 flex items-center justify-between rounded-md bg-foreground px-3 py-1.5 text-background">
+                        <div className="-mx-4 -mb-4 mt-1 flex items-center justify-between rounded-b-lg bg-foreground px-4 py-2.5 text-background">
                             <span className="font-medium">Total</span>
-                            <span className="font-semibold">
+                            <span className="px-2 font-semibold tabular-nums">
                                 {formatMxn(totals.total)}
                             </span>
                         </div>

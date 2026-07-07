@@ -183,20 +183,6 @@ describe("MonthFeed", () => {
         expect(totals.getByText("$200.00")).toBeDefined();
     });
 
-    it("shows a 'partner owes you' estimate from her unpaid share", () => {
-        // Her share of the shared Soriana expense = 1820 - 1237 = 583, nothing
-        // funded back yet.
-        render(
-            <MonthFeed
-                expenses={expenses}
-                movements={[]}
-                monthLabel="June 2026"
-            />,
-        );
-        expect(screen.getByText(/Brenda owes you/)).toBeDefined();
-        expect(screen.getByText("$583.00")).toBeDefined();
-    });
-
     it("shows no card (not Cash) for a savings row", () => {
         const savings: ExpenseListItem[] = [
             {

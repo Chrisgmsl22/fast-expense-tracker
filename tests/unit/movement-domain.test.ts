@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-    computeFeedTotals,
-    partnerOwesYou,
-    partnerShareTotal,
-} from "@/lib/domain/movement";
+import { computeFeedTotals, partnerShareTotal } from "@/lib/domain/movement";
 
 const shared = (amount: number, yourPct: number) => ({
     amount,
@@ -27,26 +23,6 @@ describe("partnerShareTotal", () => {
 
     it("is 0 for no expenses", () => {
         expect(partnerShareTotal([])).toBe(0);
-    });
-});
-
-describe("partnerOwesYou", () => {
-    it("is her share when nothing has been paid back", () => {
-        expect(partnerOwesYou([shared(1000, 0.68)], 0)).toBe(320);
-    });
-
-    it("draws down by funded-by-partner card payments (fully settled → 0)", () => {
-        expect(partnerOwesYou([shared(1000, 0.68)], 320)).toBe(0);
-    });
-
-    it("reads high on a netting week until the offsetting transfer is logged", () => {
-        // She owes 320 for her share; they netted so she sent only 120.
-        // The reminder honestly still shows 200 — an estimate, not a balance.
-        expect(partnerOwesYou([shared(1000, 0.68)], 120)).toBe(200);
-    });
-
-    it("floors at 0 — never reports a negative 'she owes you'", () => {
-        expect(partnerOwesYou([shared(1000, 0.68)], 500)).toBe(0);
     });
 });
 

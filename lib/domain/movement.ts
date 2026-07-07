@@ -20,36 +20,19 @@ export type MovementType =
 /** The movement kinds the user can create from the Add menu. */
 export const CREATABLE_MOVEMENT_TYPES = ["card_payment", "gf_paid"] as const;
 
-/** Minimal shape the reminder needs from a shared expense. */
+/** Minimal shape the couple-balance math needs from a shared expense. */
 export type ExpenseShare = { amount: number; actualExpenditure: number };
 
 /**
- * The partner's total share of the given expenses. For a shared expense it's the
- * slice that isn't yours (`amount − actualExpenditure`); for an unshared one that
- * difference is 0, so summing over every expense is safe.
+ * The partner's total share of the given expenses — the slice that isn't yours
+ * (`amount − actualExpenditure`); 0 for an unshared expense, so summing over
+ * every expense is safe. This is one input to the two-sided couple balance built
+ * in the settlement slice (the "she owes you" side).
  */
 export function partnerShareTotal(expenses: ExpenseShare[]): number {
     return expenses.reduce(
         (sum, e) => sum + (e.amount - e.actualExpenditure),
         0,
-    );
-}
-
-/**
- * The soft "partner owes you" reminder (ADR-0018 §4): her share of this month's
- * shared expenses, minus card payments you tagged as funded by her money. It is
- * an *estimate*, not a settled balance — on a netting week it reads high until
- * the offsetting "I paid {partner}" transfer is logged, and that's expected.
- * Never goes below 0 (a negative "she owes you" is meaningless; you'd just be
- * ahead, which the journal shows).
- */
-export function partnerOwesYou(
-    expenses: ExpenseShare[],
-    fundedByPartnerPaymentsTotal: number,
-): number {
-    return Math.max(
-        0,
-        partnerShareTotal(expenses) - fundedByPartnerPaymentsTotal,
     );
 }
 
