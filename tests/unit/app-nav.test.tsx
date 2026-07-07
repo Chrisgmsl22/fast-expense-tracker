@@ -27,6 +27,7 @@ describe("AppNav", () => {
         ).toBe("page");
         expect(screen.getByRole("link", { name: "Expenses" })).toBeDefined();
         expect(screen.getByRole("link", { name: "Income" })).toBeDefined();
+        expect(screen.getByRole("link", { name: "Settlement" })).toBeDefined();
     });
 
     it("opens a drawer with the links, email, and sign-out", async () => {

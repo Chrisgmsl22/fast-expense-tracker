@@ -20,6 +20,7 @@ const LINKS = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/expenses", label: "Expenses" },
     { href: "/income", label: "Income" },
+    { href: "/settlement", label: "Settlement" },
 ] as const;
 
 /**

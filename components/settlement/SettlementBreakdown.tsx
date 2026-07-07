@@ -53,7 +53,7 @@ export function SettlementBreakdown({ balance }: { balance: CoupleBalance }) {
                         <span
                             className={`shrink-0 font-semibold tabular-nums ${AMOUNT_CLASS[line.key]}`}
                         >
-                            {line.sign}
+                            {line.sign === "-" ? "−" : "+"}
                             {formatMxn(line.amount)}
                         </span>
                     </li>
