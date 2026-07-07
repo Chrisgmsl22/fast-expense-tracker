@@ -99,6 +99,18 @@ describe("movement actions (unit, injected fake repo)", () => {
             expect(row.amount).toBe(300);
         });
 
+        it("persists a gf_received movement when direction is gf_received", async () => {
+            const repo = new FakeMovementRepository();
+            const res = await addTransfer(
+                { date: "2026-06-20", amount: "700", direction: "gf_received" },
+                repo,
+            );
+
+            expect(res.ok).toBe(true);
+            expect(repo.inserts[0]!.type).toBe("gf_received");
+            expect(repo.inserts[0]!.amount).toBe(700);
+        });
+
         it("rejects a non-positive amount", async () => {
             const repo = new FakeMovementRepository();
             const res = await addTransfer(

@@ -17,11 +17,32 @@ export const cardPaymentInputSchema = z.object({
 
 export type CardPaymentInput = z.infer<typeof cardPaymentInputSchema>;
 
-/** A transfer you sent the partner ("I paid {partner}") — a `gf_paid` movement. */
+/**
+ * A cash transfer between you and the partner. `direction` picks the side:
+ * `gf_paid` = "I paid {partner}" (money out), `gf_received` = "{partner} paid me"
+ * (money in, settling what she owes you). Defaults to `gf_paid` for back-compat
+ * with the original one-directional transfer.
+ */
 export const transferInputSchema = z.object({
     date: z.coerce.date(),
     amount: z.coerce.number().positive("Amount must be greater than 0"),
+    direction: z.enum(["gf_paid", "gf_received"]).default("gf_paid"),
     note: z.string().max(1000).optional(),
 });
 
 export type TransferInput = z.infer<typeof transferInputSchema>;
+
+/**
+ * An "I owe {partner}" debt — your share of shared things she fronted (spec
+ * 0004). Stored as an `Expense{paidBy:"gf"}`, so it needs a category (the debt
+ * feeds "What I really spent" + its bucket). The amount is your share; the
+ * action sets `actualExpenditure = amount`. Logged only from the settlement page.
+ */
+export const partnerDebtInputSchema = z.object({
+    date: z.coerce.date(),
+    amount: z.coerce.number().positive("Amount must be greater than 0"),
+    categoryId: z.string().min(1, "Category is required"),
+    note: z.string().max(200).optional(),
+});
+
+export type PartnerDebtInput = z.infer<typeof partnerDebtInputSchema>;
