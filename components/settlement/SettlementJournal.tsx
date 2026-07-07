@@ -83,11 +83,11 @@ function JournalRow({ item }: { item: SettlementJournalItem }) {
         return (
             <Row
                 icon={<CreditCard className="size-4" />}
-                iconClass="bg-positive-tint text-positive"
+                iconClass="bg-payment-tint text-payment"
                 title={`${PARTNER_NAME}'s money → card payment`}
                 subtitle={`${formatExpenseDate(item.date)} · settles what she owes`}
                 amount={formatMxn(item.amount)}
-                amountClass="text-positive"
+                amountClass="text-payment"
             />
         );
     }
