@@ -1,10 +1,12 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
+import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
 import { PARTNER_NAME } from "@/lib/partner";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
+import { SettlementChip } from "./SettlementChip";
 
 const CASH_COLOR = "#16a34a";
 
@@ -21,10 +23,13 @@ export function MonthFeed({
     expenses,
     movements,
     monthLabel,
+    settlement,
 }: {
     expenses: ExpenseListItem[];
     movements: MovementListItem[];
     monthLabel: string;
+    /** Running couple balance — rendered as a chip in the footer (spec 0004). */
+    settlement?: CoupleBalance;
 }) {
     const feed = buildFeed(expenses, movements);
 
@@ -72,6 +77,11 @@ export function MonthFeed({
                     data-testid="feed-totals"
                     className="space-y-1.5 border-t p-4 text-sm"
                 >
+                    {settlement && (
+                        <div className="pb-1">
+                            <SettlementChip balance={settlement} />
+                        </div>
+                    )}
                     {/* Every amount carries the same px-2 + tabular-nums so the
                         digits line up in one right-aligned column — even the
                         "spent" pill and the Total band (which bleeds to the card
@@ -123,6 +133,12 @@ export function MonthFeed({
                             </span>
                         </div>
                     )}
+                </div>
+            )}
+
+            {count === 0 && settlement && (
+                <div className="border-t p-4">
+                    <SettlementChip balance={settlement} />
                 </div>
             )}
         </div>

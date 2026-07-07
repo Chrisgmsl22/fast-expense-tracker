@@ -5,61 +5,60 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    addTransfer,
-    type AddTransferResult,
-} from "@/app/_actions/movement/add-transfer";
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+} from "@/components/ui/select";
+import {
+    addPartnerDebt,
+    type AddPartnerDebtResult,
+} from "@/app/_actions/movement/add-partner-debt";
+import type { CategoryOption } from "@/components/expense/ExpenseForm";
 import { PARTNER_NAME } from "@/lib/partner";
 import type { FieldErrors } from "@/lib/actions/result";
-import type { TransferInput } from "@/lib/schemas/movement";
-
-type Direction = "gf_paid" | "gf_received";
+import type { PartnerDebtInput } from "@/lib/schemas/movement";
 
 type Props = {
-    /** `gf_paid` = "I paid {partner}"; `gf_received` = "{partner} paid me". */
-    direction?: Direction;
-    /** Prefills the amount (settlement quick-settle passes the net balance). */
-    initialAmount?: string;
+    categories: CategoryOption[];
+    /** Preselected category (the settlement page passes its first essentials category). */
+    defaultCategoryId?: string;
     onSuccess?: () => void;
     onCancel?: () => void;
 };
 
 /**
- * Log a cash transfer with the partner (ADR-0018 + spec 0004). `direction` picks
- * the side: money you sent her (`gf_paid`) or money she sent you (`gf_received`,
- * settling what she owes). Just the amount you settled (netted in your head); no
- * category, no split — it's cash, not an expense.
+ * Log an "I owe {partner}" debt — your share of shared things she fronted (spec
+ * 0004). It's cost, not cash: it's saved as an `Expense{paidBy:"gf"}` in a
+ * category, so it feeds "What I really spent" + its bucket, and the settlement
+ * balance reads it as the "you owe her" side. Logged only from the settlement page.
  */
-export function TransferForm({
-    direction = "gf_paid",
-    initialAmount = "",
+export function PartnerDebtForm({
+    categories,
+    defaultCategoryId = "",
     onSuccess,
     onCancel,
 }: Props) {
     const [date, setDate] = useState("");
-    const [amount, setAmount] = useState(initialAmount);
+    const [amount, setAmount] = useState("");
+    const [categoryId, setCategoryId] = useState(defaultCategoryId);
     const [note, setNote] = useState("");
 
     const [pending, startTransition] = useTransition();
-    const [errors, setErrors] = useState<FieldErrors<TransferInput>>({});
+    const [errors, setErrors] = useState<FieldErrors<PartnerDebtInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
 
-    const inbound = direction === "gf_received";
-    const blurb = inbound
-        ? `Money ${PARTNER_NAME} sent you — settles what she owes you. Not an expense.`
-        : `The amount you settled with ${PARTNER_NAME} — money out of your account, not an expense.`;
-    const submitLabel = inbound
-        ? `Log ${PARTNER_NAME}'s payment`
-        : `Log payment to ${PARTNER_NAME}`;
+    const selectedCategory = categories.find((c) => c.id === categoryId);
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         const form = e.currentTarget;
         startTransition(async () => {
             try {
-                const res: AddTransferResult = await addTransfer({
+                const res: AddPartnerDebtResult = await addPartnerDebt({
                     date,
                     amount,
-                    direction,
+                    categoryId,
                     note: note || undefined,
                 });
                 if (res.ok) {
@@ -75,12 +74,12 @@ export function TransferForm({
                     setFormError(res.message);
                 }
             } catch {
-                setFormError("Something went wrong saving the transfer.");
+                setFormError("Something went wrong saving the debt.");
             }
         });
     }
 
-    const fieldError = (name: keyof TransferInput) => {
+    const fieldError = (name: keyof PartnerDebtInput) => {
         const msg = errors[name]?.[0];
         return msg ? (
             <p className="mt-1 text-sm text-destructive" role="alert">
@@ -93,19 +92,17 @@ export function TransferForm({
         <form
             onSubmit={handleSubmit}
             className="flex flex-col gap-4"
-            aria-label={
-                inbound
-                    ? `Log money received from ${PARTNER_NAME}`
-                    : `Log money sent to ${PARTNER_NAME}`
-            }
+            aria-label={`Log a debt you owe ${PARTNER_NAME}`}
         >
-            <p className="text-sm text-muted-foreground">{blurb}</p>
+            <p className="text-sm text-muted-foreground">
+                {`Your share of shared things ${PARTNER_NAME} paid for. It counts as what you spent and adds to what you owe her — settle it with a transfer.`}
+            </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                    <Label htmlFor="tr-date">Date</Label>
+                    <Label htmlFor="debt-date">Date</Label>
                     <Input
-                        id="tr-date"
+                        id="debt-date"
                         name="date"
                         type="date"
                         required
@@ -116,7 +113,7 @@ export function TransferForm({
                     {fieldError("date")}
                 </div>
                 <div className="sm:col-span-2">
-                    <Label htmlFor="tr-amount">Amount (MXN)</Label>
+                    <Label htmlFor="debt-amount">Amount you owe (MXN)</Label>
                     <div className="relative mt-1.5">
                         <span
                             aria-hidden
@@ -125,7 +122,7 @@ export function TransferForm({
                             $
                         </span>
                         <Input
-                            id="tr-amount"
+                            id="debt-amount"
                             name="amount"
                             type="number"
                             inputMode="decimal"
@@ -143,16 +140,63 @@ export function TransferForm({
             </div>
 
             <div>
-                <Label htmlFor="tr-note">
+                <Label htmlFor="debt-category">Category</Label>
+                <Select
+                    value={categoryId}
+                    onValueChange={(value) => setCategoryId(value ?? "")}
+                >
+                    <SelectTrigger
+                        id="debt-category"
+                        aria-label="Category"
+                        className="mt-1.5 w-full"
+                    >
+                        {selectedCategory ? (
+                            <span className="flex items-center gap-2">
+                                <span
+                                    aria-hidden
+                                    className="size-2.5 shrink-0 rounded-full"
+                                    style={{
+                                        backgroundColor: selectedCategory.color,
+                                    }}
+                                />
+                                {selectedCategory.name}
+                            </span>
+                        ) : (
+                            <span className="text-muted-foreground">
+                                Select a category…
+                            </span>
+                        )}
+                    </SelectTrigger>
+                    <SelectContent>
+                        {categories.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                                <span className="flex items-center gap-2">
+                                    <span
+                                        aria-hidden
+                                        className="size-2.5 shrink-0 rounded-full"
+                                        style={{ backgroundColor: c.color }}
+                                    />
+                                    {c.name}
+                                </span>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                {fieldError("categoryId")}
+            </div>
+
+            <div>
+                <Label htmlFor="debt-note">
                     Note{" "}
                     <span className="font-normal text-muted-foreground">
                         (optional)
                     </span>
                 </Label>
                 <Input
-                    id="tr-note"
+                    id="debt-note"
                     name="note"
                     type="text"
+                    placeholder={`I owe ${PARTNER_NAME}`}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     className="mt-1.5"
@@ -177,7 +221,7 @@ export function TransferForm({
                     </Button>
                 ) : null}
                 <Button type="submit" disabled={pending}>
-                    {pending ? "Saving…" : submitLabel}
+                    {pending ? "Saving…" : "Log debt"}
                 </Button>
             </div>
         </form>

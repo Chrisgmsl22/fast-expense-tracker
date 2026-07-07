@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
 import { expenseRepository, movementRepository } from "@/lib/repositories";
 import { getDashboardSummary } from "@/lib/services/dashboard/dashboard.service";
+import { getSettlement } from "@/lib/services/settlement/settlement.service";
 import { BucketsHero } from "@/components/dashboard/BucketsHero";
 import { CategoriesGrid } from "@/components/dashboard/CategoriesGrid";
 import { DashboardTopbar } from "@/components/dashboard/DashboardTopbar";
@@ -35,6 +36,7 @@ export default async function DashboardPage({
 
     const [
         summary,
+        settlement,
         expenses,
         movements,
         categories,
@@ -43,6 +45,7 @@ export default async function DashboardPage({
         settings,
     ] = await Promise.all([
         getDashboardSummary(userId, month),
+        getSettlement(userId),
         expenseRepository.getForMonth(userId, month),
         movementRepository.getForMonth(userId, month),
         db.category.findMany({
@@ -112,6 +115,7 @@ export default async function DashboardPage({
                         expenses={expenses}
                         movements={movements}
                         monthLabel={monthLabel}
+                        settlement={settlement.balance}
                     />
                 </aside>
             </div>
