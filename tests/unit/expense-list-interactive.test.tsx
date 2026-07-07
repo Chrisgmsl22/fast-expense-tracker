@@ -12,6 +12,7 @@ vi.mock("next/navigation", () => ({
     useRouter: () => ({ refresh: refreshMock }),
 }));
 vi.mock("@/app/_actions/expense/delete", () => ({ deleteExpense: vi.fn() }));
+vi.mock("@/app/_actions/movement/delete", () => ({ deleteMovement: vi.fn() }));
 vi.mock("@/app/_actions/expense/get-for-edit", () => ({
     getExpenseForEdit: vi.fn(),
 }));
@@ -36,11 +37,14 @@ vi.mock("@/components/expense/ExpenseForm", () => ({
 
 import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteractive";
 import { deleteExpense } from "@/app/_actions/expense/delete";
+import { deleteMovement } from "@/app/_actions/movement/delete";
 import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
+import type { MovementListItem } from "@/lib/repositories/movement.repository";
 
 beforeEach(() => {
     refreshMock.mockReset();
     (deleteExpense as unknown as Mock).mockReset();
+    (deleteMovement as unknown as Mock).mockReset();
     (getExpenseForEdit as unknown as Mock).mockReset();
 });
 
@@ -74,18 +78,41 @@ const expenses = [
     },
 ];
 
+const movements: MovementListItem[] = [
+    {
+        id: "mv1",
+        date: new Date("2026-05-20T06:00:00Z"),
+        amount: 800,
+        type: "card_payment",
+        fundedByPartner: true,
+        card: { name: "Amex", color: "#ca8a04" },
+        note: null,
+    },
+    {
+        id: "mv2",
+        date: new Date("2026-05-18T06:00:00Z"),
+        amount: 300,
+        type: "gf_paid",
+        fundedByPartner: false,
+        card: null,
+        note: "netted",
+    },
+];
+
 const props = {
+    movements: [],
     categories: [{ id: "c1", slug: "food", name: "Food", color: "#ef4444" }],
     subcategories: [{ id: "s1", name: "Restaurants", categoryId: "c1" }],
     cards: [{ id: "card1", name: "Amex", color: "#ca8a04" }],
     defaultSharePercentage: 0.68,
-    monthLabel: "May 2026",
 };
 
 describe("ExpenseListInteractive", () => {
-    it("shows the empty state when there are no expenses", () => {
+    it("shows the empty state when there is nothing logged", () => {
         render(<ExpenseListInteractive expenses={[]} {...props} />);
-        expect(screen.getByText(/no expenses for this month/i)).toBeDefined();
+        expect(
+            screen.getByText(/nothing logged for this month/i),
+        ).toBeDefined();
     });
 
     it("renders a row with per-row edit + delete actions", () => {
@@ -243,5 +270,61 @@ describe("ExpenseListInteractive", () => {
         expect(
             within(dialog).getByRole("button", { name: "Delete" }),
         ).toBeDefined();
+    });
+
+    it("interleaves money movements in the All view and folds them into the footer", () => {
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+        // Card payment tagged as the partner's money; transfer line present.
+        expect(screen.getByText("Card payment")).toBeDefined();
+        expect(screen.getByText(/Brenda's money/)).toBeDefined();
+        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        // Footer shows the transfer under "Paid to Brenda".
+        const totals = screen.getByTestId("totals-desktop");
+        expect(within(totals).getByText("Paid to Brenda")).toBeDefined();
+        expect(within(totals).getByText("$300.00")).toBeDefined();
+    });
+
+    it("hides movements when a category filter is active (they have no category)", () => {
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Food" }));
+        // Movements have no category → gone under a filter.
+        expect(screen.queryByText("Card payment")).toBeNull();
+        expect(screen.queryByText("Paid Brenda")).toBeNull();
+    });
+
+    it("deletes a movement after confirming, then refreshes", async () => {
+        (deleteMovement as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { id: "mv2" },
+        });
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "Delete paid brenda" }),
+        );
+        expect(
+            await screen.findByText(/will be permanently removed/i),
+        ).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+        await waitFor(() =>
+            expect(deleteMovement).toHaveBeenCalledWith({ id: "mv2" }),
+        );
+        await waitFor(() => expect(refreshMock).toHaveBeenCalled());
     });
 });

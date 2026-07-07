@@ -20,6 +20,10 @@ import {
     PrismaCategoryBudgetRepository,
     type CategoryBudgetRepository,
 } from "./category-budget.repository";
+import {
+    PrismaMovementRepository,
+    type MovementRepository,
+} from "./movement.repository";
 
 /**
  * Composition root — the single place the concrete Prisma adapters are wired to
@@ -43,3 +47,6 @@ export const categoryRepository: CategoryRepository =
 
 export const categoryBudgetRepository: CategoryBudgetRepository =
     new PrismaCategoryBudgetRepository(db);
+
+export const movementRepository: MovementRepository =
+    new PrismaMovementRepository(db);

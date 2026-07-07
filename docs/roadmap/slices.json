@@ -154,7 +154,7 @@
             "id": "2.6",
             "phase": 2,
             "type": "integration",
-            "title": "Settlement screen + Movement / card-payment UI + e2e",
+            "title": "Money movements — card-payment + partner-transfer journal + e2e",
             "dependsOn": ["2.5"]
         },
         {
@@ -191,6 +191,13 @@
             "type": "fan-out",
             "title": "Mobile foundation — viewport zoom policy, kill horizontal scroll, burger/drawer nav, fixed-income editable on mobile (pulls Phase-6 mobile fundamentals forward, ADR-0017)",
             "dependsOn": ["2.3", "2.4c"]
+        },
+        {
+            "id": "2.12",
+            "phase": 2,
+            "type": "integration",
+            "title": "Settlement / couple balance — two-sided net (her share − 'I owe' entry ∓ transfers) + settle flow (brainstorm on pickup)",
+            "dependsOn": ["2.6"]
         },
 
         {

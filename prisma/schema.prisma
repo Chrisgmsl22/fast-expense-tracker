@@ -188,6 +188,11 @@ model Movement {
   cardId String? // set when type = "card_payment"
   card   Card?   @relation(fields: [cardId], references: [id])
 
+  // card_payment only: the payment used money the partner sent (her reimbursement
+  // passing straight through to the card). Draws down the "partner owes you"
+  // reminder and tags the feed line. See ADR-0018.
+  fundedByPartner Boolean @default(false)
+
   note String?
 
   createdAt DateTime @default(now())

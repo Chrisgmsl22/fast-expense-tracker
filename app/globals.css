@@ -36,6 +36,12 @@
     --danger-tint: #fef2f2;
     --payment: #2563eb;
     --payment-tint: #eff6ff;
+    /* Money you sent the partner ("I paid {partner}") — a transfer out (ADR-0018). */
+    --transfer: #b45309;
+    --transfer-tint: #fffbeb;
+    /* "What I really spent" pill — the budget number, deliberately not green. */
+    --spent: #4f46e5;
+    --spent-tint: #eef2ff;
 
     /* 50/25/25 budget buckets */
     --bucket-essentials: #475569;
@@ -70,6 +76,10 @@
     --color-danger-tint: var(--danger-tint);
     --color-payment: var(--payment);
     --color-payment-tint: var(--payment-tint);
+    --color-transfer: var(--transfer);
+    --color-transfer-tint: var(--transfer-tint);
+    --color-spent: var(--spent);
+    --color-spent-tint: var(--spent-tint);
     --color-bucket-essentials: var(--bucket-essentials);
     --color-bucket-discretionary: var(--bucket-discretionary);
     --color-bucket-savings: var(--bucket-savings);

@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
-import { expenseRepository } from "@/lib/repositories";
+import { expenseRepository, movementRepository } from "@/lib/repositories";
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
 import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteractive";
 import { MonthPicker } from "@/components/expense/MonthPicker";
@@ -28,7 +28,7 @@ export default async function ExpensesPage({
         return null;
     }
 
-    const [categories, subcategories, cards, expenses, settings] =
+    const [categories, subcategories, cards, expenses, movements, settings] =
         await Promise.all([
             db.category.findMany({
                 orderBy: { name: "asc" },
@@ -43,6 +43,7 @@ export default async function ExpensesPage({
                 select: { id: true, name: true, color: true },
             }),
             expenseRepository.getForMonth(userId, month),
+            movementRepository.getForMonth(userId, month),
             db.settings.findUnique({
                 where: { userId },
                 select: { defaultSharePercentage: true },
@@ -52,14 +53,6 @@ export default async function ExpensesPage({
     // Fall back to the schema default (Settings.defaultSharePercentage) if the
     // user has no Settings row yet; the form reads this for new shared expenses.
     const defaultSharePercentage = settings?.defaultSharePercentage ?? 0.68;
-
-    // "2026-06" → "June 2026" for the mobile total bar (UTC: the value is a
-    // calendar month, not a timestamp to shift).
-    const monthLabel = new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-    }).format(new Date(`${month}-01T12:00:00Z`));
 
     return (
         // Bottom padding on mobile so the pinned total bar never covers rows.
@@ -79,11 +72,11 @@ export default async function ExpensesPage({
             <div className="mt-4">
                 <ExpenseListInteractive
                     expenses={expenses}
+                    movements={movements}
                     categories={categories}
                     subcategories={subcategories}
                     cards={cards}
                     defaultSharePercentage={defaultSharePercentage}
-                    monthLabel={monthLabel}
                 />
             </div>
         </main>
