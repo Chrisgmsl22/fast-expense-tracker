@@ -6,6 +6,7 @@ import { PARTNER_NAME } from "@/lib/partner";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
+import { movementDisplay } from "@/components/movement/movement-display";
 import { SettlementChip } from "./SettlementChip";
 
 const CASH_COLOR = "#16a34a";
@@ -210,21 +211,19 @@ function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
     );
 }
 
-/** One money-movement line — colour-tagged by type (ADR-0018). */
+/** One money-movement line — colour-tagged by type (ADR-0018, spec 0004). */
 function MovementRow({ movement: m }: { movement: MovementListItem }) {
-    const isCardPayment = m.type === "card_payment";
-    // Whole row tinted in its type colour, with a solid left border — the
-    // money-movement rows stand out clearly from expenses (per design).
-    const rowTint = isCardPayment
-        ? "border-payment bg-payment-tint"
-        : "border-transfer bg-transfer-tint";
-    const amountColor = isCardPayment ? "text-payment" : "text-transfer";
-    const label = isCardPayment ? "Card payment" : `Paid ${PARTNER_NAME}`;
-    const subline = isCardPayment
-        ? [m.card?.name, m.fundedByPartner ? `${PARTNER_NAME}'s money` : null]
-              .filter(Boolean)
-              .join(" · ")
-        : (m.note ?? "");
+    const { label, amountClass, rowTint } = movementDisplay(m.type);
+    // Card payments carry a card + funded tag; transfers carry their note.
+    const subline =
+        m.type === "card_payment"
+            ? [
+                  m.card?.name,
+                  m.fundedByPartner ? `${PARTNER_NAME}'s money` : null,
+              ]
+                  .filter(Boolean)
+                  .join(" · ")
+            : (m.note ?? "");
 
     return (
         <li
@@ -240,7 +239,7 @@ function MovementRow({ movement: m }: { movement: MovementListItem }) {
                 </span>
             </span>
             <span
-                className={`text-right text-sm font-semibold whitespace-nowrap ${amountColor}`}
+                className={`text-right text-sm font-semibold whitespace-nowrap ${amountClass}`}
             >
                 {formatMxn(m.amount)}
             </span>

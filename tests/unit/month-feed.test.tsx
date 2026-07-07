@@ -80,6 +80,29 @@ describe("MonthFeed", () => {
         expect(screen.queryByText("Charged")).toBeNull();
     });
 
+    it("labels a gf_received movement as 'Brenda paid you', not 'Paid Brenda'", () => {
+        const received: MovementListItem[] = [
+            {
+                id: "m1",
+                date: new Date("2026-06-15T06:00:00Z"),
+                amount: 700,
+                type: "gf_received",
+                fundedByPartner: false,
+                card: null,
+                note: null,
+            },
+        ];
+        render(
+            <MonthFeed
+                expenses={[]}
+                movements={received}
+                monthLabel="June 2026"
+            />,
+        );
+        expect(screen.getByText("Brenda paid you")).toBeDefined();
+        expect(screen.queryByText("Paid Brenda")).toBeNull();
+    });
+
     it("splits the footer into Charged / spent / Set aside / Total when savings is present", () => {
         const mixed: ExpenseListItem[] = [
             {

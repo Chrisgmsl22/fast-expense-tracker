@@ -83,7 +83,11 @@ function JournalRow({ item }: { item: SettlementJournalItem }) {
     return (
         <Row
             icon={<ArrowLeftRight className="size-4" />}
-            iconClass="bg-payment-tint text-payment"
+            iconClass={
+                inbound
+                    ? "bg-positive-tint text-positive"
+                    : "bg-transfer-tint text-transfer"
+            }
             title={
                 inbound
                     ? `Transfer — ${PARTNER_NAME} paid you`
@@ -91,7 +95,7 @@ function JournalRow({ item }: { item: SettlementJournalItem }) {
             }
             subtitle={formatExpenseDate(item.date)}
             amount={formatMxn(item.amount)}
-            amountClass="text-payment"
+            amountClass={inbound ? "text-positive" : "text-transfer"}
         />
     );
 }
