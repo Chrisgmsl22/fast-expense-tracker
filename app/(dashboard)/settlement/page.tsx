@@ -6,6 +6,7 @@ import { getSettlement } from "@/lib/services/settlement/settlement.service";
 import { SettlementActions } from "@/components/settlement/SettlementActions";
 import { SettlementBalanceCard } from "@/components/settlement/SettlementBalanceCard";
 import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown";
+import { SettlementHelp } from "@/components/settlement/SettlementHelp";
 import { SettlementJournal } from "@/components/settlement/SettlementJournal";
 
 // Per-request, DB-backed — never prerender at build (no DB in preview builds).
@@ -49,7 +50,10 @@ export default async function SettlementPage() {
     return (
         <main className="mx-auto max-w-3xl p-4 sm:p-6 lg:p-8">
             <header className="flex items-baseline justify-between">
-                <h1 className="text-2xl font-bold">Settlement</h1>
+                <div className="flex items-center gap-1.5">
+                    <h1 className="text-2xl font-bold">Settlement</h1>
+                    <SettlementHelp />
+                </div>
                 <p className="text-sm text-muted-foreground">
                     with {PARTNER_NAME}
                 </p>
