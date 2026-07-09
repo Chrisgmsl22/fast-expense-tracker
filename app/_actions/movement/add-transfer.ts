@@ -21,10 +21,11 @@ export type AddTransferResult = ActionResult<
 >;
 
 /**
- * Log money you sent the partner ("I paid {partner}") — a `gf_paid` movement
- * (ADR-0018). The net debt you settle, computed in your head; no
- * category, no split. It's cash out (feeds the footer's Total), never an
- * expense, so it can't distort a category budget or the 68/32 math.
+ * Log a cash transfer with the partner — `gf_paid` ("I paid {partner}", money
+ * out) or `gf_received` ("{partner} paid me", settling what she owes you), per
+ * `input.direction` (ADR-0018 + spec 0004). The net debt you settle, computed in
+ * your head; no category, no split. It's cash, never an expense, so it can't
+ * distort a category budget or the 68/32 math.
  */
 export async function addTransfer(
     input: unknown,
@@ -55,7 +56,7 @@ export async function addTransfer(
         const created = await repo.insert(userId, {
             date: cdmxCalendarDateToUtc(v.date),
             amount: v.amount,
-            type: "gf_paid",
+            type: v.direction,
             cardId: null,
             fundedByPartner: false,
             note: v.note ?? null,

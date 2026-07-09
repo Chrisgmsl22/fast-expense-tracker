@@ -1,10 +1,13 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
+import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
 import { PARTNER_NAME } from "@/lib/partner";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
+import { movementDisplay } from "@/components/movement/movement-display";
+import { SettlementChip } from "./SettlementChip";
 
 const CASH_COLOR = "#16a34a";
 
@@ -21,10 +24,13 @@ export function MonthFeed({
     expenses,
     movements,
     monthLabel,
+    settlement,
 }: {
     expenses: ExpenseListItem[];
     movements: MovementListItem[];
     monthLabel: string;
+    /** Running couple balance — rendered as a chip in the footer (spec 0004). */
+    settlement?: CoupleBalance;
 }) {
     const feed = buildFeed(expenses, movements);
 
@@ -72,6 +78,11 @@ export function MonthFeed({
                     data-testid="feed-totals"
                     className="space-y-1.5 border-t p-4 text-sm"
                 >
+                    {settlement && (
+                        <div className="pb-1">
+                            <SettlementChip balance={settlement} />
+                        </div>
+                    )}
                     {/* Every amount carries the same px-2 + tabular-nums so the
                         digits line up in one right-aligned column — even the
                         "spent" pill and the Total band (which bleeds to the card
@@ -123,6 +134,12 @@ export function MonthFeed({
                             </span>
                         </div>
                     )}
+                </div>
+            )}
+
+            {count === 0 && settlement && (
+                <div className="border-t p-4">
+                    <SettlementChip balance={settlement} />
                 </div>
             )}
         </div>
@@ -194,21 +211,19 @@ function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
     );
 }
 
-/** One money-movement line — colour-tagged by type (ADR-0018). */
+/** One money-movement line — colour-tagged by type (ADR-0018, spec 0004). */
 function MovementRow({ movement: m }: { movement: MovementListItem }) {
-    const isCardPayment = m.type === "card_payment";
-    // Whole row tinted in its type colour, with a solid left border — the
-    // money-movement rows stand out clearly from expenses (per design).
-    const rowTint = isCardPayment
-        ? "border-payment bg-payment-tint"
-        : "border-transfer bg-transfer-tint";
-    const amountColor = isCardPayment ? "text-payment" : "text-transfer";
-    const label = isCardPayment ? "Card payment" : `Paid ${PARTNER_NAME}`;
-    const subline = isCardPayment
-        ? [m.card?.name, m.fundedByPartner ? `${PARTNER_NAME}'s money` : null]
-              .filter(Boolean)
-              .join(" · ")
-        : (m.note ?? "");
+    const { label, amountClass, rowTint } = movementDisplay(m.type);
+    // Card payments carry a card + funded tag; transfers carry their note.
+    const subline =
+        m.type === "card_payment"
+            ? [
+                  m.card?.name,
+                  m.fundedByPartner ? `${PARTNER_NAME}'s money` : null,
+              ]
+                  .filter(Boolean)
+                  .join(" · ")
+            : (m.note ?? "");
 
     return (
         <li
@@ -224,7 +239,7 @@ function MovementRow({ movement: m }: { movement: MovementListItem }) {
                 </span>
             </span>
             <span
-                className={`text-right text-sm font-semibold whitespace-nowrap ${amountColor}`}
+                className={`text-right text-sm font-semibold whitespace-nowrap ${amountClass}`}
             >
                 {formatMxn(m.amount)}
             </span>

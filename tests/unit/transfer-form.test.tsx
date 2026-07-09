@@ -1,0 +1,102 @@
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+
+vi.mock("@/app/_actions/movement/add-transfer", () => ({
+    addTransfer: vi.fn(),
+}));
+
+import { TransferForm } from "@/components/movement/TransferForm";
+import { addTransfer } from "@/app/_actions/movement/add-transfer";
+
+const addTransferMock = addTransfer as unknown as Mock;
+
+beforeEach(() => {
+    addTransferMock.mockReset();
+    addTransferMock.mockResolvedValue({ ok: true, data: { id: "m1" } });
+});
+
+describe("TransferForm", () => {
+    it("submits a gf_paid transfer by default", async () => {
+        const onSuccess = vi.fn();
+        render(<TransferForm onSuccess={onSuccess} />);
+        expect(
+            screen.getByRole("button", { name: /Log payment to Brenda/ }),
+        ).toBeDefined();
+
+        fireEvent.change(screen.getByLabelText("Date"), {
+            target: { value: "2026-07-10" },
+        });
+        fireEvent.change(screen.getByLabelText(/Amount/), {
+            target: { value: "300" },
+        });
+        fireEvent.click(
+            screen.getByRole("button", { name: /Log payment to Brenda/ }),
+        );
+
+        await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+        expect(addTransferMock).toHaveBeenCalledWith(
+            expect.objectContaining({ direction: "gf_paid", amount: "300" }),
+        );
+    });
+
+    it("submits a gf_received transfer when direction is gf_received", async () => {
+        const onSuccess = vi.fn();
+        render(<TransferForm direction="gf_received" onSuccess={onSuccess} />);
+        // Inbound label + copy differ.
+        expect(
+            screen.getByRole("button", { name: /Log Brenda's payment/ }),
+        ).toBeDefined();
+
+        fireEvent.change(screen.getByLabelText("Date"), {
+            target: { value: "2026-07-10" },
+        });
+        fireEvent.change(screen.getByLabelText(/Amount/), {
+            target: { value: "700" },
+        });
+        fireEvent.click(
+            screen.getByRole("button", { name: /Log Brenda's payment/ }),
+        );
+
+        await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+        expect(addTransferMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                direction: "gf_received",
+                amount: "700",
+            }),
+        );
+    });
+
+    it("prefills the amount for quick-settle", () => {
+        render(<TransferForm direction="gf_received" initialAmount="512.5" />);
+        const amount = screen.getByLabelText(/Amount/) as HTMLInputElement;
+        expect(amount.value).toBe("512.5");
+    });
+
+    it("shows the field error and does not call onSuccess on a validation failure", async () => {
+        addTransferMock.mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Invalid transfer",
+            fieldErrors: { amount: ["Amount must be greater than 0"] },
+        });
+        const onSuccess = vi.fn();
+        render(<TransferForm onSuccess={onSuccess} />);
+
+        fireEvent.change(screen.getByLabelText("Date"), {
+            target: { value: "2026-07-10" },
+        });
+        fireEvent.change(screen.getByLabelText(/Amount/), {
+            target: { value: "0" },
+        });
+        fireEvent.click(
+            screen.getByRole("button", { name: /Log payment to Brenda/ }),
+        );
+
+        await waitFor(() =>
+            expect(
+                screen.getByText("Amount must be greater than 0"),
+            ).toBeDefined(),
+        );
+        expect(onSuccess).not.toHaveBeenCalled();
+    });
+});

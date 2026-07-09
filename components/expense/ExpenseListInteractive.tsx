@@ -7,6 +7,7 @@ import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals } from "@/lib/domain/movement";
 import { buildFeed } from "@/lib/feed";
 import { PARTNER_NAME } from "@/lib/partner";
+import { movementDisplay } from "@/components/movement/movement-display";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
@@ -498,9 +499,7 @@ export function ExpenseListInteractive({
 }
 
 function movementLabel(m: MovementListItem): string {
-    return m.type === "card_payment"
-        ? "Card payment"
-        : `Payment to ${PARTNER_NAME}`;
+    return movementDisplay(m.type).label;
 }
 
 /** One expense row — one responsive tree (mobile card, desktop grid). */
@@ -634,19 +633,20 @@ function MovementRow({
     pending: boolean;
     onDelete: () => void;
 }) {
-    const isCardPayment = m.type === "card_payment";
-    // Whole row tinted in its type colour with a solid left border, so movements
-    // read as clearly distinct from expenses (per design).
-    const rowTint = isCardPayment
-        ? "border-payment bg-payment-tint"
-        : "border-transfer bg-transfer-tint";
-    const amountColor = isCardPayment ? "text-payment" : "text-transfer";
-    const label = isCardPayment ? "Card payment" : `Paid ${PARTNER_NAME}`;
-    const subline = isCardPayment
-        ? [m.card?.name, m.fundedByPartner ? `${PARTNER_NAME}'s money` : null]
-              .filter(Boolean)
-              .join(" · ")
-        : (m.note ?? "");
+    const {
+        label,
+        amountClass: amountColor,
+        rowTint,
+    } = movementDisplay(m.type);
+    const subline =
+        m.type === "card_payment"
+            ? [
+                  m.card?.name,
+                  m.fundedByPartner ? `${PARTNER_NAME}'s money` : null,
+              ]
+                  .filter(Boolean)
+                  .join(" · ")
+            : (m.note ?? "");
 
     return (
         <li

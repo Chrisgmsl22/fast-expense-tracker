@@ -110,20 +110,22 @@ The app was desktop-first and unusable on a phone (zoom-out "mini desktop", hori
 
 Route `/settings` — the settings surface the V1 designs lacked. Design: [`designs-screens/Settings.html`](../designs-screens/Settings.html) (HTML-only, authoritative). Covers budget/**monthly-income** editing + the **68/32 split** (`Settings.defaultSharePercentage`), **per-category budgets** (`Category.monthlyBudget`), and **currency**. Acts as the **shell** that surfaces card management (2.7) and the privacy toggle (2.8) — those may land within it or link to it. **Not high priority**; slot after the core screens (dashboard/category/settlement). Also the natural home for the recurring-prompt-suppression setting (slice 3.3).
 
-#### 2.12: Settlement / couple balance `[PR]` — brainstorm on pickup
+#### 2.12: Settlement / couple balance `[PR]`
 
-Brings back a **settlement surface** with a **two-sided net balance** — the piece 2.6 deliberately deferred (2.6 removed the one-sided "{partner} owes you" reminder; this supersedes [ADR-0018](../decisions/0018-money-movements-not-settlement-ritual.md) §4). Depends on 2.6 (`Movement` journal + `fundedByPartner`).
+A **settlement surface** with a **two-sided net balance** — the piece 2.6 deferred (it removed the one-sided "{partner} owes you" reminder). Depends on 2.6 (`Movement` journal + `fundedByPartner`). Full design, balance formula, and worked scenarios: **[spec 0004](../specs/0004-settlement-couple-balance.md)** (design approved with the user 2026-07-06). Supersedes [ADR-0018](../decisions/0018-money-movements-not-settlement-ritual.md) §4; amends §5.
 
-**The agreed model** (confirmed with the user 2026-07-06 — the full design/ADR is written when this slice is picked up):
+##### Tasks
 
-- A single running **balance**:
-  `balance = (her 32% share of the shared expenses YOU logged) − (what you log as "I owe {partner}") − (money she's paid you: gf_received / funded-by-her card payments) + (money you've paid her: gf_paid)`.
-  Positive → she owes you; negative → you owe her; **0 → settled** (bar empty).
-- The **one new concept**: an **"I owe {partner}" entry** — a lump debt you log (your share of stuff she fronted, un-itemized), since the app never tracks her receipts. It nets against what she owes you; a real `gf_paid`/`gf_received` then clears the balance.
-- Reuses `partnerShareTotal` (`lib/domain/movement.ts`) for the "she owes you" side; the `fundedByPartner` flag + `gf_received`/`gf_paid` movements already exist.
-- Worked scenarios (all settle to 0): she owes 1000, pays 1000 → 0 · she owes 1000, you owe 300 → she pays 700 → 0 · she owes 500, you owe 700 → you pay 200 → 0.
-
-**Open questions for the brainstorm:** dedicated `/settlement` route vs a dashboard widget; where the "I owe {partner}" entry is logged (Add menu? the settlement surface?); whether that logged debt should also feed "What I really spent" (it's arguably your cost) or stay balance-only; how `income`/`other` movements fit. **Scope out:** itemising the partner's expenses (still never tracked); auto-settlement.
+- [x] Domain `computeCoupleBalance` + unit tests (3 scenarios, settled, direction, 2-month cutoff)
+- [x] `getSettlementInputs` repo method (2-month window) + fake + integration test
+- [x] `getSettlement` service (breakdown + journal + `carriedOver`) + unit test
+- [x] `add-partner-debt` action + `gf_received` on the transfer action + Zod + tests
+- [x] `AddExpenseButton` "Brenda paid me" + direction-generalized `TransferForm` + component tests
+- [x] `/settlement` route + components (hero 3 states, breakdown, journal + Earlier-months divider, buttons, `PartnerDebtForm`, quick-settle prefill, mobile) + component tests
+- [x] `MonthFeed` settlement chip + wire `getSettlement` into the dashboard page + tests
+- [x] ADR-0019 (two-sided balance; `paidBy="brenda"` amendment; 2-month window; `fundedByPartner` bridge)
+- [x] e2e (log "I owe Brenda" → orange → transfer → settled)
+- [x] Reviewer loop + real-browser check + `pnpm test:coverage` + slice-lifecycle cleanup
 
 ## Navigation model (decided 2026-07-01)
 

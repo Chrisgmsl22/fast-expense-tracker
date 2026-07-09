@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, CreditCard, Receipt, Send } from "lucide-react";
+import {
+    ChevronLeft,
+    CreditCard,
+    HandCoins,
+    Receipt,
+    Send,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -29,13 +35,14 @@ type Props = {
 };
 
 /** Which thing the user is logging; `menu` is the type picker (ADR-0018). */
-type Mode = "menu" | "expense" | "card_payment" | "transfer";
+type Mode = "menu" | "expense" | "card_payment" | "transfer" | "receive";
 
 const TITLES: Record<Mode, string> = {
     menu: "Add",
     expense: "Add expense",
     card_payment: "Add card payment",
     transfer: `I paid ${PARTNER_NAME}`,
+    receive: `${PARTNER_NAME} paid me`,
 };
 
 /**
@@ -112,6 +119,12 @@ export function AddExpenseButton({
                             subtitle={`Money you sent ${PARTNER_NAME}`}
                             onClick={() => setMode("transfer")}
                         />
+                        <TypeButton
+                            icon={<HandCoins className="size-5" />}
+                            title={`${PARTNER_NAME} paid me`}
+                            subtitle={`Money ${PARTNER_NAME} sent you`}
+                            onClick={() => setMode("receive")}
+                        />
                     </div>
                 ) : null}
 
@@ -136,6 +149,14 @@ export function AddExpenseButton({
 
                 {mode === "transfer" ? (
                     <TransferForm onCancel={close} onSuccess={onSuccess} />
+                ) : null}
+
+                {mode === "receive" ? (
+                    <TransferForm
+                        direction="gf_received"
+                        onCancel={close}
+                        onSuccess={onSuccess}
+                    />
                 ) : null}
             </DialogContent>
         </Dialog>
