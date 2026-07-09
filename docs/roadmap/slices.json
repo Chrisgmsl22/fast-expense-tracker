@@ -199,6 +199,13 @@
             "title": "Settlement / couple balance — two-sided net (her share − 'I owe' entry ∓ transfers) + settle flow (brainstorm on pickup)",
             "dependsOn": ["2.6"]
         },
+        {
+            "id": "2.13",
+            "phase": 2,
+            "type": "fan-out",
+            "title": "Per-card outstanding balance — charges − card-payments per card (spec 0003 §4.4, deferred from ADR-0018); read-model + display, no new capture (backlog)",
+            "dependsOn": ["2.6"]
+        },
 
         {
             "id": "3.1",

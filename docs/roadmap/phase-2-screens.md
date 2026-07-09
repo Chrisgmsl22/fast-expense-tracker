@@ -125,6 +125,10 @@ Brings back a **settlement surface** with a **two-sided net balance** — the pi
 
 **Open questions for the brainstorm:** dedicated `/settlement` route vs a dashboard widget; where the "I owe {partner}" entry is logged (Add menu? the settlement surface?); whether that logged debt should also feed "What I really spent" (it's arguably your cost) or stay balance-only; how `income`/`other` movements fit. **Scope out:** itemising the partner's expenses (still never tracked); auto-settlement.
 
+#### 2.13: Per-card outstanding balance `[PR]` — backlog
+
+Surfaces the **per-card outstanding** stat deferred since [ADR-0018](../decisions/0018-money-movements-not-settlement-ritual.md) (formula in [spec 0003 §4.4](../specs/0003-shared-expense-settlement.md)): `outstanding = Σ(charges you paid on that card) − Σ(card_payments to that card)`. The raw data already exists — expenses carry `cardId` + `paidBy`, card payments carry `cardId` — so this is a read-model + display slice, no new capture. **Accuracy is logging-completeness-bound**: correct only if every charge is logged (the user commits to this), and labelled "based on logged expenses," not the bank statement (no statement import — spec 0003 §7). Depends on 2.6 (`card_payment` movements). Design pending — brainstorm the surface (dedicated card view vs dashboard widget vs settlement page) on pickup.
+
 ## Navigation model (decided 2026-07-01)
 
 **Dashboard-as-hub + nav + drill-in.** `/dashboard` is the home/landing; a top nav links each screen (Dashboard / Expenses / Income); **and** clicking a section _on_ the dashboard drills into its detail screen (category card → `/category/[slug]` (2.5); Total income chip → income popover/`/income`; month-feed → expenses). The chip's income **popover** (add-inline) is deferred (2.4a ships a static Total-income chip); income capture lives on the Income screen (2.3) meanwhile.
