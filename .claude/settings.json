@@ -82,6 +82,16 @@
                 "hooks": [
                     {
                         "type": "command",
+                        "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/bugs-status.sh\"",
+                        "timeout": 20,
+                        "statusMessage": "Reading bug register..."
+                    }
+                ]
+            },
+            {
+                "hooks": [
+                    {
+                        "type": "command",
                         "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-status.sh\"",
                         "timeout": 20,
                         "statusMessage": "Checking worktrees..."

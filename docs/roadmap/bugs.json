@@ -1,0 +1,35 @@
+{
+    "branchPattern": "fix/{id}-",
+    "bugs": [
+        {
+            "id": "BUG-1",
+            "title": "Partner-debt ('I owe') logged as a phantom Cash expense on the dashboard",
+            "description": "Logging 'I owe {partner} $X' stores an Expense{paidBy:'gf', cardId:null} — intended as cost (ADR-0018). But Spend-by-card (getCardSpends) groups every expense by cardId, so the debt surfaces as a second 'Cash' row next to real cash spend. Two 'Cash' entries appear on the dashboard: the real one and the phantom.",
+            "proposedSolution": "Exclude paidBy:'gf' from getCardSpends (count only what the user paid); cardId can't discriminate since real cash is also cardId:null. OPEN/deferred: whether partner-debt should also leave category + 'what I really spent' totals — spec this before touching it.",
+            "status": "open",
+            "spec": null,
+            "pr": null,
+            "issue": 47
+        },
+        {
+            "id": "BUG-2",
+            "title": "Category colors render gray in production",
+            "description": "Category dots + 'Where the money went' bars show neutral gray in prod; card colors are fine. Not a Tailwind purge (colors applied via inline style). Prod Category.color rows still hold the schema default #6b7280 — prod was never re-seeded since per-slug colors landed.",
+            "proposedSolution": "Confirm prod state via Neon MCP, then carefully re-seed prod (seed already refreshes Category.color on upsert). Bundle: FK-safely delete the Amex Gold card (no longer owned).",
+            "status": "open",
+            "spec": null,
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "BUG-3",
+            "title": "Auth session never expires",
+            "description": "Still signed in after several days of inactivity — no session maxAge configured, so sessions live indefinitely.",
+            "proposedSolution": "Set session maxAge (+ updateAge) in auth.config.ts; pick a concrete window (e.g. 7-day rolling).",
+            "status": "open",
+            "spec": null,
+            "pr": null,
+            "issue": null
+        }
+    ]
+}
