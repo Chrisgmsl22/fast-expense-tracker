@@ -19,6 +19,7 @@
         "test:coverage": "vitest run --coverage",
         "roadmap:status": "node scripts/roadmap-status.ts",
         "bugs:status": "node scripts/bugs-status.ts",
+        "chores:status": "node scripts/chores-status.ts",
         "db:up": "docker compose up -d db",
         "db:down": "docker compose down",
         "db:generate": "prisma generate",
