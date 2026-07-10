@@ -1,0 +1,35 @@
+{
+    "branchPattern": "feat/{id}-",
+    "chores": [
+        {
+            "id": "CHORE-1",
+            "title": "Edit + delete \"I owe {partner}\" debts on the settlement page",
+            "description": "Partner-debt entries (Expense{paidBy:'gf'}) can be created from the settlement page but never edited, and only deleted from the expenses list. They should be editable + deletable on the settlement page, where they belong. Prereq for BUG-1's 'route to settlement to edit' flow.",
+            "plan": "New updatePartnerDebt action (mirror addPartnerDebt + IDOR-safe updateForUser; preserve paidBy:'gf'/cardId:null/isShared:false/yourPercentage:1/actualExpenditure=amount/no subcategory). PartnerDebtForm gains an edit mode (optional debt prop, prefill via getExpenseForEdit, 'Save changes'). New client SettlementJournalInteractive adds edit + delete (reuse deleteExpense) dialogs on partner_debt rows; router.refresh after. Out of scope: transfers/funded-card/your_expense rows, card-payment editing, all expenses-screen changes (that's BUG-1).",
+            "status": "open",
+            "spec": null,
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-2",
+            "title": "Treat person-to-person wire transfers as a \"debit\" method",
+            "description": "Money wired to/from people is neither a card nor cash — the user thinks of it as 'debit'. Surface it as a distinct, clearly-noticeable payment method (not a real Card entity). Scope TBD when picked up.",
+            "plan": "TBD — decide where 'debit' surfaces (transfer method label / settlement flow) and its color; keep it out of CARD_SEED.",
+            "status": "open",
+            "spec": null,
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-3",
+            "title": "Edit card payments (movements)",
+            "description": "Card-payment movements are delete-only (delete + re-add). Allow editing amount/date/card/note like a normal entry.",
+            "plan": "TBD — updateMovement action + edit mode on the card-payment form; wire into the expenses/settlement flow.",
+            "status": "open",
+            "spec": null,
+            "pr": null,
+            "issue": null
+        }
+    ]
+}
