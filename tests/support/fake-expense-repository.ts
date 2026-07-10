@@ -38,6 +38,10 @@ export class FakeExpenseRepository implements ExpenseRepository {
     /** Every row inserted via `insert`, in order — for assertions. */
     readonly inserts: StoredExpense[] = [];
 
+    /** Every `updateForUser` write that matched a row, in order — for assertions. */
+    readonly updates: { id: string; userId: string; data: ExpenseWriteData }[] =
+        [];
+
     // --- arrange helpers ---
 
     setSubcategory(subcategoryId: string, categoryId: string): void {
@@ -104,6 +108,7 @@ export class FakeExpenseRepository implements ExpenseRepository {
         const existing = this.rows.get(id);
         if (!existing || existing.userId !== userId) return 0;
         this.rows.set(id, { id, userId, ...data });
+        this.updates.push({ id, userId, data });
         return 1;
     }
 }

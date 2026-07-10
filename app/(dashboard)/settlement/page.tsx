@@ -71,7 +71,10 @@ export default async function SettlementPage() {
                     netAmount={settlement.balance.amount}
                 />
                 <SettlementBreakdown balance={settlement.balance} />
-                <SettlementJournal journal={settlement.journal} />
+                <SettlementJournal
+                    journal={settlement.journal}
+                    categories={categoryOptions}
+                />
             </div>
         </main>
     );

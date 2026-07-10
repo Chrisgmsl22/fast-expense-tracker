@@ -8,6 +8,9 @@ vi.mock("@/app/_actions/movement/add-transfer", () => ({
 vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
     addPartnerDebt: vi.fn(),
 }));
+vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
+    updatePartnerDebt: vi.fn(),
+}));
 
 import { SettlementActions } from "@/components/settlement/SettlementActions";
 

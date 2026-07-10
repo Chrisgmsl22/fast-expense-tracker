@@ -14,15 +14,30 @@ import {
     addPartnerDebt,
     type AddPartnerDebtResult,
 } from "@/app/_actions/movement/add-partner-debt";
+import {
+    updatePartnerDebt,
+    type UpdatePartnerDebtResult,
+} from "@/app/_actions/movement/update-partner-debt";
 import type { CategoryOption } from "@/components/expense/ExpenseForm";
 import { PARTNER_NAME } from "@/lib/partner";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { PartnerDebtInput } from "@/lib/schemas/movement";
 
+/** Prefilled fields when the form edits an existing debt (strings for inputs). */
+export type PartnerDebtEditable = {
+    id: string;
+    date: string;
+    amount: string;
+    categoryId: string;
+    note: string;
+};
+
 type Props = {
     categories: CategoryOption[];
     /** Preselected category (the settlement page passes its first essentials category). */
     defaultCategoryId?: string;
+    /** When present, the form edits this debt instead of creating a new one. */
+    debt?: PartnerDebtEditable;
     onSuccess?: () => void;
     onCancel?: () => void;
 };
@@ -36,13 +51,16 @@ type Props = {
 export function PartnerDebtForm({
     categories,
     defaultCategoryId = "",
+    debt,
     onSuccess,
     onCancel,
 }: Props) {
-    const [date, setDate] = useState("");
-    const [amount, setAmount] = useState("");
-    const [categoryId, setCategoryId] = useState(defaultCategoryId);
-    const [note, setNote] = useState("");
+    const [date, setDate] = useState(debt?.date ?? "");
+    const [amount, setAmount] = useState(debt?.amount ?? "");
+    const [categoryId, setCategoryId] = useState(
+        debt?.categoryId ?? defaultCategoryId,
+    );
+    const [note, setNote] = useState(debt?.note ?? "");
 
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<PartnerDebtInput>>({});
@@ -55,12 +73,20 @@ export function PartnerDebtForm({
         const form = e.currentTarget;
         startTransition(async () => {
             try {
-                const res: AddPartnerDebtResult = await addPartnerDebt({
-                    date,
-                    amount,
-                    categoryId,
-                    note: note || undefined,
-                });
+                const res: AddPartnerDebtResult | UpdatePartnerDebtResult = debt
+                    ? await updatePartnerDebt({
+                          id: debt.id,
+                          date,
+                          amount,
+                          categoryId,
+                          note: note || undefined,
+                      })
+                    : await addPartnerDebt({
+                          date,
+                          amount,
+                          categoryId,
+                          note: note || undefined,
+                      });
                 if (res.ok) {
                     setErrors({});
                     setFormError(null);
@@ -92,7 +118,11 @@ export function PartnerDebtForm({
         <form
             onSubmit={handleSubmit}
             className="flex flex-col gap-4"
-            aria-label={`Log a debt you owe ${PARTNER_NAME}`}
+            aria-label={
+                debt
+                    ? `Edit a debt you owe ${PARTNER_NAME}`
+                    : `Log a debt you owe ${PARTNER_NAME}`
+            }
         >
             <p className="text-sm text-muted-foreground">
                 {`Your share of shared things ${PARTNER_NAME} paid for. It counts as what you spent and adds to what you owe her — settle it with a transfer.`}
@@ -221,7 +251,7 @@ export function PartnerDebtForm({
                     </Button>
                 ) : null}
                 <Button type="submit" disabled={pending}>
-                    {pending ? "Saving…" : "Log debt"}
+                    {pending ? "Saving…" : debt ? "Save changes" : "Log debt"}
                 </Button>
             </div>
         </form>
