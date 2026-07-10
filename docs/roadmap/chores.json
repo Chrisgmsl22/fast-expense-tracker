@@ -6,7 +6,7 @@
             "title": "Edit + delete \"I owe {partner}\" debts on the settlement page",
             "description": "Partner-debt entries (Expense{paidBy:'gf'}) can be created from the settlement page but never edited, and only deleted from the expenses list. They should be editable + deletable on the settlement page, where they belong. Prereq for BUG-1's 'route to settlement to edit' flow.",
             "plan": "New updatePartnerDebt action (mirror addPartnerDebt + IDOR-safe updateForUser; preserve paidBy:'gf'/cardId:null/isShared:false/yourPercentage:1/actualExpenditure=amount/no subcategory). PartnerDebtForm gains an edit mode (optional debt prop, prefill via getExpenseForEdit, 'Save changes'). New client SettlementJournalInteractive adds edit + delete (reuse deleteExpense) dialogs on partner_debt rows; router.refresh after. Out of scope: transfers/funded-card/your_expense rows, card-payment editing, all expenses-screen changes (that's BUG-1).",
-            "status": "open",
+            "status": "in-progress",
             "spec": null,
             "pr": null,
             "issue": null
