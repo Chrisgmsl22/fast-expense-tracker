@@ -22,6 +22,16 @@ vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
 vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
     updatePartnerDebt: vi.fn(),
 }));
+// TransferForm (rendered in the transfer edit dialog) imports these too.
+vi.mock("@/app/_actions/movement/add-transfer", () => ({
+    addTransfer: vi.fn(),
+}));
+const { updateTransferMock } = vi.hoisted(() => ({
+    updateTransferMock: vi.fn(),
+}));
+vi.mock("@/app/_actions/movement/update-transfer", () => ({
+    updateTransfer: updateTransferMock,
+}));
 
 import { SettlementBalanceCard } from "@/components/settlement/SettlementBalanceCard";
 import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown";
@@ -128,6 +138,8 @@ describe("SettlementJournal", () => {
 
     beforeEach(() => {
         deleteMock.mockReset();
+        updateTransferMock.mockReset();
+        updateTransferMock.mockResolvedValue({ ok: true, data: { id: "m1" } });
     });
     const journal: SettlementJournalItem[] = [
         {
@@ -146,6 +158,7 @@ describe("SettlementJournal", () => {
             carriedOver: false,
             direction: "gf_received",
             amount: 320,
+            note: "rent",
         },
         {
             kind: "partner_debt",
@@ -166,9 +179,10 @@ describe("SettlementJournal", () => {
         expect(screen.getByText("Earlier months")).toBeDefined();
     });
 
-    it("renders a transfer row", () => {
+    it("renders a transfer row with its note in the subtitle", () => {
         render(<SettlementJournal journal={journal} />);
         expect(screen.getByText(/Transfer — Brenda paid you/)).toBeDefined();
+        expect(screen.getByText(/rent/)).toBeDefined();
     });
 
     it("shows an empty state when there is nothing to settle", () => {
@@ -176,11 +190,17 @@ describe("SettlementJournal", () => {
         expect(screen.getByText("Nothing to settle yet.")).toBeDefined();
     });
 
-    it("shows edit + delete only on the debt row", () => {
+    it("shows edit + delete on the debt and transfer rows, not a shared expense", () => {
         render(<SettlementJournal journal={journal} />);
         expect(screen.getByLabelText("Edit I owe Brenda")).toBeDefined();
         expect(screen.getByLabelText("Delete I owe Brenda")).toBeDefined();
-        // A shared-expense row is not editable here.
+        expect(
+            screen.getByLabelText("Edit Transfer — Brenda paid you"),
+        ).toBeDefined();
+        expect(
+            screen.getByLabelText("Delete Transfer — Brenda paid you"),
+        ).toBeDefined();
+        // A shared-expense row is not editable here (edited on the expenses screen).
         expect(screen.queryByLabelText("Edit Groceries")).toBeNull();
     });
 
@@ -211,5 +231,50 @@ describe("SettlementJournal", () => {
                 ) as HTMLInputElement
             ).value,
         ).toBe("300");
+    });
+
+    it("edits a transfer, prefilled from the row, and saves via updateTransfer", async () => {
+        render(<SettlementJournal journal={journal} />);
+        fireEvent.click(
+            screen.getByLabelText("Edit Transfer — Brenda paid you"),
+        );
+
+        const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).getByText("Edit transfer")).toBeDefined();
+        // Amount + note prefilled straight from the row.
+        expect(
+            (within(dialog).getByLabelText(/Amount/) as HTMLInputElement).value,
+        ).toBe("320");
+        expect(
+            (within(dialog).getByLabelText(/Note/) as HTMLInputElement).value,
+        ).toBe("rent");
+
+        fireEvent.click(
+            within(dialog).getByRole("button", { name: /Save changes/ }),
+        );
+        await waitFor(() =>
+            expect(updateTransferMock).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    id: "m1",
+                    direction: "gf_received",
+                    amount: "320",
+                }),
+            ),
+        );
+    });
+
+    it("deletes a transfer via deleteMovement", async () => {
+        deleteMock.mockResolvedValue({ ok: true, data: { id: "m1" } });
+        render(<SettlementJournal journal={journal} />);
+        fireEvent.click(
+            screen.getByLabelText("Delete Transfer — Brenda paid you"),
+        );
+
+        const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).getByText("Delete this transfer?")).toBeDefined();
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+        await waitFor(() =>
+            expect(deleteMock).toHaveBeenCalledWith({ id: "m1" }),
+        );
     });
 });

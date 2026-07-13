@@ -10,6 +10,10 @@ import {
     PartnerDebtForm,
     type PartnerDebtEditable,
 } from "@/components/movement/PartnerDebtForm";
+import {
+    TransferForm,
+    type TransferEditable,
+} from "@/components/movement/TransferForm";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -28,14 +32,30 @@ import type { SettlementJournalItem } from "@/lib/services/settlement/settlement
 const DEFAULT_DEBT_DESCRIPTION = `I owe ${PARTNER_NAME}`;
 
 type PartnerDebtRow = Extract<SettlementJournalItem, { kind: "partner_debt" }>;
+type TransferRow = Extract<SettlementJournalItem, { kind: "transfer" }>;
+/** Either journal row that can be edited + deleted here (CHORE-1, CHORE-5). */
+type DeletableRow = PartnerDebtRow | TransferRow;
+
+/** The row's human title — reused by the row, its action labels, and the delete copy. */
+function transferTitle(direction: TransferRow["direction"]): string {
+    return direction === "gf_received"
+        ? `Transfer — ${PARTNER_NAME} paid you`
+        : `Transfer — you paid ${PARTNER_NAME}`;
+}
+
+function rowTitle(row: DeletableRow): string {
+    return row.kind === "partner_debt"
+        ? row.description
+        : transferTitle(row.direction);
+}
 
 /**
  * The settlement movement journal (spec 0004 §3.1) — shared expenses you paid
  * (+ her 32%), "I owe {partner}" debts (− your share), and transfers, newest
- * first. Previous-month rows sit under an "Earlier months" divider. Only the
- * "I owe" debts are editable/deletable here — they're the entries that belong
- * to the settlement; edits re-assert the debt invariants and the page
- * re-renders so the balance recomputes.
+ * first. Previous-month rows sit under an "Earlier months" divider. The "I owe"
+ * debts and the transfers are editable/deletable here — they're the entries you
+ * own on the settlement side (CHORE-1, CHORE-5); a shared expense is edited on
+ * the expenses screen. Edits re-render the page so the balance recomputes.
  */
 export function SettlementJournal({
     journal,
@@ -44,7 +64,10 @@ export function SettlementJournal({
 }) {
     const router = useRouter();
     const [editing, setEditing] = useState<PartnerDebtEditable | null>(null);
-    const [deleting, setDeleting] = useState<PartnerDebtRow | null>(null);
+    const [editingTransfer, setEditingTransfer] = useState<TransferRow | null>(
+        null,
+    );
+    const [deleting, setDeleting] = useState<DeletableRow | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
     const [pending, startTransition] = useTransition();
 
@@ -63,6 +86,21 @@ export function SettlementJournal({
                     : item.description,
         });
     }
+
+    function openEditTransfer(item: TransferRow) {
+        setActionError(null);
+        // Transfer rows carry date/amount/note, so prefill from the row too; the
+        // form takes the direction as a prop (see the edit dialog below).
+        setEditingTransfer(item);
+    }
+
+    /** String-input shape the transfer form prefills from the row being edited. */
+    const transferEdit: TransferEditable | null = editingTransfer && {
+        id: editingTransfer.id,
+        date: toDateInputValue(editingTransfer.date),
+        amount: String(editingTransfer.amount),
+        note: editingTransfer.note ?? "",
+    };
 
     function confirmDelete() {
         if (!deleting) return;
@@ -107,7 +145,7 @@ export function SettlementJournal({
                 </p>
             )}
 
-            <ul className="mt-3 max-h-[55vh] divide-y overflow-y-auto">
+            <ul className="mt-3 max-h-[55vh] divide-y overflow-x-hidden overflow-y-auto">
                 {journal.map((item) => (
                     <li key={`${item.kind}-${item.id}`}>
                         {item.id === firstCarriedId && (
@@ -120,9 +158,19 @@ export function SettlementJournal({
                             actions={
                                 item.kind === "partner_debt" ? (
                                     <RowActions
-                                        description={item.description}
+                                        label={item.description}
                                         pending={pending}
                                         onEdit={() => openEdit(item)}
+                                        onDelete={() => {
+                                            setActionError(null);
+                                            setDeleting(item);
+                                        }}
+                                    />
+                                ) : item.kind === "transfer" ? (
+                                    <RowActions
+                                        label={transferTitle(item.direction)}
+                                        pending={pending}
+                                        onEdit={() => openEditTransfer(item)}
                                         onDelete={() => {
                                             setActionError(null);
                                             setDeleting(item);
@@ -160,6 +208,31 @@ export function SettlementJournal({
             </Dialog>
 
             <Dialog
+                open={editingTransfer !== null}
+                onOpenChange={(open) => {
+                    if (!open) setEditingTransfer(null);
+                }}
+            >
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Edit transfer</DialogTitle>
+                    </DialogHeader>
+                    {editingTransfer && transferEdit && (
+                        <TransferForm
+                            key={editingTransfer.id}
+                            direction={editingTransfer.direction}
+                            transfer={transferEdit}
+                            onCancel={() => setEditingTransfer(null)}
+                            onSuccess={() => {
+                                setEditingTransfer(null);
+                                router.refresh();
+                            }}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
                 open={deleting !== null}
                 onOpenChange={(open) => {
                     if (!open) {
@@ -170,10 +243,14 @@ export function SettlementJournal({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete this debt?</DialogTitle>
+                        <DialogTitle>
+                            {deleting?.kind === "transfer"
+                                ? "Delete this transfer?"
+                                : "Delete this debt?"}
+                        </DialogTitle>
                         <DialogDescription>
                             {deleting
-                                ? `"${deleting.description}" (${formatMxn(deleting.amount)}) will be permanently removed.`
+                                ? `${rowTitle(deleting)} (${formatMxn(deleting.amount)}) will be permanently removed.`
                                 : ""}
                         </DialogDescription>
                     </DialogHeader>
@@ -209,14 +286,14 @@ export function SettlementJournal({
     );
 }
 
-/** Edit + delete controls for a debt row (revealed on hover/focus, desktop). */
+/** Edit + delete controls for a debt/transfer row (revealed on hover/focus, desktop). */
 function RowActions({
-    description,
+    label,
     pending,
     onEdit,
     onDelete,
 }: {
-    description: string;
+    label: string;
     pending: boolean;
     onEdit: () => void;
     onDelete: () => void;
@@ -227,7 +304,7 @@ function RowActions({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`Edit ${description}`}
+                aria-label={`Edit ${label}`}
                 onClick={onEdit}
                 disabled={pending}
             >
@@ -237,7 +314,7 @@ function RowActions({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`Delete ${description}`}
+                aria-label={`Delete ${label}`}
                 onClick={onDelete}
                 disabled={pending}
             >
@@ -271,11 +348,12 @@ function JournalRow({
         return (
             <Row
                 icon={<BarChart3 className="size-4" />}
-                iconClass="bg-transfer-tint text-transfer"
+                iconClass="bg-debt-tint text-debt"
+                rowTint="border-debt bg-debt-tint"
                 title={item.description}
                 subtitle={`${formatExpenseDate(item.date)} · un-itemized`}
                 amount={`−${formatMxn(item.amount)}`}
-                amountClass="text-transfer"
+                amountClass="text-debt"
                 actions={actions}
             />
         );
@@ -289,12 +367,21 @@ function JournalRow({
                     ? "bg-positive-tint text-positive"
                     : "bg-transfer-tint text-transfer"
             }
+            rowTint={
+                inbound
+                    ? "border-positive bg-positive-tint"
+                    : "border-transfer bg-transfer-tint"
+            }
             title={
                 inbound
                     ? `Transfer — ${PARTNER_NAME} paid you`
                     : `Transfer — you paid ${PARTNER_NAME}`
             }
-            subtitle={formatExpenseDate(item.date)}
+            subtitle={
+                item.note
+                    ? `${formatExpenseDate(item.date)} · ${item.note}`
+                    : formatExpenseDate(item.date)
+            }
             amount={formatMxn(item.amount)}
             amountClass={inbound ? "text-positive" : "text-transfer"}
             actions={actions}
@@ -305,6 +392,7 @@ function JournalRow({
 function Row({
     icon,
     iconClass,
+    rowTint,
     title,
     subtitle,
     amount,
@@ -313,14 +401,23 @@ function Row({
 }: {
     icon: React.ReactNode;
     iconClass: string;
+    /** Colour-coded left border + tint, bled to the card edges. Omit for a plain row. */
+    rowTint?: string;
     title: string;
     subtitle: string;
     amount: string;
     amountClass: string;
     actions: ReactNode;
 }) {
+    // Every row carries a 3px left stripe (transparent when plain) so icons stay
+    // aligned; highlighted money kinds fill it with their colour + tint. The band
+    // stays inside the scroll container — no negative-margin bleed, which would
+    // widen the row past the list and trigger a horizontal scrollbar.
+    const stripe = rowTint ? rowTint : "border-transparent";
     return (
-        <div className="group flex items-center gap-3 py-2.5">
+        <div
+            className={`group flex items-center gap-3 border-l-[3px] py-2.5 pl-3 ${stripe}`}
+        >
             <span
                 className={`flex size-7 shrink-0 items-center justify-center rounded-md ${iconClass}`}
             >

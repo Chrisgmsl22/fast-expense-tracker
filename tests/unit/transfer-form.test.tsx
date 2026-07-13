@@ -4,15 +4,22 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 vi.mock("@/app/_actions/movement/add-transfer", () => ({
     addTransfer: vi.fn(),
 }));
+vi.mock("@/app/_actions/movement/update-transfer", () => ({
+    updateTransfer: vi.fn(),
+}));
 
 import { TransferForm } from "@/components/movement/TransferForm";
 import { addTransfer } from "@/app/_actions/movement/add-transfer";
+import { updateTransfer } from "@/app/_actions/movement/update-transfer";
 
 const addTransferMock = addTransfer as unknown as Mock;
+const updateTransferMock = updateTransfer as unknown as Mock;
 
 beforeEach(() => {
     addTransferMock.mockReset();
     addTransferMock.mockResolvedValue({ ok: true, data: { id: "m1" } });
+    updateTransferMock.mockReset();
+    updateTransferMock.mockResolvedValue({ ok: true, data: { id: "m1" } });
 });
 
 describe("TransferForm", () => {
@@ -70,6 +77,44 @@ describe("TransferForm", () => {
         render(<TransferForm direction="gf_received" initialAmount="512.5" />);
         const amount = screen.getByLabelText(/Amount/) as HTMLInputElement;
         expect(amount.value).toBe("512.5");
+    });
+
+    it("edits an existing transfer via updateTransfer, prefilled", async () => {
+        const onSuccess = vi.fn();
+        render(
+            <TransferForm
+                direction="gf_paid"
+                transfer={{
+                    id: "m9",
+                    date: "2026-07-01",
+                    amount: "350",
+                    note: "dinner",
+                }}
+                onSuccess={onSuccess}
+            />,
+        );
+        // Prefilled from the transfer, and the submit label flips to Save changes.
+        expect(
+            (screen.getByLabelText(/Amount/) as HTMLInputElement).value,
+        ).toBe("350");
+        expect((screen.getByLabelText(/Note/) as HTMLInputElement).value).toBe(
+            "dinner",
+        );
+
+        fireEvent.change(screen.getByLabelText(/Amount/), {
+            target: { value: "400" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /Save changes/ }));
+
+        await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+        expect(updateTransferMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                id: "m9",
+                direction: "gf_paid",
+                amount: "400",
+            }),
+        );
+        expect(addTransferMock).not.toHaveBeenCalled();
     });
 
     it("shows the field error and does not call onSuccess on a validation failure", async () => {

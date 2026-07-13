@@ -5,6 +5,9 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/app/_actions/movement/add-transfer", () => ({
     addTransfer: vi.fn(),
 }));
+vi.mock("@/app/_actions/movement/update-transfer", () => ({
+    updateTransfer: vi.fn(),
+}));
 vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
     addPartnerDebt: vi.fn(),
 }));

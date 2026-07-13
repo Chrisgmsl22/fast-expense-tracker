@@ -5,7 +5,7 @@ import { PARTNER_NAME } from "@/lib/partner";
  * Label + colour tone for a movement row — the single source both feeds
  * (dashboard `MonthFeed`, expenses `ExpenseListInteractive`) read, so a new
  * movement type can't slip through and get mislabelled. Card payment = blue,
- * money you sent = amber (transfer out), money she sent you = green (money in).
+ * money you sent = gold (transfer out), money she sent you = green (money in).
  */
 export type MovementDisplay = {
     label: string;

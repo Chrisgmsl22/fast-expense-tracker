@@ -16,8 +16,11 @@ vi.mock("@/app/_actions/movement/delete", () => ({ deleteMovement: vi.fn() }));
 vi.mock("@/app/_actions/expense/get-for-edit", () => ({
     getExpenseForEdit: vi.fn(),
 }));
-// The form is covered by its own test; stub it so this test stays about the
-// list's filter/edit/delete wiring (and avoids the form's server-action imports).
+vi.mock("@/app/_actions/movement/get-for-edit", () => ({
+    getMovementForEdit: vi.fn(),
+}));
+// The forms are covered by their own tests; stub them so this test stays about
+// the list's filter/edit/delete wiring (and avoids the forms' server-action imports).
 vi.mock("@/components/expense/ExpenseForm", () => ({
     ExpenseForm: ({
         expense,
@@ -34,11 +37,22 @@ vi.mock("@/components/expense/ExpenseForm", () => ({
         </div>
     ),
 }));
+vi.mock("@/components/movement/CardPaymentForm", () => ({
+    CardPaymentForm: ({ payment }: { payment?: { id: string } }) => (
+        <div data-testid="card-payment-form">editing cp {payment?.id}</div>
+    ),
+}));
+vi.mock("@/components/movement/TransferForm", () => ({
+    TransferForm: ({ transfer }: { transfer?: { id: string } }) => (
+        <div data-testid="transfer-form">editing tr {transfer?.id}</div>
+    ),
+}));
 
 import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteractive";
 import { deleteExpense } from "@/app/_actions/expense/delete";
 import { deleteMovement } from "@/app/_actions/movement/delete";
 import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
+import { getMovementForEdit } from "@/app/_actions/movement/get-for-edit";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
 
 beforeEach(() => {
@@ -46,6 +60,7 @@ beforeEach(() => {
     (deleteExpense as unknown as Mock).mockReset();
     (deleteMovement as unknown as Mock).mockReset();
     (getExpenseForEdit as unknown as Mock).mockReset();
+    (getMovementForEdit as unknown as Mock).mockReset();
 });
 
 const expenses = [
@@ -302,6 +317,88 @@ describe("ExpenseListInteractive", () => {
         expect(screen.queryByText("Paid Brenda")).toBeNull();
     });
 
+    it("renders edit + delete actions on a movement row", () => {
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+        expect(
+            screen.getByRole("button", { name: "Edit Card payment" }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Delete Card payment" }),
+        ).toBeDefined();
+    });
+
+    it("fetches a card payment then opens its edit dialog", async () => {
+        (getMovementForEdit as unknown as Mock).mockResolvedValue({
+            id: "mv1",
+            date: new Date("2026-05-20T06:00:00Z"),
+            amount: 800,
+            type: "card_payment",
+            cardId: "card1",
+            note: null,
+        });
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "Edit Card payment" }),
+        );
+        await waitFor(() =>
+            expect(getMovementForEdit).toHaveBeenCalledWith("mv1"),
+        );
+        expect(await screen.findByText(/editing cp mv1/i)).toBeDefined();
+    });
+
+    it("opens the transfer edit form for a transfer movement", async () => {
+        (getMovementForEdit as unknown as Mock).mockResolvedValue({
+            id: "mv2",
+            date: new Date("2026-05-18T06:00:00Z"),
+            amount: 300,
+            type: "gf_paid",
+            cardId: null,
+            note: "netted",
+        });
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "Edit Paid Brenda" }),
+        );
+        await waitFor(() =>
+            expect(getMovementForEdit).toHaveBeenCalledWith("mv2"),
+        );
+        expect(await screen.findByText(/editing tr mv2/i)).toBeDefined();
+    });
+
+    it("surfaces an error when the movement fails to load for edit", async () => {
+        (getMovementForEdit as unknown as Mock).mockResolvedValue(null);
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "Edit Card payment" }),
+        );
+        expect(
+            await screen.findByText(/couldn't load that movement/i),
+        ).toBeDefined();
+    });
+
     it("deletes a movement after confirming, then refreshes", async () => {
         (deleteMovement as unknown as Mock).mockResolvedValue({
             ok: true,
@@ -315,7 +412,7 @@ describe("ExpenseListInteractive", () => {
         );
 
         fireEvent.click(
-            screen.getByRole("button", { name: "Delete paid brenda" }),
+            screen.getByRole("button", { name: "Delete Paid Brenda" }),
         );
         expect(
             await screen.findByText(/will be permanently removed/i),

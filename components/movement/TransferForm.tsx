@@ -8,17 +8,31 @@ import {
     addTransfer,
     type AddTransferResult,
 } from "@/app/_actions/movement/add-transfer";
+import {
+    updateTransfer,
+    type UpdateTransferResult,
+} from "@/app/_actions/movement/update-transfer";
 import { PARTNER_NAME } from "@/lib/partner";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { TransferInput } from "@/lib/schemas/movement";
 
 type Direction = "gf_paid" | "gf_received";
 
+/** Prefilled fields when the form edits an existing transfer (strings for inputs). */
+export type TransferEditable = {
+    id: string;
+    date: string;
+    amount: string;
+    note: string;
+};
+
 type Props = {
     /** `gf_paid` = "I paid {partner}"; `gf_received` = "{partner} paid me". */
     direction?: Direction;
     /** Prefills the amount (settlement quick-settle passes the net balance). */
     initialAmount?: string;
+    /** When present, the form edits this transfer instead of creating one. */
+    transfer?: TransferEditable;
     onSuccess?: () => void;
     onCancel?: () => void;
 };
@@ -32,12 +46,13 @@ type Props = {
 export function TransferForm({
     direction = "gf_paid",
     initialAmount = "",
+    transfer,
     onSuccess,
     onCancel,
 }: Props) {
-    const [date, setDate] = useState("");
-    const [amount, setAmount] = useState(initialAmount);
-    const [note, setNote] = useState("");
+    const [date, setDate] = useState(transfer?.date ?? "");
+    const [amount, setAmount] = useState(transfer?.amount ?? initialAmount);
+    const [note, setNote] = useState(transfer?.note ?? "");
 
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<TransferInput>>({});
@@ -47,21 +62,31 @@ export function TransferForm({
     const blurb = inbound
         ? `Money ${PARTNER_NAME} sent you — settles what she owes you. Not an expense.`
         : `The amount you settled with ${PARTNER_NAME} — money out of your account, not an expense.`;
-    const submitLabel = inbound
-        ? `Log ${PARTNER_NAME}'s payment`
-        : `Log payment to ${PARTNER_NAME}`;
+    const submitLabel = transfer
+        ? "Save changes"
+        : inbound
+          ? `Log ${PARTNER_NAME}'s payment`
+          : `Log payment to ${PARTNER_NAME}`;
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         const form = e.currentTarget;
         startTransition(async () => {
             try {
-                const res: AddTransferResult = await addTransfer({
-                    date,
-                    amount,
-                    direction,
-                    note: note || undefined,
-                });
+                const res: AddTransferResult | UpdateTransferResult = transfer
+                    ? await updateTransfer({
+                          id: transfer.id,
+                          date,
+                          amount,
+                          direction,
+                          note: note || undefined,
+                      })
+                    : await addTransfer({
+                          date,
+                          amount,
+                          direction,
+                          note: note || undefined,
+                      });
                 if (res.ok) {
                     setErrors({});
                     setFormError(null);

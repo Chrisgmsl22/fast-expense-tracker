@@ -6,6 +6,7 @@ import { SettlementBalanceCard } from "@/components/settlement/SettlementBalance
 import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown";
 import { SettlementHelp } from "@/components/settlement/SettlementHelp";
 import { SettlementJournal } from "@/components/settlement/SettlementJournal";
+import { SettlementJournalKey } from "@/components/settlement/SettlementJournalKey";
 
 // Per-request, DB-backed — never prerender at build (no DB in preview builds).
 export const dynamic = "force-dynamic";
@@ -47,6 +48,7 @@ export default async function SettlementPage() {
                         netAmount={settlement.balance.amount}
                     />
                     <SettlementBreakdown balance={settlement.balance} />
+                    <SettlementJournalKey />
                 </div>
                 <SettlementJournal journal={settlement.journal} />
             </div>

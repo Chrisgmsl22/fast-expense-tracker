@@ -70,6 +70,16 @@
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "CHORE-7",
+            "title": "Toggle dashboard categories between my-share and total spend",
+            "description": "The dashboard Categories cards + 'Where the money went' show only your share (actualExpenditure, the 68% slice). Add a control to flip them to the full charged amount (ignoring the split) — e.g. Transport shows $2,000 total, not just your part. Aligns with CHORE-6 / spec 0006: in solo mode a user's share IS the total, so the category displays must already support a total basis; build this so the two dovetail (a shared user toggles; a solo user is effectively always 'total').",
+            "plan": "Scope TBD at build time (decide with the user): a segmented 'My share ⇄ Total' control on the dashboard. Thread both sums per category from the dashboard data (amount-sum + actualExpenditure-sum) so the toggle is a pure client re-scope of the Categories cards + 'Where the money went'. Open question: whether the 50/25/25 buckets + 'Income vs spent' also re-scope (they encode budget-against-your-income, so likely stay my-share). Coordinate with CHORE-6.a/.b (sharesExpenses flag) so solo mode reuses the total-basis path rather than duplicating it.",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
         }
     ]
 }

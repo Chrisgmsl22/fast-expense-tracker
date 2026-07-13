@@ -17,11 +17,13 @@ const SUBLABELS: Partial<Record<SettlementBreakdownKey, string>> = {
     partner_paid: "transfers she sent you",
 };
 
+// Money lines carry the journal's colour language: green = she paid you,
+// gold = you paid her, orange = a debt you owe (matches the journal key).
 const AMOUNT_CLASS: Record<SettlementBreakdownKey, string> = {
     partner_share: "text-positive",
-    your_debt: "text-transfer",
-    partner_paid: "text-payment",
-    you_paid: "text-payment",
+    your_debt: "text-debt",
+    partner_paid: "text-positive",
+    you_paid: "text-transfer",
 };
 
 /** "How this balance is made" — the four signed lines + the net (spec 0004 §3.1). */
@@ -59,11 +61,12 @@ export function SettlementBreakdown({ balance }: { balance: CoupleBalance }) {
                     </li>
                 ))}
             </ul>
-            <div className="mt-3 flex items-center justify-between border-t pt-3 text-sm">
+            {/* Net balance as a dark band flush to the card edges — the same
+                high-contrast treatment as the expenses totals bar, so the
+                bottom line is the easiest thing to spot. */}
+            <div className="-mx-5 -mb-5 mt-4 flex items-center justify-between rounded-b-xl bg-foreground px-5 py-3 text-sm text-background">
                 <span className="font-medium">Net balance</span>
-                <span className={`font-bold tabular-nums ${tone.textClass}`}>
-                    {netLabel}
-                </span>
+                <span className="font-bold tabular-nums">{netLabel}</span>
             </div>
         </div>
     );

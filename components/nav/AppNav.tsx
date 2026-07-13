@@ -88,7 +88,12 @@ export function AppNav({ email }: { email?: string }) {
                     </SheetContent>
                 </Sheet>
 
-                <span className="font-medium">Expense Tracker</span>
+                <Link
+                    href="/dashboard"
+                    className="font-medium transition-opacity hover:opacity-70"
+                >
+                    Expense Tracker
+                </Link>
 
                 <nav className="hidden items-center gap-5 text-sm md:flex">
                     {LINKS.map((l) => (
