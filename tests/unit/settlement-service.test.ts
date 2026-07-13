@@ -23,7 +23,6 @@ const expense = (
     amount: 1000,
     actualExpenditure: 680,
     isShared: true,
-    paidBy: "you",
     ...over,
 });
 
@@ -35,6 +34,7 @@ const movement = (
     amount: 100,
     type: "gf_paid",
     fundedByPartner: false,
+    note: null,
     ...over,
 });
 
@@ -60,24 +60,28 @@ describe("getSettlement", () => {
     });
 
     it("nets a logged debt and a transfer to zero", async () => {
-        // she owes 320 (your shared), you owe 300 (gf debt), she paid 20 → 0
+        // she owes 320 (your shared), you owe 300 (gf_fronted debt), she paid 20 → 0
         const s = await run(
+            [expense()],
             [
-                expense(),
-                expense({
-                    id: "e2",
+                movement({
+                    id: "mdebt",
+                    type: "gf_fronted",
                     amount: 300,
-                    actualExpenditure: 300,
-                    isShared: false,
-                    paidBy: "gf",
-                    description: "I owe Brenda",
+                    note: "I owe Brenda",
                 }),
+                movement({ id: "m2", type: "gf_received", amount: 20 }),
             ],
-            [movement({ id: "m2", type: "gf_received", amount: 20 })],
         );
         expect(s.balance.direction).toBe("settled");
         expect(s.balance.amount).toBe(0);
         expect(s.journal).toHaveLength(3);
+        const debt = s.journal.find((j) => j.kind === "partner_debt");
+        expect(debt).toBeDefined();
+        if (debt?.kind === "partner_debt") {
+            expect(debt.amount).toBe(300);
+            expect(debt.description).toBe("I owe Brenda");
+        }
     });
 
     it("a Brenda-funded card payment draws down the balance and shows as a journal row", async () => {

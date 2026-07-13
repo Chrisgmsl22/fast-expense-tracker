@@ -2,7 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import type { MovementType } from "@/lib/domain/movement";
 
-/** An expense the couple-balance math reads — carries `paidBy`, unlike `ExpenseListItem`. */
+/** An expense the couple-balance math reads (all are the user's own — ADR-0020). */
 export type SettlementExpenseRow = {
     id: string;
     date: Date;
@@ -10,8 +10,6 @@ export type SettlementExpenseRow = {
     amount: number;
     actualExpenditure: number;
     isShared: boolean;
-    /** "you" | "gf" — a `paidBy="gf"` row is an "I owe Brenda" debt (spec 0004). */
-    paidBy: string;
 };
 
 /** A movement the couple-balance math reads. */
@@ -21,6 +19,8 @@ export type SettlementMovementRow = {
     amount: number;
     type: MovementType;
     fundedByPartner: boolean;
+    /** Free-text label — the "I owe {partner}" debt's description, if any. */
+    note: string | null;
 };
 
 export type SettlementWindowRows = {
@@ -62,7 +62,6 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     amount: true,
                     actualExpenditure: true,
                     isShared: true,
-                    paidBy: true,
                 },
             }),
             this.db.movement.findMany({
@@ -74,6 +73,7 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     amount: true,
                     type: true,
                     fundedByPartner: true,
+                    note: true,
                 },
             }),
         ]);

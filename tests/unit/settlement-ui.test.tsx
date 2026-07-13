@@ -8,15 +8,11 @@ import {
 } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-const { getForEditMock, deleteMock } = vi.hoisted(() => ({
-    getForEditMock: vi.fn(),
+const { deleteMock } = vi.hoisted(() => ({
     deleteMock: vi.fn(),
 }));
-vi.mock("@/app/_actions/expense/get-for-edit", () => ({
-    getExpenseForEdit: getForEditMock,
-}));
-vi.mock("@/app/_actions/expense/delete", () => ({
-    deleteExpense: deleteMock,
+vi.mock("@/app/_actions/movement/delete", () => ({
+    deleteMovement: deleteMock,
 }));
 // PartnerDebtForm (rendered in the edit dialog) imports these; stub them so the
 // test doesn't pull the next-auth server graph in for a pure render.
@@ -127,14 +123,10 @@ describe("SettlementBreakdown", () => {
 });
 
 describe("SettlementJournal", () => {
-    const cats = [
-        { id: "c1", slug: "groceries", name: "Groceries", color: "#65a30d" },
-    ];
     const july = new Date("2026-07-10T06:00:00Z");
     const june = new Date("2026-06-20T06:00:00Z");
 
     beforeEach(() => {
-        getForEditMock.mockReset();
         deleteMock.mockReset();
     });
     const journal: SettlementJournalItem[] = [
@@ -165,7 +157,7 @@ describe("SettlementJournal", () => {
     ];
 
     it("renders rows with the Earlier-months divider before carried rows", () => {
-        render(<SettlementJournal journal={journal} categories={cats} />);
+        render(<SettlementJournal journal={journal} />);
         expect(screen.getByText("Groceries")).toBeDefined();
         expect(screen.getByText("+$320.00")).toBeDefined();
         expect(screen.getByText("I owe Brenda")).toBeDefined();
@@ -174,26 +166,26 @@ describe("SettlementJournal", () => {
     });
 
     it("renders a funded card payment row", () => {
-        render(<SettlementJournal journal={journal} categories={cats} />);
+        render(<SettlementJournal journal={journal} />);
         expect(screen.getByText(/Brenda's money → card payment/)).toBeDefined();
     });
 
     it("shows an empty state when there is nothing to settle", () => {
-        render(<SettlementJournal journal={[]} categories={cats} />);
+        render(<SettlementJournal journal={[]} />);
         expect(screen.getByText("Nothing to settle yet.")).toBeDefined();
     });
 
     it("shows edit + delete only on the debt row", () => {
-        render(<SettlementJournal journal={journal} categories={cats} />);
+        render(<SettlementJournal journal={journal} />);
         expect(screen.getByLabelText("Edit I owe Brenda")).toBeDefined();
         expect(screen.getByLabelText("Delete I owe Brenda")).toBeDefined();
         // A shared-expense row is not editable here.
         expect(screen.queryByLabelText("Edit Groceries")).toBeNull();
     });
 
-    it("opens the delete confirm and calls deleteExpense", async () => {
+    it("opens the delete confirm and calls deleteMovement", async () => {
         deleteMock.mockResolvedValue({ ok: true, data: { id: "e2" } });
-        render(<SettlementJournal journal={journal} categories={cats} />);
+        render(<SettlementJournal journal={journal} />);
         fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
 
         const dialog = await screen.findByRole("dialog");
@@ -204,24 +196,19 @@ describe("SettlementJournal", () => {
         );
     });
 
-    it("loads the debt into an edit form", async () => {
-        getForEditMock.mockResolvedValue({
-            id: "e2",
-            date: june,
-            amount: 300,
-            categoryId: "c1",
-            subcategoryId: null,
-            cardId: null,
-            description: "I owe Brenda",
-            notes: null,
-            isShared: false,
-            yourPercentage: 1,
-            paidBy: "gf",
-        });
-        render(<SettlementJournal journal={journal} categories={cats} />);
+    it("loads the debt into an edit form, prefilled from the row", async () => {
+        render(<SettlementJournal journal={journal} />);
         fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
 
-        expect(await screen.findByText('Edit "I owe Brenda"')).toBeDefined();
-        expect(getForEditMock).toHaveBeenCalledWith("e2");
+        const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).getByText('Edit "I owe Brenda"')).toBeDefined();
+        // Prefilled straight from the journal row — no server round-trip.
+        expect(
+            (
+                within(dialog).getByLabelText(
+                    /Amount you owe/,
+                ) as HTMLInputElement
+            ).value,
+        ).toBe("300");
     });
 });

@@ -5,6 +5,7 @@ import {
     type SettlementInputs,
 } from "@/lib/domain/settlement";
 import { partnerShareTotal } from "@/lib/domain/movement";
+import { PARTNER_NAME } from "@/lib/partner";
 import { settlementRepository } from "@/lib/repositories";
 import type {
     SettlementExpenseRow,
@@ -65,22 +66,19 @@ function inputsFrom(
     expenses: SettlementExpenseRow[],
     movements: SettlementMovementRow[],
 ): SettlementInputs {
-    // Partner's share of the shared expenses YOU paid. `partnerShareTotal` sums
-    // (amount − actualExpenditure); a `paidBy="gf"` debt has actualExpenditure =
-    // amount → contributes 0, but filter it out anyway to keep the intent clear.
-    const yourExpenses = expenses.filter((e) => e.paidBy !== "gf");
-    const partnerShareOfYourExpenses = partnerShareTotal(yourExpenses);
+    // Every expense is the user's own now (ADR-0020) — a thing the partner
+    // fronted is a `gf_fronted` movement, not an expense. `partnerShareTotal`
+    // sums (amount − actualExpenditure), 0 for a solo expense, so summing all is
+    // safe.
+    const partnerShareOfYourExpenses = partnerShareTotal(expenses);
 
     let yourDebtToPartner = 0;
-    for (const e of expenses) {
-        if (e.paidBy === "gf") yourDebtToPartner += e.actualExpenditure;
-    }
-
     let moneyPartnerPaidYou = 0;
     let moneyYouPaidPartner = 0;
     for (const m of movements) {
         if (m.type === "gf_paid") moneyYouPaidPartner += m.amount;
         else if (m.type === "gf_received") moneyPartnerPaidYou += m.amount;
+        else if (m.type === "gf_fronted") yourDebtToPartner += m.amount;
         else if (m.type === "card_payment" && m.fundedByPartner)
             moneyPartnerPaidYou += m.amount;
     }
@@ -151,16 +149,7 @@ function buildJournal(
     const items: SettlementJournalItem[] = [];
 
     for (const e of expenses) {
-        if (e.paidBy === "gf") {
-            items.push({
-                kind: "partner_debt",
-                id: e.id,
-                date: e.date,
-                carriedOver: isCarried(e.date),
-                description: e.description,
-                amount: e.actualExpenditure,
-            });
-        } else if (e.isShared) {
+        if (e.isShared) {
             items.push({
                 kind: "your_expense",
                 id: e.id,
@@ -171,12 +160,23 @@ function buildJournal(
                 partnerShare: e.amount - e.actualExpenditure,
             });
         }
-        // A solo (`paidBy="you"`, not shared) expense doesn't touch the couple
-        // balance, so it never enters the settlement journal.
+        // A solo (not shared) expense doesn't touch the couple balance, so it
+        // never enters the settlement journal.
     }
 
     for (const m of movements) {
-        if (m.type === "gf_paid" || m.type === "gf_received") {
+        if (m.type === "gf_fronted") {
+            // A thing she fronted that you owe her — the "you owe" side of the
+            // balance (ADR-0020). The note is the label; blank falls back below.
+            items.push({
+                kind: "partner_debt",
+                id: m.id,
+                date: m.date,
+                carriedOver: isCarried(m.date),
+                description: m.note?.trim() || `I owe ${PARTNER_NAME}`,
+                amount: m.amount,
+            });
+        } else if (m.type === "gf_paid" || m.type === "gf_received") {
             items.push({
                 kind: "transfer",
                 id: m.id,

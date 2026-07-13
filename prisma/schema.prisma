@@ -120,7 +120,11 @@ model Expense {
   isShared          Boolean @default(false)
   yourPercentage    Float   @default(1.0) // 1.0 = 100% mine; 0.68 = my 68% share
   actualExpenditure Float // stored, not computed: isShared ? amount * yourPercentage : amount
-  paidBy            String  @default("you") // "you" | "gf" — who fronted the money (spec 0003)
+  // DEPRECATED (ADR-0020): always "you". "I owe {partner}" debts moved to
+  // Movement{type:"gf_fronted"}; no expense is fronted by the partner anymore.
+  // Column retained until the CHORE-4 prod migration converts existing rows; a
+  // later chore can drop it. All reads treat expenses as the user's own.
+  paidBy            String  @default("you")
 
   // Forward-compat fields (UI ships in later phases — spec §3)
   isRecurring      Boolean @default(false) // Phase 3
@@ -183,7 +187,10 @@ model Movement {
 
   date   DateTime
   amount Float // always positive; direction comes from `type`
-  type   String // gf_received | gf_paid | card_payment | income | other
+  // gf_received | gf_paid | card_payment | gf_fronted | income | other.
+  // `gf_fronted` (ADR-0020): a thing the partner fronted that you owe her — a
+  // settlement-only debt, no card, never in the cash feed or budget.
+  type   String
 
   cardId String? // set when type = "card_payment"
   card   Card?   @relation(fields: [cardId], references: [id])

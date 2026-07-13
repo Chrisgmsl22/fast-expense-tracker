@@ -1,6 +1,4 @@
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
-import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { PARTNER_NAME } from "@/lib/partner";
 import { getSettlement } from "@/lib/services/settlement/settlement.service";
 import { SettlementActions } from "@/components/settlement/SettlementActions";
@@ -21,31 +19,7 @@ export default async function SettlementPage() {
         return null;
     }
 
-    const [settlement, categories] = await Promise.all([
-        getSettlement(userId),
-        db.category.findMany({
-            orderBy: { name: "asc" },
-            select: {
-                id: true,
-                slug: true,
-                name: true,
-                color: true,
-                isRelevant: true,
-            },
-        }),
-    ]);
-
-    // Default the debt form to an essentials category (relevant, not Savings) —
-    // most of what the partner fronts is essentials (design note, spec 0004).
-    const defaultCategory = categories.find(
-        (c) => c.isRelevant && c.slug !== SAVINGS_SLUG,
-    );
-    const categoryOptions = categories.map(({ id, slug, name, color }) => ({
-        id,
-        slug,
-        name,
-        color,
-    }));
+    const settlement = await getSettlement(userId);
 
     return (
         <main className="mx-auto max-w-3xl p-4 sm:p-6 lg:p-8">
@@ -65,16 +39,11 @@ export default async function SettlementPage() {
                     carriedOver={settlement.carriedOver}
                 />
                 <SettlementActions
-                    categories={categoryOptions}
-                    defaultCategoryId={defaultCategory?.id}
                     direction={settlement.balance.direction}
                     netAmount={settlement.balance.amount}
                 />
                 <SettlementBreakdown balance={settlement.balance} />
-                <SettlementJournal
-                    journal={settlement.journal}
-                    categories={categoryOptions}
-                />
+                <SettlementJournal journal={settlement.journal} />
             </div>
         </main>
     );

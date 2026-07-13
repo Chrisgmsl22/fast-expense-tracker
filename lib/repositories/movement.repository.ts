@@ -14,13 +14,23 @@ export type MovementListItem = {
     note: string | null;
 };
 
-/** Server-owned fields written on create (the owner is passed separately). */
+/** Server-owned fields written on create/update (the owner is passed separately). */
 export type MovementWriteData = {
     date: Date;
     amount: number;
     type: MovementType;
     cardId: string | null;
     fundedByPartner: boolean;
+    note: string | null;
+};
+
+/** One movement's editable fields — what an edit re-asserts / prefills. */
+export type MovementEditable = {
+    id: string;
+    date: Date;
+    amount: number;
+    type: MovementType;
+    cardId: string | null;
     note: string | null;
 };
 
@@ -31,7 +41,15 @@ export type MovementWriteData = {
  */
 export interface MovementRepository {
     getForMonth(userId: string, month: string): Promise<MovementListItem[]>;
+    /** One movement scoped by owner (edit-guard + prefill); null = not the user's. */
+    getById(userId: string, id: string): Promise<MovementEditable | null>;
     insert(userId: string, data: MovementWriteData): Promise<{ id: string }>;
+    /** Update one movement, scoped by owner. Returns rows affected (0 = not the user's). */
+    updateForUser(
+        id: string,
+        userId: string,
+        data: MovementWriteData,
+    ): Promise<number>;
     /** Delete one movement, scoped by owner. Returns rows affected (0 = not the user's). */
     deleteForUser(userId: string, id: string): Promise<number>;
 }
@@ -46,7 +64,14 @@ export class PrismaMovementRepository implements MovementRepository {
     ): Promise<MovementListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
         const rows = await this.db.movement.findMany({
-            where: { userId, date: { gte: start, lt: end } },
+            // `gf_fronted` is a settlement-only debt, not a cash event — it never
+            // belongs in the month feed (ADR-0020). The settlement page reads it
+            // through its own window repository instead.
+            where: {
+                userId,
+                date: { gte: start, lt: end },
+                type: { not: "gf_fronted" },
+            },
             orderBy: { date: "desc" },
             select: {
                 id: true,
@@ -63,11 +88,47 @@ export class PrismaMovementRepository implements MovementRepository {
         return rows.map((r) => ({ ...r, type: r.type as MovementType }));
     }
 
+    async getById(
+        userId: string,
+        id: string,
+    ): Promise<MovementEditable | null> {
+        const row = await this.db.movement.findFirst({
+            where: { id, userId },
+            select: {
+                id: true,
+                date: true,
+                amount: true,
+                type: true,
+                cardId: true,
+                note: true,
+            },
+        });
+        return row ? { ...row, type: row.type as MovementType } : null;
+    }
+
     insert(userId: string, data: MovementWriteData): Promise<{ id: string }> {
         return this.db.movement.create({
             data: { userId, ...data },
             select: { id: true },
         });
+    }
+
+    /**
+     * `updateMany` (not `update`) so the where-clause carries `userId` alongside
+     * `id`: a row that isn't the user's matches nothing, the count stays 0, and
+     * the caller reports not-found instead of mutating another user's row (IDOR
+     * guard) — mirrors the expense repository.
+     */
+    async updateForUser(
+        id: string,
+        userId: string,
+        data: MovementWriteData,
+    ): Promise<number> {
+        const result = await this.db.movement.updateMany({
+            where: { id, userId },
+            data,
+        });
+        return result.count;
     }
 
     /**

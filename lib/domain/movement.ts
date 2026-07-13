@@ -9,11 +9,15 @@
 
 import { SAVINGS_SLUG } from "./dashboard";
 
-/** All `Movement.type` values in the schema. Only two ship UI so far. */
+/** All `Movement.type` values in the schema. Only two ship in the Add menu. */
 export type MovementType =
     | "card_payment"
     | "gf_paid"
     | "gf_received"
+    // A thing the partner fronted that you owe her — settlement-only (ADR-0020).
+    // Never a cash event, so it's excluded from the month feed; the settlement
+    // page is the one place it shows.
+    | "gf_fronted"
     | "income"
     | "other";
 

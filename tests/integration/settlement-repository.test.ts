@@ -26,7 +26,7 @@ describe("PrismaSettlementRepository.getForWindow (integration)", () => {
         ).toEqual({ expenses: [], movements: [] });
     });
 
-    it("returns in-window expenses (with paidBy) and movements (with fundedByPartner)", async () => {
+    it("returns in-window expenses and movements (debt is a gf_fronted movement)", async () => {
         const user = await seedUser();
         const cat = await seedCategory();
 
@@ -39,19 +39,16 @@ describe("PrismaSettlementRepository.getForWindow (integration)", () => {
                 amount: 1000,
                 actualExpenditure: 680,
                 isShared: true,
-                paidBy: "you",
             },
         });
-        await db.expense.create({
+        // The "I owe Brenda" debt is now a movement, not an expense (ADR-0020).
+        await db.movement.create({
             data: {
                 userId: user.id,
-                categoryId: cat.id,
                 date: new Date("2026-06-20T06:00:00Z"),
-                description: "I owe Brenda",
                 amount: 300,
-                actualExpenditure: 300,
-                isShared: false,
-                paidBy: "gf",
+                type: "gf_fronted",
+                note: "I owe Brenda",
             },
         });
         await db.movement.create({
@@ -65,15 +62,15 @@ describe("PrismaSettlementRepository.getForWindow (integration)", () => {
         });
 
         const rows = await repo.getForWindow(user.id, WINDOW_START, WINDOW_END);
-        expect(rows.expenses).toHaveLength(2);
-        const debt = rows.expenses.find((e) => e.paidBy === "gf");
-        expect(debt?.actualExpenditure).toBe(300);
-        expect(rows.movements).toHaveLength(1);
-        expect(rows.movements[0]).toMatchObject({
-            type: "card_payment",
-            amount: 320,
-            fundedByPartner: true,
-        });
+        expect(rows.expenses).toHaveLength(1);
+        expect(rows.movements).toHaveLength(2);
+        const debt = rows.movements.find((m) => m.type === "gf_fronted");
+        expect(debt).toMatchObject({ amount: 300, note: "I owe Brenda" });
+        expect(
+            rows.movements.some(
+                (m) => m.type === "card_payment" && m.fundedByPartner,
+            ),
+        ).toBe(true);
     });
 
     it("excludes rows outside the window and other users' rows", async () => {

@@ -14,19 +14,9 @@ vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
 
 import { SettlementActions } from "@/components/settlement/SettlementActions";
 
-const categories = [
-    { id: "c1", slug: "groceries", name: "Groceries", color: "#65a30d" },
-];
-
 describe("SettlementActions", () => {
     it("renders both actions", () => {
-        render(
-            <SettlementActions
-                categories={categories}
-                direction="settled"
-                netAmount={0}
-            />,
-        );
+        render(<SettlementActions direction="settled" netAmount={0} />);
         expect(
             screen.getByRole("button", { name: "Log a transfer" }),
         ).toBeDefined();
@@ -36,13 +26,7 @@ describe("SettlementActions", () => {
     });
 
     it("quick-settle prefills 'Brenda paid me' + the net amount when she owes you", async () => {
-        render(
-            <SettlementActions
-                categories={categories}
-                direction="she_owes"
-                netAmount={700}
-            />,
-        );
+        render(<SettlementActions direction="she_owes" netAmount={700} />);
         fireEvent.click(screen.getByRole("button", { name: "Log a transfer" }));
 
         const dialog = await screen.findByRole("dialog");
@@ -59,13 +43,7 @@ describe("SettlementActions", () => {
     });
 
     it("quick-settle uses 'I paid Brenda' when you owe her", async () => {
-        render(
-            <SettlementActions
-                categories={categories}
-                direction="you_owe"
-                netAmount={200}
-            />,
-        );
+        render(<SettlementActions direction="you_owe" netAmount={200} />);
         fireEvent.click(screen.getByRole("button", { name: "Log a transfer" }));
 
         const dialog = await screen.findByRole("dialog");
@@ -76,20 +54,14 @@ describe("SettlementActions", () => {
         ).toBeDefined();
     });
 
-    it("opens the debt form with a category picker", async () => {
-        render(
-            <SettlementActions
-                categories={categories}
-                defaultCategoryId="c1"
-                direction="she_owes"
-                netAmount={700}
-            />,
-        );
+    it("opens the debt form (settlement-only — no category picker)", async () => {
+        render(<SettlementActions direction="she_owes" netAmount={700} />);
         fireEvent.click(screen.getByRole("button", { name: /I owe Brenda/ }));
 
         const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).getByLabelText(/Amount you owe/)).toBeDefined();
         expect(
-            within(dialog).getByRole("combobox", { name: "Category" }),
-        ).toBeDefined();
+            within(dialog).queryByRole("combobox", { name: "Category" }),
+        ).toBeNull();
     });
 });

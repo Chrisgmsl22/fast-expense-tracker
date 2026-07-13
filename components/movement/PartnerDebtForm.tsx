@@ -5,12 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-} from "@/components/ui/select";
-import {
     addPartnerDebt,
     type AddPartnerDebtResult,
 } from "@/app/_actions/movement/add-partner-debt";
@@ -18,7 +12,6 @@ import {
     updatePartnerDebt,
     type UpdatePartnerDebtResult,
 } from "@/app/_actions/movement/update-partner-debt";
-import type { CategoryOption } from "@/components/expense/ExpenseForm";
 import { PARTNER_NAME } from "@/lib/partner";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { PartnerDebtInput } from "@/lib/schemas/movement";
@@ -28,14 +21,10 @@ export type PartnerDebtEditable = {
     id: string;
     date: string;
     amount: string;
-    categoryId: string;
     note: string;
 };
 
 type Props = {
-    categories: CategoryOption[];
-    /** Preselected category (the settlement page passes its first essentials category). */
-    defaultCategoryId?: string;
     /** When present, the form edits this debt instead of creating a new one. */
     debt?: PartnerDebtEditable;
     onSuccess?: () => void;
@@ -43,30 +32,20 @@ type Props = {
 };
 
 /**
- * Log an "I owe {partner}" debt — your share of shared things she fronted (spec
- * 0004). It's cost, not cash: it's saved as an `Expense{paidBy:"gf"}` in a
- * category, so it feeds "What I really spent" + its bucket, and the settlement
- * balance reads it as the "you owe her" side. Logged only from the settlement page.
+ * Log an "I owe {partner}" debt — something she fronted that you owe her back
+ * (ADR-0020). It's settlement-only: saved as a `Movement{type:"gf_fronted"}`,
+ * never an expense, so it stays out of your spending, categories, and budget. It
+ * only adds to what you owe her; a transfer settles it. Logged from the
+ * settlement page.
  */
-export function PartnerDebtForm({
-    categories,
-    defaultCategoryId = "",
-    debt,
-    onSuccess,
-    onCancel,
-}: Props) {
+export function PartnerDebtForm({ debt, onSuccess, onCancel }: Props) {
     const [date, setDate] = useState(debt?.date ?? "");
     const [amount, setAmount] = useState(debt?.amount ?? "");
-    const [categoryId, setCategoryId] = useState(
-        debt?.categoryId ?? defaultCategoryId,
-    );
     const [note, setNote] = useState(debt?.note ?? "");
 
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<PartnerDebtInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
-
-    const selectedCategory = categories.find((c) => c.id === categoryId);
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -78,13 +57,11 @@ export function PartnerDebtForm({
                           id: debt.id,
                           date,
                           amount,
-                          categoryId,
                           note: note || undefined,
                       })
                     : await addPartnerDebt({
                           date,
                           amount,
-                          categoryId,
                           note: note || undefined,
                       });
                 if (res.ok) {
@@ -125,7 +102,7 @@ export function PartnerDebtForm({
             }
         >
             <p className="text-sm text-muted-foreground">
-                {`Your share of shared things ${PARTNER_NAME} paid for. It counts as what you spent and adds to what you owe her — settle it with a transfer.`}
+                {`Something ${PARTNER_NAME} fronted that you owe her back. It only adds to what you owe her — settle it with a transfer. It's not part of your spending.`}
             </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -167,52 +144,6 @@ export function PartnerDebtForm({
                     </div>
                     {fieldError("amount")}
                 </div>
-            </div>
-
-            <div>
-                <Label htmlFor="debt-category">Category</Label>
-                <Select
-                    value={categoryId}
-                    onValueChange={(value) => setCategoryId(value ?? "")}
-                >
-                    <SelectTrigger
-                        id="debt-category"
-                        aria-label="Category"
-                        className="mt-1.5 w-full"
-                    >
-                        {selectedCategory ? (
-                            <span className="flex items-center gap-2">
-                                <span
-                                    aria-hidden
-                                    className="size-2.5 shrink-0 rounded-full"
-                                    style={{
-                                        backgroundColor: selectedCategory.color,
-                                    }}
-                                />
-                                {selectedCategory.name}
-                            </span>
-                        ) : (
-                            <span className="text-muted-foreground">
-                                Select a category…
-                            </span>
-                        )}
-                    </SelectTrigger>
-                    <SelectContent>
-                        {categories.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                                <span className="flex items-center gap-2">
-                                    <span
-                                        aria-hidden
-                                        className="size-2.5 shrink-0 rounded-full"
-                                        style={{ backgroundColor: c.color }}
-                                    />
-                                    {c.name}
-                                </span>
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                {fieldError("categoryId")}
             </div>
 
             <div>
