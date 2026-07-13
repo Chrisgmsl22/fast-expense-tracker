@@ -56,8 +56,7 @@ describe("PrismaSettlementRepository.getForWindow (integration)", () => {
                 userId: user.id,
                 date: new Date("2026-07-05T06:00:00Z"),
                 amount: 320,
-                type: "card_payment",
-                fundedByPartner: true,
+                type: "gf_received",
             },
         });
 
@@ -66,11 +65,7 @@ describe("PrismaSettlementRepository.getForWindow (integration)", () => {
         expect(rows.movements).toHaveLength(2);
         const debt = rows.movements.find((m) => m.type === "gf_fronted");
         expect(debt).toMatchObject({ amount: 300, note: "I owe Brenda" });
-        expect(
-            rows.movements.some(
-                (m) => m.type === "card_payment" && m.fundedByPartner,
-            ),
-        ).toBe(true);
+        expect(rows.movements.some((m) => m.type === "gf_received")).toBe(true);
     });
 
     it("excludes rows outside the window and other users' rows", async () => {
@@ -95,7 +90,6 @@ describe("PrismaSettlementRepository.getForWindow (integration)", () => {
                 date: new Date("2026-08-02T06:00:00Z"),
                 amount: 50,
                 type: "gf_paid",
-                fundedByPartner: false,
             },
         });
         await db.expense.create({

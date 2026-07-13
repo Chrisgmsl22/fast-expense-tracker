@@ -29,7 +29,6 @@ describe("addPartnerDebt (unit, injected fake repo)", () => {
         expect(row.type).toBe("gf_fronted");
         expect(row.amount).toBe(500);
         expect(row.cardId).toBeNull();
-        expect(row.fundedByPartner).toBe(false);
         expect(row.note).toBe("groceries she covered");
     });
 

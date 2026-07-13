@@ -6,12 +6,11 @@ import { z } from "zod";
  * CDMX→UTC date conversion; movements never touch the expense/consumption math.
  */
 
-/** Card payment — always targets a card; may be funded by the partner's money. */
+/** Card payment — real money moving to a card, decoupled from any expense. */
 export const cardPaymentInputSchema = z.object({
     date: z.coerce.date(),
     amount: z.coerce.number().positive("Amount must be greater than 0"),
     cardId: z.string().min(1, "Card is required"),
-    fundedByPartner: z.boolean().default(false),
     note: z.string().max(1000).optional(),
 });
 

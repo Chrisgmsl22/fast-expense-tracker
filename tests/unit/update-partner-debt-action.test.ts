@@ -42,7 +42,6 @@ describe("updatePartnerDebt (unit, injected fake repo)", () => {
         expect(id).toBe("mv1");
         expect(data.type).toBe("gf_fronted");
         expect(data.cardId).toBeNull();
-        expect(data.fundedByPartner).toBe(false);
         expect(data.amount).toBe(680);
         expect(data.note).toBe("gas she covered");
     });

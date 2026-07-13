@@ -24,8 +24,9 @@ export type AddCardPaymentResult = ActionResult<
  * Log a card payment for the signed-in user (ADR-0018).
  *
  * A `card_payment` movement — real money moving to a card, decoupled from any
- * expense row. `fundedByPartner` marks that the payment used money the partner
- * sent (draws down the "partner owes you" reminder). Never enters spend totals.
+ * expense row and from the partner (ADR-0020: money she sends is a separate
+ * `gf_received` transfer, never coupled to a card payment). Never enters spend
+ * totals or the settlement balance.
  */
 export async function addCardPayment(
     input: unknown,
@@ -58,7 +59,6 @@ export async function addCardPayment(
             amount: v.amount,
             type: "card_payment",
             cardId: v.cardId,
-            fundedByPartner: v.fundedByPartner,
             note: v.note ?? null,
         });
         return { ok: true, data: { id: created.id } };

@@ -87,7 +87,6 @@ describe("MonthFeed", () => {
                 date: new Date("2026-06-15T06:00:00Z"),
                 amount: 700,
                 type: "gf_received",
-                fundedByPartner: false,
                 card: null,
                 note: null,
             },
@@ -175,7 +174,6 @@ describe("MonthFeed", () => {
                 date: new Date("2026-06-21T06:00:00Z"),
                 amount: 500,
                 type: "card_payment",
-                fundedByPartner: true,
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
             },
@@ -184,7 +182,6 @@ describe("MonthFeed", () => {
                 date: new Date("2026-06-22T06:00:00Z"),
                 amount: 200,
                 type: "gf_paid",
-                fundedByPartner: false,
                 card: null,
                 note: "netted week",
             },
@@ -196,9 +193,8 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
             />,
         );
-        // Card payment line, tagged as funded by the partner.
+        // Card payment line present (no partner-money tag anymore).
         expect(screen.getByText("Card payment")).toBeDefined();
-        expect(screen.getByText(/Brenda's money/)).toBeDefined();
         // Transfer line + footer "Paid to Brenda" figure.
         expect(screen.getByText("Paid Brenda")).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));

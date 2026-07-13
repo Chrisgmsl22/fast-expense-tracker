@@ -13,7 +13,7 @@ export type SettlementInputs = {
     partnerShareOfYourExpenses: number;
     /** Stuff she fronted that you owe her — Σ `gf_fronted` movement amounts (ADR-0020). */
     yourDebtToPartner: number;
-    /** Money she's given you — Σ `gf_received` + Σ `fundedByPartner` card payments. */
+    /** Money she's given you — Σ `gf_received` transfers (ADR-0020). */
     moneyPartnerPaidYou: number;
     /** Money you've sent her — Σ `gf_paid`. */
     moneyYouPaidPartner: number;

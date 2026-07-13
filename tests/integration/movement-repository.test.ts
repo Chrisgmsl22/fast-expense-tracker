@@ -17,7 +17,6 @@ const write = (over: Partial<MovementWriteData> = {}): MovementWriteData => ({
     amount: 100,
     type: "gf_paid",
     cardId: null,
-    fundedByPartner: false,
     note: null,
     ...over,
 });

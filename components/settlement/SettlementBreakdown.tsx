@@ -14,7 +14,7 @@ const LABELS: Record<SettlementBreakdownKey, string> = {
 };
 
 const SUBLABELS: Partial<Record<SettlementBreakdownKey, string>> = {
-    partner_paid: "transfers · her-funded card payments",
+    partner_paid: "transfers she sent you",
 };
 
 const AMOUNT_CLASS: Record<SettlementBreakdownKey, string> = {

@@ -18,7 +18,6 @@ export type SettlementMovementRow = {
     date: Date;
     amount: number;
     type: MovementType;
-    fundedByPartner: boolean;
     /** Free-text label — the "I owe {partner}" debt's description, if any. */
     note: string | null;
 };
@@ -72,7 +71,6 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     date: true,
                     amount: true,
                     type: true,
-                    fundedByPartner: true,
                     note: true,
                 },
             }),

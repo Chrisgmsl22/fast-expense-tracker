@@ -65,8 +65,8 @@ describe("computeCoupleBalance", () => {
         expect(r.direction).toBe("settled");
     });
 
-    it("fundedByPartner + gf_received both draw down what she owes (moneyPartnerPaidYou)", () => {
-        // she owes 1000; she paid 600 (400 cash + 200 card-funded) → 400 left
+    it("money she paid you (moneyPartnerPaidYou) draws down what she owes", () => {
+        // she owes 1000; she sent you 600 (gf_received transfers) → 400 left
         const r = computeCoupleBalance(
             inputs({
                 partnerShareOfYourExpenses: 1000,

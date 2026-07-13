@@ -5,10 +5,10 @@
             "id": "BUG-1",
             "title": "Partner-debt ('I owe') logged as a phantom Cash expense on the dashboard",
             "description": "Logging 'I owe {partner} $X' stores an Expense{paidBy:'gf', cardId:null} — intended as cost (ADR-0018). But Spend-by-card (getCardSpends) groups every expense by cardId, so the debt surfaces as a second 'Cash' row next to real cash spend. Two 'Cash' entries appear on the dashboard: the real one and the phantom.",
-            "proposedSolution": "Exclude paidBy:'gf' from getCardSpends (count only what the user paid); cardId can't discriminate since real cash is also cardId:null. OPEN/deferred: whether partner-debt should also leave category + 'what I really spent' totals — spec this before touching it.",
-            "status": "open",
-            "spec": null,
-            "pr": null,
+            "proposedSolution": "Retired by CHORE-4 (PR #53): 'I owe {partner}' is no longer an Expense{paidBy:'gf'} but a settlement-only Movement{type:'gf_fronted'}, so it never reaches getCardSpends — the phantom Cash row is gone by construction, not by a filter.",
+            "status": "merged",
+            "spec": "docs/specs/0005-cash-basis-money-model.md",
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/53",
             "issue": 47
         },
         {

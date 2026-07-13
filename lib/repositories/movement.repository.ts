@@ -9,7 +9,6 @@ export type MovementListItem = {
     date: Date;
     amount: number;
     type: MovementType;
-    fundedByPartner: boolean;
     card: { name: string; color: string } | null;
     note: string | null;
 };
@@ -20,7 +19,6 @@ export type MovementWriteData = {
     amount: number;
     type: MovementType;
     cardId: string | null;
-    fundedByPartner: boolean;
     note: string | null;
 };
 
@@ -78,7 +76,6 @@ export class PrismaMovementRepository implements MovementRepository {
                 date: true,
                 amount: true,
                 type: true,
-                fundedByPartner: true,
                 note: true,
                 card: { select: { name: true, color: true } },
             },

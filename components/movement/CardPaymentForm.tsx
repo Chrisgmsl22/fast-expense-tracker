@@ -4,7 +4,6 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     Select,
     SelectContent,
@@ -15,7 +14,6 @@ import {
     addCardPayment,
     type AddCardPaymentResult,
 } from "@/app/_actions/movement/add-card-payment";
-import { PARTNER_NAME } from "@/lib/partner";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { CardPaymentInput } from "@/lib/schemas/movement";
 import type { CardOption } from "@/components/expense/ExpenseForm";
@@ -27,16 +25,15 @@ type Props = {
 };
 
 /**
- * Log a card payment (ADR-0018): amount + which card + an optional
- * "paid with {partner}'s money" toggle. A card payment is a `Movement`, decoupled
- * from expenses — it never enters spend totals; the toggle draws down the
- * "{partner} owes you" reminder. Validation + persistence live in the action.
+ * Log a card payment (ADR-0018 / ADR-0020): amount + which card. A card payment
+ * is a `Movement`, decoupled from expenses and from the partner — it never enters
+ * spend totals or the settlement balance. Money the partner sends is a separate
+ * `gf_received` transfer. Validation + persistence live in the action.
  */
 export function CardPaymentForm({ cards, onSuccess, onCancel }: Props) {
     const [date, setDate] = useState("");
     const [amount, setAmount] = useState("");
     const [cardId, setCardId] = useState("");
-    const [fundedByPartner, setFundedByPartner] = useState(false);
     const [note, setNote] = useState("");
 
     const [pending, startTransition] = useTransition();
@@ -54,7 +51,6 @@ export function CardPaymentForm({ cards, onSuccess, onCancel }: Props) {
                     date,
                     amount,
                     cardId,
-                    fundedByPartner,
                     note: note || undefined,
                 });
                 if (res.ok) {
@@ -64,7 +60,6 @@ export function CardPaymentForm({ cards, onSuccess, onCancel }: Props) {
                     setDate("");
                     setAmount("");
                     setCardId("");
-                    setFundedByPartner(false);
                     setNote("");
                     onSuccess?.();
                 } else {
@@ -178,23 +173,6 @@ export function CardPaymentForm({ cards, onSuccess, onCancel }: Props) {
                 </Select>
                 {fieldError("cardId")}
             </div>
-
-            <label className="flex items-start gap-2.5">
-                <Checkbox
-                    checked={fundedByPartner}
-                    onCheckedChange={(checked) => setFundedByPartner(checked)}
-                    aria-label={`Paid with ${PARTNER_NAME}'s money`}
-                    className="mt-0.5 data-checked:border-payment data-checked:bg-payment"
-                />
-                <span className="text-sm">
-                    <span className="block font-medium">
-                        {`Paid with ${PARTNER_NAME}'s money`}
-                    </span>
-                    <span className="block text-muted-foreground">
-                        {`Money ${PARTNER_NAME} sent you, passing straight through to the card.`}
-                    </span>
-                </span>
-            </label>
 
             <div>
                 <Label htmlFor="cp-note">

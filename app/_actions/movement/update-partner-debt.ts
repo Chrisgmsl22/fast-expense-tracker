@@ -81,7 +81,6 @@ export async function updatePartnerDebt(
             amount: v.amount,
             type: "gf_fronted",
             cardId: null,
-            fundedByPartner: false,
             note: v.note?.trim() || null,
         });
         if (count === 0) {

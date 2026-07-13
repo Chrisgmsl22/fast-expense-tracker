@@ -3,14 +3,7 @@
 import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-    ArrowLeftRight,
-    BarChart3,
-    Check,
-    CreditCard,
-    Pencil,
-    Trash2,
-} from "lucide-react";
+import { ArrowLeftRight, BarChart3, Check, Pencil, Trash2 } from "lucide-react";
 
 import { deleteMovement } from "@/app/_actions/movement/delete";
 import {
@@ -114,7 +107,7 @@ export function SettlementJournal({
                 </p>
             )}
 
-            <ul className="mt-3 divide-y">
+            <ul className="mt-3 max-h-[55vh] divide-y overflow-y-auto">
                 {journal.map((item) => (
                     <li key={`${item.kind}-${item.id}`}>
                         {item.id === firstCarriedId && (
@@ -283,19 +276,6 @@ function JournalRow({
                 subtitle={`${formatExpenseDate(item.date)} · un-itemized`}
                 amount={`−${formatMxn(item.amount)}`}
                 amountClass="text-transfer"
-                actions={actions}
-            />
-        );
-    }
-    if (item.kind === "funded_card_payment") {
-        return (
-            <Row
-                icon={<CreditCard className="size-4" />}
-                iconClass="bg-payment-tint text-payment"
-                title={`${PARTNER_NAME}'s money → card payment`}
-                subtitle={`${formatExpenseDate(item.date)} · settles what she owes`}
-                amount={formatMxn(item.amount)}
-                amountClass="text-payment"
                 actions={actions}
             />
         );
