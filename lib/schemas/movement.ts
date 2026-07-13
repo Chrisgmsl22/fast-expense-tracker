@@ -33,15 +33,14 @@ export const transferInputSchema = z.object({
 export type TransferInput = z.infer<typeof transferInputSchema>;
 
 /**
- * An "I owe {partner}" debt — your share of shared things she fronted (spec
- * 0004). Stored as an `Expense{paidBy:"gf"}`, so it needs a category (the debt
- * feeds "What I really spent" + its bucket). The amount is your share; the
- * action sets `actualExpenditure = amount`. Logged only from the settlement page.
+ * An "I owe {partner}" debt — something she fronted that you owe her back
+ * (ADR-0020). Stored as a `Movement{type:"gf_fronted"}`: settlement-only, no
+ * category, no card, never consumption or budget. Just amount / date / optional
+ * note. Logged only from the settlement page.
  */
 export const partnerDebtInputSchema = z.object({
     date: z.coerce.date(),
     amount: z.coerce.number().positive("Amount must be greater than 0"),
-    categoryId: z.string().min(1, "Category is required"),
     note: z.string().max(200).optional(),
 });
 

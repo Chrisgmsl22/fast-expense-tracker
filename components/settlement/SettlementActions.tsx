@@ -11,15 +11,12 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import type { CategoryOption } from "@/components/expense/ExpenseForm";
 import { PartnerDebtForm } from "@/components/movement/PartnerDebtForm";
 import { TransferForm } from "@/components/movement/TransferForm";
 import type { SettlementDirection } from "@/lib/domain/settlement";
 import { PARTNER_NAME } from "@/lib/partner";
 
 type Props = {
-    categories: CategoryOption[];
-    defaultCategoryId?: string;
     /** Drives the transfer form's quick-settle prefill (net amount + side). */
     direction: SettlementDirection;
     /** The net balance magnitude, as a string for the amount input. */
@@ -32,12 +29,7 @@ type Props = {
  * current balance (she owes → she pays you; you owe → you pay her). "+ I owe
  * {partner}" opens the debt form. Both refresh the server-rendered page on success.
  */
-export function SettlementActions({
-    categories,
-    defaultCategoryId,
-    direction,
-    netAmount,
-}: Props) {
+export function SettlementActions({ direction, netAmount }: Props) {
     const [transferOpen, setTransferOpen] = useState(false);
     const [debtOpen, setDebtOpen] = useState(false);
     const router = useRouter();
@@ -85,8 +77,6 @@ export function SettlementActions({
                         <DialogTitle>{`I owe ${PARTNER_NAME}`}</DialogTitle>
                     </DialogHeader>
                     <PartnerDebtForm
-                        categories={categories}
-                        defaultCategoryId={defaultCategoryId}
                         onCancel={() => setDebtOpen(false)}
                         onSuccess={onDebtDone}
                     />

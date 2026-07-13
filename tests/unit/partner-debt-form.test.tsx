@@ -15,28 +15,17 @@ import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
 const addPartnerDebtMock = addPartnerDebt as unknown as Mock;
 const updatePartnerDebtMock = updatePartnerDebt as unknown as Mock;
 
-const categories = [
-    { id: "c1", slug: "groceries", name: "Groceries", color: "#65a30d" },
-    { id: "c2", slug: "health", name: "Health", color: "#14b8a6" },
-];
-
 beforeEach(() => {
     addPartnerDebtMock.mockReset();
-    addPartnerDebtMock.mockResolvedValue({ ok: true, data: { id: "e1" } });
+    addPartnerDebtMock.mockResolvedValue({ ok: true, data: { id: "mv1" } });
     updatePartnerDebtMock.mockReset();
-    updatePartnerDebtMock.mockResolvedValue({ ok: true, data: { id: "e1" } });
+    updatePartnerDebtMock.mockResolvedValue({ ok: true, data: { id: "mv1" } });
 });
 
 describe("PartnerDebtForm", () => {
-    it("submits the debt with the preselected category", async () => {
+    it("submits the debt (amount + date, no category)", async () => {
         const onSuccess = vi.fn();
-        render(
-            <PartnerDebtForm
-                categories={categories}
-                defaultCategoryId="c1"
-                onSuccess={onSuccess}
-            />,
-        );
+        render(<PartnerDebtForm onSuccess={onSuccess} />);
 
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
@@ -47,13 +36,13 @@ describe("PartnerDebtForm", () => {
         fireEvent.click(screen.getByRole("button", { name: "Log debt" }));
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-        expect(addPartnerDebtMock).toHaveBeenCalledWith(
-            expect.objectContaining({
-                amount: "500",
-                categoryId: "c1",
-                date: "2026-07-10",
-            }),
-        );
+        expect(addPartnerDebtMock).toHaveBeenCalledWith({
+            amount: "500",
+            date: "2026-07-10",
+            note: undefined,
+        });
+        // A debt is settlement-only — it never carries a category.
+        expect(screen.queryByRole("combobox", { name: "Category" })).toBeNull();
     });
 
     it("surfaces a validation error without calling onSuccess", async () => {
@@ -61,23 +50,23 @@ describe("PartnerDebtForm", () => {
             ok: false,
             code: "validation",
             message: "Invalid debt",
-            fieldErrors: { categoryId: ["Category is required"] },
+            fieldErrors: { amount: ["Amount must be greater than 0"] },
         });
         const onSuccess = vi.fn();
-        render(
-            <PartnerDebtForm categories={categories} onSuccess={onSuccess} />,
-        );
+        render(<PartnerDebtForm onSuccess={onSuccess} />);
 
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
         });
         fireEvent.change(screen.getByLabelText(/Amount you owe/), {
-            target: { value: "500" },
+            target: { value: "0" },
         });
         fireEvent.click(screen.getByRole("button", { name: "Log debt" }));
 
         await waitFor(() =>
-            expect(screen.getByText("Category is required")).toBeDefined(),
+            expect(
+                screen.getByText("Amount must be greater than 0"),
+            ).toBeDefined(),
         );
         expect(onSuccess).not.toHaveBeenCalled();
     });
@@ -86,12 +75,10 @@ describe("PartnerDebtForm", () => {
         const onSuccess = vi.fn();
         render(
             <PartnerDebtForm
-                categories={categories}
                 debt={{
-                    id: "e9",
+                    id: "mv9",
                     date: "2026-07-10",
                     amount: "680",
-                    categoryId: "c2",
                     note: "gas she covered",
                 }}
                 onSuccess={onSuccess}
@@ -109,14 +96,12 @@ describe("PartnerDebtForm", () => {
         fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-        expect(updatePartnerDebtMock).toHaveBeenCalledWith(
-            expect.objectContaining({
-                id: "e9",
-                amount: "700",
-                categoryId: "c2",
-                note: "gas she covered",
-            }),
-        );
+        expect(updatePartnerDebtMock).toHaveBeenCalledWith({
+            id: "mv9",
+            amount: "700",
+            date: "2026-07-10",
+            note: "gas she covered",
+        });
         expect(addPartnerDebtMock).not.toHaveBeenCalled();
     });
 });

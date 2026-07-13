@@ -47,10 +47,13 @@ describe("expenseInputSchema", () => {
         ).toBe(false);
     });
 
-    it("rejects an invalid paidBy", () => {
+    it("rejects any paidBy other than 'you' (gf is deprecated — ADR-0020)", () => {
         expect(
             expenseInputSchema.safeParse({ ...valid, paidBy: "someone" })
                 .success,
+        ).toBe(false);
+        expect(
+            expenseInputSchema.safeParse({ ...valid, paidBy: "gf" }).success,
         ).toBe(false);
     });
 
@@ -68,7 +71,6 @@ describe("expenseInputSchema", () => {
             ...valid,
             isShared: true,
             yourPercentage: "0.7",
-            paidBy: "gf",
         });
         expect(r.success).toBe(true);
     });

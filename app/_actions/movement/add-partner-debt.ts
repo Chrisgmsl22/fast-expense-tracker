@@ -4,9 +4,8 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
-import { PARTNER_NAME } from "@/lib/partner";
-import { expenseRepository } from "@/lib/repositories";
-import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
+import { movementRepository } from "@/lib/repositories";
+import type { MovementRepository } from "@/lib/repositories/movement.repository";
 import {
     partnerDebtInputSchema,
     type PartnerDebtInput,
@@ -22,15 +21,15 @@ export type AddPartnerDebtResult = ActionResult<
 >;
 
 /**
- * Log an "I owe {partner}" debt — your share of shared things she fronted (spec
- * 0004 §2.2). It's cost, not cash, so it's stored as an `Expense{paidBy:"gf"}`:
- * `actualExpenditure = amount` (all of it is your cost), unshared, in a category
- * so it feeds "What I really spent" + its bucket. The settlement balance reads
- * it as the "you owe her" side; a real `gf_paid` transfer then clears it.
+ * Log an "I owe {partner}" debt — something she fronted that you owe her back
+ * (ADR-0020). It's settlement-only, not consumption, so it's stored as a
+ * `Movement{type:"gf_fronted"}` (no card, no category): it never enters
+ * expenses, categories, the budget, or spend-by-card. The settlement balance
+ * reads it as the "you owe her" side; a real `gf_paid` transfer then clears it.
  */
 export async function addPartnerDebt(
     input: unknown,
-    repo: ExpenseRepository = expenseRepository,
+    repo: MovementRepository = movementRepository,
 ): Promise<AddPartnerDebtResult> {
     const parsed = partnerDebtInputSchema.safeParse(input);
     if (!parsed.success) {
@@ -53,21 +52,14 @@ export async function addPartnerDebt(
     }
 
     const v = parsed.data;
-    const description = v.note?.trim() || `I owe ${PARTNER_NAME}`;
     try {
         const created = await repo.insert(userId, {
-            categoryId: v.categoryId,
-            subcategoryId: null,
-            cardId: null,
             date: cdmxCalendarDateToUtc(v.date),
-            description,
             amount: v.amount,
-            isShared: false,
-            yourPercentage: 1,
-            // The whole amount is your cost — she fronted it, you owe your share.
-            actualExpenditure: v.amount,
-            paidBy: "gf",
-            notes: null,
+            type: "gf_fronted",
+            cardId: null,
+            fundedByPartner: false,
+            note: v.note?.trim() || null,
         });
         return { ok: true, data: { id: created.id } };
     } catch (e) {

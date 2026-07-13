@@ -1,4 +1,5 @@
 import type {
+    MovementEditable,
     MovementListItem,
     MovementRepository,
     MovementWriteData,
@@ -22,6 +23,13 @@ export class FakeMovementRepository implements MovementRepository {
     /** Every row inserted via `insert`, in order. */
     readonly inserts: StoredMovement[] = [];
 
+    /** Every update applied via `updateForUser`, in order. */
+    readonly updates: {
+        id: string;
+        userId: string;
+        data: MovementWriteData;
+    }[] = [];
+
     seed(
         id: string,
         userId: string,
@@ -41,17 +49,38 @@ export class FakeMovementRepository implements MovementRepository {
     }
 
     async getForMonth(userId: string): Promise<MovementListItem[]> {
-        return [...this.rows.values()]
-            .filter((r) => r.userId === userId)
-            .map((r) => ({
-                id: r.id,
-                date: r.date,
-                amount: r.amount,
-                type: r.type,
-                fundedByPartner: r.fundedByPartner,
-                card: null,
-                note: r.note,
-            }));
+        return (
+            [...this.rows.values()]
+                .filter((r) => r.userId === userId)
+                // Mirror the Prisma adapter: `gf_fronted` is settlement-only and
+                // never appears in the month feed (ADR-0020).
+                .filter((r) => r.type !== "gf_fronted")
+                .map((r) => ({
+                    id: r.id,
+                    date: r.date,
+                    amount: r.amount,
+                    type: r.type,
+                    fundedByPartner: r.fundedByPartner,
+                    card: null,
+                    note: r.note,
+                }))
+        );
+    }
+
+    async getById(
+        userId: string,
+        id: string,
+    ): Promise<MovementEditable | null> {
+        const row = this.rows.get(id);
+        if (!row || row.userId !== userId) return null;
+        return {
+            id: row.id,
+            date: row.date,
+            amount: row.amount,
+            type: row.type,
+            cardId: row.cardId,
+            note: row.note,
+        };
     }
 
     async insert(
@@ -63,6 +92,19 @@ export class FakeMovementRepository implements MovementRepository {
         this.rows.set(row.id, row);
         this.inserts.push(row);
         return { id: row.id };
+    }
+
+    async updateForUser(
+        id: string,
+        userId: string,
+        data: MovementWriteData,
+    ): Promise<number> {
+        if (this.failOnWrite) throw new Error("fake: update failed");
+        const row = this.rows.get(id);
+        if (!row || row.userId !== userId) return 0;
+        this.rows.set(id, { ...row, ...data });
+        this.updates.push({ id, userId, data });
+        return 1;
     }
 
     async deleteForUser(userId: string, id: string): Promise<number> {

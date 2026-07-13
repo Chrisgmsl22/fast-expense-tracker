@@ -11,7 +11,7 @@
 export type SettlementInputs = {
     /** Brenda's 32% share of shared expenses YOU paid — Σ(amount − actualExpenditure). */
     partnerShareOfYourExpenses: number;
-    /** Your share of stuff she fronted — Σ actualExpenditure of `paidBy="gf"` expenses. */
+    /** Stuff she fronted that you owe her — Σ `gf_fronted` movement amounts (ADR-0020). */
     yourDebtToPartner: number;
     /** Money she's given you — Σ `gf_received` + Σ `fundedByPartner` card payments. */
     moneyPartnerPaidYou: number;

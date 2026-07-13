@@ -12,9 +12,7 @@ import {
     Trash2,
 } from "lucide-react";
 
-import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
-import { deleteExpense } from "@/app/_actions/expense/delete";
-import type { CategoryOption } from "@/components/expense/ExpenseForm";
+import { deleteMovement } from "@/app/_actions/movement/delete";
 import {
     PartnerDebtForm,
     type PartnerDebtEditable,
@@ -48,10 +46,8 @@ type PartnerDebtRow = Extract<SettlementJournalItem, { kind: "partner_debt" }>;
  */
 export function SettlementJournal({
     journal,
-    categories,
 }: {
     journal: SettlementJournalItem[];
-    categories: CategoryOption[];
 }) {
     const router = useRouter();
     const [editing, setEditing] = useState<PartnerDebtEditable | null>(null);
@@ -61,31 +57,24 @@ export function SettlementJournal({
 
     function openEdit(item: PartnerDebtRow) {
         setActionError(null);
-        startTransition(async () => {
-            const data = await getExpenseForEdit(item.id);
-            if (!data) {
-                setActionError("Couldn't load that debt. Please refresh.");
-                return;
-            }
-            setEditing({
-                id: data.id,
-                date: toDateInputValue(data.date),
-                amount: String(data.amount),
-                categoryId: data.categoryId,
-                // The note is stored as the description; a blank note falls back
-                // to the default label, so surface an empty field for that case.
-                note:
-                    data.description === DEFAULT_DEBT_DESCRIPTION
-                        ? ""
-                        : data.description,
-            });
+        // The debt movement carries everything the form needs, so prefill straight
+        // from the journal row — no server round-trip. A blank note falls back to
+        // the default label, so surface an empty field for that case.
+        setEditing({
+            id: item.id,
+            date: toDateInputValue(item.date),
+            amount: String(item.amount),
+            note:
+                item.description === DEFAULT_DEBT_DESCRIPTION
+                    ? ""
+                    : item.description,
         });
     }
 
     function confirmDelete() {
         if (!deleting) return;
         startTransition(async () => {
-            const res = await deleteExpense({ id: deleting.id });
+            const res = await deleteMovement({ id: deleting.id });
             if (res.ok) {
                 setDeleting(null);
                 router.refresh();
@@ -166,7 +155,6 @@ export function SettlementJournal({
                     {editing && (
                         <PartnerDebtForm
                             key={editing.id}
-                            categories={categories}
                             debt={editing}
                             onCancel={() => setEditing(null)}
                             onSuccess={() => {

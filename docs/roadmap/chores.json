@@ -26,7 +26,7 @@
             "title": "\"I owe {partner}\" becomes settlement-only — not an expense (reverses ADR-0018)",
             "description": "Today 'I owe Brenda' is stored as Expense{paidBy:'gf'}, so it pollutes the expenses list, categories, budget, and spend-by-card (that's BUG-1's phantom Cash). Per the agreed cash-basis model, a thing she fronted is HER spending and only a debt to you — it must live ONLY in settlement, never in your expenses/consumption. Foundation of the money-model rework.",
             "plan": "Reverses ADR-0018 — write the superseding ADR + short spec first (docs/decisions is protected: get sign-off). Then: (1) store the debt as a Movement (new type 'gf_fronted' — she fronted, you owe; amount/date/note, no card) instead of an Expense; addPartnerDebt/updatePartnerDebt write the Movement. (2) settlement.service: yourDebtToPartner = Σ gf_fronted movements (was Σ actualExpenditure of paidBy:'gf'); the journal 'partner_debt' kind reads from movements; re-point CHORE-1's edit/delete onto the movement. (3) Drop paidBy:'gf' from every read — expenses list, dashboard categories/radar/buckets, getCardSpends (phantom gone for free); deprecate Expense.paidBy (all 'you'). (4) Prod data migration: convert existing paidBy:'gf' expenses → gf_fronted movements (real data — Neon MCP survey + reviewed SQL, careful). Retires BUG-1 and the whole 'debt shows as an expense' confusion.",
-            "status": "open",
+            "status": "in-progress",
             "spec": "docs/specs/0005-cash-basis-money-model.md",
             "pr": null,
             "issue": null

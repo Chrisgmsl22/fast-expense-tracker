@@ -4,19 +4,16 @@ const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
 vi.mock("@/auth", () => ({ auth: authMock }));
 
 import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
-import { FakeExpenseRepository } from "@/tests/support/fake-expense-repository";
+import { FakeMovementRepository } from "@/tests/support/fake-movement-repository";
 
-/** Seed a gf-fronted debt owned by u1 that the edit will target. */
+/** Seed a gf_fronted debt movement owned by u1 that the edit will target. */
 function seededRepo() {
-    const repo = new FakeExpenseRepository();
-    repo.seedExpense("e1", "u1", {
-        paidBy: "gf",
+    const repo = new FakeMovementRepository();
+    repo.seed("mv1", "u1", {
+        type: "gf_fronted",
         cardId: null,
-        isShared: false,
-        yourPercentage: 1,
         amount: 300,
-        actualExpenditure: 300,
-        description: "I owe Brenda",
+        note: null,
     });
     return repo;
 }
@@ -31,10 +28,9 @@ describe("updatePartnerDebt (unit, injected fake repo)", () => {
         const repo = seededRepo();
         const res = await updatePartnerDebt(
             {
-                id: "e1",
+                id: "mv1",
                 date: "2026-07-10",
                 amount: "680",
-                categoryId: "cat_transport",
                 note: "gas she covered",
             },
             repo,
@@ -43,31 +39,27 @@ describe("updatePartnerDebt (unit, injected fake repo)", () => {
         expect(res.ok).toBe(true);
         expect(repo.updates).toHaveLength(1);
         const { id, data } = repo.updates[0]!;
-        expect(id).toBe("e1");
-        expect(data.paidBy).toBe("gf");
+        expect(id).toBe("mv1");
+        expect(data.type).toBe("gf_fronted");
         expect(data.cardId).toBeNull();
-        expect(data.subcategoryId).toBeNull();
-        expect(data.isShared).toBe(false);
-        expect(data.yourPercentage).toBe(1);
+        expect(data.fundedByPartner).toBe(false);
         expect(data.amount).toBe(680);
-        expect(data.actualExpenditure).toBe(680); // whole amount is your cost
-        expect(data.categoryId).toBe("cat_transport");
-        expect(data.description).toBe("gas she covered");
+        expect(data.note).toBe("gas she covered");
     });
 
-    it("defaults the description to 'I owe Brenda' when the note is cleared", async () => {
+    it("stores a null note when the note is cleared", async () => {
         const repo = seededRepo();
         await updatePartnerDebt(
-            { id: "e1", date: "2026-07-10", amount: "300", categoryId: "c1" },
+            { id: "mv1", date: "2026-07-10", amount: "300" },
             repo,
         );
-        expect(repo.updates[0]!.data.description).toBe("I owe Brenda");
+        expect(repo.updates[0]!.data.note).toBeNull();
     });
 
     it("rejects an invalid edit with a validation code + no write", async () => {
         const repo = seededRepo();
         const res = await updatePartnerDebt(
-            { id: "e1", date: "2026-07-10", amount: "0", categoryId: "" },
+            { id: "mv1", date: "2026-07-10", amount: "0" },
             repo,
         );
         expect(res.ok).toBe(false);
@@ -77,10 +69,10 @@ describe("updatePartnerDebt (unit, injected fake repo)", () => {
     });
 
     it("returns not_found when the row isn't the user's (IDOR guard)", async () => {
-        const repo = seededRepo(); // e1 belongs to u1
+        const repo = seededRepo(); // mv1 belongs to u1
         authMock.mockResolvedValue({ user: { id: "someone_else" } });
         const res = await updatePartnerDebt(
-            { id: "e1", date: "2026-07-10", amount: "300", categoryId: "c1" },
+            { id: "mv1", date: "2026-07-10", amount: "300" },
             repo,
         );
         expect(res.ok).toBe(false);
@@ -89,11 +81,11 @@ describe("updatePartnerDebt (unit, injected fake repo)", () => {
         expect(repo.updates).toHaveLength(0);
     });
 
-    it("refuses to retype a non-debt expense (only paidBy:'gf' rows are editable)", async () => {
-        const repo = new FakeExpenseRepository();
-        repo.seedExpense("e1", "u1", { paidBy: "you", cardId: "card_1" });
+    it("refuses to retype a non-debt movement (only gf_fronted is editable)", async () => {
+        const repo = new FakeMovementRepository();
+        repo.seed("mv1", "u1", { type: "card_payment", cardId: "card_1" });
         const res = await updatePartnerDebt(
-            { id: "e1", date: "2026-07-10", amount: "300", categoryId: "c1" },
+            { id: "mv1", date: "2026-07-10", amount: "300" },
             repo,
         );
         expect(res.ok).toBe(false);
@@ -106,7 +98,7 @@ describe("updatePartnerDebt (unit, injected fake repo)", () => {
         authMock.mockResolvedValue(null);
         const repo = seededRepo();
         const res = await updatePartnerDebt(
-            { id: "e1", date: "2026-07-10", amount: "300", categoryId: "c1" },
+            { id: "mv1", date: "2026-07-10", amount: "300" },
             repo,
         );
         expect(res.ok).toBe(false);
@@ -119,7 +111,7 @@ describe("updatePartnerDebt (unit, injected fake repo)", () => {
         const repo = seededRepo();
         repo.failOnWrite = true;
         const res = await updatePartnerDebt(
-            { id: "e1", date: "2026-07-10", amount: "300", categoryId: "c1" },
+            { id: "mv1", date: "2026-07-10", amount: "300" },
             repo,
         );
         expect(res.ok).toBe(false);

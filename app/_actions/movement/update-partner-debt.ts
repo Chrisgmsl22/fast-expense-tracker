@@ -6,9 +6,8 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
-import { PARTNER_NAME } from "@/lib/partner";
-import { expenseRepository } from "@/lib/repositories";
-import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
+import { movementRepository } from "@/lib/repositories";
+import type { MovementRepository } from "@/lib/repositories/movement.repository";
 import {
     partnerDebtInputSchema,
     type PartnerDebtInput,
@@ -31,16 +30,15 @@ export type UpdatePartnerDebtResult = ActionResult<
 >;
 
 /**
- * Edit an existing "I owe {partner}" debt (spec 0004). Mirrors `addPartnerDebt`
+ * Edit an existing "I owe {partner}" debt (ADR-0020). Mirrors `addPartnerDebt`
  * but the write is **scoped by `userId`** (IDOR guard — a mismatch matches zero
- * rows → `not_found`). Re-asserts the debt invariants on every save so an edit
- * can only change the amount/date/category/note, never turn the row into a
- * normal card expense: `paidBy:"gf"`, no card, unshared, full-share, and
- * `actualExpenditure = amount`.
+ * rows → `not_found`). Only a `gf_fronted` movement is editable here: refusing
+ * any other type stops a card payment or transfer being retyped into a debt via
+ * this action (the action is the enforcement seam, not just the UI).
  */
 export async function updatePartnerDebt(
     input: unknown,
-    repo: ExpenseRepository = expenseRepository,
+    repo: MovementRepository = movementRepository,
 ): Promise<UpdatePartnerDebtResult> {
     const parsed = partnerDebtInputSchema.safeParse(input);
     if (!parsed.success) {
@@ -68,13 +66,9 @@ export async function updatePartnerDebt(
     }
 
     const v = parsed.data;
-    const description = v.note?.trim() || `I owe ${PARTNER_NAME}`;
     try {
-        // Only "I owe {partner}" debts are editable here. Refuse to retype any
-        // other owned expense (e.g. a normal card expense) into a gf-debt — the
-        // action is the enforcement seam, not just the UI that hides the button.
         const existing = await repo.getById(userId, id);
-        if (!existing || existing.paidBy !== "gf") {
+        if (!existing || existing.type !== "gf_fronted") {
             return {
                 ok: false,
                 code: "not_found",
@@ -83,18 +77,12 @@ export async function updatePartnerDebt(
         }
 
         const count = await repo.updateForUser(id, userId, {
-            categoryId: v.categoryId,
-            subcategoryId: null,
-            cardId: null,
             date: cdmxCalendarDateToUtc(v.date),
-            description,
             amount: v.amount,
-            isShared: false,
-            yourPercentage: 1,
-            // The whole amount is your cost — she fronted it, you owe your share.
-            actualExpenditure: v.amount,
-            paidBy: "gf",
-            notes: null,
+            type: "gf_fronted",
+            cardId: null,
+            fundedByPartner: false,
+            note: v.note?.trim() || null,
         });
         if (count === 0) {
             return {

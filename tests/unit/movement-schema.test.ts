@@ -93,33 +93,30 @@ describe("transferInputSchema", () => {
 });
 
 describe("partnerDebtInputSchema", () => {
-    it("accepts a valid debt with a category and optional note", () => {
+    it("accepts a valid debt (amount + date) with an optional note", () => {
         const res = partnerDebtInputSchema.safeParse({
             date: "2026-06-20",
             amount: "500",
-            categoryId: "cat_1",
             note: "groceries she covered",
         });
         expect(res.success).toBe(true);
         if (!res.success) return;
         expect(res.data.amount).toBe(500);
-        expect(res.data.categoryId).toBe("cat_1");
+        expect(res.data.note).toBe("groceries she covered");
     });
 
-    it("requires a category", () => {
+    it("accepts a debt with no note (settlement-only, no category)", () => {
         const res = partnerDebtInputSchema.safeParse({
             date: "2026-06-20",
             amount: "500",
-            categoryId: "",
         });
-        expect(res.success).toBe(false);
+        expect(res.success).toBe(true);
     });
 
     it("rejects a non-positive amount", () => {
         const res = partnerDebtInputSchema.safeParse({
             date: "2026-06-20",
             amount: "0",
-            categoryId: "cat_1",
         });
         expect(res.success).toBe(false);
     });
