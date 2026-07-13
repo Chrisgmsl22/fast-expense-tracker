@@ -267,8 +267,11 @@ describe("ExpenseListInteractive", () => {
             ).toBeDefined(),
         );
         expect(refreshMock).not.toHaveBeenCalled();
+        // The confirm button label flips "Deleting…" → "Delete" when the pending
+        // transition settles; await it so the assertion doesn't race that
+        // re-render (the flake that intermittently failed CI under load).
         expect(
-            within(dialog).getByRole("button", { name: "Delete" }),
+            await within(dialog).findByRole("button", { name: "Delete" }),
         ).toBeDefined();
     });
 
