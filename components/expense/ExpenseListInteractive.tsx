@@ -289,10 +289,11 @@ export function ExpenseListInteractive({
                 </p>
             )}
 
-            {/* Totals — desktop footer (dark bar, mirrors the mobile pinned bar) */}
+            {/* Totals — desktop footer: sticks to the viewport bottom while the
+                list scrolls, so it stays visible before you reach the end. */}
             <div
                 data-testid="totals-desktop"
-                className="mt-4 hidden items-center justify-end gap-6 rounded-lg bg-foreground px-5 py-3 text-sm text-background sm:flex"
+                className="sticky bottom-4 z-30 mt-4 hidden items-center justify-end gap-6 rounded-lg bg-foreground px-5 py-3 text-sm text-background shadow-lg sm:flex"
             >
                 <span className="text-background/70">
                     Charged{" "}

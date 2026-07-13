@@ -107,7 +107,7 @@ export function SettlementJournal({
                 </p>
             )}
 
-            <ul className="mt-3 divide-y">
+            <ul className="mt-3 max-h-[55vh] divide-y overflow-y-auto">
                 {journal.map((item) => (
                     <li key={`${item.kind}-${item.id}`}>
                         {item.id === firstCarriedId && (
