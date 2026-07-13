@@ -25,6 +25,42 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-07-13 — The `implementer` "writes nothing" was a malformed `tools:` grant + agent-def caching
+
+- **Symptom:** Every `implementer` subagent run did nothing — `tool_uses: 0`, tool
+  calls emitted as _text_, results hallucinated, `git status` clean. The read-only
+  `reviewer` worked fine in the same session. (First seen 2026-06-26; recurred.)
+- **Root cause (two compounding):**
+    1. `.claude/agents/implementer.md` had `tools: All tools` in frontmatter. That
+       field is a **comma-separated list of real tool names**, so `All tools` parsed
+       as tools literally named `All` and `tools` (the registry showed
+       `Tools: All, tools`) → the agent was granted **zero real tools**. With no
+       Edit/Write/Bash it degraded to narrating tool calls as prose. The working
+       `reviewer` has a valid list (`Read, Grep, Glob, Bash`) — that contrast is the tell.
+    2. **Agent definitions are cached at session start and do NOT hot-reload.**
+       Editing `implementer.md` mid-session had no effect — every run used the
+       session-start (broken) version, so the fix "didn't work" and sent me chasing
+       a phantom second cause. Proven two ways in-session: a newly-added agent file
+       was "not found", and a distinctive token injected into the reviewer's prompt
+       never appeared in its output.
+- **Fix:** removed the `tools:` line entirely (omitting it grants ALL tools — the
+  intent). Documented the invariant in the agent file. **Verification requires a new
+  session** (cache) — after restart, dispatch the implementer on a small real task
+  and confirm `git diff` shows the expected files. Fallback if omit still misbehaves:
+  an explicit list mirroring the reviewer (`Read, Edit, Write, Bash, Glob, Grep`, plus
+  Playwright MCP for UI smoke tests).
+- **Lessons for next time:**
+    1. Validate an agent's `tools:` frontmatter against the **real tool-name list** —
+       a plausible prose value (`All tools`) silently disables the agent. Omit the
+       field for all-tools; never write a phrase.
+    2. **You cannot test an agent-config change in the session you make it** — defs
+       are cached at start. Edit → restart → verify. Budgeting for a restart is part
+       of any agent-config fix.
+    3. A working read-only sibling agent (`reviewer`) is the fastest control for
+       isolating a _grant_ problem from a _prompt_ problem.
+
+---
+
 ### 2026-06-28 — Two agents shared one checkout → branch switched out from under a slice, trees intermingled
 
 - **Symptom:** Mid-way through shipping slice 1.7, `git add -A` swept up 7 unrelated files (an architecture-DI refactor) alongside the 1.7 work, and the branch had silently changed from `feat/1.7-observability` to `refactor/architecture-di`. A blind commit would have mixed two agents' work and wrongly deleted `expense.service.ts` on the 1.7 PR.

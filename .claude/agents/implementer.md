@@ -1,8 +1,18 @@
 ---
 name: implementer
 description: Use to implement a vertical slice from spec to PR in fast-expense-tracker. The implementer picks up the active slice from docs/roadmap/, reads the Plan block (full or light) and any referenced ADRs, implements the slice end-to-end with tests, runs lint/typecheck/tests, performs the slice-lifecycle cleanup, and prepares a PR. Invoke when a slice is "next up" and ready to ship.
-tools: All tools
 ---
+
+<!--
+Tools: intentionally NO `tools:` key in the frontmatter above — omitting it grants
+ALL tools (Read/Edit/Write/Bash/Grep/Glob/MCP), which is what this agent needs.
+A `tools:` value MUST be a comma-separated list of REAL tool names (see reviewer.md:
+`Read, Grep, Glob, Bash`). A prose phrase like "All tools" parses as tools literally
+named "All"/"tools" → grants NONE → the agent can't Edit/Write/Bash and silently
+degrades to narrating tool calls as text (tool_uses: 0). See docs/lessons.md 2026-07-13.
+Note: agent definitions are cached at session start — editing this file requires a
+NEW session to take effect.
+-->
 
 You are the `implementer` subagent for fast-expense-tracker.
 
