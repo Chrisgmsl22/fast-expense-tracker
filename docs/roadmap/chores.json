@@ -40,6 +40,36 @@
             "spec": "docs/specs/0005-cash-basis-money-model.md",
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "CHORE-6.a",
+            "title": "Settings foundation — configurable partner behind an opt-in sharing toggle",
+            "description": "Make the app usable by anyone: partner identity becomes per-user data behind an opt-in 'I share expenses' toggle, instead of the hardcoded PARTNER_NAME='Brenda' constant (used in 13 files). Foundation of CHORE-6 (spec 0006) — the Settings page and the shared/solo split both build on this flag. The Settings page is currently an empty stub.",
+            "plan": "Kicks off with an ADR (partner-as-Settings + opt-in sharing mode; docs/decisions is protected — sign-off first). (1) Schema: Settings +sharesExpenses(Boolean, default false) +partnerName(String?); defaultSharePercentage already exists. (2) A getSettings(userId) accessor as the single source; remove the PARTNER_NAME constant and thread the name down as data (no component imports a partner constant). (3) Settings page shell (server component reads Settings) + the Expense-split-rule block: an 'I share expenses' toggle that reveals + requires partner name and your share % when on. Persist via an IDOR-safe server action (name required when toggle on). (4) Owner-account migration: sharesExpenses=true, partnerName='Brenda' (no record rewrites). Tests: action validation, accessor, form both modes. Out of scope: the gating sweep (6.b), card management (6.c), and the deferred mock sections (Account/Preferences/Privacy/Export/theme).",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-6.b",
+            "title": "Solo mode — hide the shared-expense + settlement machinery when sharing is off",
+            "description": "With the sharesExpenses flag in place (CHORE-6.a), a solo user must see a plain expense tracker: no split control, no settlement, no partner anywhere. Today that machinery is always on. Depends on CHORE-6.a.",
+            "plan": "When sharesExpenses=false, hide/guard: (1) the shared/% control in components/expense/ExpenseForm.tsx (expenses save isShared:false, yourPercentage:1, actualExpenditure=amount); (2) the Settlement route + its link in components/nav/AppNav.tsx, plus a server-side route guard (solo user hitting the URL → redirect); (3) the partner items in the Add menu (components/expense/AddExpenseButton.tsx → gf_received/gf_paid/gf_fronted actions); (4) partner widgets on the dashboard. Shared mode renders exactly as today. Tests: each surface in both modes; route guard. Depends on CHORE-6.a.",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-6.c",
+            "title": "Card management — add / rename / recolor / archive cards in Settings",
+            "description": "Cards are seeded only; there is no way to add, rename, recolor, or remove one from the app. Add card management to the Settings page. Delete is unsafe (cards are referenced by Expense[] and Movement[]), so removal is soft-archive. Depends on CHORE-6.a (the Settings page shell).",
+            "plan": "(1) Schema: Card +archivedAt(DateTime?). (2) Card CRUD server actions (IDOR-safe, userId-scoped): add (name, type credit|debit|cash, color from the fixed palette — a picker over the known palette, not free hex), rename, recolor, archive (sets archivedAt). (3) Settings Cards section renders the list with those controls. (4) Reads that populate pickers (add-expense, card-payment) filter archivedAt:null; reads that render history do NOT filter, so archived cards stay attached to old records and totals never break. A never-used card may be hard-deleted (implementer's call). Tests: CRUD actions, archive hides-from-picker-but-keeps-history, ownership scoping. Depends on CHORE-6.a.",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
         }
     ]
 }
