@@ -214,16 +214,9 @@ function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
 /** One money-movement line — colour-tagged by type (ADR-0018, spec 0004). */
 function MovementRow({ movement: m }: { movement: MovementListItem }) {
     const { label, amountClass, rowTint } = movementDisplay(m.type);
-    // Card payments carry a card + funded tag; transfers carry their note.
+    // Card payments carry their card name; transfers carry their note.
     const subline =
-        m.type === "card_payment"
-            ? [
-                  m.card?.name,
-                  m.fundedByPartner ? `${PARTNER_NAME}'s money` : null,
-              ]
-                  .filter(Boolean)
-                  .join(" · ")
-            : (m.note ?? "");
+        m.type === "card_payment" ? (m.card?.name ?? "") : (m.note ?? "");
 
     return (
         <li

@@ -19,20 +19,20 @@ const OPERATIONS: { when: string; then: string }[] = [
         then: `Log it as a normal expense — ${PARTNER_NAME}'s 32% is added to what she owes you automatically.`,
     },
     {
-        when: `${PARTNER_NAME} pays you back and you put it straight on a card`,
-        then: `Add → Card payment, with "Paid with ${PARTNER_NAME}'s money" on. One entry — settles the balance and records the card payment.`,
+        when: `${PARTNER_NAME} sends you money / pays you back`,
+        then: `Add → "${PARTNER_NAME} paid me" (or "Log a transfer" here). It lowers what she owes you — whatever you do with the money after is separate.`,
     },
     {
         when: `${PARTNER_NAME} paid for shared things`,
-        then: `"+ I owe ${PARTNER_NAME}" here — your share. It lowers what she owes you.`,
+        then: `"+ I owe ${PARTNER_NAME}" here — your share. It raises what you owe her.`,
     },
     {
         when: `You end up owing ${PARTNER_NAME}, so you pay her`,
         then: `"Log a transfer" here (it'll say "I paid ${PARTNER_NAME}").`,
     },
     {
-        when: `${PARTNER_NAME} pays you back and you keep the cash`,
-        then: `Add → "${PARTNER_NAME} paid me". (Don't also log a funded card payment — that double-counts.)`,
+        when: "You pay off a credit card",
+        then: `Add → Card payment. It just records the payment — it doesn't touch the settlement balance.`,
     },
 ];
 

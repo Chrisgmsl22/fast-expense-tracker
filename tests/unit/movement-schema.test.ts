@@ -12,23 +12,10 @@ describe("cardPaymentInputSchema", () => {
             date: "2026-06-20",
             amount: "1000",
             cardId: "card_1",
-            fundedByPartner: true,
         });
         expect(res.success).toBe(true);
         if (!res.success) return;
         expect(res.data.amount).toBe(1000);
-        expect(res.data.fundedByPartner).toBe(true);
-    });
-
-    it("defaults fundedByPartner to false when omitted", () => {
-        const res = cardPaymentInputSchema.safeParse({
-            date: "2026-06-20",
-            amount: "500",
-            cardId: "card_1",
-        });
-        expect(res.success).toBe(true);
-        if (!res.success) return;
-        expect(res.data.fundedByPartner).toBe(false);
     });
 
     it("requires a card", () => {

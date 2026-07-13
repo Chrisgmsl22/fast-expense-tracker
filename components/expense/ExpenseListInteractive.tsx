@@ -639,14 +639,7 @@ function MovementRow({
         rowTint,
     } = movementDisplay(m.type);
     const subline =
-        m.type === "card_payment"
-            ? [
-                  m.card?.name,
-                  m.fundedByPartner ? `${PARTNER_NAME}'s money` : null,
-              ]
-                  .filter(Boolean)
-                  .join(" · ")
-            : (m.note ?? "");
+        m.type === "card_payment" ? (m.card?.name ?? "") : (m.note ?? "");
 
     return (
         <li

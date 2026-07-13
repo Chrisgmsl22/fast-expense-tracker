@@ -58,7 +58,6 @@ export async function addTransfer(
             amount: v.amount,
             type: v.direction,
             cardId: null,
-            fundedByPartner: false,
             note: v.note ?? null,
         });
         return { ok: true, data: { id: created.id } };

@@ -17,7 +17,7 @@ describe("SettlementHelp", () => {
             within(dialog).getByText(/You pay for something shared/),
         ).toBeDefined();
         expect(
-            within(dialog).getByText(/Paid with Brenda's money/),
+            within(dialog).getByText(/You pay off a credit card/),
         ).toBeDefined();
     });
 });

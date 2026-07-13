@@ -39,13 +39,6 @@ export type SettlementJournalItem = {
           direction: "gf_paid" | "gf_received";
           amount: number;
       }
-    | {
-          // A card payment made with Brenda's money — one entry for the two
-          // real-world movements (she paid you → you paid the card). Money in
-          // from her, so it draws the balance down like a `gf_received`.
-          kind: "funded_card_payment";
-          amount: number;
-      }
 );
 
 export type Settlement = {
@@ -79,8 +72,6 @@ function inputsFrom(
         if (m.type === "gf_paid") moneyYouPaidPartner += m.amount;
         else if (m.type === "gf_received") moneyPartnerPaidYou += m.amount;
         else if (m.type === "gf_fronted") yourDebtToPartner += m.amount;
-        else if (m.type === "card_payment" && m.fundedByPartner)
-            moneyPartnerPaidYou += m.amount;
     }
 
     return {
@@ -185,18 +176,8 @@ function buildJournal(
                 direction: m.type,
                 amount: m.amount,
             });
-        } else if (m.type === "card_payment" && m.fundedByPartner) {
-            // Her money that went to a card — show it so the balance draw-down
-            // is visible, not just a number in the breakdown.
-            items.push({
-                kind: "funded_card_payment",
-                id: m.id,
-                date: m.date,
-                carriedOver: isCarried(m.date),
-                amount: m.amount,
-            });
         }
-        // A plain (own-money) card payment doesn't touch the balance → not shown.
+        // A card payment doesn't touch the couple balance → never in the journal.
     }
 
     return items.sort((a, b) => b.date.getTime() - a.date.getTime());

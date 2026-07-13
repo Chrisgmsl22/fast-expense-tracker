@@ -42,7 +42,6 @@ export class FakeMovementRepository implements MovementRepository {
             amount: 100,
             type: "card_payment",
             cardId: null,
-            fundedByPartner: false,
             note: null,
             ...over,
         });
@@ -60,7 +59,6 @@ export class FakeMovementRepository implements MovementRepository {
                     date: r.date,
                     amount: r.amount,
                     type: r.type,
-                    fundedByPartner: r.fundedByPartner,
                     card: null,
                     note: r.note,
                 }))

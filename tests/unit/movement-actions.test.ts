@@ -22,7 +22,6 @@ describe("movement actions (unit, injected fake repo)", () => {
                     date: "2026-06-20",
                     amount: "1000",
                     cardId: "card_1",
-                    fundedByPartner: true,
                 },
                 repo,
             );
@@ -33,7 +32,6 @@ describe("movement actions (unit, injected fake repo)", () => {
             expect(row.userId).toBe("u1");
             expect(row.type).toBe("card_payment");
             expect(row.cardId).toBe("card_1");
-            expect(row.fundedByPartner).toBe(true);
             expect(row.amount).toBe(1000);
         });
 
@@ -95,7 +93,6 @@ describe("movement actions (unit, injected fake repo)", () => {
             const row = repo.inserts[0]!;
             expect(row.type).toBe("gf_paid");
             expect(row.cardId).toBeNull();
-            expect(row.fundedByPartner).toBe(false);
             expect(row.amount).toBe(300);
         });
 

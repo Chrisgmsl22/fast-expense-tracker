@@ -84,7 +84,6 @@ const movements: MovementListItem[] = [
         date: new Date("2026-05-20T06:00:00Z"),
         amount: 800,
         type: "card_payment",
-        fundedByPartner: true,
         card: { name: "Amex", color: "#ca8a04" },
         note: null,
     },
@@ -93,7 +92,6 @@ const movements: MovementListItem[] = [
         date: new Date("2026-05-18T06:00:00Z"),
         amount: 300,
         type: "gf_paid",
-        fundedByPartner: false,
         card: null,
         note: "netted",
     },
@@ -282,9 +280,8 @@ describe("ExpenseListInteractive", () => {
                 {...{ ...props, movements }}
             />,
         );
-        // Card payment tagged as the partner's money; transfer line present.
+        // Card payment + transfer lines present (no partner-money tag anymore).
         expect(screen.getByText("Card payment")).toBeDefined();
-        expect(screen.getByText(/Brenda's money/)).toBeDefined();
         expect(screen.getByText("Paid Brenda")).toBeDefined();
         // Footer shows the transfer under "Paid to Brenda".
         const totals = screen.getByTestId("totals-desktop");

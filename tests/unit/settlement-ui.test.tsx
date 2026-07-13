@@ -140,10 +140,11 @@ describe("SettlementJournal", () => {
             partnerShare: 320,
         },
         {
-            kind: "funded_card_payment",
+            kind: "transfer",
             id: "m1",
             date: july,
             carriedOver: false,
+            direction: "gf_received",
             amount: 320,
         },
         {
@@ -165,9 +166,9 @@ describe("SettlementJournal", () => {
         expect(screen.getByText("Earlier months")).toBeDefined();
     });
 
-    it("renders a funded card payment row", () => {
+    it("renders a transfer row", () => {
         render(<SettlementJournal journal={journal} />);
-        expect(screen.getByText(/Brenda's money → card payment/)).toBeDefined();
+        expect(screen.getByText(/Transfer — Brenda paid you/)).toBeDefined();
     });
 
     it("shows an empty state when there is nothing to settle", () => {
