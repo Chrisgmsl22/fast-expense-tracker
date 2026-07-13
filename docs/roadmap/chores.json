@@ -16,9 +16,9 @@
             "title": "Decouple partner money from cards — drop the funded-card-payment flag",
             "description": "The 'card payment funded by Brenda' flag encodes two real events as one and spawned the edge cases you hit (money-in vs money-in-then-card vs kept-as-cash). Per the model, money from Brenda is just money in; a card payment is just a card payment; they're never coupled.",
             "plan": "Foundation (depends on CHORE-4). (1) Remove Movement.fundedByPartner + the 'funded_card_payment' settlement journal kind. (2) Money-from-Brenda = a plain gf_received transfer-in; a card payment = a plain card_payment — two independent events. (3) settlement.service: moneyPartnerPaidYou = Σ gf_received only (drop the fundedByPartner term from the sum). (4) Simplify the settlement help / info-icon copy now that the edge cases are gone. (5) Prod data migration: existing fundedByPartner card payments → split into a gf_received (money in) + a plain card_payment (reviewed SQL on real data).",
-            "status": "in-progress",
+            "status": "shipped",
             "spec": "docs/specs/0005-cash-basis-money-model.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/54",
             "issue": null
         },
         {
