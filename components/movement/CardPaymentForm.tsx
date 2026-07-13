@@ -14,12 +14,27 @@ import {
     addCardPayment,
     type AddCardPaymentResult,
 } from "@/app/_actions/movement/add-card-payment";
+import {
+    updateCardPayment,
+    type UpdateCardPaymentResult,
+} from "@/app/_actions/movement/update-card-payment";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { CardPaymentInput } from "@/lib/schemas/movement";
 import type { CardOption } from "@/components/expense/ExpenseForm";
 
+/** Prefilled fields when the form edits an existing payment (strings for inputs). */
+export type CardPaymentEditable = {
+    id: string;
+    date: string;
+    amount: string;
+    cardId: string;
+    note: string;
+};
+
 type Props = {
     cards: CardOption[];
+    /** When present, the form edits this card payment instead of creating one. */
+    payment?: CardPaymentEditable;
     onSuccess?: () => void;
     onCancel?: () => void;
 };
@@ -30,11 +45,16 @@ type Props = {
  * spend totals or the settlement balance. Money the partner sends is a separate
  * `gf_received` transfer. Validation + persistence live in the action.
  */
-export function CardPaymentForm({ cards, onSuccess, onCancel }: Props) {
-    const [date, setDate] = useState("");
-    const [amount, setAmount] = useState("");
-    const [cardId, setCardId] = useState("");
-    const [note, setNote] = useState("");
+export function CardPaymentForm({
+    cards,
+    payment,
+    onSuccess,
+    onCancel,
+}: Props) {
+    const [date, setDate] = useState(payment?.date ?? "");
+    const [amount, setAmount] = useState(payment?.amount ?? "");
+    const [cardId, setCardId] = useState(payment?.cardId ?? "");
+    const [note, setNote] = useState(payment?.note ?? "");
 
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<CardPaymentInput>>({});
@@ -47,12 +67,21 @@ export function CardPaymentForm({ cards, onSuccess, onCancel }: Props) {
         const form = e.currentTarget;
         startTransition(async () => {
             try {
-                const res: AddCardPaymentResult = await addCardPayment({
-                    date,
-                    amount,
-                    cardId,
-                    note: note || undefined,
-                });
+                const res: AddCardPaymentResult | UpdateCardPaymentResult =
+                    payment
+                        ? await updateCardPayment({
+                              id: payment.id,
+                              date,
+                              amount,
+                              cardId,
+                              note: note || undefined,
+                          })
+                        : await addCardPayment({
+                              date,
+                              amount,
+                              cardId,
+                              note: note || undefined,
+                          });
                 if (res.ok) {
                     setErrors({});
                     setFormError(null);
@@ -85,7 +114,7 @@ export function CardPaymentForm({ cards, onSuccess, onCancel }: Props) {
         <form
             onSubmit={handleSubmit}
             className="flex flex-col gap-4"
-            aria-label="Add card payment"
+            aria-label={payment ? "Edit card payment" : "Add card payment"}
         >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
@@ -209,7 +238,11 @@ export function CardPaymentForm({ cards, onSuccess, onCancel }: Props) {
                     </Button>
                 ) : null}
                 <Button type="submit" disabled={pending}>
-                    {pending ? "Saving…" : "Add card payment"}
+                    {pending
+                        ? "Saving…"
+                        : payment
+                          ? "Save changes"
+                          : "Add card payment"}
                 </Button>
             </div>
         </form>

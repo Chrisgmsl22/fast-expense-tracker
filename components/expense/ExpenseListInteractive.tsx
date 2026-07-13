@@ -24,14 +24,21 @@ import {
     type SubcategoryOption,
     type CardOption,
 } from "./ExpenseForm";
+import { CardPaymentForm } from "@/components/movement/CardPaymentForm";
+import { TransferForm } from "@/components/movement/TransferForm";
 import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
 import { deleteExpense } from "@/app/_actions/expense/delete";
 import { deleteMovement } from "@/app/_actions/movement/delete";
+import { getMovementForEdit } from "@/app/_actions/movement/get-for-edit";
+import { toDateInputValue } from "@/lib/dates";
 import type {
     ExpenseListItem,
     ExpenseEditable,
 } from "@/lib/repositories/expense.repository";
-import type { MovementListItem } from "@/lib/repositories/movement.repository";
+import type {
+    MovementListItem,
+    MovementEditable,
+} from "@/lib/repositories/movement.repository";
 
 type Props = {
     expenses: ExpenseListItem[];
@@ -75,7 +82,7 @@ const ROW_GRID = "sm:grid-cols-[5.5rem_minmax(0,1fr)_10rem_9rem_8rem_4rem]";
  * (ADR-0018). Expenses keep category filter chips, pills, and
  * edit/delete. Money movements (card payments blue, "I paid {partner}" amber)
  * interleave by date in the unfiltered ("All") view — they have no category, so a
- * category filter hides them — and can be deleted (no edit; delete + re-add).
+ * category filter hides them — and are editable + deletable (CHORE-5).
  */
 export function ExpenseListInteractive({
     expenses,
@@ -87,6 +94,8 @@ export function ExpenseListInteractive({
 }: Props) {
     const router = useRouter();
     const [editing, setEditing] = useState<ExpenseEditable | null>(null);
+    const [editingMovement, setEditingMovement] =
+        useState<MovementEditable | null>(null);
     const [deleting, setDeleting] = useState<ExpenseListItem | null>(null);
     const [deletingMovement, setDeletingMovement] =
         useState<MovementListItem | null>(null);
@@ -168,6 +177,18 @@ export function ExpenseListInteractive({
             } else {
                 setActionError(res.message);
             }
+        });
+    }
+
+    function openEditMovement(id: string) {
+        setActionError(null);
+        startTransition(async () => {
+            const data = await getMovementForEdit(id);
+            if (!data) {
+                setActionError("Couldn't load that movement. Please refresh.");
+                return;
+            }
+            setEditingMovement(data);
         });
     }
 
@@ -261,8 +282,12 @@ export function ExpenseListInteractive({
                 <span className="sr-only">Actions</span>
             </div>
 
-            {/* Rows — expenses + (in the All view) money movements, by date */}
-            <ul className="divide-y">
+            {/* Rows — expenses + (in the All view) money movements, by date.
+                Bounded scroller (see frontend.md "Long lists"): the list scrolls
+                inside a fixed max-height instead of growing the whole page, so the
+                totals bar and chips stay in reach. overflow-x-hidden guards the
+                min-content trap (overflow-y:auto forces overflow-x to auto). */}
+            <ul className="max-h-[70vh] divide-y overflow-x-hidden overflow-y-auto">
                 {feed.map((item) =>
                     item.kind === "expense" ? (
                         <ExpenseRow
@@ -277,6 +302,7 @@ export function ExpenseListInteractive({
                             key={`m-${item.movement.id}`}
                             movement={item.movement}
                             pending={pending}
+                            onEdit={() => openEditMovement(item.movement.id)}
                             onDelete={() => setDeletingMovement(item.movement)}
                         />
                     ),
@@ -289,8 +315,9 @@ export function ExpenseListInteractive({
                 </p>
             )}
 
-            {/* Totals — desktop footer: sticks to the viewport bottom while the
-                list scrolls, so it stays visible before you reach the end. */}
+            {/* Totals — desktop footer sits just below the bounded list and
+                stays put; sticky bottom-4 keeps it visible if the page itself
+                still scrolls on shorter viewports. */}
             <div
                 data-testid="totals-desktop"
                 className="sticky bottom-4 z-30 mt-4 hidden items-center justify-end gap-6 rounded-lg bg-foreground px-5 py-3 text-sm text-background shadow-lg sm:flex"
@@ -409,6 +436,66 @@ export function ExpenseListInteractive({
             </Dialog>
 
             <Dialog
+                open={editingMovement !== null}
+                onOpenChange={(open) => {
+                    if (!open) setEditingMovement(null);
+                }}
+            >
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {editingMovement?.type === "card_payment"
+                                ? "Edit card payment"
+                                : "Edit transfer"}
+                        </DialogTitle>
+                    </DialogHeader>
+                    {editingMovement &&
+                        (editingMovement.type === "card_payment" ? (
+                            <CardPaymentForm
+                                key={editingMovement.id}
+                                cards={cards}
+                                payment={{
+                                    id: editingMovement.id,
+                                    date: toDateInputValue(
+                                        editingMovement.date,
+                                    ),
+                                    amount: String(editingMovement.amount),
+                                    cardId: editingMovement.cardId ?? "",
+                                    note: editingMovement.note ?? "",
+                                }}
+                                onCancel={() => setEditingMovement(null)}
+                                onSuccess={() => {
+                                    setEditingMovement(null);
+                                    router.refresh();
+                                }}
+                            />
+                        ) : (
+                            <TransferForm
+                                key={editingMovement.id}
+                                direction={
+                                    editingMovement.type === "gf_received"
+                                        ? "gf_received"
+                                        : "gf_paid"
+                                }
+                                transfer={{
+                                    id: editingMovement.id,
+                                    date: toDateInputValue(
+                                        editingMovement.date,
+                                    ),
+                                    amount: String(editingMovement.amount),
+                                    note: editingMovement.note ?? "",
+                                }}
+                                onCancel={() => setEditingMovement(null)}
+                                onSuccess={() => {
+                                    setEditingMovement(null);
+                                    router.refresh();
+                                }}
+                            />
+                        ))}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
                 open={deleting !== null}
                 onOpenChange={(open) => {
                     if (!open) {
@@ -466,7 +553,7 @@ export function ExpenseListInteractive({
                         <DialogTitle>Delete this movement?</DialogTitle>
                         <DialogDescription>
                             {deletingMovement
-                                ? `${movementLabel(deletingMovement)} of ${formatMxn(deletingMovement.amount)} will be permanently removed.`
+                                ? `${movementDisplay(deletingMovement.type).label} of ${formatMxn(deletingMovement.amount)} will be permanently removed.`
                                 : ""}
                         </DialogDescription>
                     </DialogHeader>
@@ -497,10 +584,6 @@ export function ExpenseListInteractive({
             </Dialog>
         </>
     );
-}
-
-function movementLabel(m: MovementListItem): string {
-    return movementDisplay(m.type).label;
 }
 
 /** One expense row — one responsive tree (mobile card, desktop grid). */
@@ -624,14 +707,16 @@ function ExpenseRow({
     );
 }
 
-/** One money-movement row — colour-tagged, delete-only (ADR-0018). */
+/** One money-movement row — colour-tagged, editable + deletable (CHORE-5). */
 function MovementRow({
     movement: m,
     pending,
+    onEdit,
     onDelete,
 }: {
     movement: MovementListItem;
     pending: boolean;
+    onEdit: () => void;
     onDelete: () => void;
 }) {
     const {
@@ -658,12 +743,22 @@ function MovementRow({
             >
                 {formatMxn(m.amount)}
             </span>
-            <span className="flex w-10 justify-end opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+            <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                 <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Delete ${label.toLowerCase()}`}
+                    aria-label={`Edit ${label}`}
+                    onClick={onEdit}
+                    disabled={pending}
+                >
+                    <Pencil />
+                </Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Delete ${label}`}
                     onClick={onDelete}
                     disabled={pending}
                 >

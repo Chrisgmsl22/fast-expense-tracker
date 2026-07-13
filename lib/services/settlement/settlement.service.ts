@@ -38,6 +38,8 @@ export type SettlementJournalItem = {
           kind: "transfer";
           direction: "gf_paid" | "gf_received";
           amount: number;
+          /** Free-text label ("what it was toward"); null when none. */
+          note: string | null;
       }
 );
 
@@ -175,6 +177,7 @@ function buildJournal(
                 carriedOver: isCarried(m.date),
                 direction: m.type,
                 amount: m.amount,
+                note: m.note?.trim() || null,
             });
         }
         // A card payment doesn't touch the couple balance → never in the journal.

@@ -36,9 +36,14 @@
     --danger-tint: #fef2f2;
     --payment: #2563eb;
     --payment-tint: #eff6ff;
-    /* Money you sent the partner ("I paid {partner}") — a transfer out (ADR-0018). */
-    --transfer: #b45309;
-    --transfer-tint: #fffbeb;
+    /* Money you sent the partner ("I paid {partner}") — a transfer out (ADR-0018).
+       Gold, so it reads distinctly from the orange debt token below. */
+    --transfer: #ca8a04;
+    --transfer-tint: #fefce8;
+    /* A thing the partner fronted that you owe her back ("I owe {partner}") —
+       a settlement-only debt (ADR-0020). Orange, distinct from the gold transfer. */
+    --debt: #ea580c;
+    --debt-tint: #fff7ed;
     /* "What I really spent" pill — the budget number, deliberately not green. */
     --spent: #4f46e5;
     --spent-tint: #eef2ff;
@@ -78,6 +83,8 @@
     --color-payment-tint: var(--payment-tint);
     --color-transfer: var(--transfer);
     --color-transfer-tint: var(--transfer-tint);
+    --color-debt: var(--debt);
+    --color-debt-tint: var(--debt-tint);
     --color-spent: var(--spent);
     --color-spent-tint: var(--spent-tint);
     --color-bucket-essentials: var(--bucket-essentials);

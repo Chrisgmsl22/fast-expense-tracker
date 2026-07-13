@@ -15,7 +15,7 @@ const CASH_COLOR = "#16a34a";
  * Right-rail month feed — a read-only list of the month's expenses **and money
  * movements** (card payments, transfers to the partner), newest first, with a
  * pinned footer. Movements are colour-tagged (card payment blue, "I paid
- * {partner}" amber) and never enter the spend total. The footer splits money into
+ * {partner}" gold) and never enter the spend total. The footer splits money into
  * Charged / What I really spent (consumption) / Set aside (savings) / Paid to
  * {partner} / Total. Who-owes-whom lives in the settlement slice, not here
  * (ADR-0018).
@@ -40,7 +40,7 @@ export function MonthFeed({
     const count = feed.length;
 
     return (
-        <div className="flex flex-col rounded-lg border lg:sticky lg:top-6 lg:max-h-[calc(100vh-9rem)]">
+        <div className="flex max-h-[70vh] flex-col rounded-lg border lg:sticky lg:top-6 lg:max-h-[calc(100vh-9rem)]">
             <div className="border-b p-4">
                 <p className="text-sm font-medium">
                     All activity · {monthLabel}

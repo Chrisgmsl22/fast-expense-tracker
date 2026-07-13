@@ -36,9 +36,9 @@
             "title": "Edit + delete money movements (card payments + transfers), with optional note",
             "description": "Card payments and settlement transfers are delete-only (delete + re-add), and transfers can't be edited at all — surfaced when a $350 payment was logged as $320 with no way to fix it. Make both editable + deletable, mirroring CHORE-1's settlement-debt edit, and give transfers an optional note. Least urgent of the rework.",
             "plan": "New updateMovement action (IDOR-safe, scoped by userId). Edit mode on the movement forms (card-payment form + transfer form); optional free-text note on transfers ('what it was toward' — a label, never a budget category). Reuse CHORE-1's dialog pattern in the settlement journal + the expenses feed. Depends on CHORE-3 (final transfer shape after the funded-card flag is gone).",
-            "status": "open",
+            "status": "shipped",
             "spec": "docs/specs/0005-cash-basis-money-model.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/56",
             "issue": null
         },
         {
@@ -66,6 +66,16 @@
             "title": "Card management — add / rename / recolor / archive cards in Settings",
             "description": "Cards are seeded only; there is no way to add, rename, recolor, or remove one from the app. Add card management to the Settings page. Delete is unsafe (cards are referenced by Expense[] and Movement[]), so removal is soft-archive. Depends on CHORE-6.a (the Settings page shell).",
             "plan": "(1) Schema: Card +archivedAt(DateTime?). (2) Card CRUD server actions (IDOR-safe, userId-scoped): add (name, type credit|debit|cash, color from the fixed palette — a picker over the known palette, not free hex), rename, recolor, archive (sets archivedAt). (3) Settings Cards section renders the list with those controls. (4) Reads that populate pickers (add-expense, card-payment) filter archivedAt:null; reads that render history do NOT filter, so archived cards stay attached to old records and totals never break. A never-used card may be hard-deleted (implementer's call). Tests: CRUD actions, archive hides-from-picker-but-keeps-history, ownership scoping. Depends on CHORE-6.a.",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-7",
+            "title": "Toggle dashboard categories between my-share and total spend",
+            "description": "The dashboard Categories cards + 'Where the money went' show only your share (actualExpenditure, the 68% slice). Add a control to flip them to the full charged amount (ignoring the split) — e.g. Transport shows $2,000 total, not just your part. Aligns with CHORE-6 / spec 0006: in solo mode a user's share IS the total, so the category displays must already support a total basis; build this so the two dovetail (a shared user toggles; a solo user is effectively always 'total').",
+            "plan": "Scope TBD at build time (decide with the user): a segmented 'My share ⇄ Total' control on the dashboard. Thread both sums per category from the dashboard data (amount-sum + actualExpenditure-sum) so the toggle is a pure client re-scope of the Categories cards + 'Where the money went'. Open question: whether the 50/25/25 buckets + 'Income vs spent' also re-scope (they encode budget-against-your-income, so likely stay my-share). Coordinate with CHORE-6.a/.b (sharesExpenses flag) so solo mode reuses the total-basis path rather than duplicating it.",
             "status": "open",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,

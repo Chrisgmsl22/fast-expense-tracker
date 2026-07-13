@@ -66,6 +66,21 @@ repo. Reference implementations: `components/expense/ExpenseForm.tsx`,
 - Variants via **`cva` + `cn()`** (see `components/ui/button.tsx`). Don't
   copy-paste a class string ≥2× — extract a variant or shared constant/component.
 
+## Long lists & scroll containers
+
+- **A long list is a bounded scroller, never an unbounded page scroll.** Any list
+  that can grow past the viewport (feeds, journals, tables) lives in a fixed
+  `max-h-[Nvh]` container with `overflow-y-auto`, so surrounding chrome (headers,
+  filters, totals) stays in reach instead of scrolling off. New pages with a long
+  list follow this by default. Precedents: `MonthFeed`, `SettlementJournal`,
+  `ExpenseListInteractive`.
+- **Always pair `overflow-y-auto` with `overflow-x-hidden`.** A scroll container
+  computes `overflow-x` to `auto` too, so a min-content-wide child silently adds a
+  horizontal scrollbar. Clip it explicitly. Truncate row text (`min-w-0` +
+  `truncate`) rather than letting it force width.
+- Keep column headers / totals **outside** the scrolling element so they stay
+  pinned; on desktop watch scrollbar-gutter shift if columns must align.
+
 ## Accessibility (baseline, not optional)
 
 - Every input has a `<label htmlFor>`. Icon-only buttons get `aria-label`. Use a
