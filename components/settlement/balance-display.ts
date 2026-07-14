@@ -9,9 +9,9 @@ import type { SettlementDirection } from "@/lib/domain/settlement";
  * (spec 0006) so labels read with the user's own partner.
  */
 export type BalanceTone = {
-    /** Uppercase hero label, e.g. "BRENDA OWES YOU". */
+    /** Uppercase hero label, e.g. "PARTNER OWES YOU". */
     label: string;
-    /** Sentence-case chip label, e.g. "Brenda owes you". */
+    /** Sentence-case chip label, e.g. "Partner owes you". */
     chipLabel: string;
     dotClass: string;
     textClass: string;

@@ -20,7 +20,6 @@ type Props = {
     direction: SettlementDirection;
     /** The net balance magnitude, as a string for the amount input. */
     netAmount: number;
-    /** Partner display name, threaded as data (spec 0006). */
     partnerName: string;
 };
 

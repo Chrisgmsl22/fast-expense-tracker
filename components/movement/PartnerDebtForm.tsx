@@ -26,7 +26,6 @@ export type PartnerDebtEditable = {
 type Props = {
     /** When present, the form edits this debt instead of creating a new one. */
     debt?: PartnerDebtEditable;
-    /** Partner display name, threaded as data (spec 0006). */
     partnerName: string;
     onSuccess?: () => void;
     onCancel?: () => void;

@@ -26,7 +26,7 @@ export type SettlementJournalItem = {
           description: string;
           /** What you paid (gross). */
           gross: number;
-          /** Brenda's 32% — the `+` this row adds to the balance. */
+          /** Your partner's 32% — the `+` this row adds to the balance. */
           partnerShare: number;
       }
     | {
@@ -146,7 +146,7 @@ export async function getSettlement(
     };
 }
 
-/** Shared expenses you paid + "I owe Brenda" debts + transfers, newest first. */
+/** Shared expenses you paid + partner-fronted debts + transfers, newest first. */
 function buildJournal(
     expenses: SettlementExpenseRow[],
     movements: SettlementMovementRow[],

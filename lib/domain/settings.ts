@@ -67,18 +67,22 @@ export type SplitRulePersist = {
  * partner name is preserved regardless of mode (only nulled when genuinely
  * blank), so toggling Shared→Solo is lossless: disabling sharing hides the
  * partner surfaces (CHORE-6.b) but never deletes the name, and re-enabling
- * restores it (ADR-0021). The share percentage is stored as a fraction. Assumes
- * the input already passed `splitRuleInputSchema` (which requires a name when
- * `sharesExpenses` is on).
+ * restores it (ADR-0021). The share percentage is stored as a fraction; when
+ * absent (a Solo save omits it) it falls back to `DEFAULT_SHARE_PERCENTAGE`.
+ * Assumes the input already passed `splitRuleInputSchema` (which requires a name
+ * and share when `sharesExpenses` is on).
  */
 export function resolveSplitRule(input: {
     sharesExpenses: boolean;
     partnerName?: string;
-    sharePercentage: number;
+    sharePercentage?: number;
 }): SplitRulePersist {
     return {
         sharesExpenses: input.sharesExpenses,
         partnerName: input.partnerName?.trim() || null,
-        defaultSharePercentage: input.sharePercentage / 100,
+        defaultSharePercentage:
+            input.sharePercentage === undefined
+                ? DEFAULT_SHARE_PERCENTAGE
+                : input.sharePercentage / 100,
     };
 }

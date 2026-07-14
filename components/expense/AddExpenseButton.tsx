@@ -31,7 +31,6 @@ type Props = {
     subcategories: SubcategoryOption[];
     cards: CardOption[];
     defaultSharePercentage: number;
-    /** Partner display name, threaded as data (spec 0006). */
     partnerName: string;
 };
 

@@ -32,7 +32,6 @@ type Props = {
     initialAmount?: string;
     /** When present, the form edits this transfer instead of creating one. */
     transfer?: TransferEditable;
-    /** Partner display name, threaded as data (spec 0006). */
     partnerName: string;
     onSuccess?: () => void;
     onCancel?: () => void;

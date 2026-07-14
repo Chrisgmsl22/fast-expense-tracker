@@ -9,7 +9,7 @@
 
 /** The four figures the balance nets, all positive, all in the 2-month window. */
 export type SettlementInputs = {
-    /** Brenda's 32% share of shared expenses YOU paid — Σ(amount − actualExpenditure). */
+    /** Your partner's 32% share of shared expenses YOU paid — Σ(amount − actualExpenditure). */
     partnerShareOfYourExpenses: number;
     /** Stuff she fronted that you owe her — Σ `gf_fronted` movement amounts (ADR-0020). */
     yourDebtToPartner: number;

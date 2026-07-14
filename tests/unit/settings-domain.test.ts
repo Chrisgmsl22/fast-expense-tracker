@@ -74,6 +74,19 @@ describe("resolveSplitRule", () => {
         });
     });
 
+    it("falls back to the default share when the percentage is undefined", () => {
+        expect(
+            resolveSplitRule({
+                sharesExpenses: false,
+                partnerName: "",
+            }),
+        ).toEqual({
+            sharesExpenses: false,
+            partnerName: null,
+            defaultSharePercentage: DEFAULT_SHARE_PERCENTAGE,
+        });
+    });
+
     it("stores null when the name is genuinely blank", () => {
         expect(
             resolveSplitRule({

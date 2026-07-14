@@ -31,7 +31,6 @@ export function MonthFeed({
     monthLabel: string;
     /** Running couple balance — rendered as a chip in the footer (spec 0004). */
     settlement?: CoupleBalance;
-    /** Partner display name, threaded as data (spec 0006). */
     partnerName: string;
 }) {
     const feed = buildFeed(expenses, movements);

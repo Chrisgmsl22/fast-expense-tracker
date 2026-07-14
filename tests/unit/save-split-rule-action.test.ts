@@ -61,6 +61,32 @@ describe("saveSplitRule (unit, injected fake repo)", () => {
         expect(repo.saves[0]?.data.partnerName).toBeNull();
     });
 
+    it("saves Solo mode with a blank share percentage (no phantom field error)", async () => {
+        const repo = new FakeSettingsRepository();
+        const res = await saveSplitRule(
+            { sharesExpenses: false, partnerName: "", sharePercentage: "" },
+            repo,
+        );
+
+        expect(res.ok).toBe(true);
+        expect(repo.saves).toHaveLength(1);
+        expect(repo.saves[0]?.data.sharesExpenses).toBe(false);
+    });
+
+    it("requires a share percentage when sharing is on (validation, no write)", async () => {
+        const repo = new FakeSettingsRepository();
+        const res = await saveSplitRule(
+            { sharesExpenses: true, partnerName: "Alex", sharePercentage: "" },
+            repo,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.sharePercentage).toBeDefined();
+        expect(repo.saves).toHaveLength(0);
+    });
+
     it("rejects an out-of-range share percentage", async () => {
         const repo = new FakeSettingsRepository();
         const res = await saveSplitRule(
