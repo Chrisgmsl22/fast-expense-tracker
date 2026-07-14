@@ -59,6 +59,37 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
     3. A working read-only sibling agent (`reviewer`) is the fastest control for
        isolating a _grant_ problem from a _prompt_ problem.
 
+#### Follow-up (next session) — grant fix confirmed, but a SECOND, intermittent cause: fenced `bash` exemplars
+
+- **Grant fix works.** In a fresh session the `implementer` used tools for real — a
+  2-call probe and a full 47-file slice at **221 `tool_uses`**. The malformed-grant
+  cause is closed.
+- **Residual reproduced.** The _same_ agent, same session, then no-opped (`tool_uses: 0`,
+  fake ` ```bash ` blocks emitted as text, a hallucinated "the file tools are broken"
+  story) on **2 of 4** runs — both were "apply the review fixes" tasks. Intermittent, not
+  deterministic.
+- **Root cause of the residual:** the prompt **modelled tool use as literal ` ```bash `
+  fenced blocks** (Step 0 had two; Process/Report had more). Fenced runnable blocks
+  probabilistically train the model to _reproduce them as text_ instead of _invoking_ the
+  tool. The failing runs literally echoed the Step-0 ` ```bash ` block back.
+- **What it is NOT:** raw length. My first guess was "heavy ~140-line prompt." Wrong — the
+  `reviewer` is _also_ long (~193 lines) and never degrades. The real differentiators:
+  far fewer fenced-command exemplars + an **explicit narrow `tools:` grant**.
+- **Controlled proof:** a `general-purpose` agent (lighter prompt, no fenced-command
+  mimicry) completed the _exact_ task the `implementer` no-opped on twice — pinning the
+  fault on the implementer's prompt, not the session or the tools.
+- **Fix (this PR):** rewrote `implementer.md` — (a) explicit `tools: Read, Edit, Write,
+Bash, Glob, Grep` mirroring the reliable `reviewer` (browser/PR work is the main
+  thread's, so no MCP); (b) an upfront "**call tools, don't narrate them**" rule with an
+  "if a result is empty, re-run — don't fabricate" instruction; (c) converted every
+  ` ```bash ` exemplar to prose. Requires a new session to verify (defs cache).
+- **Lessons:** (1) don't put runnable ` ```bash ` blocks in an agent's system prompt —
+  describe commands inline/in prose so the model _calls_ rather than _prints_. (2) When an
+  agent degrades intermittently, a **different agent type on the identical task** is the
+  cleanest way to separate prompt-fault from session/tool-fault. (3) Until a reworked
+  agent is verified in a fresh session, route work through a proven-reliable agent
+  (`general-purpose`) — don't keep re-dispatching the flaky one.
+
 ---
 
 ### 2026-06-28 — Two agents shared one checkout → branch switched out from under a slice, trees intermingled
