@@ -28,6 +28,10 @@ describe("AppNav", () => {
         expect(screen.getByRole("link", { name: "Expenses" })).toBeDefined();
         expect(screen.getByRole("link", { name: "Income" })).toBeDefined();
         expect(screen.getByRole("link", { name: "Settlement" })).toBeDefined();
+        // Settings is a separate gear entry point, not part of the primary
+        // LINKS row. Drawer is closed, so only the desktop gear is present.
+        const settings = screen.getByRole("link", { name: "Settings" });
+        expect(settings.getAttribute("href")).toBe("/settings");
     });
 
     it("opens a drawer with the links, email, and sign-out", async () => {
@@ -39,6 +43,8 @@ describe("AppNav", () => {
             within(drawer).getByRole("link", { name: "Dashboard" }),
         ).toBeDefined();
         expect(within(drawer).getByText("test@email.com")).toBeDefined();
+        const settings = within(drawer).getByRole("link", { name: "Settings" });
+        expect(settings.getAttribute("href")).toBe("/settings");
         expect(
             within(drawer).getByRole("button", { name: /sign out/i }),
         ).toBeDefined();
