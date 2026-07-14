@@ -136,23 +136,19 @@ export function AppNav({ email }: { email?: string }) {
                         {email}
                     </span>
                 )}
-                <Button
-                    variant="ghost"
-                    size="icon-sm"
+                <Link
+                    href="/settings"
                     aria-label="Settings"
                     aria-current={isActive("/settings") ? "page" : undefined}
                     className={cn(
-                        "transition-colors",
+                        "inline-flex size-8 items-center justify-center rounded-md transition-colors",
                         isActive("/settings")
                             ? "text-foreground"
                             : "text-muted-foreground hover:text-foreground",
                     )}
-                    render={
-                        <Link href="/settings">
-                            <Settings />
-                        </Link>
-                    }
-                />
+                >
+                    <Settings className="size-4" />
+                </Link>
                 <LogoutButton />
             </div>
         </div>
