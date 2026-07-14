@@ -7,10 +7,12 @@ import { render, screen } from "@testing-library/react";
 vi.mock("@/app/_actions/auth/login", () => ({ loginAction: vi.fn() }));
 
 import LoginPage from "@/app/(auth)/login/page";
-import SettingsPage from "@/app/(dashboard)/settings/page";
 
 // The expenses page became a data-backed async server component in 1.4 (capture),
 // so it's no longer a renderable "shell" — its UI is covered by expense-form.test.tsx.
+// The settings page did the same in CHORE-6.a (it reads Settings + threads the
+// partner name), so it's dropped here too — its UI is covered by
+// split-rule-form.test.tsx.
 describe("Phase 1 page shells", () => {
     it("Should render the login shell heading", () => {
         render(<LoginPage />);
@@ -38,12 +40,5 @@ describe("Phase 1 page shells", () => {
         // It must not be a real link/button that could navigate or submit.
         expect(screen.queryByRole("button", { name: /sign up/i })).toBeNull();
         expect(screen.queryByRole("link", { name: /sign up/i })).toBeNull();
-    });
-
-    it("Should render the settings shell heading", () => {
-        render(<SettingsPage />);
-        expect(
-            screen.getByRole("heading", { name: /settings/i }),
-        ).toBeDefined();
     });
 });

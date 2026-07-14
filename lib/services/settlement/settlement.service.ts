@@ -5,13 +5,14 @@ import {
     type SettlementInputs,
 } from "@/lib/domain/settlement";
 import { partnerShareTotal } from "@/lib/domain/movement";
-import { PARTNER_NAME } from "@/lib/partner";
-import { settlementRepository } from "@/lib/repositories";
+import { resolvePartnerName } from "@/lib/domain/settings";
+import { settlementRepository, settingsRepository } from "@/lib/repositories";
 import type {
     SettlementExpenseRow,
     SettlementMovementRow,
     SettlementRepository,
 } from "@/lib/repositories/settlement.repository";
+import type { SettingsRepository } from "@/lib/repositories/settings.repository";
 
 /** One balance-affecting row for the settlement journal. */
 export type SettlementJournalItem = {
@@ -53,6 +54,7 @@ export type Settlement = {
 /** Injectable seams so the assembly is unit-testable without a DB or the clock. */
 export type SettlementDeps = {
     settlementRepo: SettlementRepository;
+    settingsRepo: SettingsRepository;
     now: Date;
 };
 
@@ -96,7 +98,13 @@ export async function getSettlement(
     deps: Partial<SettlementDeps> = {},
 ): Promise<Settlement> {
     const settlementRepo = deps.settlementRepo ?? settlementRepository;
+    const settingsRepo = deps.settingsRepo ?? settingsRepository;
     const now = deps.now ?? new Date();
+
+    // The partner name is per-user data (spec 0006), used only for the default
+    // debt-row label when a debt has no note.
+    const { partnerName } = await settingsRepo.getSettings(userId);
+    const resolvedPartnerName = resolvePartnerName(partnerName);
 
     const currentMonth = getCurrentMonthCdmx(now);
     const previousMonth = shiftMonth(currentMonth, -1);
@@ -121,7 +129,12 @@ export async function getSettlement(
     );
     const hasPrevRows = prevExpenses.length > 0 || prevMovements.length > 0;
 
-    const journal = buildJournal(expenses, movements, isCarried);
+    const journal = buildJournal(
+        expenses,
+        movements,
+        isCarried,
+        resolvedPartnerName,
+    );
 
     return {
         balance,
@@ -138,6 +151,7 @@ function buildJournal(
     expenses: SettlementExpenseRow[],
     movements: SettlementMovementRow[],
     isCarried: (date: Date) => boolean,
+    partnerName: string,
 ): SettlementJournalItem[] {
     const items: SettlementJournalItem[] = [];
 
@@ -166,7 +180,7 @@ function buildJournal(
                 id: m.id,
                 date: m.date,
                 carriedOver: isCarried(m.date),
-                description: m.note?.trim() || `I owe ${PARTNER_NAME}`,
+                description: m.note?.trim() || `I owe ${partnerName}`,
                 amount: m.amount,
             });
         } else if (m.type === "gf_paid" || m.type === "gf_received") {

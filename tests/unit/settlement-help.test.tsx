@@ -5,7 +5,7 @@ import { SettlementHelp } from "@/components/settlement/SettlementHelp";
 
 describe("SettlementHelp", () => {
     it("opens a cheat-sheet of common operations", async () => {
-        render(<SettlementHelp />);
+        render(<SettlementHelp partnerName="Brenda" />);
         fireEvent.click(
             screen.getByRole("button", { name: /how to use settlement/i }),
         );

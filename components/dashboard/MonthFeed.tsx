@@ -2,7 +2,6 @@ import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
-import { PARTNER_NAME } from "@/lib/partner";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
@@ -25,12 +24,15 @@ export function MonthFeed({
     movements,
     monthLabel,
     settlement,
+    partnerName,
 }: {
     expenses: ExpenseListItem[];
     movements: MovementListItem[];
     monthLabel: string;
     /** Running couple balance — rendered as a chip in the footer (spec 0004). */
     settlement?: CoupleBalance;
+    /** Partner display name, threaded as data (spec 0006). */
+    partnerName: string;
 }) {
     const feed = buildFeed(expenses, movements);
 
@@ -67,6 +69,7 @@ export function MonthFeed({
                             <MovementRow
                                 key={`m-${item.movement.id}`}
                                 movement={item.movement}
+                                partnerName={partnerName}
                             />
                         ),
                     )}
@@ -80,7 +83,10 @@ export function MonthFeed({
                 >
                     {settlement && (
                         <div className="pb-1">
-                            <SettlementChip balance={settlement} />
+                            <SettlementChip
+                                balance={settlement}
+                                partnerName={partnerName}
+                            />
                         </div>
                     )}
                     {/* Every amount carries the same px-2 + tabular-nums so the
@@ -116,7 +122,7 @@ export function MonthFeed({
                     {totals.paidToPartner > 0 && (
                         <div className="flex items-center justify-between">
                             <span className="font-medium text-foreground">
-                                Paid to {PARTNER_NAME}
+                                Paid to {partnerName}
                             </span>
                             <span className="px-2 font-semibold text-transfer tabular-nums">
                                 {formatMxn(totals.paidToPartner)}
@@ -139,7 +145,10 @@ export function MonthFeed({
 
             {count === 0 && settlement && (
                 <div className="border-t p-4">
-                    <SettlementChip balance={settlement} />
+                    <SettlementChip
+                        balance={settlement}
+                        partnerName={partnerName}
+                    />
                 </div>
             )}
         </div>
@@ -212,8 +221,17 @@ function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
 }
 
 /** One money-movement line — colour-tagged by type (ADR-0018, spec 0004). */
-function MovementRow({ movement: m }: { movement: MovementListItem }) {
-    const { label, amountClass, rowTint } = movementDisplay(m.type);
+function MovementRow({
+    movement: m,
+    partnerName,
+}: {
+    movement: MovementListItem;
+    partnerName: string;
+}) {
+    const { label, amountClass, rowTint } = movementDisplay(
+        m.type,
+        partnerName,
+    );
     // Card payments carry their card name; transfers carry their note.
     const subline =
         m.type === "card_payment" ? (m.card?.name ?? "") : (m.note ?? "");

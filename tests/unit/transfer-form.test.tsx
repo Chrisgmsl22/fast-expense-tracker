@@ -25,7 +25,7 @@ beforeEach(() => {
 describe("TransferForm", () => {
     it("submits a gf_paid transfer by default", async () => {
         const onSuccess = vi.fn();
-        render(<TransferForm onSuccess={onSuccess} />);
+        render(<TransferForm partnerName="Brenda" onSuccess={onSuccess} />);
         expect(
             screen.getByRole("button", { name: /Log payment to Brenda/ }),
         ).toBeDefined();
@@ -48,7 +48,13 @@ describe("TransferForm", () => {
 
     it("submits a gf_received transfer when direction is gf_received", async () => {
         const onSuccess = vi.fn();
-        render(<TransferForm direction="gf_received" onSuccess={onSuccess} />);
+        render(
+            <TransferForm
+                direction="gf_received"
+                partnerName="Brenda"
+                onSuccess={onSuccess}
+            />,
+        );
         // Inbound label + copy differ.
         expect(
             screen.getByRole("button", { name: /Log Brenda's payment/ }),
@@ -74,7 +80,13 @@ describe("TransferForm", () => {
     });
 
     it("prefills the amount for quick-settle", () => {
-        render(<TransferForm direction="gf_received" initialAmount="512.5" />);
+        render(
+            <TransferForm
+                direction="gf_received"
+                initialAmount="512.5"
+                partnerName="Brenda"
+            />,
+        );
         const amount = screen.getByLabelText(/Amount/) as HTMLInputElement;
         expect(amount.value).toBe("512.5");
     });
@@ -90,6 +102,7 @@ describe("TransferForm", () => {
                     amount: "350",
                     note: "dinner",
                 }}
+                partnerName="Brenda"
                 onSuccess={onSuccess}
             />,
         );
@@ -125,7 +138,7 @@ describe("TransferForm", () => {
             fieldErrors: { amount: ["Amount must be greater than 0"] },
         });
         const onSuccess = vi.fn();
-        render(<TransferForm onSuccess={onSuccess} />);
+        render(<TransferForm partnerName="Brenda" onSuccess={onSuccess} />);
 
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },

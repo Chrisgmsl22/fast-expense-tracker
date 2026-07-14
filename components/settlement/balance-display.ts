@@ -1,12 +1,12 @@
 import type { SettlementDirection } from "@/lib/domain/settlement";
-import { PARTNER_NAME } from "@/lib/partner";
 
 /**
  * Presentation for a balance direction — the single source both the settlement
  * hero and the dashboard chip read, so their colour/label never drift. Green =
  * she owes you (money coming in), amber = you owe her (matches the "money to
  * {partner}" transfer tone), grey = settled. (The `--transfer` amber is the same
- * token the "I paid {partner}" feed line uses.)
+ * token the "I paid {partner}" feed line uses.) `partnerName` is threaded as data
+ * (spec 0006) so labels read with the user's own partner.
  */
 export type BalanceTone = {
     /** Uppercase hero label, e.g. "BRENDA OWES YOU". */
@@ -21,12 +21,15 @@ export type BalanceTone = {
     borderClass: string;
 };
 
-export function balanceTone(direction: SettlementDirection): BalanceTone {
+export function balanceTone(
+    direction: SettlementDirection,
+    partnerName: string,
+): BalanceTone {
     switch (direction) {
         case "she_owes":
             return {
-                label: `${PARTNER_NAME.toUpperCase()} OWES YOU`,
-                chipLabel: `${PARTNER_NAME} owes you`,
+                label: `${partnerName.toUpperCase()} OWES YOU`,
+                chipLabel: `${partnerName} owes you`,
                 dotClass: "bg-positive",
                 textClass: "text-positive",
                 fillClass: "bg-positive",
@@ -35,8 +38,8 @@ export function balanceTone(direction: SettlementDirection): BalanceTone {
             };
         case "you_owe":
             return {
-                label: `YOU OWE ${PARTNER_NAME.toUpperCase()}`,
-                chipLabel: `You owe ${PARTNER_NAME}`,
+                label: `YOU OWE ${partnerName.toUpperCase()}`,
+                chipLabel: `You owe ${partnerName}`,
                 dotClass: "bg-transfer",
                 textClass: "text-transfer",
                 fillClass: "bg-transfer",

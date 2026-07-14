@@ -11,8 +11,14 @@ import { formatMxn } from "@/lib/format";
  * current+previous-month balance, so it's the same figure regardless of the
  * month the dashboard is viewing (hence "running balance", not a month total).
  */
-export function SettlementChip({ balance }: { balance: CoupleBalance }) {
-    const tone = balanceTone(balance.direction);
+export function SettlementChip({
+    balance,
+    partnerName,
+}: {
+    balance: CoupleBalance;
+    partnerName: string;
+}) {
+    const tone = balanceTone(balance.direction, partnerName);
     const settled = balance.direction === "settled";
 
     return (

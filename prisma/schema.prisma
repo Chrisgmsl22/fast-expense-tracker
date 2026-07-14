@@ -144,7 +144,15 @@ model Settings {
   user   User   @relation(fields: [userId], references: [id])
 
   monthlyIncome             Float   @default(0)
-  defaultSharePercentage    Float   @default(0.68)
+  // Opt-in shared-expense mode (spec 0006 / ADR-0021). Default solo: a plain
+  // tracker with no split control, no settlement, no partner. When true the app
+  // reveals the shared machinery and `partnerName` is required in the UI.
+  sharesExpenses            Boolean @default(false)
+  // The partner's display name — per-user data, replacing the hardcoded
+  // `PARTNER_NAME` constant. Null in solo mode; required in the UI when
+  // `sharesExpenses` is on. Only meaningful in shared mode.
+  partnerName               String?
+  defaultSharePercentage    Float   @default(0.68) // only meaningful when sharesExpenses
   emailDay                  Int     @default(1) // 0=Sun, 1=Mon, ..., 6=Sat
   recurringPromptSuppressed Boolean @default(false)
 

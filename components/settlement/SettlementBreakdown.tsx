@@ -3,15 +3,16 @@ import type {
     SettlementBreakdownKey,
 } from "@/lib/domain/settlement";
 import { formatMxn } from "@/lib/format";
-import { PARTNER_NAME } from "@/lib/partner";
 import { balanceTone } from "./balance-display";
 
-const LABELS: Record<SettlementBreakdownKey, string> = {
-    partner_share: `${PARTNER_NAME}'s 32% of shared expenses you logged`,
-    your_debt: `Debts you logged as "I owe ${PARTNER_NAME}"`,
-    partner_paid: `Money ${PARTNER_NAME} paid you`,
-    you_paid: `Money you paid ${PARTNER_NAME}`,
-};
+const labelsFor = (
+    partnerName: string,
+): Record<SettlementBreakdownKey, string> => ({
+    partner_share: `${partnerName}'s 32% of shared expenses you logged`,
+    your_debt: `Debts you logged as "I owe ${partnerName}"`,
+    partner_paid: `Money ${partnerName} paid you`,
+    you_paid: `Money you paid ${partnerName}`,
+});
 
 const SUBLABELS: Partial<Record<SettlementBreakdownKey, string>> = {
     partner_paid: "transfers she sent you",
@@ -27,8 +28,15 @@ const AMOUNT_CLASS: Record<SettlementBreakdownKey, string> = {
 };
 
 /** "How this balance is made" — the four signed lines + the net (spec 0004 §3.1). */
-export function SettlementBreakdown({ balance }: { balance: CoupleBalance }) {
-    const tone = balanceTone(balance.direction);
+export function SettlementBreakdown({
+    balance,
+    partnerName,
+}: {
+    balance: CoupleBalance;
+    partnerName: string;
+}) {
+    const tone = balanceTone(balance.direction, partnerName);
+    const labels = labelsFor(partnerName);
     const netLabel =
         balance.direction === "settled"
             ? "Settled"
@@ -44,7 +52,7 @@ export function SettlementBreakdown({ balance }: { balance: CoupleBalance }) {
                         className="flex items-center justify-between gap-3"
                     >
                         <span>
-                            {LABELS[line.key]}
+                            {labels[line.key]}
                             {SUBLABELS[line.key] ? (
                                 <span className="text-muted-foreground">
                                     {" "}

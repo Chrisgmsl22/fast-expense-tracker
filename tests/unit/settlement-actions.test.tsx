@@ -19,7 +19,13 @@ import { SettlementActions } from "@/components/settlement/SettlementActions";
 
 describe("SettlementActions", () => {
     it("renders both actions", () => {
-        render(<SettlementActions direction="settled" netAmount={0} />);
+        render(
+            <SettlementActions
+                direction="settled"
+                netAmount={0}
+                partnerName="Brenda"
+            />,
+        );
         expect(
             screen.getByRole("button", { name: "Log a transfer" }),
         ).toBeDefined();
@@ -29,7 +35,13 @@ describe("SettlementActions", () => {
     });
 
     it("quick-settle prefills 'Brenda paid me' + the net amount when she owes you", async () => {
-        render(<SettlementActions direction="she_owes" netAmount={700} />);
+        render(
+            <SettlementActions
+                direction="she_owes"
+                netAmount={700}
+                partnerName="Brenda"
+            />,
+        );
         fireEvent.click(screen.getByRole("button", { name: "Log a transfer" }));
 
         const dialog = await screen.findByRole("dialog");
@@ -46,7 +58,13 @@ describe("SettlementActions", () => {
     });
 
     it("quick-settle uses 'I paid Brenda' when you owe her", async () => {
-        render(<SettlementActions direction="you_owe" netAmount={200} />);
+        render(
+            <SettlementActions
+                direction="you_owe"
+                netAmount={200}
+                partnerName="Brenda"
+            />,
+        );
         fireEvent.click(screen.getByRole("button", { name: "Log a transfer" }));
 
         const dialog = await screen.findByRole("dialog");
@@ -58,7 +76,13 @@ describe("SettlementActions", () => {
     });
 
     it("opens the debt form (settlement-only — no category picker)", async () => {
-        render(<SettlementActions direction="she_owes" netAmount={700} />);
+        render(
+            <SettlementActions
+                direction="she_owes"
+                netAmount={700}
+                partnerName="Brenda"
+            />,
+        );
         fireEvent.click(screen.getByRole("button", { name: /I owe Brenda/ }));
 
         const dialog = await screen.findByRole("dialog");

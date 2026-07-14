@@ -12,7 +12,6 @@ import {
     updateTransfer,
     type UpdateTransferResult,
 } from "@/app/_actions/movement/update-transfer";
-import { PARTNER_NAME } from "@/lib/partner";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { TransferInput } from "@/lib/schemas/movement";
 
@@ -33,6 +32,8 @@ type Props = {
     initialAmount?: string;
     /** When present, the form edits this transfer instead of creating one. */
     transfer?: TransferEditable;
+    /** Partner display name, threaded as data (spec 0006). */
+    partnerName: string;
     onSuccess?: () => void;
     onCancel?: () => void;
 };
@@ -47,6 +48,7 @@ export function TransferForm({
     direction = "gf_paid",
     initialAmount = "",
     transfer,
+    partnerName,
     onSuccess,
     onCancel,
 }: Props) {
@@ -60,13 +62,13 @@ export function TransferForm({
 
     const inbound = direction === "gf_received";
     const blurb = inbound
-        ? `Money ${PARTNER_NAME} sent you — settles what she owes you. Not an expense.`
-        : `The amount you settled with ${PARTNER_NAME} — money out of your account, not an expense.`;
+        ? `Money ${partnerName} sent you — settles what she owes you. Not an expense.`
+        : `The amount you settled with ${partnerName} — money out of your account, not an expense.`;
     const submitLabel = transfer
         ? "Save changes"
         : inbound
-          ? `Log ${PARTNER_NAME}'s payment`
-          : `Log payment to ${PARTNER_NAME}`;
+          ? `Log ${partnerName}'s payment`
+          : `Log payment to ${partnerName}`;
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -120,8 +122,8 @@ export function TransferForm({
             className="flex flex-col gap-4"
             aria-label={
                 inbound
-                    ? `Log money received from ${PARTNER_NAME}`
-                    : `Log money sent to ${PARTNER_NAME}`
+                    ? `Log money received from ${partnerName}`
+                    : `Log money sent to ${partnerName}`
             }
         >
             <p className="text-sm text-muted-foreground">{blurb}</p>

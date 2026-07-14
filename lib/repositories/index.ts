@@ -28,6 +28,10 @@ import {
     PrismaSettlementRepository,
     type SettlementRepository,
 } from "./settlement.repository";
+import {
+    PrismaSettingsRepository,
+    type SettingsRepository,
+} from "./settings.repository";
 
 /**
  * Composition root — the single place the concrete Prisma adapters are wired to
@@ -57,3 +61,6 @@ export const movementRepository: MovementRepository =
 
 export const settlementRepository: SettlementRepository =
     new PrismaSettlementRepository(db);
+
+export const settingsRepository: SettingsRepository =
+    new PrismaSettingsRepository(db);
