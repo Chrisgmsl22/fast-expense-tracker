@@ -82,6 +82,27 @@ describe("SplitRuleForm", () => {
         );
     });
 
+    it("the Save button itself becomes a disabled 'Saved' success state", async () => {
+        render(
+            <SplitRuleForm
+                sharesExpenses={true}
+                partnerName="Brenda"
+                defaultSharePercentage={0.68}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+        // On success the button label flips to "Saved" and it is disabled;
+        // there is no separate standalone "Saved" text element anymore.
+        const savedButton = (await screen.findByRole("button", {
+            name: "Saved",
+        })) as HTMLButtonElement;
+        expect(savedButton.disabled).toBe(true);
+        expect(
+            screen.queryByRole("button", { name: "Save changes" }),
+        ).toBeNull();
+    });
+
     it("renders the server's partner-name validation error", async () => {
         saveMock.mockResolvedValue({
             ok: false,

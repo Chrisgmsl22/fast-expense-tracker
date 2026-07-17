@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import {
+    useEffect,
+    useRef,
+    useState,
+    useTransition,
+    type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -47,12 +54,33 @@ export function SplitRuleForm({
     const [formError, setFormError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
 
+    // How long the button stays in its green "✓ Saved" state after a save.
+    const SAVED_WINDOW_MS = 1600;
+    const revertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const clearRevertTimer = () => {
+        if (revertTimer.current !== null) {
+            clearTimeout(revertTimer.current);
+            revertTimer.current = null;
+        }
+    };
+
+    // Clear the pending revert timer on unmount so it can't fire on a gone form.
+    useEffect(() => clearRevertTimer, []);
+
+    // Editing any field breaks the success state; also drop a stale revert timer.
+    const resetSaved = () => {
+        clearRevertTimer();
+        setSaved(false);
+    };
+
     // Clamp for the preview only; the server is the validation source of truth.
     const yourShare = Math.min(100, Math.max(0, Number(percent) || 0));
     const partnerShare = 100 - yourShare;
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
+        clearRevertTimer();
         startTransition(async () => {
             try {
                 const res: SaveSplitRuleResult = await saveSplitRule({
@@ -64,6 +92,10 @@ export function SplitRuleForm({
                     setErrors({});
                     setFormError(null);
                     setSaved(true);
+                    revertTimer.current = setTimeout(() => {
+                        setSaved(false);
+                        revertTimer.current = null;
+                    }, SAVED_WINDOW_MS);
                     router.refresh();
                 } else {
                     setSaved(false);
@@ -114,7 +146,7 @@ export function SplitRuleForm({
                     checked={shares}
                     onCheckedChange={(checked) => {
                         setShares(checked === true);
-                        setSaved(false);
+                        resetSaved();
                     }}
                 />
                 <Label htmlFor="shares-toggle" className="text-sm font-medium">
@@ -133,7 +165,7 @@ export function SplitRuleForm({
                             value={name}
                             onChange={(e) => {
                                 setName(e.target.value);
-                                setSaved(false);
+                                resetSaved();
                             }}
                             placeholder="e.g. Alex"
                             aria-invalid={Boolean(errors.partnerName)}
@@ -166,7 +198,7 @@ export function SplitRuleForm({
                             value={percent}
                             onChange={(e) => {
                                 setPercent(e.target.value);
-                                setSaved(false);
+                                resetSaved();
                             }}
                             aria-invalid={Boolean(errors.sharePercentage)}
                             aria-describedby={
@@ -204,17 +236,25 @@ export function SplitRuleForm({
                 </p>
             )}
 
-            <div className="mt-5 flex items-center justify-end gap-3">
-                {saved && !pending && (
-                    <span
-                        className="text-sm text-muted-foreground"
-                        role="status"
-                    >
-                        Saved
-                    </span>
-                )}
-                <Button type="submit" disabled={pending}>
-                    {pending ? "Saving…" : "Save changes"}
+            <div className="mt-5 flex items-center justify-end">
+                <Button
+                    type="submit"
+                    disabled={pending || saved}
+                    aria-live="polite"
+                    className={
+                        saved && !pending ? "bg-positive text-white" : undefined
+                    }
+                >
+                    {saved && !pending ? (
+                        <>
+                            <Check className="size-4" aria-hidden="true" />
+                            Saved
+                        </>
+                    ) : pending ? (
+                        "Saving…"
+                    ) : (
+                        "Save changes"
+                    )}
                 </Button>
             </div>
         </form>
