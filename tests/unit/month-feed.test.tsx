@@ -2,8 +2,16 @@ import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 
 import { MonthFeed } from "@/components/dashboard/MonthFeed";
+import type { CoupleBalance } from "@/lib/domain/settlement";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
+
+const sheOwes: CoupleBalance = {
+    balance: 500,
+    amount: 500,
+    direction: "she_owes",
+    breakdown: [],
+};
 
 const expenses: ExpenseListItem[] = [
     {
@@ -48,6 +56,7 @@ describe("MonthFeed", () => {
                 movements={[]}
                 monthLabel="June 2026"
                 partnerName="Brenda"
+                sharesExpenses
             />,
         );
         expect(screen.getByText("Soriana")).toBeDefined();
@@ -64,6 +73,7 @@ describe("MonthFeed", () => {
                 movements={[]}
                 monthLabel="June 2026"
                 partnerName="Brenda"
+                sharesExpenses
             />,
         );
         // charged = 1820 + 185 = 2005; spent = 1237 + 185 = 1422
@@ -79,6 +89,7 @@ describe("MonthFeed", () => {
                 movements={[]}
                 monthLabel="June 2026"
                 partnerName="Brenda"
+                sharesExpenses
             />,
         );
         expect(
@@ -104,6 +115,7 @@ describe("MonthFeed", () => {
                 movements={received}
                 monthLabel="June 2026"
                 partnerName="Brenda"
+                sharesExpenses
             />,
         );
         expect(screen.getByText("Brenda paid you")).toBeDefined();
@@ -151,6 +163,7 @@ describe("MonthFeed", () => {
                 movements={[]}
                 monthLabel="June 2026"
                 partnerName="Brenda"
+                sharesExpenses
             />,
         );
         const totals = within(screen.getByTestId("feed-totals"));
@@ -171,6 +184,7 @@ describe("MonthFeed", () => {
                 movements={[]}
                 monthLabel="June 2026"
                 partnerName="Brenda"
+                sharesExpenses
             />,
         );
         expect(screen.queryByText("Set aside")).toBeNull();
@@ -202,6 +216,7 @@ describe("MonthFeed", () => {
                 movements={movements}
                 monthLabel="June 2026"
                 partnerName="Brenda"
+                sharesExpenses
             />,
         );
         // Card payment line present (no partner-money tag anymore).
@@ -211,6 +226,60 @@ describe("MonthFeed", () => {
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.getByText("Paid to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
+    });
+
+    it("renders the settlement chip in Shared mode when a balance is passed", () => {
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[]}
+                monthLabel="June 2026"
+                settlement={sheOwes}
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+        // The chip is a link to the settlement page.
+        expect(screen.getByRole("link").getAttribute("href")).toBe(
+            "/settlement",
+        );
+    });
+
+    it("hides the settlement chip, partner rows, and 'Paid to' total in Solo mode (CHORE-6.b)", () => {
+        const movements: MovementListItem[] = [
+            {
+                id: "m1",
+                date: new Date("2026-06-21T06:00:00Z"),
+                amount: 500,
+                type: "card_payment",
+                card: { name: "BBVA", color: "#2563eb" },
+                note: null,
+            },
+            {
+                id: "m2",
+                date: new Date("2026-06-22T06:00:00Z"),
+                amount: 200,
+                type: "gf_paid",
+                card: null,
+                note: "netted week",
+            },
+        ];
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={movements}
+                monthLabel="June 2026"
+                settlement={sheOwes}
+                partnerName="Brenda"
+                sharesExpenses={false}
+            />,
+        );
+        // Non-partner activity stays.
+        expect(screen.getByText("Card payment")).toBeDefined();
+        // No settlement chip (its link), no partner transfer row, no footer figure.
+        expect(screen.queryByRole("link")).toBeNull();
+        expect(screen.queryByText("Paid Brenda")).toBeNull();
+        expect(screen.queryByText("Paid to Brenda")).toBeNull();
     });
 
     it("shows no card (not Cash) for a savings row", () => {
@@ -238,6 +307,7 @@ describe("MonthFeed", () => {
                 movements={[]}
                 monthLabel="June 2026"
                 partnerName="Brenda"
+                sharesExpenses
             />,
         );
         expect(screen.getByText("Emergency fund")).toBeDefined();

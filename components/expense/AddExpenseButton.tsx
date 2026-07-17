@@ -32,6 +32,12 @@ type Props = {
     cards: CardOption[];
     defaultSharePercentage: number;
     partnerName: string;
+    /**
+     * Shared-expense mode (Settings.sharesExpenses). In Solo mode the partner
+     * transfer items ("I paid {partner}" / "{partner} paid me") are hidden — the
+     * menu is just Expense + Card payment (CHORE-6.b).
+     */
+    sharesExpenses: boolean;
 };
 
 /** Which thing the user is logging; `menu` is the type picker (ADR-0018). */
@@ -56,6 +62,7 @@ export function AddExpenseButton({
     cards,
     defaultSharePercentage,
     partnerName,
+    sharesExpenses,
 }: Props) {
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<Mode>("menu");
@@ -115,18 +122,22 @@ export function AddExpenseButton({
                             subtitle="Money you paid toward a card"
                             onClick={() => setMode("card_payment")}
                         />
-                        <TypeButton
-                            icon={<Send className="size-5" />}
-                            title={`I paid ${partnerName}`}
-                            subtitle={`Money you sent ${partnerName}`}
-                            onClick={() => setMode("transfer")}
-                        />
-                        <TypeButton
-                            icon={<HandCoins className="size-5" />}
-                            title={`${partnerName} paid me`}
-                            subtitle={`Money ${partnerName} sent you`}
-                            onClick={() => setMode("receive")}
-                        />
+                        {sharesExpenses ? (
+                            <>
+                                <TypeButton
+                                    icon={<Send className="size-5" />}
+                                    title={`I paid ${partnerName}`}
+                                    subtitle={`Money you sent ${partnerName}`}
+                                    onClick={() => setMode("transfer")}
+                                />
+                                <TypeButton
+                                    icon={<HandCoins className="size-5" />}
+                                    title={`${partnerName} paid me`}
+                                    subtitle={`Money ${partnerName} sent you`}
+                                    onClick={() => setMode("receive")}
+                                />
+                            </>
+                        ) : null}
                     </div>
                 ) : null}
 
@@ -136,6 +147,7 @@ export function AddExpenseButton({
                         subcategories={subcategories}
                         cards={cards}
                         defaultSharePercentage={defaultSharePercentage}
+                        sharesExpenses={sharesExpenses}
                         onCancel={close}
                         onSuccess={onSuccess}
                     />

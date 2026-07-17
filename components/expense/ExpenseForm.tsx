@@ -45,6 +45,12 @@ type Props = {
     cards: CardOption[];
     /** The user's configured income-ratio split (Settings.defaultSharePercentage). */
     defaultSharePercentage: number;
+    /**
+     * Whether the user is in shared-expense mode (Settings.sharesExpenses). In
+     * Solo mode (`false`) the split control is hidden and a new expense saves at
+     * 100% mine (`isShared:false`, `yourPercentage:1`) — CHORE-6.b.
+     */
+    sharesExpenses: boolean;
     /** When present, the form edits this expense instead of creating one. */
     expense?: ExpenseEditable;
     onSuccess?: () => void;
@@ -81,6 +87,7 @@ export function ExpenseForm({
     subcategories,
     cards,
     defaultSharePercentage,
+    sharesExpenses,
     expense,
     onSuccess,
     onCancel,
@@ -99,14 +106,19 @@ export function ExpenseForm({
     const [notes, setNotes] = useState(expense?.notes ?? "");
     const [isShared, setIsShared] = useState(expense?.isShared ?? false);
     // An already-shared row keeps its stored split so historical splits stay
-    // correct (CLAUDE.md domain note). Everything else — a new expense, or an
-    // unshared row being newly marked shared — uses the configured split. An
-    // unshared row stores yourPercentage = 1, which would fail the "shared needs
-    // < 100%" rule if carried over, so it must never be the shared value.
+    // correct (CLAUDE.md domain note + immutable history, ADR-0021) — even in
+    // Solo mode, editing a historical shared row must not rewrite its split.
+    // Everything else — a new expense, or an unshared row being newly marked
+    // shared — uses the configured split in Shared mode, but 100% mine in Solo
+    // mode (no split exists). An unshared row stores yourPercentage = 1, which
+    // would fail the "shared needs < 100%" rule if carried over, so it must
+    // never be the shared value.
     const yourPercentage =
         expense?.isShared && expense.yourPercentage < 1
             ? expense.yourPercentage
-            : defaultSharePercentage;
+            : sharesExpenses
+              ? defaultSharePercentage
+              : 1;
 
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<ExpenseInput>>({});
@@ -397,27 +409,31 @@ export function ExpenseForm({
                 />
             </div>
 
-            <div>
-                <label className="flex items-start gap-2.5">
-                    <Checkbox
-                        checked={isShared}
-                        onCheckedChange={(checked) => setIsShared(checked)}
-                        aria-label="Shared expense"
-                        className="mt-0.5 data-checked:border-positive data-checked:bg-positive"
-                    />
-                    <span className="text-sm">
-                        <span className="block font-medium">
-                            {`Shared expense · ${yourPct}/${partnerPct}`}
-                        </span>
-                        {isShared ? (
-                            <span className="block text-positive">
-                                {`your share ${formatMxn(yourShare)}`}
+            {/* Solo mode (Settings.sharesExpenses = false) has no split — the
+                control is hidden and the expense saves at 100% mine (CHORE-6.b). */}
+            {sharesExpenses ? (
+                <div>
+                    <label className="flex items-start gap-2.5">
+                        <Checkbox
+                            checked={isShared}
+                            onCheckedChange={(checked) => setIsShared(checked)}
+                            aria-label="Shared expense"
+                            className="mt-0.5 data-checked:border-positive data-checked:bg-positive"
+                        />
+                        <span className="text-sm">
+                            <span className="block font-medium">
+                                {`Shared expense · ${yourPct}/${partnerPct}`}
                             </span>
-                        ) : null}
-                    </span>
-                </label>
-                {fieldError("yourPercentage")}
-            </div>
+                            {isShared ? (
+                                <span className="block text-positive">
+                                    {`your share ${formatMxn(yourShare)}`}
+                                </span>
+                            ) : null}
+                        </span>
+                    </label>
+                    {fieldError("yourPercentage")}
+                </div>
+            ) : null}
 
             {formError && (
                 <p className="text-sm text-destructive" role="alert">

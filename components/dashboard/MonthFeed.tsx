@@ -25,6 +25,7 @@ export function MonthFeed({
     monthLabel,
     settlement,
     partnerName,
+    sharesExpenses,
 }: {
     expenses: ExpenseListItem[];
     movements: MovementListItem[];
@@ -32,10 +33,21 @@ export function MonthFeed({
     /** Running couple balance — rendered as a chip in the footer (spec 0004). */
     settlement?: CoupleBalance;
     partnerName: string;
+    /**
+     * Shared-expense mode. Solo hides every partner surface here — the
+     * settlement chip, the partner transfer rows, and the "Paid to {partner}"
+     * footer — so the feed reads as a plain tracker (CHORE-6.b). Historical
+     * partner movements are never rewritten (ADR-0021), just not surfaced.
+     */
+    sharesExpenses: boolean;
 }) {
-    const feed = buildFeed(expenses, movements);
+    // Solo mode surfaces only non-partner activity — expenses + card payments.
+    const visibleMovements = sharesExpenses
+        ? movements
+        : movements.filter((m) => m.type === "card_payment");
+    const feed = buildFeed(expenses, visibleMovements);
 
-    const paidToPartner = sumByType(movements, "gf_paid");
+    const paidToPartner = sumByType(visibleMovements, "gf_paid");
     const totals = computeFeedTotals(expenses, paidToPartner);
 
     const count = feed.length;
@@ -80,7 +92,7 @@ export function MonthFeed({
                     data-testid="feed-totals"
                     className="space-y-1.5 border-t p-4 text-sm"
                 >
-                    {settlement && (
+                    {sharesExpenses && settlement && (
                         <div className="pb-1">
                             <SettlementChip
                                 balance={settlement}
@@ -142,7 +154,7 @@ export function MonthFeed({
                 </div>
             )}
 
-            {count === 0 && settlement && (
+            {count === 0 && sharesExpenses && settlement && (
                 <div className="border-t p-4">
                     <SettlementChip
                         balance={settlement}

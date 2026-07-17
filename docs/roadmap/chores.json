@@ -56,7 +56,7 @@
             "title": "Solo mode — hide the shared-expense + settlement machinery when sharing is off",
             "description": "With the sharesExpenses flag in place (CHORE-6.a), a solo user must see a plain expense tracker: no split control, no settlement, no partner anywhere. Today that machinery is always on. Depends on CHORE-6.a.",
             "plan": "When sharesExpenses=false, hide/guard: (1) the shared/% control in components/expense/ExpenseForm.tsx (expenses save isShared:false, yourPercentage:1, actualExpenditure=amount); (2) the Settlement route + its link in components/nav/AppNav.tsx, plus a server-side route guard (solo user hitting the URL → redirect); (3) the partner items in the Add menu (components/expense/AddExpenseButton.tsx → gf_received/gf_paid/gf_fronted actions); (4) partner widgets on the dashboard. Shared mode renders exactly as today. Tests: each surface in both modes; route guard. Depends on CHORE-6.a.",
-            "status": "open",
+            "status": "in-progress",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,
             "issue": null

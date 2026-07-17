@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { auth } from "@/auth";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import { settingsRepository } from "@/lib/repositories";
@@ -25,6 +27,12 @@ export default async function SettlementPage() {
         getSettlement(userId),
         settingsRepository.getSettings(userId),
     ]);
+    // Settlement is a shared-mode-only surface. A Solo user reaching this URL
+    // directly (bookmark, stale link) is sent back to the dashboard — the nav
+    // link is already hidden, this guards the route itself (CHORE-6.b).
+    if (!settings.sharesExpenses) {
+        redirect("/dashboard");
+    }
     const partnerName = resolvePartnerName(settings.partnerName);
 
     return (

@@ -56,6 +56,7 @@ export default async function ExpensesPage({
     // form reads this for new shared expenses.
     const defaultSharePercentage = settings.defaultSharePercentage;
     const partnerName = resolvePartnerName(settings.partnerName);
+    const { sharesExpenses } = settings;
 
     return (
         // Bottom padding on mobile so the pinned total bar never covers rows.
@@ -68,6 +69,7 @@ export default async function ExpensesPage({
                     cards={cards}
                     defaultSharePercentage={defaultSharePercentage}
                     partnerName={partnerName}
+                    sharesExpenses={sharesExpenses}
                 />
             </div>
             <div className="mt-6">
@@ -82,6 +84,7 @@ export default async function ExpensesPage({
                     cards={cards}
                     defaultSharePercentage={defaultSharePercentage}
                     partnerName={partnerName}
+                    sharesExpenses={sharesExpenses}
                 />
             </div>
         </main>

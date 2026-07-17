@@ -18,7 +18,7 @@ import { AppNav } from "@/components/nav/AppNav";
 
 describe("AppNav", () => {
     it("renders the nav links and marks the active route", () => {
-        render(<AppNav email="test@email.com" />);
+        render(<AppNav email="test@email.com" sharesExpenses />);
         // Desktop row (drawer is closed, so links appear once).
         expect(
             screen
@@ -35,7 +35,7 @@ describe("AppNav", () => {
     });
 
     it("opens a drawer with the links, email, and sign-out", async () => {
-        render(<AppNav email="test@email.com" />);
+        render(<AppNav email="test@email.com" sharesExpenses />);
         fireEvent.click(screen.getByRole("button", { name: /open menu/i }));
 
         const drawer = await screen.findByRole("dialog");
@@ -51,11 +51,21 @@ describe("AppNav", () => {
     });
 
     it("closes the drawer when a link is tapped", async () => {
-        render(<AppNav email="test@email.com" />);
+        render(<AppNav email="test@email.com" sharesExpenses />);
         fireEvent.click(screen.getByRole("button", { name: /open menu/i }));
         const drawer = await screen.findByRole("dialog");
 
         fireEvent.click(within(drawer).getByRole("link", { name: "Income" }));
         await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    });
+
+    it("drops the Settlement link in Solo mode, keeping the others (CHORE-6.b)", () => {
+        render(<AppNav email="test@email.com" sharesExpenses={false} />);
+        expect(screen.getByRole("link", { name: "Dashboard" })).toBeDefined();
+        expect(screen.getByRole("link", { name: "Expenses" })).toBeDefined();
+        expect(screen.getByRole("link", { name: "Income" })).toBeDefined();
+        expect(screen.queryByRole("link", { name: "Settlement" })).toBeNull();
+        // The Settings gear stays regardless of mode.
+        expect(screen.getByRole("link", { name: "Settings" })).toBeDefined();
     });
 });
