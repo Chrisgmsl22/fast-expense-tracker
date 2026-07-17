@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
-import { PARTNER_NAME } from "@/lib/partner";
+import { resolvePartnerName } from "@/lib/domain/settings";
+import { settingsRepository } from "@/lib/repositories";
 import { getSettlement } from "@/lib/services/settlement/settlement.service";
 import { SettlementActions } from "@/components/settlement/SettlementActions";
 import { SettlementBalanceCard } from "@/components/settlement/SettlementBalanceCard";
@@ -20,17 +21,21 @@ export default async function SettlementPage() {
         return null;
     }
 
-    const settlement = await getSettlement(userId);
+    const [settlement, settings] = await Promise.all([
+        getSettlement(userId),
+        settingsRepository.getSettings(userId),
+    ]);
+    const partnerName = resolvePartnerName(settings.partnerName);
 
     return (
         <main className="p-4 sm:p-6 lg:p-8">
             <header className="flex items-baseline justify-between">
                 <div className="flex items-center gap-1.5">
                     <h1 className="text-2xl font-bold">Settlement</h1>
-                    <SettlementHelp />
+                    <SettlementHelp partnerName={partnerName} />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                    with {PARTNER_NAME}
+                    with {partnerName}
                 </p>
             </header>
 
@@ -42,15 +47,23 @@ export default async function SettlementPage() {
                     <SettlementBalanceCard
                         balance={settlement.balance}
                         carriedOver={settlement.carriedOver}
+                        partnerName={partnerName}
                     />
                     <SettlementActions
                         direction={settlement.balance.direction}
                         netAmount={settlement.balance.amount}
+                        partnerName={partnerName}
                     />
-                    <SettlementBreakdown balance={settlement.balance} />
-                    <SettlementJournalKey />
+                    <SettlementBreakdown
+                        balance={settlement.balance}
+                        partnerName={partnerName}
+                    />
+                    <SettlementJournalKey partnerName={partnerName} />
                 </div>
-                <SettlementJournal journal={settlement.journal} />
+                <SettlementJournal
+                    journal={settlement.journal}
+                    partnerName={partnerName}
+                />
             </div>
         </main>
     );

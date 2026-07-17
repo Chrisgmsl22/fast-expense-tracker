@@ -25,25 +25,25 @@ import {
 } from "./ExpenseForm";
 import { CardPaymentForm } from "@/components/movement/CardPaymentForm";
 import { TransferForm } from "@/components/movement/TransferForm";
-import { PARTNER_NAME } from "@/lib/partner";
 
 type Props = {
     categories: CategoryOption[];
     subcategories: SubcategoryOption[];
     cards: CardOption[];
     defaultSharePercentage: number;
+    partnerName: string;
 };
 
 /** Which thing the user is logging; `menu` is the type picker (ADR-0018). */
 type Mode = "menu" | "expense" | "card_payment" | "transfer" | "receive";
 
-const TITLES: Record<Mode, string> = {
+const titlesFor = (partnerName: string): Record<Mode, string> => ({
     menu: "Add",
     expense: "Add expense",
     card_payment: "Add card payment",
-    transfer: `I paid ${PARTNER_NAME}`,
-    receive: `${PARTNER_NAME} paid me`,
-};
+    transfer: `I paid ${partnerName}`,
+    receive: `${partnerName} paid me`,
+});
 
 /**
  * The `+ Add` entry point. Opens a type picker (expense / card payment / transfer
@@ -55,10 +55,12 @@ export function AddExpenseButton({
     subcategories,
     cards,
     defaultSharePercentage,
+    partnerName,
 }: Props) {
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<Mode>("menu");
     const router = useRouter();
+    const titles = titlesFor(partnerName);
 
     // Reset to the picker on close so the next open starts on the menu — not the
     // form that was last shown (close() sets open=false directly, bypassing
@@ -95,7 +97,7 @@ export function AddExpenseButton({
                                 <ChevronLeft className="size-4" />
                             </button>
                         ) : null}
-                        {TITLES[mode]}
+                        {titles[mode]}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -115,14 +117,14 @@ export function AddExpenseButton({
                         />
                         <TypeButton
                             icon={<Send className="size-5" />}
-                            title={`I paid ${PARTNER_NAME}`}
-                            subtitle={`Money you sent ${PARTNER_NAME}`}
+                            title={`I paid ${partnerName}`}
+                            subtitle={`Money you sent ${partnerName}`}
                             onClick={() => setMode("transfer")}
                         />
                         <TypeButton
                             icon={<HandCoins className="size-5" />}
-                            title={`${PARTNER_NAME} paid me`}
-                            subtitle={`Money ${PARTNER_NAME} sent you`}
+                            title={`${partnerName} paid me`}
+                            subtitle={`Money ${partnerName} sent you`}
                             onClick={() => setMode("receive")}
                         />
                     </div>
@@ -148,12 +150,17 @@ export function AddExpenseButton({
                 ) : null}
 
                 {mode === "transfer" ? (
-                    <TransferForm onCancel={close} onSuccess={onSuccess} />
+                    <TransferForm
+                        partnerName={partnerName}
+                        onCancel={close}
+                        onSuccess={onSuccess}
+                    />
                 ) : null}
 
                 {mode === "receive" ? (
                     <TransferForm
                         direction="gf_received"
+                        partnerName={partnerName}
                         onCancel={close}
                         onSuccess={onSuccess}
                     />

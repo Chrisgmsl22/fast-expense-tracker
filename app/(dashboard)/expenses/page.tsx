@@ -1,7 +1,12 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
-import { expenseRepository, movementRepository } from "@/lib/repositories";
+import { resolvePartnerName } from "@/lib/domain/settings";
+import {
+    expenseRepository,
+    movementRepository,
+    settingsRepository,
+} from "@/lib/repositories";
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
 import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteractive";
 import { MonthPicker } from "@/components/expense/MonthPicker";
@@ -44,15 +49,13 @@ export default async function ExpensesPage({
             }),
             expenseRepository.getForMonth(userId, month),
             movementRepository.getForMonth(userId, month),
-            db.settings.findUnique({
-                where: { userId },
-                select: { defaultSharePercentage: true },
-            }),
+            settingsRepository.getSettings(userId),
         ]);
 
-    // Fall back to the schema default (Settings.defaultSharePercentage) if the
-    // user has no Settings row yet; the form reads this for new shared expenses.
-    const defaultSharePercentage = settings?.defaultSharePercentage ?? 0.68;
+    // `getSettings` applies the schema default when the user has no row yet; the
+    // form reads this for new shared expenses.
+    const defaultSharePercentage = settings.defaultSharePercentage;
+    const partnerName = resolvePartnerName(settings.partnerName);
 
     return (
         // Bottom padding on mobile so the pinned total bar never covers rows.
@@ -64,6 +67,7 @@ export default async function ExpensesPage({
                     subcategories={subcategories}
                     cards={cards}
                     defaultSharePercentage={defaultSharePercentage}
+                    partnerName={partnerName}
                 />
             </div>
             <div className="mt-6">
@@ -77,6 +81,7 @@ export default async function ExpensesPage({
                     subcategories={subcategories}
                     cards={cards}
                     defaultSharePercentage={defaultSharePercentage}
+                    partnerName={partnerName}
                 />
             </div>
         </main>

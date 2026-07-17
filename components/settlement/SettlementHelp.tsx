@@ -10,25 +10,25 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { PARTNER_NAME } from "@/lib/partner";
-
 /** One "situation → what to log" row in the cheat-sheet. */
-const OPERATIONS: { when: string; then: string }[] = [
+const operationsFor = (
+    partnerName: string,
+): { when: string; then: string }[] => [
     {
         when: "You pay for something shared",
-        then: `Log it as a normal expense — ${PARTNER_NAME}'s 32% is added to what she owes you automatically.`,
+        then: `Log it as a normal expense — ${partnerName}'s 32% is added to what she owes you automatically.`,
     },
     {
-        when: `${PARTNER_NAME} sends you money / pays you back`,
-        then: `Add → "${PARTNER_NAME} paid me" (or "Log a transfer" here). It lowers what she owes you — whatever you do with the money after is separate.`,
+        when: `${partnerName} sends you money / pays you back`,
+        then: `Add → "${partnerName} paid me" (or "Log a transfer" here). It lowers what she owes you — whatever you do with the money after is separate.`,
     },
     {
-        when: `${PARTNER_NAME} paid for shared things`,
-        then: `"+ I owe ${PARTNER_NAME}" here — your share. It raises what you owe her.`,
+        when: `${partnerName} paid for shared things`,
+        then: `"+ I owe ${partnerName}" here — your share. It raises what you owe her.`,
     },
     {
-        when: `You end up owing ${PARTNER_NAME}, so you pay her`,
-        then: `"Log a transfer" here (it'll say "I paid ${PARTNER_NAME}").`,
+        when: `You end up owing ${partnerName}, so you pay her`,
+        then: `"Log a transfer" here (it'll say "I paid ${partnerName}").`,
     },
     {
         when: "You pay off a credit card",
@@ -41,7 +41,8 @@ const OPERATIONS: { when: string; then: string }[] = [
  * common operations — a reminder of which entry to log for each situation, so
  * the flows are easy to recall.
  */
-export function SettlementHelp() {
+export function SettlementHelp({ partnerName }: { partnerName: string }) {
+    const operations = operationsFor(partnerName);
     return (
         <Dialog>
             <DialogTrigger
@@ -60,7 +61,7 @@ export function SettlementHelp() {
                     <DialogTitle>Common operations</DialogTitle>
                 </DialogHeader>
                 <ul className="flex flex-col gap-3 text-sm">
-                    {OPERATIONS.map((op) => (
+                    {operations.map((op) => (
                         <li key={op.when}>
                             <p className="font-medium text-foreground">
                                 {op.when}

@@ -21,6 +21,7 @@ export function DashboardTopbar({
     categories,
     subcategories,
     cards,
+    partnerName,
 }: {
     month: string;
     monthLabel: string;
@@ -29,6 +30,7 @@ export function DashboardTopbar({
     categories: CategoryOption[];
     subcategories: SubcategoryOption[];
     cards: CardOption[];
+    partnerName: string;
 }) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -53,6 +55,7 @@ export function DashboardTopbar({
                     subcategories={subcategories}
                     cards={cards}
                     defaultSharePercentage={sharePercentage}
+                    partnerName={partnerName}
                 />
             </div>
         </div>

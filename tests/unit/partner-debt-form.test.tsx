@@ -25,7 +25,7 @@ beforeEach(() => {
 describe("PartnerDebtForm", () => {
     it("submits the debt (amount + date, no category)", async () => {
         const onSuccess = vi.fn();
-        render(<PartnerDebtForm onSuccess={onSuccess} />);
+        render(<PartnerDebtForm partnerName="Brenda" onSuccess={onSuccess} />);
 
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
@@ -53,7 +53,7 @@ describe("PartnerDebtForm", () => {
             fieldErrors: { amount: ["Amount must be greater than 0"] },
         });
         const onSuccess = vi.fn();
-        render(<PartnerDebtForm onSuccess={onSuccess} />);
+        render(<PartnerDebtForm partnerName="Brenda" onSuccess={onSuccess} />);
 
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
@@ -81,6 +81,7 @@ describe("PartnerDebtForm", () => {
                     amount: "680",
                     note: "gas she covered",
                 }}
+                partnerName="Brenda"
                 onSuccess={onSuccess}
             />,
         );

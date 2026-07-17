@@ -25,11 +25,11 @@ import {
 } from "@/components/ui/dialog";
 import { toDateInputValue } from "@/lib/dates";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
-import { PARTNER_NAME } from "@/lib/partner";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
 
 /** The auto-generated description when a debt is logged without a note. */
-const DEFAULT_DEBT_DESCRIPTION = `I owe ${PARTNER_NAME}`;
+const defaultDebtDescription = (partnerName: string): string =>
+    `I owe ${partnerName}`;
 
 type PartnerDebtRow = Extract<SettlementJournalItem, { kind: "partner_debt" }>;
 type TransferRow = Extract<SettlementJournalItem, { kind: "transfer" }>;
@@ -37,16 +37,19 @@ type TransferRow = Extract<SettlementJournalItem, { kind: "transfer" }>;
 type DeletableRow = PartnerDebtRow | TransferRow;
 
 /** The row's human title — reused by the row, its action labels, and the delete copy. */
-function transferTitle(direction: TransferRow["direction"]): string {
+function transferTitle(
+    direction: TransferRow["direction"],
+    partnerName: string,
+): string {
     return direction === "gf_received"
-        ? `Transfer — ${PARTNER_NAME} paid you`
-        : `Transfer — you paid ${PARTNER_NAME}`;
+        ? `Transfer — ${partnerName} paid you`
+        : `Transfer — you paid ${partnerName}`;
 }
 
-function rowTitle(row: DeletableRow): string {
+function rowTitle(row: DeletableRow, partnerName: string): string {
     return row.kind === "partner_debt"
         ? row.description
-        : transferTitle(row.direction);
+        : transferTitle(row.direction, partnerName);
 }
 
 /**
@@ -59,8 +62,10 @@ function rowTitle(row: DeletableRow): string {
  */
 export function SettlementJournal({
     journal,
+    partnerName,
 }: {
     journal: SettlementJournalItem[];
+    partnerName: string;
 }) {
     const router = useRouter();
     const [editing, setEditing] = useState<PartnerDebtEditable | null>(null);
@@ -81,7 +86,7 @@ export function SettlementJournal({
             date: toDateInputValue(item.date),
             amount: String(item.amount),
             note:
-                item.description === DEFAULT_DEBT_DESCRIPTION
+                item.description === defaultDebtDescription(partnerName)
                     ? ""
                     : item.description,
         });
@@ -155,6 +160,7 @@ export function SettlementJournal({
                         )}
                         <JournalRow
                             item={item}
+                            partnerName={partnerName}
                             actions={
                                 item.kind === "partner_debt" ? (
                                     <RowActions
@@ -168,7 +174,10 @@ export function SettlementJournal({
                                     />
                                 ) : item.kind === "transfer" ? (
                                     <RowActions
-                                        label={transferTitle(item.direction)}
+                                        label={transferTitle(
+                                            item.direction,
+                                            partnerName,
+                                        )}
                                         pending={pending}
                                         onEdit={() => openEditTransfer(item)}
                                         onDelete={() => {
@@ -191,12 +200,13 @@ export function SettlementJournal({
             >
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>{`Edit "I owe ${PARTNER_NAME}"`}</DialogTitle>
+                        <DialogTitle>{`Edit "I owe ${partnerName}"`}</DialogTitle>
                     </DialogHeader>
                     {editing && (
                         <PartnerDebtForm
                             key={editing.id}
                             debt={editing}
+                            partnerName={partnerName}
                             onCancel={() => setEditing(null)}
                             onSuccess={() => {
                                 setEditing(null);
@@ -222,6 +232,7 @@ export function SettlementJournal({
                             key={editingTransfer.id}
                             direction={editingTransfer.direction}
                             transfer={transferEdit}
+                            partnerName={partnerName}
                             onCancel={() => setEditingTransfer(null)}
                             onSuccess={() => {
                                 setEditingTransfer(null);
@@ -250,7 +261,7 @@ export function SettlementJournal({
                         </DialogTitle>
                         <DialogDescription>
                             {deleting
-                                ? `${rowTitle(deleting)} (${formatMxn(deleting.amount)}) will be permanently removed.`
+                                ? `${rowTitle(deleting, partnerName)} (${formatMxn(deleting.amount)}) will be permanently removed.`
                                 : ""}
                         </DialogDescription>
                     </DialogHeader>
@@ -326,9 +337,11 @@ function RowActions({
 
 function JournalRow({
     item,
+    partnerName,
     actions,
 }: {
     item: SettlementJournalItem;
+    partnerName: string;
     actions: ReactNode;
 }) {
     if (item.kind === "your_expense") {
@@ -337,7 +350,7 @@ function JournalRow({
                 icon={<Check className="size-4" />}
                 iconClass="bg-positive-tint text-positive"
                 title={item.description}
-                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${PARTNER_NAME}'s 32%`}
+                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32%`}
                 amount={`+${formatMxn(item.partnerShare)}`}
                 amountClass="text-positive"
                 actions={actions}
@@ -374,8 +387,8 @@ function JournalRow({
             }
             title={
                 inbound
-                    ? `Transfer — ${PARTNER_NAME} paid you`
-                    : `Transfer — you paid ${PARTNER_NAME}`
+                    ? `Transfer — ${partnerName} paid you`
+                    : `Transfer — you paid ${partnerName}`
             }
             subtitle={
                 item.note

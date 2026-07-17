@@ -6,20 +6,21 @@ decisions, working conventions, or agent-led code work.
 
 ## How this differs from the other `docs/` subdirectories
 
-| Directory | Answers |
-|---|---|
+| Directory                         | Answers                                                 |
+| --------------------------------- | ------------------------------------------------------- |
 | [`conventions/`](../conventions/) | How do we work? (coding rules, slicing, agent workflow) |
-| [`decisions/`](../decisions/) | Why did we do it this way? (immutable ADRs) |
-| [`reference/`](../reference/) | What's the domain data? (categories, schema, math) |
-| [`roadmap/`](../roadmap/) | What are we building next? (phases, slices) |
-| [`specs/`](../specs/) | What does the design say? (versioned specs) |
-| **`operations/`** | **What manual steps does the human need to take?** |
+| [`decisions/`](../decisions/)     | Why did we do it this way? (immutable ADRs)             |
+| [`reference/`](../reference/)     | What's the domain data? (categories, schema, math)      |
+| [`roadmap/`](../roadmap/)         | What are we building next? (phases, slices)             |
+| [`specs/`](../specs/)             | What does the design say? (versioned specs)             |
+| **`operations/`**                 | **What manual steps does the human need to take?**      |
 
 ## Index
 
-| Topic | When needed |
-|---|---|
-| [setup.md](./setup.md) | Initial external setup (Neon, Vercel, env vars, GitHub branch protection). Some sections deferred until specific slices. |
+| Topic                                                              | When needed                                                                                                                                                                   |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [setup.md](./setup.md)                                             | Initial external setup (Neon, Vercel, env vars, GitHub branch protection). Some sections deferred until specific slices.                                                      |
+| [owner-shared-mode-migration.md](./owner-shared-mode-migration.md) | After deploying CHORE-6.a: switch the owner account to Shared mode + the BUG-2 rider (re-seed prod category colors, drop the retired Amex Gold card). Manual prod data steps. |
 
 Future docs will land here as operational needs surface — recovery
 procedures, secret rotation, the eventual MoneyFlow data migration.
@@ -47,4 +48,4 @@ procedures, secret rotation, the eventual MoneyFlow data migration.
 Phase files that depend on manual setup carry a **Prerequisites (manual)**
 section near the top, pointing at the relevant section of
 [`setup.md`](./setup.md). This way the agent (and future you) sees the
-manual prereqs *before* trying to ship a slice that depends on them.
+manual prereqs _before_ trying to ship a slice that depends on them.

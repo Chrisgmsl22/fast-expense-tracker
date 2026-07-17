@@ -47,6 +47,7 @@ describe("MonthFeed", () => {
                 expenses={expenses}
                 movements={[]}
                 monthLabel="June 2026"
+                partnerName="Brenda"
             />,
         );
         expect(screen.getByText("Soriana")).toBeDefined();
@@ -62,6 +63,7 @@ describe("MonthFeed", () => {
                 expenses={expenses}
                 movements={[]}
                 monthLabel="June 2026"
+                partnerName="Brenda"
             />,
         );
         // charged = 1820 + 185 = 2005; spent = 1237 + 185 = 1422
@@ -72,7 +74,12 @@ describe("MonthFeed", () => {
 
     it("shows an empty state and no footer with nothing logged", () => {
         render(
-            <MonthFeed expenses={[]} movements={[]} monthLabel="June 2026" />,
+            <MonthFeed
+                expenses={[]}
+                movements={[]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+            />,
         );
         expect(
             screen.getByText(/nothing logged this month yet/i),
@@ -96,6 +103,7 @@ describe("MonthFeed", () => {
                 expenses={[]}
                 movements={received}
                 monthLabel="June 2026"
+                partnerName="Brenda"
             />,
         );
         expect(screen.getByText("Brenda paid you")).toBeDefined();
@@ -142,6 +150,7 @@ describe("MonthFeed", () => {
                 expenses={mixed}
                 movements={[]}
                 monthLabel="June 2026"
+                partnerName="Brenda"
             />,
         );
         const totals = within(screen.getByTestId("feed-totals"));
@@ -161,6 +170,7 @@ describe("MonthFeed", () => {
                 expenses={expenses}
                 movements={[]}
                 monthLabel="June 2026"
+                partnerName="Brenda"
             />,
         );
         expect(screen.queryByText("Set aside")).toBeNull();
@@ -191,6 +201,7 @@ describe("MonthFeed", () => {
                 expenses={expenses}
                 movements={movements}
                 monthLabel="June 2026"
+                partnerName="Brenda"
             />,
         );
         // Card payment line present (no partner-money tag anymore).
@@ -226,6 +237,7 @@ describe("MonthFeed", () => {
                 expenses={savings}
                 movements={[]}
                 monthLabel="June 2026"
+                partnerName="Brenda"
             />,
         );
         expect(screen.getByText("Emergency fund")).toBeDefined();

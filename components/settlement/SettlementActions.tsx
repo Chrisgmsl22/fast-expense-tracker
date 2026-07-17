@@ -14,13 +14,13 @@ import {
 import { PartnerDebtForm } from "@/components/movement/PartnerDebtForm";
 import { TransferForm } from "@/components/movement/TransferForm";
 import type { SettlementDirection } from "@/lib/domain/settlement";
-import { PARTNER_NAME } from "@/lib/partner";
 
 type Props = {
     /** Drives the transfer form's quick-settle prefill (net amount + side). */
     direction: SettlementDirection;
     /** The net balance magnitude, as a string for the amount input. */
     netAmount: number;
+    partnerName: string;
 };
 
 /**
@@ -29,7 +29,11 @@ type Props = {
  * current balance (she owes → she pays you; you owe → you pay her). "+ I owe
  * {partner}" opens the debt form. Both refresh the server-rendered page on success.
  */
-export function SettlementActions({ direction, netAmount }: Props) {
+export function SettlementActions({
+    direction,
+    netAmount,
+    partnerName,
+}: Props) {
     const [transferOpen, setTransferOpen] = useState(false);
     const [debtOpen, setDebtOpen] = useState(false);
     const router = useRouter();
@@ -60,6 +64,7 @@ export function SettlementActions({ direction, netAmount }: Props) {
                     <TransferForm
                         direction={settleDirection}
                         initialAmount={prefillAmount}
+                        partnerName={partnerName}
                         onCancel={() => setTransferOpen(false)}
                         onSuccess={onTransferDone}
                     />
@@ -69,14 +74,15 @@ export function SettlementActions({ direction, netAmount }: Props) {
             <Dialog open={debtOpen} onOpenChange={setDebtOpen}>
                 <DialogTrigger
                     render={
-                        <Button variant="outline">{`+ I owe ${PARTNER_NAME}`}</Button>
+                        <Button variant="outline">{`+ I owe ${partnerName}`}</Button>
                     }
                 />
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>{`I owe ${PARTNER_NAME}`}</DialogTitle>
+                        <DialogTitle>{`I owe ${partnerName}`}</DialogTitle>
                     </DialogHeader>
                     <PartnerDebtForm
+                        partnerName={partnerName}
                         onCancel={() => setDebtOpen(false)}
                         onSuccess={onDebtDone}
                     />
