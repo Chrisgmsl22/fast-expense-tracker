@@ -167,8 +167,11 @@ scoping. _Depends on 6.a (the Settings page shell)._
 
 ## 8. Out of scope / deferred
 
-- **Public signup / onboarding.** Accounts stay manually created. (Owner's
-  explicit decision — few users, insert a password hash directly.)
+- **Public signup / onboarding.** ~~Accounts stay manually created.~~ **Superseded
+  (2026-07-13):** interest from would-be users reversed this — public signup is now
+  planned in **[CHORE-8](../roadmap/chores.json)**, bounded by a configurable
+  `MAX_USERS` cap (default 10) enforced in PROD so onboarding stays small. Sequenced
+  after CHORE-6.a/6.b. Email verification, password reset, and OAuth remain out of scope.
 - **Account / Preferences / Privacy / Export sections** of the mock — visual
   placeholders or omitted this chore.
 - **Theme / dark mode** — the mock now has a light/dark design, which _unblocks_

@@ -80,6 +80,16 @@
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "CHORE-8",
+            "title": "Public signup, capped to a configurable max users in PROD",
+            "description": "Accounts are created manually today (seed / direct prod insert); spec 0006 §8 deferred public signup. People are interested in using the app, so add a real signup page — but bound it: PROD accepts at most N users (default 10) so onboarding stays small and controlled. Reverses the 'no signup' deferral in spec 0006 §8 (updated in this chore). Sequenced AFTER CHORE-6.a (a new account needs the default Settings row) and ideally CHORE-6.b (so a new user lands in a clean Solo tracker).",
+            "plan": "(1) Signup page + IDOR-N/A public server action: email + password (Zod-validated), bcrypt-hash the password (mirror the seed's hashing), create User + a default Settings row (Solo: sharesExpenses=false). (2) User cap: a MAX_USERS env var (default 10) checked in the action BEFORE creating the user — count existing users and reject at-cap with a clear 'signups are currently full' message; document the var in .env.example + coding-conventions.md. The cap is enforced wherever the env is set (PROD); local/dev can raise it. (3) After signup, sign the user in (or redirect to /login). (4) Update spec 0006 §8 to record signup is now in-scope behind the cap. Tests: action happy path, duplicate-email rejection, at-cap rejection (boundary: N-1 ok, N rejected), validation, password is hashed (never stored plain). Out of scope: email verification, password reset, onboarding wizard, social/OAuth login, rate-limiting beyond the cap (note as follow-up). Depends on CHORE-6.a (default Settings), coordinates with CHORE-6.b (Solo UX).",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
         }
     ]
 }
