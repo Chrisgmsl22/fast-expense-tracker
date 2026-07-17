@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, Settings } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -83,6 +83,22 @@ export function AppNav({ email }: { email?: string }) {
                                     {email}
                                 </p>
                             )}
+                            <Link
+                                href="/settings"
+                                onClick={() => setOpen(false)}
+                                aria-current={
+                                    isActive("/settings") ? "page" : undefined
+                                }
+                                className={cn(
+                                    "mb-1 flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+                                    isActive("/settings")
+                                        ? "bg-muted font-medium text-foreground"
+                                        : "text-muted-foreground hover:text-foreground",
+                                )}
+                            >
+                                <Settings className="size-4" />
+                                Settings
+                            </Link>
                             <LogoutButton />
                         </div>
                     </SheetContent>
@@ -120,6 +136,19 @@ export function AppNav({ email }: { email?: string }) {
                         {email}
                     </span>
                 )}
+                <Link
+                    href="/settings"
+                    aria-label="Settings"
+                    aria-current={isActive("/settings") ? "page" : undefined}
+                    className={cn(
+                        "inline-flex size-8 items-center justify-center rounded-md transition-colors",
+                        isActive("/settings")
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground",
+                    )}
+                >
+                    <Settings className="size-4" />
+                </Link>
                 <LogoutButton />
             </div>
         </div>

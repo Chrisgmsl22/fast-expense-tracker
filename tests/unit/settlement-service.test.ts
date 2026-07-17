@@ -7,6 +7,7 @@ import type {
     SettlementMovementRow,
 } from "@/lib/repositories/settlement.repository";
 import { FakeSettlementRepository } from "@/tests/support/fake-settlement-repository";
+import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
 
 // now = mid-July → window is June + July; May is outside it.
 const NOW = new Date("2026-07-15T12:00:00Z");
@@ -44,7 +45,13 @@ function run(
     const repo = new FakeSettlementRepository();
     repo.setExpenses(expenses);
     repo.setMovements(movements);
-    return getSettlement("u1", { settlementRepo: repo, now: NOW });
+    const settingsRepo = new FakeSettingsRepository();
+    settingsRepo.seed("u1", { sharesExpenses: true, partnerName: "Brenda" });
+    return getSettlement("u1", {
+        settlementRepo: repo,
+        settingsRepo,
+        now: NOW,
+    });
 }
 
 describe("getSettlement", () => {

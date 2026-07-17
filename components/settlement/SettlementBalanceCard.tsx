@@ -2,7 +2,6 @@ import { Check } from "lucide-react";
 
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { formatMxn } from "@/lib/format";
-import { PARTNER_NAME } from "@/lib/partner";
 import { balanceTone } from "./balance-display";
 
 /**
@@ -13,11 +12,13 @@ import { balanceTone } from "./balance-display";
 export function SettlementBalanceCard({
     balance,
     carriedOver,
+    partnerName,
 }: {
     balance: CoupleBalance;
     carriedOver: { present: boolean; amount: number };
+    partnerName: string;
 }) {
-    const tone = balanceTone(balance.direction);
+    const tone = balanceTone(balance.direction, partnerName);
     const settled = balance.direction === "settled";
 
     return (
@@ -61,6 +62,7 @@ export function SettlementBalanceCard({
             <BalanceBar
                 direction={balance.direction}
                 fillClass={tone.fillClass}
+                partnerName={partnerName}
             />
         </div>
     );
@@ -73,9 +75,11 @@ export function SettlementBalanceCard({
 function BalanceBar({
     direction,
     fillClass,
+    partnerName,
 }: {
     direction: CoupleBalance["direction"];
     fillClass: string;
+    partnerName: string;
 }) {
     return (
         <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
@@ -96,7 +100,7 @@ function BalanceBar({
                     className="absolute top-1/2 left-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-border"
                 />
             </div>
-            <span>{`${PARTNER_NAME.toLowerCase()} owes`}</span>
+            <span>{`${partnerName.toLowerCase()} owes`}</span>
         </div>
     );
 }

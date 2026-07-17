@@ -12,7 +12,6 @@ import {
     updatePartnerDebt,
     type UpdatePartnerDebtResult,
 } from "@/app/_actions/movement/update-partner-debt";
-import { PARTNER_NAME } from "@/lib/partner";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { PartnerDebtInput } from "@/lib/schemas/movement";
 
@@ -27,6 +26,7 @@ export type PartnerDebtEditable = {
 type Props = {
     /** When present, the form edits this debt instead of creating a new one. */
     debt?: PartnerDebtEditable;
+    partnerName: string;
     onSuccess?: () => void;
     onCancel?: () => void;
 };
@@ -38,7 +38,12 @@ type Props = {
  * only adds to what you owe her; a transfer settles it. Logged from the
  * settlement page.
  */
-export function PartnerDebtForm({ debt, onSuccess, onCancel }: Props) {
+export function PartnerDebtForm({
+    debt,
+    partnerName,
+    onSuccess,
+    onCancel,
+}: Props) {
     const [date, setDate] = useState(debt?.date ?? "");
     const [amount, setAmount] = useState(debt?.amount ?? "");
     const [note, setNote] = useState(debt?.note ?? "");
@@ -97,12 +102,12 @@ export function PartnerDebtForm({ debt, onSuccess, onCancel }: Props) {
             className="flex flex-col gap-4"
             aria-label={
                 debt
-                    ? `Edit a debt you owe ${PARTNER_NAME}`
-                    : `Log a debt you owe ${PARTNER_NAME}`
+                    ? `Edit a debt you owe ${partnerName}`
+                    : `Log a debt you owe ${partnerName}`
             }
         >
             <p className="text-sm text-muted-foreground">
-                {`Something ${PARTNER_NAME} fronted that you owe her back. It only adds to what you owe her — settle it with a transfer. It's not part of your spending.`}
+                {`Something ${partnerName} fronted that you owe her back. It only adds to what you owe her — settle it with a transfer. It's not part of your spending.`}
             </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -157,7 +162,7 @@ export function PartnerDebtForm({ debt, onSuccess, onCancel }: Props) {
                     id="debt-note"
                     name="note"
                     type="text"
-                    placeholder={`I owe ${PARTNER_NAME}`}
+                    placeholder={`I owe ${partnerName}`}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     className="mt-1.5"

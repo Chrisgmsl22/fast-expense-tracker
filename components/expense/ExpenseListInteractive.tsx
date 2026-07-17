@@ -6,7 +6,6 @@ import { Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals } from "@/lib/domain/movement";
 import { buildFeed } from "@/lib/feed";
-import { PARTNER_NAME } from "@/lib/partner";
 import { movementDisplay } from "@/components/movement/movement-display";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -47,6 +46,7 @@ type Props = {
     subcategories: SubcategoryOption[];
     cards: CardOption[];
     defaultSharePercentage: number;
+    partnerName: string;
 };
 
 /** Cash is the fallback for a null card (legacy rows); the seeded Cash card is green. */
@@ -91,6 +91,7 @@ export function ExpenseListInteractive({
     subcategories,
     cards,
     defaultSharePercentage,
+    partnerName,
 }: Props) {
     const router = useRouter();
     const [editing, setEditing] = useState<ExpenseEditable | null>(null);
@@ -301,6 +302,7 @@ export function ExpenseListInteractive({
                         <MovementRow
                             key={`m-${item.movement.id}`}
                             movement={item.movement}
+                            partnerName={partnerName}
                             pending={pending}
                             onEdit={() => openEditMovement(item.movement.id)}
                             onDelete={() => setDeletingMovement(item.movement)}
@@ -338,7 +340,7 @@ export function ExpenseListInteractive({
                 )}
                 {totals.paidToPartner > 0 && (
                     <span className="text-background/70">
-                        Paid to {PARTNER_NAME}{" "}
+                        Paid to {partnerName}{" "}
                         <span className="font-semibold text-background">
                             {formatMxn(totals.paidToPartner)}
                         </span>
@@ -485,6 +487,7 @@ export function ExpenseListInteractive({
                                     amount: String(editingMovement.amount),
                                     note: editingMovement.note ?? "",
                                 }}
+                                partnerName={partnerName}
                                 onCancel={() => setEditingMovement(null)}
                                 onSuccess={() => {
                                     setEditingMovement(null);
@@ -553,7 +556,7 @@ export function ExpenseListInteractive({
                         <DialogTitle>Delete this movement?</DialogTitle>
                         <DialogDescription>
                             {deletingMovement
-                                ? `${movementDisplay(deletingMovement.type).label} of ${formatMxn(deletingMovement.amount)} will be permanently removed.`
+                                ? `${movementDisplay(deletingMovement.type, partnerName).label} of ${formatMxn(deletingMovement.amount)} will be permanently removed.`
                                 : ""}
                         </DialogDescription>
                     </DialogHeader>
@@ -710,11 +713,13 @@ function ExpenseRow({
 /** One money-movement row — colour-tagged, editable + deletable (CHORE-5). */
 function MovementRow({
     movement: m,
+    partnerName,
     pending,
     onEdit,
     onDelete,
 }: {
     movement: MovementListItem;
+    partnerName: string;
     pending: boolean;
     onEdit: () => void;
     onDelete: () => void;
@@ -723,7 +728,7 @@ function MovementRow({
         label,
         amountClass: amountColor,
         rowTint,
-    } = movementDisplay(m.type);
+    } = movementDisplay(m.type, partnerName);
     const subline =
         m.type === "card_payment" ? (m.card?.name ?? "") : (m.note ?? "");
 

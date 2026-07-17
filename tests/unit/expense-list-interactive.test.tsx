@@ -118,6 +118,7 @@ const props = {
     subcategories: [{ id: "s1", name: "Restaurants", categoryId: "c1" }],
     cards: [{ id: "card1", name: "Amex", color: "#ca8a04" }],
     defaultSharePercentage: 0.68,
+    partnerName: "Brenda",
 };
 
 describe("ExpenseListInteractive", () => {

@@ -65,6 +65,7 @@ describe("SettlementBalanceCard", () => {
             <SettlementBalanceCard
                 balance={sheOwes}
                 carriedOver={{ present: false, amount: 0 }}
+                partnerName="Brenda"
             />,
         );
         expect(screen.getByText("BRENDA OWES YOU")).toBeDefined();
@@ -76,6 +77,7 @@ describe("SettlementBalanceCard", () => {
             <SettlementBalanceCard
                 balance={youOwe}
                 carriedOver={{ present: false, amount: 0 }}
+                partnerName="Brenda"
             />,
         );
         expect(screen.getByText("YOU OWE BRENDA")).toBeDefined();
@@ -86,6 +88,7 @@ describe("SettlementBalanceCard", () => {
             <SettlementBalanceCard
                 balance={settled}
                 carriedOver={{ present: false, amount: 0 }}
+                partnerName="Brenda"
             />,
         );
         expect(screen.getByText("All settled")).toBeDefined();
@@ -96,6 +99,7 @@ describe("SettlementBalanceCard", () => {
             <SettlementBalanceCard
                 balance={sheOwes}
                 carriedOver={{ present: true, amount: 300 }}
+                partnerName="Brenda"
             />,
         );
         expect(screen.getByText(/from last month/)).toBeDefined();
@@ -105,7 +109,7 @@ describe("SettlementBalanceCard", () => {
 
 describe("SettlementChip", () => {
     it("links to /settlement and shows the she-owes label + amount", () => {
-        render(<SettlementChip balance={sheOwes} />);
+        render(<SettlementChip balance={sheOwes} partnerName="Brenda" />);
         const link = screen.getByRole("link");
         expect(link.getAttribute("href")).toBe("/settlement");
         expect(screen.getByText("Brenda owes you")).toBeDefined();
@@ -113,7 +117,7 @@ describe("SettlementChip", () => {
     });
 
     it("hides the amount when settled", () => {
-        render(<SettlementChip balance={settled} />);
+        render(<SettlementChip balance={settled} partnerName="Brenda" />);
         expect(screen.getByText("All settled")).toBeDefined();
         expect(screen.queryByText(/\$/)).toBeNull();
     });
@@ -121,7 +125,7 @@ describe("SettlementChip", () => {
 
 describe("SettlementBreakdown", () => {
     it("renders the four lines and the net", () => {
-        render(<SettlementBreakdown balance={sheOwes} />);
+        render(<SettlementBreakdown balance={sheOwes} partnerName="Brenda" />);
         expect(
             screen.getByText(/32% of shared expenses you logged/),
         ).toBeDefined();
@@ -171,7 +175,7 @@ describe("SettlementJournal", () => {
     ];
 
     it("renders rows with the Earlier-months divider before carried rows", () => {
-        render(<SettlementJournal journal={journal} />);
+        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         expect(screen.getByText("Groceries")).toBeDefined();
         expect(screen.getByText("+$320.00")).toBeDefined();
         expect(screen.getByText("I owe Brenda")).toBeDefined();
@@ -180,18 +184,18 @@ describe("SettlementJournal", () => {
     });
 
     it("renders a transfer row with its note in the subtitle", () => {
-        render(<SettlementJournal journal={journal} />);
+        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         expect(screen.getByText(/Transfer — Brenda paid you/)).toBeDefined();
         expect(screen.getByText(/rent/)).toBeDefined();
     });
 
     it("shows an empty state when there is nothing to settle", () => {
-        render(<SettlementJournal journal={[]} />);
+        render(<SettlementJournal journal={[]} partnerName="Brenda" />);
         expect(screen.getByText("Nothing to settle yet.")).toBeDefined();
     });
 
     it("shows edit + delete on the debt and transfer rows, not a shared expense", () => {
-        render(<SettlementJournal journal={journal} />);
+        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         expect(screen.getByLabelText("Edit I owe Brenda")).toBeDefined();
         expect(screen.getByLabelText("Delete I owe Brenda")).toBeDefined();
         expect(
@@ -206,7 +210,7 @@ describe("SettlementJournal", () => {
 
     it("opens the delete confirm and calls deleteMovement", async () => {
         deleteMock.mockResolvedValue({ ok: true, data: { id: "e2" } });
-        render(<SettlementJournal journal={journal} />);
+        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
 
         const dialog = await screen.findByRole("dialog");
@@ -218,7 +222,7 @@ describe("SettlementJournal", () => {
     });
 
     it("loads the debt into an edit form, prefilled from the row", async () => {
-        render(<SettlementJournal journal={journal} />);
+        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
 
         const dialog = await screen.findByRole("dialog");
@@ -234,7 +238,7 @@ describe("SettlementJournal", () => {
     });
 
     it("edits a transfer, prefilled from the row, and saves via updateTransfer", async () => {
-        render(<SettlementJournal journal={journal} />);
+        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         fireEvent.click(
             screen.getByLabelText("Edit Transfer — Brenda paid you"),
         );
@@ -265,7 +269,7 @@ describe("SettlementJournal", () => {
 
     it("deletes a transfer via deleteMovement", async () => {
         deleteMock.mockResolvedValue({ ok: true, data: { id: "m1" } });
-        render(<SettlementJournal journal={journal} />);
+        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         fireEvent.click(
             screen.getByLabelText("Delete Transfer — Brenda paid you"),
         );

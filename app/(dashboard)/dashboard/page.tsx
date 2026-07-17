@@ -1,7 +1,12 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
-import { expenseRepository, movementRepository } from "@/lib/repositories";
+import { resolvePartnerName } from "@/lib/domain/settings";
+import {
+    expenseRepository,
+    movementRepository,
+    settingsRepository,
+} from "@/lib/repositories";
 import { getDashboardSummary } from "@/lib/services/dashboard/dashboard.service";
 import { getSettlement } from "@/lib/services/settlement/settlement.service";
 import { BucketsHero } from "@/components/dashboard/BucketsHero";
@@ -60,13 +65,11 @@ export default async function DashboardPage({
             orderBy: { name: "asc" },
             select: { id: true, name: true, color: true },
         }),
-        db.settings.findUnique({
-            where: { userId },
-            select: { defaultSharePercentage: true },
-        }),
+        settingsRepository.getSettings(userId),
     ]);
 
-    const sharePercentage = settings?.defaultSharePercentage ?? 0.68;
+    const sharePercentage = settings.defaultSharePercentage;
+    const partnerName = resolvePartnerName(settings.partnerName);
 
     // "2026-06" → "June 2026" (UTC: a calendar month, not a timestamp to shift).
     const monthLabel = new Intl.DateTimeFormat("en-US", {
@@ -85,6 +88,7 @@ export default async function DashboardPage({
                 categories={categories}
                 subcategories={subcategories}
                 cards={cards}
+                partnerName={partnerName}
             />
             <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem] xl:grid-cols-[1fr_24rem]">
                 {/* Main column */}
@@ -116,6 +120,7 @@ export default async function DashboardPage({
                         movements={movements}
                         monthLabel={monthLabel}
                         settlement={settlement.balance}
+                        partnerName={partnerName}
                     />
                 </aside>
             </div>
