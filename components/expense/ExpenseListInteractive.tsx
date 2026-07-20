@@ -6,6 +6,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals } from "@/lib/domain/movement";
 import { buildFeed } from "@/lib/feed";
+import { CASH_COLOR } from "@/lib/palette";
 import { movementDisplay } from "@/components/movement/movement-display";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -50,9 +51,6 @@ type Props = {
     /** Shared-expense mode — threaded to the edit form's split control. */
     sharesExpenses: boolean;
 };
-
-/** Cash is the fallback for a null card (legacy rows); the seeded Cash card is green. */
-const CASH_COLOR = "#16a34a";
 
 function Dot({ color }: { color: string }) {
     return (

@@ -5,10 +5,9 @@ import { buildFeed } from "@/lib/feed";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
+import { CASH_COLOR } from "@/lib/palette";
 import { movementDisplay } from "@/components/movement/movement-display";
 import { SettlementChip } from "./SettlementChip";
-
-const CASH_COLOR = "#16a34a";
 
 /**
  * Right-rail month feed — a read-only list of the month's expenses **and money

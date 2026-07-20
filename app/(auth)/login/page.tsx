@@ -1,9 +1,10 @@
 import { LoginForm } from "@/components/auth/LoginForm";
+import { CARD_PALETTE } from "@/lib/palette";
 
-// Card-method colors (docs/designs-screens/README.md §Design Tokens): Amex
-// Platinum · Amex Gold · NU · BBVA · Cash. Per-card hex, not theme tokens —
-// rendered here as the brand-panel dot motif.
-const CARD_DOT_COLORS = ["#6b7280", "#c79a3b", "#820ad1", "#0b5cab", "#16a34a"];
+// Card-method colors: Amex Platinum · Amex Gold · NU · BBVA · Cash — the first
+// five palette swatches are exactly the seeded card colours (spec 0006 §6).
+// Sourced from the shared palette so these brand dots can't drift from the seed.
+const CARD_DOT_COLORS = CARD_PALETTE.slice(0, 5).map((swatch) => swatch.hex);
 
 function CardDots() {
     return (

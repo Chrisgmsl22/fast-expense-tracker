@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 import { getMonthRangeUtc } from "@/lib/dates";
 import { budgetForMonth } from "@/lib/domain/category";
 import { SAVINGS_SLUG, type CategorySpend } from "@/lib/domain/dashboard";
+import { CASH_COLOR } from "@/lib/palette";
 
 /** One card's my-share spend for the month (the spend-by-card bar/legend). */
 export type CardSpend = {
@@ -30,7 +31,6 @@ export type CategoryBudgetItem = {
 /** Cash (null `cardId`) rolls up under this id/label + the seeded Cash green. */
 const CASH_ID = "cash";
 const CASH_NAME = "Cash";
-const CASH_COLOR = "#16a34a";
 
 /** The orphaned-expense sentinel — excluded from the category grid. */
 const UNASSIGNED_SLUG = "unassigned";
