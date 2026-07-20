@@ -183,6 +183,50 @@ describe("CardsForm", () => {
         expect(archiveMock).not.toHaveBeenCalled();
     });
 
+    it("surfaces a server field error when saving an edit", async () => {
+        updateMock.mockResolvedValue({
+            ok: false,
+            code: "duplicate_name",
+            message: "You already have an active card with that name.",
+            fieldErrors: { name: ["A card with that name already exists"] },
+        });
+        render(<CardsForm cards={[card({ id: "c1", name: "NU" })]} />);
+        fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
+        fireEvent.change(screen.getByLabelText("Card name"), {
+            target: { value: "BBVA" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+        await waitFor(() =>
+            expect(
+                screen.getByText("A card with that name already exists"),
+            ).toBeDefined(),
+        );
+    });
+
+    it("surfaces a has_references message when a delete is refused", async () => {
+        deleteMock.mockResolvedValue({
+            ok: false,
+            code: "has_references",
+            message: "This card has expenses — archive it instead.",
+        });
+        render(
+            <CardsForm
+                cards={[card({ id: "c1", name: "NU", inUse: false })]}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
+        fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+        await waitFor(() =>
+            expect(
+                screen.getByText(
+                    "This card has expenses — archive it instead.",
+                ),
+            ).toBeDefined(),
+        );
+    });
+
     it("edit → Save changes calls updateCard", async () => {
         render(<CardsForm cards={[card({ id: "c1", name: "NU" })]} />);
         fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
