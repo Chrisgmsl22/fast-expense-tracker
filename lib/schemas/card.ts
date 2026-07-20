@@ -38,6 +38,12 @@ export const updateCardInputSchema = z.object({
     color: cardColorSchema,
 });
 
+/** Identify a card for archive/delete — id only (both are `userId`-scoped). */
+export const cardIdInputSchema = z.object({
+    id: z.string().min(1, "Card is required"),
+});
+
 export type CardType = z.infer<typeof cardTypeSchema>;
 export type AddCardInput = z.infer<typeof addCardInputSchema>;
 export type UpdateCardInput = z.infer<typeof updateCardInputSchema>;
+export type CardIdInput = z.infer<typeof cardIdInputSchema>;
