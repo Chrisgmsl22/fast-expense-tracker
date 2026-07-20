@@ -82,6 +82,21 @@ describe("CardsForm", () => {
         );
     });
 
+    it("offers only Credit and Debit as add types (no Cash)", async () => {
+        render(<CardsForm cards={[]} />);
+        fireEvent.click(screen.getByRole("button", { name: "Add card" }));
+        // Open the type dropdown so its options mount.
+        fireEvent.click(screen.getByLabelText("Card type"));
+
+        await waitFor(() =>
+            expect(
+                screen.getByRole("option", { name: "Credit" }),
+            ).toBeDefined(),
+        );
+        expect(screen.getByRole("option", { name: "Debit" })).toBeDefined();
+        expect(screen.queryByRole("option", { name: "Cash" })).toBeNull();
+    });
+
     it("surfaces a server field error on add", async () => {
         addMock.mockResolvedValue({
             ok: false,

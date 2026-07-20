@@ -12,11 +12,7 @@ import type { FieldErrors } from "@/lib/actions/result";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
 import { CARD_PALETTE, isValidHex } from "@/lib/palette";
 import type { CardSettingsItem } from "@/lib/repositories/card.repository";
-import type {
-    AddCardInput,
-    CardType,
-    UpdateCardInput,
-} from "@/lib/schemas/card";
+import type { AddCardInput, UpdateCardInput } from "@/lib/schemas/card";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,14 +26,22 @@ import {
 
 const DEFAULT_COLOR = CARD_PALETTE[0]?.hex ?? "#6b7280";
 
-const TYPE_OPTIONS: ReadonlyArray<{ value: CardType; label: string }> = [
+/** Display labels for every card type (Cash is a locked, non-addable system card). */
+const CARD_TYPE_LABELS: Record<string, string> = {
+    credit: "Credit",
+    debit: "Debit",
+    cash: "Cash",
+};
+
+/** Types a user may add — Cash is excluded on purpose (see `addCardTypeSchema`). */
+type AddCardType = AddCardInput["type"];
+const ADD_TYPE_OPTIONS: ReadonlyArray<{ value: AddCardType; label: string }> = [
     { value: "credit", label: "Credit" },
     { value: "debit", label: "Debit" },
-    { value: "cash", label: "Cash" },
 ];
 
 function typeLabel(type: string): string {
-    return TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
+    return CARD_TYPE_LABELS[type] ?? type;
 }
 
 function FieldError({ id, message }: { id: string; message?: string }) {
@@ -112,7 +116,7 @@ function ColorField({
 function AddCardForm({ onDone }: { onDone: () => void }) {
     const router = useRouter();
     const [name, setName] = useState("");
-    const [type, setType] = useState<CardType>("credit");
+    const [type, setType] = useState<AddCardType>("credit");
     const [color, setColor] = useState(DEFAULT_COLOR);
     const [errors, setErrors] = useState<FieldErrors<AddCardInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
@@ -167,7 +171,7 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
                     value={type}
                     onValueChange={(value) =>
                         setType(
-                            TYPE_OPTIONS.find((o) => o.value === value)
+                            ADD_TYPE_OPTIONS.find((o) => o.value === value)
                                 ?.value ?? "credit",
                         )
                     }
@@ -180,7 +184,7 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
                         {typeLabel(type)}
                     </SelectTrigger>
                     <SelectContent>
-                        {TYPE_OPTIONS.map((o) => (
+                        {ADD_TYPE_OPTIONS.map((o) => (
                             <SelectItem key={o.value} value={o.value}>
                                 {o.label}
                             </SelectItem>

@@ -41,6 +41,20 @@ describe("addCard (unit, injected fake repo)", () => {
         expect(repo.created).toHaveLength(0);
     });
 
+    it("rejects a cash card add (cash is a locked system card, not addable)", async () => {
+        const repo = new FakeCardRepository();
+        const res = await addCard(
+            { name: "Efectivo", type: "cash", color: "#16a34a" },
+            repo,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.type).toBeDefined();
+        expect(repo.created).toHaveLength(0);
+    });
+
     it("returns unauthenticated with no session (never writes)", async () => {
         authMock.mockResolvedValue(null);
         const repo = new FakeCardRepository();

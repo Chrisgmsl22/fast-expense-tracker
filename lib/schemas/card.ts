@@ -3,13 +3,22 @@ import { z } from "zod";
 import { isValidHex } from "@/lib/palette";
 
 /**
- * Validation for card management (spec 0006 §6 / CHORE-6.c). The colour accepts
- * either a palette swatch or a custom value, so the schema only enforces the
- * `#RRGGBB` shape (normalized to lowercase); the palette is a UI convenience, not
- * an allow-list. `type` is immutable after creation (the mock has no type control
+ * Validation for card management (spec 0006 §6). The colour accepts either a
+ * palette swatch or a custom value, so the schema only enforces the `#RRGGBB`
+ * shape (normalized to lowercase); the palette is a UI convenience, not an
+ * allow-list. `type` is immutable after creation (the mock has no type control
  * on the edit row), so only `addCardInputSchema` carries it.
  */
 export const cardTypeSchema = z.enum(["credit", "debit", "cash"]);
+
+/**
+ * The types a user may *add*. `cash` is excluded on purpose: the cash card is a
+ * single system-managed, fully-locked card (null `cardId` = Cash on the
+ * dashboard). Adding another `type:"cash"` card would be permanently
+ * un-removable (locked by `isCash`) and break that invariant, so a cash add
+ * fails validation here rather than reaching the DB.
+ */
+export const addCardTypeSchema = z.enum(["credit", "debit"]);
 
 const cardNameSchema = z
     .string()
@@ -25,7 +34,7 @@ const cardColorSchema = z
 
 export const addCardInputSchema = z.object({
     name: cardNameSchema,
-    type: cardTypeSchema,
+    type: addCardTypeSchema,
     color: cardColorSchema,
 });
 
