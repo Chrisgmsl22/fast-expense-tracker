@@ -45,25 +45,44 @@ derive every view.)
    mode change — the flag only changes what the UI _derives and shows_, not the
    stored facts.
 6. **Solo → Shared is additive** — no confirmation needed.
-7. **Shared → Solo hides, never deletes.** Disabling sharing hides the settlement
-   route + partner surfaces but removes no data. `partnerName` is **preserved**
-   (not nulled) so re-enabling restores the prior setup losslessly. With live
-   partner data present, a confirm dialog is warranted; an unsettled balance is
-   **frozen + hidden while Solo and restored losslessly** on re-enable.
-8. **In Solo mode, dashboard categories default to the Total basis** (a solo
-   user's share _is_ the total). The my-share ⇄ total control itself is CHORE-7.
+7. **Shared → Solo hides live machinery, never data.** Disabling sharing hides the
+   _forward-looking_ controls — the split control on the expense form, the partner
+   items in the Add menu, the "My view · %" pill — and the live settlement **chip**
+   (running balance). But **historical partner data stays visible**: past
+   `gf_paid` / `gf_received` movement rows and the monthly "Paid to {partner}"
+   totals still render in the dashboard + expenses feeds. Rationale: hiding real
+   past transactions would misrepresent the data. A was-shared user keeps seeing
+   their history; a genuine solo user has none, so it still reads as a plain
+   tracker. `partnerName` is **preserved** (not nulled) so re-enabling restores
+   losslessly. No data is frozen or deleted.
+8. **The Settlement page is data-driven in Solo, not frozen.** While an unsettled
+   balance exists (≠ 0), the Settlement tab + route stay **reachable and
+   settleable** (`SettlementActions` work) so a was-shared user can wind the
+   balance down; once it reaches zero the tab auto-hides — and with no new shared
+   activity it stays hidden. This **supersedes the earlier "freeze + hide the
+   balance" idea**: hiding an owed balance would strand important info. Gate:
+   `showSettlement = sharesExpenses || !isBalanceSettled(balance)`.
+9. **No Total-basis display toggle is needed for Solo.** Because `actualExpenditure`
+   is stored per expense (a solo expense = 100% = `amount`; a historical shared
+   expense = its stored share), summing `actualExpenditure` is already correct in
+   every mode — no per-mode display switch is required for solo coherence. The
+   optional my-share ⇄ total control (CHORE-7) is **deferred** and not a
+   dependency of solo mode.
 
 ### Scope of _this_ chore (6.a) vs. later
 
 - **6.a (this chore):** schema (`Settings +sharesExpenses +partnerName`), the
   `getSettings` accessor, removal of the `PARTNER_NAME` constant (name threaded as
   data), the Settings page shell + the live split-rule block, and the owner data
-  migration. The confirm-on-disable dialog and the freeze/restore + gating
-  machinery (decisions 7–8) are **recorded here but implemented in 6.b/6.c** —
-  6.a does not build them.
-- **6.b:** Solo-mode gating (hide the split control, settlement route + guard,
-  partner Add-menu items, partner dashboard widgets) + the freeze/restore of an
-  unsettled balance.
+  migration. The solo-mode gating (decisions 7–9) is **recorded here but
+  implemented in 6.b** — 6.a does not build it.
+- **6.b:** Solo-mode gating per decisions 7–9 — hide the split control, partner
+  Add-menu items, the "My view" pill, and the live settlement chip; **keep
+  historical partner rows + "Paid to {partner}" totals visible** (decision 7);
+  **data-driven Settlement route/link** — reachable + settleable while the balance
+  is unsettled, hidden once settled (decision 8). No freeze/restore, no Total-basis
+  toggle (decision 9). A confirm-on-disable dialog was dropped as unnecessary:
+  show-until-settled makes disabling low-risk (nothing is hidden or lost).
 - **6.c:** card management (`Card.archivedAt`, CRUD in Settings).
 
 ## Consequences
