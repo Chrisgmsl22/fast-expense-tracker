@@ -223,7 +223,7 @@ describe("CardsForm", () => {
         deleteMock.mockResolvedValue({
             ok: false,
             code: "has_references",
-            message: "This card has expenses — archive it instead.",
+            message: "This card is used by past records — archive it instead.",
         });
         render(
             <CardsForm
@@ -236,7 +236,7 @@ describe("CardsForm", () => {
         await waitFor(() =>
             expect(
                 screen.getByText(
-                    "This card has expenses — archive it instead.",
+                    "This card is used by past records — archive it instead.",
                 ),
             ).toBeDefined(),
         );

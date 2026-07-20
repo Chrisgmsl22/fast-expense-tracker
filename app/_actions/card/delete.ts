@@ -68,7 +68,8 @@ export async function deleteCard(
             return {
                 ok: false,
                 code: "has_references",
-                message: "This card has expenses — archive it instead.",
+                message:
+                    "This card is used by past records — archive it instead.",
             };
         }
 
