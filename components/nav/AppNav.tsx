@@ -28,21 +28,22 @@ const LINKS = [
  * hamburger opens a Sheet drawer with the links + email + Sign out, so the
  * header stays a compact burger + brand and never overflows the viewport width.
  *
- * Solo mode (Settings.sharesExpenses = false) drops the Settlement link — that
- * whole surface is partner-only and its route is guarded server-side (CHORE-6.b).
+ * The Settlement link shows when `showSettlement` is true (Shared mode, or Solo
+ * with an unsettled balance still to wind down); otherwise it's dropped and its
+ * route is guarded server-side (CHORE-6.b). The layout computes the flag.
  */
 export function AppNav({
     email,
-    sharesExpenses,
+    showSettlement,
 }: {
     email?: string;
-    sharesExpenses: boolean;
+    showSettlement: boolean;
 }) {
     const pathname = usePathname();
     const [open, setOpen] = useState(false);
     const isActive = (href: string) =>
         pathname === href || pathname.startsWith(`${href}/`);
-    const links = sharesExpenses
+    const links = showSettlement
         ? LINKS
         : LINKS.filter((l) => l.href !== "/settlement");
 

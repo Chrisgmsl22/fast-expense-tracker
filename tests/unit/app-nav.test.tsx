@@ -18,7 +18,7 @@ import { AppNav } from "@/components/nav/AppNav";
 
 describe("AppNav", () => {
     it("renders the nav links and marks the active route", () => {
-        render(<AppNav email="test@email.com" sharesExpenses />);
+        render(<AppNav email="test@email.com" showSettlement />);
         // Desktop row (drawer is closed, so links appear once).
         expect(
             screen
@@ -35,7 +35,7 @@ describe("AppNav", () => {
     });
 
     it("opens a drawer with the links, email, and sign-out", async () => {
-        render(<AppNav email="test@email.com" sharesExpenses />);
+        render(<AppNav email="test@email.com" showSettlement />);
         fireEvent.click(screen.getByRole("button", { name: /open menu/i }));
 
         const drawer = await screen.findByRole("dialog");
@@ -51,7 +51,7 @@ describe("AppNav", () => {
     });
 
     it("closes the drawer when a link is tapped", async () => {
-        render(<AppNav email="test@email.com" sharesExpenses />);
+        render(<AppNav email="test@email.com" showSettlement />);
         fireEvent.click(screen.getByRole("button", { name: /open menu/i }));
         const drawer = await screen.findByRole("dialog");
 
@@ -59,13 +59,22 @@ describe("AppNav", () => {
         await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     });
 
-    it("drops the Settlement link in Solo mode, keeping the others (CHORE-6.b)", () => {
-        render(<AppNav email="test@email.com" sharesExpenses={false} />);
+    // showSettlement=false is the Solo + settled case (nothing left to wind
+    // down); the layout hides the link. The others stay.
+    it("drops the Settlement link when showSettlement is false (CHORE-6.b)", () => {
+        render(<AppNav email="test@email.com" showSettlement={false} />);
         expect(screen.getByRole("link", { name: "Dashboard" })).toBeDefined();
         expect(screen.getByRole("link", { name: "Expenses" })).toBeDefined();
         expect(screen.getByRole("link", { name: "Income" })).toBeDefined();
         expect(screen.queryByRole("link", { name: "Settlement" })).toBeNull();
         // The Settings gear stays regardless of mode.
         expect(screen.getByRole("link", { name: "Settings" })).toBeDefined();
+    });
+
+    // showSettlement=true covers both Shared mode and Solo-with-an-unsettled
+    // balance — either way the link is reachable so the balance can be settled.
+    it("shows the Settlement link when showSettlement is true (CHORE-6.b)", () => {
+        render(<AppNav email="test@email.com" showSettlement />);
+        expect(screen.getByRole("link", { name: "Settlement" })).toBeDefined();
     });
 });

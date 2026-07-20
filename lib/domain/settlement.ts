@@ -81,3 +81,13 @@ export function computeCoupleBalance(inputs: SettlementInputs): CoupleBalance {
         ],
     };
 }
+
+/**
+ * True when nothing is owed either way (net zero). `balance` is already rounded
+ * to cents, but a half-cent epsilon keeps this robust against Float drift.
+ * Drives the solo-mode Settlement gate (CHORE-6.b): a solo user still reaches
+ * the settlement surface while a nonzero balance remains to be wound down.
+ */
+export function isBalanceSettled(balance: CoupleBalance): boolean {
+    return Math.abs(balance.balance) < 0.005;
+}

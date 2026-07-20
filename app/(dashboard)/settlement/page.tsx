@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { isBalanceSettled } from "@/lib/domain/settlement";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import { settingsRepository } from "@/lib/repositories";
 import { getSettlement } from "@/lib/services/settlement/settlement.service";
@@ -27,10 +28,11 @@ export default async function SettlementPage() {
         getSettlement(userId),
         settingsRepository.getSettings(userId),
     ]);
-    // Settlement is a shared-mode-only surface. A Solo user reaching this URL
-    // directly (bookmark, stale link) is sent back to the dashboard — the nav
-    // link is already hidden, this guards the route itself (CHORE-6.b).
-    if (!settings.sharesExpenses) {
+    // A Solo user only reaches settlement while a balance is still open, so they
+    // can wind it down (CHORE-6.b). Once solo + settled, the surface is dead —
+    // send them back to the dashboard (the nav link is already hidden then too).
+    // Shared users always pass. Reuse the balance already computed above.
+    if (!settings.sharesExpenses && isBalanceSettled(settlement.balance)) {
         redirect("/dashboard");
     }
     const partnerName = resolvePartnerName(settings.partnerName);

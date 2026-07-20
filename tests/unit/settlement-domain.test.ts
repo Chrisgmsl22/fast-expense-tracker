@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { computeCoupleBalance } from "@/lib/domain/settlement";
+import {
+    computeCoupleBalance,
+    isBalanceSettled,
+} from "@/lib/domain/settlement";
 
 const inputs = (
     over: Partial<Parameters<typeof computeCoupleBalance>[0]> = {},
@@ -102,5 +105,42 @@ describe("computeCoupleBalance", () => {
             { key: "partner_paid", sign: "-", amount: 50 },
             { key: "you_paid", sign: "+", amount: 20 },
         ]);
+    });
+});
+
+describe("isBalanceSettled", () => {
+    it("is true when the net balance is zero", () => {
+        const r = computeCoupleBalance(
+            inputs({
+                partnerShareOfYourExpenses: 1000,
+                moneyPartnerPaidYou: 1000,
+            }),
+        );
+        expect(isBalanceSettled(r)).toBe(true);
+    });
+
+    it("is false when she still owes you", () => {
+        const r = computeCoupleBalance(
+            inputs({ partnerShareOfYourExpenses: 400 }),
+        );
+        expect(isBalanceSettled(r)).toBe(false);
+    });
+
+    it("is false when you still owe her", () => {
+        const r = computeCoupleBalance(inputs({ yourDebtToPartner: 250 }));
+        expect(isBalanceSettled(r)).toBe(false);
+    });
+
+    it("treats sub-cent Float drift as settled", () => {
+        // 0.1 - 0.1 rounds to exactly 0, but a synthetic drift under half a cent
+        // must still read as settled.
+        expect(
+            isBalanceSettled({
+                balance: 0.004,
+                amount: 0.004,
+                direction: "she_owes",
+                breakdown: [],
+            }),
+        ).toBe(true);
     });
 });
