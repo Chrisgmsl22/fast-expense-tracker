@@ -34,20 +34,18 @@ export function MonthFeed({
     settlement?: CoupleBalance;
     partnerName: string;
     /**
-     * Shared-expense mode. Solo hides every partner surface here — the
-     * settlement chip, the partner transfer rows, and the "Paid to {partner}"
-     * footer — so the feed reads as a plain tracker (CHORE-6.b). Historical
-     * partner movements are never rewritten (ADR-0021), just not surfaced.
+     * Shared-expense mode. Solo hides only the live settlement chip — the
+     * running couple balance is frozen (ADR-0021). Historical partner rows and
+     * the monthly "Paid to {partner}" total stay visible: a was-shared user
+     * keeps their real history, and a genuine solo user has none, so the feed
+     * still reads as a plain tracker (CHORE-6.b, Option 2). Partner movements
+     * are never rewritten (ADR-0021), just no longer created in solo.
      */
     sharesExpenses: boolean;
 }) {
-    // Solo mode surfaces only non-partner activity — expenses + card payments.
-    const visibleMovements = sharesExpenses
-        ? movements
-        : movements.filter((m) => m.type === "card_payment");
-    const feed = buildFeed(expenses, visibleMovements);
+    const feed = buildFeed(expenses, movements);
 
-    const paidToPartner = sumByType(visibleMovements, "gf_paid");
+    const paidToPartner = sumByType(movements, "gf_paid");
     const totals = computeFeedTotals(expenses, paidToPartner);
 
     const count = feed.length;

@@ -245,7 +245,7 @@ describe("MonthFeed", () => {
         );
     });
 
-    it("hides the settlement chip, partner rows, and 'Paid to' total in Solo mode (CHORE-6.b)", () => {
+    it("keeps historical partner rows + 'Paid to' total but hides only the settlement chip in Solo mode (CHORE-6.b, Option 2)", () => {
         const movements: MovementListItem[] = [
             {
                 id: "m1",
@@ -276,10 +276,15 @@ describe("MonthFeed", () => {
         );
         // Non-partner activity stays.
         expect(screen.getByText("Card payment")).toBeDefined();
-        // No settlement chip (its link), no partner transfer row, no footer figure.
+        // Historical partner data stays visible (immutable history, ADR-0021):
+        // the transfer row + the monthly "Paid to Brenda" footer figure.
+        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        const totals = within(screen.getByTestId("feed-totals"));
+        expect(totals.getByText("Paid to Brenda")).toBeDefined();
+        expect(totals.getByText("$200.00")).toBeDefined();
+        // Only the live settlement chip (its link) is hidden — the running
+        // balance is frozen in solo (ADR-0021 freeze).
         expect(screen.queryByRole("link")).toBeNull();
-        expect(screen.queryByText("Paid Brenda")).toBeNull();
-        expect(screen.queryByText("Paid to Brenda")).toBeNull();
     });
 
     it("shows no card (not Cash) for a savings row", () => {
