@@ -21,7 +21,7 @@ export type ArchiveCardResult = ActionResult<
 >;
 
 /**
- * Archive a card (CHORE-6.c) — the removal path for a card with history: it drops
+ * Archive a card — the removal path for a card with history: it drops
  * out of pickers but stays attached to past expenses/movements. IDOR-safe and
  * cash-locked. Delete (for unused cards) is a separate action.
  */

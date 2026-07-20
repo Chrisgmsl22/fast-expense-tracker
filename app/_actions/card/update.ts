@@ -26,7 +26,7 @@ export type UpdateCardResult = ActionResult<
 >;
 
 /**
- * Rename/recolor a card (CHORE-6.c). IDOR-safe: writes are scoped to the session
+ * Rename/recolor a card. IDOR-safe: writes are scoped to the session
  * user. The `type:"cash"` card is fully locked (no rename/recolor). The unique
  * active-name check excludes the card's own id so a pure recolor never trips it.
  */

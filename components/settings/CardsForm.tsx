@@ -392,7 +392,7 @@ function DisplayRow({
 }
 
 /**
- * The Settings "Cards" section (spec 0006 §6 / CHORE-6.c). Lists the user's cards
+ * The Settings "Cards" section (spec 0006 §6). Lists the user's cards
  * and drives add / rename / recolor / archive / delete through IDOR-safe server
  * actions. The Cash card is locked (no controls); used cards archive while unused
  * ones delete, chosen up front from each card's `inUse` flag. Active cards are

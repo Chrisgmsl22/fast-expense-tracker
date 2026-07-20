@@ -23,7 +23,7 @@ export type AddCardResult = ActionResult<
 >;
 
 /**
- * Add a card (CHORE-6.c). IDOR-safe: the `userId` comes from the session, never
+ * Add a card. IDOR-safe: the `userId` comes from the session, never
  * the client. Enforces the active-card cap and a unique active name per user
  * (case-insensitive) before writing; archived names don't collide.
  */

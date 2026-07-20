@@ -22,7 +22,7 @@ export type DeleteCardResult = ActionResult<
 >;
 
 /**
- * Hard-delete a card (CHORE-6.c) — only allowed for a card with zero
+ * Hard-delete a card — only allowed for a card with zero
  * Expense/Movement references (added by mistake, never used). References are
  * re-checked server-side, so the client can never force a delete that would
  * strip the card label off history; used cards must be archived instead.
