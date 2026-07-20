@@ -1,0 +1,43 @@
+import { z } from "zod";
+
+import { isValidHex } from "@/lib/palette";
+
+/**
+ * Validation for card management (spec 0006 §6 / CHORE-6.c). The colour accepts
+ * either a palette swatch or a custom value, so the schema only enforces the
+ * `#RRGGBB` shape (normalized to lowercase); the palette is a UI convenience, not
+ * an allow-list. `type` is immutable after creation (the mock has no type control
+ * on the edit row), so only `addCardInputSchema` carries it.
+ */
+export const cardTypeSchema = z.enum(["credit", "debit", "cash"]);
+
+const cardNameSchema = z
+    .string()
+    .trim()
+    .min(1, "Card name is required")
+    .max(40, "Card name is too long");
+
+const cardColorSchema = z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine(isValidHex, "Enter a valid #RRGGBB colour");
+
+export const addCardInputSchema = z.object({
+    name: cardNameSchema,
+    type: cardTypeSchema,
+    color: cardColorSchema,
+});
+
+export const updateCardInputSchema = z.object({
+    // A malformed id can't match another user's row (the repo scopes writes by
+    // `{ id, userId }`), so this only needs to be present — mirrors the expense
+    // and movement schemas rather than enforcing a strict UUID shape.
+    id: z.string().min(1, "Card is required"),
+    name: cardNameSchema,
+    color: cardColorSchema,
+});
+
+export type CardType = z.infer<typeof cardTypeSchema>;
+export type AddCardInput = z.infer<typeof addCardInputSchema>;
+export type UpdateCardInput = z.infer<typeof updateCardInputSchema>;
