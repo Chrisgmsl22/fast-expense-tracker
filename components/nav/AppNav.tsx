@@ -27,12 +27,25 @@ const LINKS = [
  * App header nav. Desktop (≥md): inline link row + email + Sign out. Mobile: a
  * hamburger opens a Sheet drawer with the links + email + Sign out, so the
  * header stays a compact burger + brand and never overflows the viewport width.
+ *
+ * The Settlement link shows when `showSettlement` is true (Shared mode, or Solo
+ * with an unsettled balance still to wind down); otherwise it's dropped and its
+ * route is guarded server-side. The layout computes the flag.
  */
-export function AppNav({ email }: { email?: string }) {
+export function AppNav({
+    email,
+    showSettlement,
+}: {
+    email?: string;
+    showSettlement: boolean;
+}) {
     const pathname = usePathname();
     const [open, setOpen] = useState(false);
     const isActive = (href: string) =>
         pathname === href || pathname.startsWith(`${href}/`);
+    const links = showSettlement
+        ? LINKS
+        : LINKS.filter((l) => l.href !== "/settlement");
 
     return (
         <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-8">
@@ -55,7 +68,7 @@ export function AppNav({ email }: { email?: string }) {
                             <SheetTitle>Expense Tracker</SheetTitle>
                         </SheetHeader>
                         <nav className="flex flex-col gap-1">
-                            {LINKS.map((l) => (
+                            {links.map((l) => (
                                 // Plain links (role "link", not a Close button)
                                 // that close the drawer on tap — keeps correct
                                 // nav semantics for screen readers.
@@ -112,7 +125,7 @@ export function AppNav({ email }: { email?: string }) {
                 </Link>
 
                 <nav className="hidden items-center gap-5 text-sm md:flex">
-                    {LINKS.map((l) => (
+                    {links.map((l) => (
                         <Link
                             key={l.href}
                             href={l.href}

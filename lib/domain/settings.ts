@@ -9,8 +9,8 @@ export const DEFAULT_SHARE_PERCENTAGE = 0.68;
 
 /**
  * Fallback shown wherever a partner name is interpolated but none is set (a Solo
- * account before it opts in). In Solo mode these surfaces are hidden entirely
- * (CHORE-6.b), so this only ever shows on the brief window between opting in and
+ * account before it opts in). In Solo mode these surfaces are hidden entirely,
+ * so this only ever shows on the brief window between opting in and
  * naming the partner — never "undefined" in the UI.
  */
 export const SOLO_PARTNER_FALLBACK = "your partner";
@@ -66,7 +66,7 @@ export type SplitRulePersist = {
  * Normalize validated split-rule form input into the columns to store. The
  * partner name is preserved regardless of mode (only nulled when genuinely
  * blank), so toggling Shared→Solo is lossless: disabling sharing hides the
- * partner surfaces (CHORE-6.b) but never deletes the name, and re-enabling
+ * partner surfaces but never deletes the name, and re-enabling
  * restores it (ADR-0021). The share percentage is stored as a fraction; when
  * absent (a Solo save omits it) it falls back to `DEFAULT_SHARE_PERCENTAGE`.
  * Assumes the input already passed `splitRuleInputSchema` (which requires a name

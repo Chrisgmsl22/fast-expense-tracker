@@ -22,6 +22,7 @@ export function DashboardTopbar({
     subcategories,
     cards,
     partnerName,
+    sharesExpenses,
 }: {
     month: string;
     monthLabel: string;
@@ -31,6 +32,8 @@ export function DashboardTopbar({
     subcategories: SubcategoryOption[];
     cards: CardOption[];
     partnerName: string;
+    /** Shared-expense mode — Solo hides the "My view · NN%" share pill. */
+    sharesExpenses: boolean;
 }) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -47,15 +50,20 @@ export function DashboardTopbar({
                         {formatMxn(incomeTotal)}
                     </span>
                 </span>
-                <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
-                    My view · {Math.round(sharePercentage * 100)}%
-                </span>
+                {/* The "My view · NN%" pill describes the shared-expense split;
+                    Solo mode has no split, so it's hidden. */}
+                {sharesExpenses ? (
+                    <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+                        My view · {Math.round(sharePercentage * 100)}%
+                    </span>
+                ) : null}
                 <AddExpenseButton
                     categories={categories}
                     subcategories={subcategories}
                     cards={cards}
                     defaultSharePercentage={sharePercentage}
                     partnerName={partnerName}
+                    sharesExpenses={sharesExpenses}
                 />
             </div>
         </div>

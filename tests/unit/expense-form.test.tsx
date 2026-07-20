@@ -47,6 +47,7 @@ function renderForm(props?: Partial<Parameters<typeof ExpenseForm>[0]>) {
             subcategories={subcategories}
             cards={cards}
             defaultSharePercentage={0.68}
+            sharesExpenses
             {...props}
         />,
     );
@@ -210,6 +211,65 @@ describe("ExpenseForm", () => {
             ),
         );
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    });
+
+    it("hides the shared/split control in Solo mode (CHORE-6.b)", () => {
+        renderForm({ sharesExpenses: false });
+        expect(
+            screen.queryByRole("checkbox", { name: /shared expense/i }),
+        ).toBeNull();
+    });
+
+    it("saves a new Solo expense at 100% mine (isShared:false, yourPercentage:1)", async () => {
+        (createExpense as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { id: "new1" },
+        });
+        renderForm({ sharesExpenses: false });
+
+        fireEvent.change(screen.getByLabelText(/description/i), {
+            target: { value: "Coffee" },
+        });
+        fireEvent.change(screen.getByLabelText(/amount/i), {
+            target: { value: "45" },
+        });
+        fireEvent.submit(screen.getByRole("form", { name: /add expense/i }));
+
+        await waitFor(() =>
+            expect(createExpense).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    amount: "45",
+                    isShared: false,
+                    yourPercentage: "1",
+                }),
+            ),
+        );
+    });
+
+    it("preserves a historical shared row's split when edited in Solo mode (ADR-0021)", async () => {
+        (updateExpense as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { id: "e1" },
+        });
+        // A Solo user editing an old shared expense must not rewrite its split.
+        renderForm({ expense: editable, sharesExpenses: false });
+
+        // The split control is hidden even though the row is shared.
+        expect(
+            screen.queryByRole("checkbox", { name: /shared expense/i }),
+        ).toBeNull();
+
+        fireEvent.submit(screen.getByRole("form", { name: /edit expense/i }));
+
+        await waitFor(() =>
+            expect(updateExpense).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    id: "e1",
+                    isShared: true,
+                    yourPercentage: "0.68",
+                }),
+            ),
+        );
     });
 
     it("disables the card field for the Savings category (a transfer, no card)", () => {

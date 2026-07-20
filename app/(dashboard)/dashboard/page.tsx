@@ -70,6 +70,7 @@ export default async function DashboardPage({
 
     const sharePercentage = settings.defaultSharePercentage;
     const partnerName = resolvePartnerName(settings.partnerName);
+    const { sharesExpenses } = settings;
 
     // "2026-06" → "June 2026" (UTC: a calendar month, not a timestamp to shift).
     const monthLabel = new Intl.DateTimeFormat("en-US", {
@@ -89,6 +90,7 @@ export default async function DashboardPage({
                 subcategories={subcategories}
                 cards={cards}
                 partnerName={partnerName}
+                sharesExpenses={sharesExpenses}
             />
             <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem] xl:grid-cols-[1fr_24rem]">
                 {/* Main column */}
@@ -121,6 +123,7 @@ export default async function DashboardPage({
                         monthLabel={monthLabel}
                         settlement={settlement.balance}
                         partnerName={partnerName}
+                        sharesExpenses={sharesExpenses}
                     />
                 </aside>
             </div>

@@ -119,6 +119,7 @@ const props = {
     cards: [{ id: "card1", name: "Amex", color: "#ca8a04" }],
     defaultSharePercentage: 0.68,
     partnerName: "Brenda",
+    sharesExpenses: true,
 };
 
 describe("ExpenseListInteractive", () => {

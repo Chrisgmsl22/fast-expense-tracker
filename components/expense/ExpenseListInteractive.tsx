@@ -47,6 +47,8 @@ type Props = {
     cards: CardOption[];
     defaultSharePercentage: number;
     partnerName: string;
+    /** Shared-expense mode — threaded to the edit form's split control. */
+    sharesExpenses: boolean;
 };
 
 /** Cash is the fallback for a null card (legacy rows); the seeded Cash card is green. */
@@ -92,6 +94,7 @@ export function ExpenseListInteractive({
     cards,
     defaultSharePercentage,
     partnerName,
+    sharesExpenses,
 }: Props) {
     const router = useRouter();
     const [editing, setEditing] = useState<ExpenseEditable | null>(null);
@@ -426,6 +429,7 @@ export function ExpenseListInteractive({
                             subcategories={subcategories}
                             cards={cards}
                             defaultSharePercentage={defaultSharePercentage}
+                            sharesExpenses={sharesExpenses}
                             expense={editing}
                             onCancel={() => setEditing(null)}
                             onSuccess={() => {

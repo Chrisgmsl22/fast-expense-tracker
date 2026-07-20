@@ -25,6 +25,7 @@ export function MonthFeed({
     monthLabel,
     settlement,
     partnerName,
+    sharesExpenses,
 }: {
     expenses: ExpenseListItem[];
     movements: MovementListItem[];
@@ -32,6 +33,16 @@ export function MonthFeed({
     /** Running couple balance — rendered as a chip in the footer (spec 0004). */
     settlement?: CoupleBalance;
     partnerName: string;
+    /**
+     * Shared-expense mode. Solo hides only the settlement chip on the dashboard
+     * — the running couple balance stays live and settleable via `/settlement`
+     * while unsettled (ADR-0021, decision 8; nothing is frozen). Historical
+     * partner rows and the monthly "Paid to {partner}" total stay visible: a
+     * was-shared user keeps their real history, and a genuine solo user has
+     * none, so the feed still reads as a plain tracker (Option 2). Partner
+     * movements are never rewritten (ADR-0021), just no longer created in solo.
+     */
+    sharesExpenses: boolean;
 }) {
     const feed = buildFeed(expenses, movements);
 
@@ -80,7 +91,7 @@ export function MonthFeed({
                     data-testid="feed-totals"
                     className="space-y-1.5 border-t p-4 text-sm"
                 >
-                    {settlement && (
+                    {sharesExpenses && settlement && (
                         <div className="pb-1">
                             <SettlementChip
                                 balance={settlement}
@@ -142,7 +153,7 @@ export function MonthFeed({
                 </div>
             )}
 
-            {count === 0 && settlement && (
+            {count === 0 && sharesExpenses && settlement && (
                 <div className="border-t p-4">
                     <SettlementChip
                         balance={settlement}
