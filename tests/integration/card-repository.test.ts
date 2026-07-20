@@ -163,6 +163,30 @@ describe("PrismaCardRepository (integration)", () => {
         expect(rows[0]?.inUse).toBe(true);
     });
 
+    it("deleteForUser is refused at the DB (FK RESTRICT) when an expense references the card", async () => {
+        const user = await seedUser();
+        const category = await seedCategory();
+        const card = await seedCard(user.id, { name: "Referenced" });
+        await db.expense.create({
+            data: {
+                userId: user.id,
+                categoryId: category.id,
+                cardId: card.id,
+                date: new Date("2026-06-01T12:00:00Z"),
+                description: "x",
+                amount: 100,
+                actualExpenditure: 100,
+            },
+        });
+
+        // The Card→Expense FK has no cascade/set-null, so Postgres RESTRICTs the
+        // delete. This is the DB-level backstop behind the action's ref re-check.
+        await expect(repo.deleteForUser(user.id, card.id)).rejects.toThrow();
+        // The card row survives the refused delete.
+        const rows = await repo.listForSettings(user.id);
+        expect(rows.map((c) => c.id)).toContain(card.id);
+    });
+
     it("deleteForUser removes a zero-ref card, scoped to the owner", async () => {
         const owner = await seedUser();
         const other = await seedUser();
