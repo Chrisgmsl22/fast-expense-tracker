@@ -48,7 +48,7 @@ type Props = {
     /**
      * Whether the user is in shared-expense mode (Settings.sharesExpenses). In
      * Solo mode (`false`) the split control is hidden and a new expense saves at
-     * 100% mine (`isShared:false`, `yourPercentage:1`) — CHORE-6.b.
+     * 100% mine (`isShared:false`, `yourPercentage:1`).
      */
     sharesExpenses: boolean;
     /** When present, the form edits this expense instead of creating one. */
@@ -410,7 +410,7 @@ export function ExpenseForm({
             </div>
 
             {/* Solo mode (Settings.sharesExpenses = false) has no split — the
-                control is hidden and the expense saves at 100% mine (CHORE-6.b). */}
+                control is hidden and the expense saves at 100% mine. */}
             {sharesExpenses ? (
                 <div>
                     <label className="flex items-start gap-2.5">

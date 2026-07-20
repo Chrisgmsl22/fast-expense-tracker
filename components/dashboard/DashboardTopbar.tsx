@@ -32,7 +32,7 @@ export function DashboardTopbar({
     subcategories: SubcategoryOption[];
     cards: CardOption[];
     partnerName: string;
-    /** Shared-expense mode — Solo hides the "My view · NN%" share pill (CHORE-6.b). */
+    /** Shared-expense mode — Solo hides the "My view · NN%" share pill. */
     sharesExpenses: boolean;
 }) {
     return (
@@ -51,7 +51,7 @@ export function DashboardTopbar({
                     </span>
                 </span>
                 {/* The "My view · NN%" pill describes the shared-expense split;
-                    Solo mode has no split, so it's hidden (CHORE-6.b). */}
+                    Solo mode has no split, so it's hidden. */}
                 {sharesExpenses ? (
                     <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
                         My view · {Math.round(sharePercentage * 100)}%

@@ -34,12 +34,13 @@ export function MonthFeed({
     settlement?: CoupleBalance;
     partnerName: string;
     /**
-     * Shared-expense mode. Solo hides only the live settlement chip — the
-     * running couple balance is frozen (ADR-0021). Historical partner rows and
-     * the monthly "Paid to {partner}" total stay visible: a was-shared user
-     * keeps their real history, and a genuine solo user has none, so the feed
-     * still reads as a plain tracker (CHORE-6.b, Option 2). Partner movements
-     * are never rewritten (ADR-0021), just no longer created in solo.
+     * Shared-expense mode. Solo hides only the settlement chip on the dashboard
+     * — the running couple balance stays live and settleable via `/settlement`
+     * while unsettled (ADR-0021, decision 8; nothing is frozen). Historical
+     * partner rows and the monthly "Paid to {partner}" total stay visible: a
+     * was-shared user keeps their real history, and a genuine solo user has
+     * none, so the feed still reads as a plain tracker (Option 2). Partner
+     * movements are never rewritten (ADR-0021), just no longer created in solo.
      */
     sharesExpenses: boolean;
 }) {

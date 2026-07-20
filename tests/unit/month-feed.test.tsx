@@ -282,8 +282,9 @@ describe("MonthFeed", () => {
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.getByText("Paid to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
-        // Only the live settlement chip (its link) is hidden — the running
-        // balance is frozen in solo (ADR-0021 freeze).
+        // Only the settlement chip (its link) is hidden on the dashboard — the
+        // running balance stays live and settleable via /settlement (ADR-0021,
+        // decision 8; nothing is frozen).
         expect(screen.queryByRole("link")).toBeNull();
     });
 

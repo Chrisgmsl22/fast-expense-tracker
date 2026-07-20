@@ -47,7 +47,7 @@ type Props = {
     cards: CardOption[];
     defaultSharePercentage: number;
     partnerName: string;
-    /** Shared-expense mode — threaded to the edit form's split control (CHORE-6.b). */
+    /** Shared-expense mode — threaded to the edit form's split control. */
     sharesExpenses: boolean;
 };
 

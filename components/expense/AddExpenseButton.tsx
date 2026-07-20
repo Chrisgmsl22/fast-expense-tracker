@@ -35,7 +35,7 @@ type Props = {
     /**
      * Shared-expense mode (Settings.sharesExpenses). In Solo mode the partner
      * transfer items ("I paid {partner}" / "{partner} paid me") are hidden — the
-     * menu is just Expense + Card payment (CHORE-6.b).
+     * menu is just Expense + Card payment.
      */
     sharesExpenses: boolean;
 };

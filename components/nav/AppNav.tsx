@@ -30,7 +30,7 @@ const LINKS = [
  *
  * The Settlement link shows when `showSettlement` is true (Shared mode, or Solo
  * with an unsettled balance still to wind down); otherwise it's dropped and its
- * route is guarded server-side (CHORE-6.b). The layout computes the flag.
+ * route is guarded server-side. The layout computes the flag.
  */
 export function AppNav({
     email,

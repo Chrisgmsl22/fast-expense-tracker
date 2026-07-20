@@ -10,7 +10,7 @@ import { AppNav } from "@/components/nav/AppNav";
 // cue next to the logout control. The nav is responsive (inline row on desktop,
 // a burger + drawer on mobile) — see AppNav. The Settlement link shows for
 // Shared users, and for a Solo user only while an unsettled balance remains to
-// be wound down (CHORE-6.b) — matching the route guard in settlement/page.tsx.
+// be wound down — matching the route guard in settlement/page.tsx.
 export default async function DashboardLayout({
     children,
 }: {
