@@ -123,21 +123,38 @@ records — this one does not.)
 
 ## 6. Card management
 
-CRUD in the Settings **Cards** section:
+CRUD in the Settings **Cards** section. Decisions refined at CHORE-6.c kickoff
+(2026-07-19, in-session sign-off) — these supersede the original bullets:
 
-- **Add** — name, type (`credit` | `debit` | `cash`), color from the fixed palette
-  (Amex Platinum gray, Amex Gold, NU purple, BBVA blue, Cash green — see
-  [`domain-reference.md §4`](../reference/domain-reference.md); a picker over the
-  known palette, not a free hex field).
-- **Rename / recolor** — edit an existing card.
-- **Archive (not delete)** — sets `archivedAt`. Archived cards vanish from the
-  Add-expense / card-payment pickers but remain attached to historical
-  expenses/movements, so history and card-spend totals never break. No hard
-  delete of in-use cards; a never-used card may be hard-deleted (implementer's
-  call — archive is always safe).
+- **Add** — name, type (`credit` | `debit` | `cash`), color. The color control is
+  a **swatch picker over a shared named palette** (`lib/palette.ts` — the seeded
+  colours plus a few extras, ending the seed↔login-page drift) **plus a validated
+  custom `#RRGGBB` hex field** (reverses the original "no free hex" — a picker
+  alone is too limiting once anyone can add cards). Palette source of truth:
+  [`domain-reference.md §4`](../reference/domain-reference.md).
+- **Rename / recolor** — edit an existing card. A **unique active card name per
+  user** (case-insensitive) is enforced in the add/rename action; archived names
+  don't collide (you may re-add a name you archived).
+- **Remove — archive _or_ delete, by reference count:**
+    - A card with **any** `Expense`/`Movement` references is **archived** (sets
+      `archivedAt`) — a hard delete would break history (FK RESTRICT) or, if forced,
+      strip the card label off every past record. Archived cards vanish from pickers
+      but stay attached to history, so months/totals never break.
+    - A card with **zero** references may be **hard-deleted** (added by mistake,
+      never used — no data impact). The delete action **re-checks references
+      server-side** and refuses if any exist.
+    - **No unarchive/restore** — plain CRUD; keep the UX simple.
+- **Cash is fully locked** — the always-present `type: "cash"` card cannot be
+  renamed, recoloured, archived, or deleted (app-wide cash convention; green).
+- **Cap: 10 active (non-archived) cards** per user (`MAX_ACTIVE_CARDS`), enforced
+  in the add action. Archived cards don't count — archive an old one to free a slot.
 
 Card reads that populate pickers filter `archivedAt: null`; reads that render
 history do **not** filter (old records still resolve their card).
+
+**Deferred to [CHORE-9](../roadmap/chores.json):** the outstanding-balance
+warn/block on archive. CHORE-9 owns the per-card balance read-model and will add
+(and tweak) that guard then; 6.c archives/deletes without a balance check.
 
 ## 7. Implementation phases — one chore each
 

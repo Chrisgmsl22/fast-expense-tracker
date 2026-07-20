@@ -91,8 +91,11 @@ model Card {
   name      String
   color     String // card color coding — see domain-reference.md §4
   type      String // "credit" | "debit" | "cash"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Soft-archive (spec 0006 §6): an archived card drops out of pickers but stays
+  // attached to its history, so past months/totals never break. Null = active.
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   expenses  Expense[]
   movements Movement[]
