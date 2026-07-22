@@ -91,6 +91,15 @@ export class FakeCardRepository implements CardRepository {
         return match ? { id: match.id } : null;
     }
 
+    async findByIdForUser(
+        userId: string,
+        id: string,
+    ): Promise<{ name: string; archivedAt: Date | null } | null> {
+        const card = this.cards.get(id);
+        if (!card || card.userId !== userId) return null;
+        return { name: card.name, archivedAt: card.archivedAt };
+    }
+
     async create(userId: string, data: CardCreate): Promise<void> {
         if (this.failOnWrite) throw new Error("fake: create failed");
         this.seed({
@@ -123,6 +132,16 @@ export class FakeCardRepository implements CardRepository {
             return 0;
         }
         card.archivedAt = new Date();
+        return 1;
+    }
+
+    async restoreForUser(userId: string, id: string): Promise<number> {
+        if (this.failOnWrite) throw new Error("fake: restore failed");
+        const card = this.cards.get(id);
+        if (!card || card.userId !== userId || card.archivedAt === null) {
+            return 0;
+        }
+        card.archivedAt = null;
         return 1;
     }
 

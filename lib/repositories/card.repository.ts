@@ -37,6 +37,11 @@ export interface CardRepository {
         userId: string,
         name: string,
     ): Promise<{ id: string } | null>;
+    /** The user's card by id (name + archive state), or null — the restore lookup. */
+    findByIdForUser(
+        userId: string,
+        id: string,
+    ): Promise<{ name: string; archivedAt: Date | null } | null>;
     create(userId: string, data: CardCreate): Promise<void>;
     /** Rename/recolor; returns the number of rows written (0 = not the user's card). */
     updateForUser(
@@ -46,6 +51,8 @@ export interface CardRepository {
     ): Promise<number>;
     /** Set `archivedAt` on an active card; returns rows written (0 = not found / already archived). */
     archiveForUser(userId: string, id: string): Promise<number>;
+    /** Clear `archivedAt` on an archived card; returns rows written (0 = not found / already active). */
+    restoreForUser(userId: string, id: string): Promise<number>;
     /** How many `Expense`/`Movement` rows reference the card (for the user). */
     referenceCount(userId: string, id: string): Promise<number>;
     /** Hard-delete a card; returns rows deleted (0 = not the user's card). */
@@ -113,6 +120,16 @@ export class PrismaCardRepository implements CardRepository {
         });
     }
 
+    findByIdForUser(
+        userId: string,
+        id: string,
+    ): Promise<{ name: string; archivedAt: Date | null } | null> {
+        return this.db.card.findFirst({
+            where: { id, userId },
+            select: { name: true, archivedAt: true },
+        });
+    }
+
     async create(userId: string, data: CardCreate): Promise<void> {
         await this.db.card.create({
             data: {
@@ -140,6 +157,14 @@ export class PrismaCardRepository implements CardRepository {
         const result = await this.db.card.updateMany({
             where: { id, userId, archivedAt: null },
             data: { archivedAt: new Date() },
+        });
+        return result.count;
+    }
+
+    async restoreForUser(userId: string, id: string): Promise<number> {
+        const result = await this.db.card.updateMany({
+            where: { id, userId, archivedAt: { not: null } },
+            data: { archivedAt: null },
         });
         return result.count;
     }

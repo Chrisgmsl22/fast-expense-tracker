@@ -107,6 +107,38 @@ describe("PrismaCardRepository (integration)", () => {
         expect(await repo.archiveForUser(user.id, card.id)).toBe(0);
     });
 
+    it("restoreForUser clears archivedAt, scoped and only when archived", async () => {
+        const owner = await seedUser();
+        const other = await seedUser();
+        const card = await seedCard(owner.id, {
+            name: "NU",
+            archivedAt: new Date(),
+        });
+
+        // Another user can't restore it.
+        expect(await repo.restoreForUser(other.id, card.id)).toBe(0);
+        // The owner can — and it becomes active again.
+        expect(await repo.restoreForUser(owner.id, card.id)).toBe(1);
+        expect(await repo.countActive(owner.id)).toBe(1);
+        // A second restore is a no-op (already active).
+        expect(await repo.restoreForUser(owner.id, card.id)).toBe(0);
+    });
+
+    it("findByIdForUser returns name + archive state, scoped to the owner", async () => {
+        const owner = await seedUser();
+        const other = await seedUser();
+        const archived = new Date();
+        const card = await seedCard(owner.id, {
+            name: "NU",
+            archivedAt: archived,
+        });
+
+        const found = await repo.findByIdForUser(owner.id, card.id);
+        expect(found?.name).toBe("NU");
+        expect(found?.archivedAt).not.toBeNull();
+        expect(await repo.findByIdForUser(other.id, card.id)).toBeNull();
+    });
+
     it("findActiveByName matches case-insensitively, excluding archived", async () => {
         const user = await seedUser();
         const active = await seedCard(user.id, { name: "BBVA" });
