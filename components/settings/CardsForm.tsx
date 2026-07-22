@@ -222,6 +222,10 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
             aria-label="Add card"
             className="space-y-4 rounded-lg border bg-muted/30 p-4"
         >
+            <p className="text-xs text-muted-foreground">
+                Up to {MAX_ACTIVE_CARDS} cards.
+            </p>
+
             <div>
                 <Label htmlFor="add-card-name">Card name</Label>
                 <Input

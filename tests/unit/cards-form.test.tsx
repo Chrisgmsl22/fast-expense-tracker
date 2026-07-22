@@ -102,6 +102,14 @@ describe("CardsForm", () => {
         expect(screen.queryByRole("option", { name: "Cash" })).toBeNull();
     });
 
+    it("shows the max-cards hint on the add form", () => {
+        render(<CardsForm cards={[]} />);
+        fireEvent.click(screen.getByRole("button", { name: "Add card" }));
+        expect(
+            screen.getByText(`Up to ${MAX_ACTIVE_CARDS} cards.`),
+        ).toBeDefined();
+    });
+
     it("surfaces a server field error on add", async () => {
         addMock.mockResolvedValue({
             ok: false,
