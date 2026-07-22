@@ -53,7 +53,10 @@ export class FakeCardRepository implements CardRepository {
         return [...this.cards.values()]
             .filter((c) => c.userId === userId)
             .sort((a, b) => {
-                // Active before archived, then by name.
+                // Cash always last; otherwise active before archived, then name.
+                const aCash = a.type === "cash" ? 1 : 0;
+                const bCash = b.type === "cash" ? 1 : 0;
+                if (aCash !== bCash) return aCash - bCash;
                 const aArchived = a.archivedAt ? 1 : 0;
                 const bArchived = b.archivedAt ? 1 : 0;
                 if (aArchived !== bArchived) return aArchived - bArchived;

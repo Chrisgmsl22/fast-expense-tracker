@@ -71,6 +71,17 @@ describe("PrismaCardRepository (integration)", () => {
         expect(names).toEqual(["Alpha", "Zed", "Old"]);
     });
 
+    it("always sorts the cash card last, even when its name sorts earlier", async () => {
+        const user = await seedUser();
+        await seedCard(user.id, { name: "NU" });
+        // "Cash" would sort before "NU" alphabetically, but it must render last.
+        await seedCard(user.id, { name: "Cash", type: "cash" });
+        await seedCard(user.id, { name: "Amex" });
+
+        const names = (await repo.listForSettings(user.id)).map((c) => c.name);
+        expect(names).toEqual(["Amex", "NU", "Cash"]);
+    });
+
     it("countActive ignores archived cards", async () => {
         const user = await seedUser();
         await seedCard(user.id, { name: "A" });

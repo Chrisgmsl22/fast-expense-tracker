@@ -79,7 +79,7 @@ export class PrismaCardRepository implements CardRepository {
                 _count: { select: { expenses: true, movements: true } },
             },
         });
-        return rows.map((row) => ({
+        const items = rows.map((row) => ({
             id: row.id,
             name: row.name,
             color: row.color,
@@ -87,6 +87,12 @@ export class PrismaCardRepository implements CardRepository {
             archivedAt: row.archivedAt,
             inUse: row._count.expenses + row._count.movements > 0,
         }));
+        // Cash is the universal, always-present card, so it always renders last
+        // regardless of name. A stable sort keeps every other card in the
+        // active-first/A→Z order the query already produced.
+        return items.sort(
+            (a, b) => Number(a.type === "cash") - Number(b.type === "cash"),
+        );
     }
 
     countActive(userId: string): Promise<number> {
