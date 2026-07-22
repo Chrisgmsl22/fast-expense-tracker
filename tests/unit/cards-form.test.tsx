@@ -255,6 +255,31 @@ describe("CardsForm", () => {
         );
     });
 
+    it("surfaces a limit-reached message when restore is blocked at the cap", async () => {
+        restoreMock.mockResolvedValue({
+            ok: false,
+            code: "limit_reached",
+            message:
+                "You're at the 10-card limit — archive or delete an active card first.",
+        });
+        render(
+            <CardsForm
+                cards={[
+                    card({ id: "c1", name: "Old", archivedAt: new Date() }),
+                ]}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Restore Old" }));
+
+        await waitFor(() =>
+            expect(
+                screen.getByText(
+                    "You're at the 10-card limit — archive or delete an active card first.",
+                ),
+            ).toBeDefined(),
+        );
+    });
+
     it("surfaces a name-conflict message when restore is blocked", async () => {
         restoreMock.mockResolvedValue({
             ok: false,

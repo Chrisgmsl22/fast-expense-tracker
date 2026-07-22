@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
+import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
 import { cardRepository } from "@/lib/repositories";
 import type { CardRepository } from "@/lib/repositories/card.repository";
 import { cardIdInputSchema, type CardIdInput } from "@/lib/schemas/card";
@@ -11,6 +12,7 @@ export type RestoreCardCode =
     | "validation"
     | "unauthenticated"
     | "not_found"
+    | "limit_reached"
     | "name_conflict"
     | "db_error";
 
@@ -59,6 +61,16 @@ export async function restoreCard(
                 ok: false,
                 code: "not_found",
                 message: "That archived card no longer exists.",
+            };
+        }
+
+        // Restoring re-activates the card, so it counts against the active cap.
+        const activeCount = await repo.countActive(userId);
+        if (activeCount >= MAX_ACTIVE_CARDS) {
+            return {
+                ok: false,
+                code: "limit_reached",
+                message: `You're at the ${MAX_ACTIVE_CARDS}-card limit — archive or delete an active card first.`,
             };
         }
 

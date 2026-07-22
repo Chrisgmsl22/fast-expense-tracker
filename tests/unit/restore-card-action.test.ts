@@ -4,6 +4,7 @@ const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
 vi.mock("@/auth", () => ({ auth: authMock }));
 
 import { restoreCard } from "@/app/_actions/card/restore";
+import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
 import { FakeCardRepository } from "@/tests/support/fake-card-repository";
 
 describe("restoreCard (unit, injected fake repo)", () => {
@@ -45,6 +46,43 @@ describe("restoreCard (unit, injected fake repo)", () => {
         expect(res.code).toBe("name_conflict");
         // Still archived — not restored.
         expect(await repo.countActive("u1")).toBe(1);
+    });
+
+    it("allows restore at one below the active cap", async () => {
+        const repo = new FakeCardRepository();
+        for (let i = 0; i < MAX_ACTIVE_CARDS - 1; i += 1) {
+            repo.seed({ userId: "u1", name: `Card ${i}` });
+        }
+        const id = repo.seed({
+            userId: "u1",
+            name: "Old",
+            archivedAt: new Date(),
+        });
+
+        const res = await restoreCard({ id }, repo);
+
+        expect(res.ok).toBe(true);
+        expect(await repo.countActive("u1")).toBe(MAX_ACTIVE_CARDS);
+    });
+
+    it("blocks restore at the active-card cap", async () => {
+        const repo = new FakeCardRepository();
+        for (let i = 0; i < MAX_ACTIVE_CARDS; i += 1) {
+            repo.seed({ userId: "u1", name: `Card ${i}` });
+        }
+        const id = repo.seed({
+            userId: "u1",
+            name: "Old",
+            archivedAt: new Date(),
+        });
+
+        const res = await restoreCard({ id }, repo);
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("limit_reached");
+        // Still archived — not restored.
+        expect(await repo.countActive("u1")).toBe(MAX_ACTIVE_CARDS);
     });
 
     it("rejects a missing id", async () => {

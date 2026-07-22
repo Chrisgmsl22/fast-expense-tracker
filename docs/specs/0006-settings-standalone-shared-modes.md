@@ -156,7 +156,9 @@ original bullets:
       if a new active card has since taken the archived card's name, restore is
       refused with an inline message asking the user to rename/archive the other
       one first (the exact case: archive "NU" → add a new active "NU" → restore old
-      "NU").
+      "NU"). Restore also **respects the active-card cap** — if the user is
+      already at `MAX_ACTIVE_CARDS`, restore is refused until they archive/delete
+      an active card.
 - **Cash is fully locked** — the always-present `type: "cash"` card cannot be
   added, renamed, recoloured, retyped, archived, or deleted (app-wide cash
   convention; green). It always renders **last** in the active list.
