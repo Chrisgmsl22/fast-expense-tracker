@@ -151,9 +151,15 @@ function ColorField({
                 <Checkbox
                     id={`${idPrefix}-custom-toggle`}
                     checked={showCustom}
-                    onCheckedChange={(checked) =>
-                        setShowCustom(checked === true)
-                    }
+                    onCheckedChange={(checked) => {
+                        const on = checked === true;
+                        setShowCustom(on);
+                        // Unchecking hides the hex field, so snap the value back to
+                        // a definite swatch — otherwise a now-invisible custom hex
+                        // would still be what gets submitted, with no swatch shown
+                        // as selected.
+                        if (!on) onColor(DEFAULT_COLOR);
+                    }}
                 />
                 <Label
                     htmlFor={`${idPrefix}-custom-toggle`}

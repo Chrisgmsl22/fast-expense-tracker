@@ -189,6 +189,39 @@ describe("CardsForm", () => {
         );
     });
 
+    it("reverts to a palette swatch when the custom-hex box is unchecked", async () => {
+        render(<CardsForm cards={[]} />);
+        fireEvent.click(screen.getByRole("button", { name: "Add card" }));
+        const form = screen.getByRole("form", { name: "Add card" });
+        fireEvent.change(within(form).getByLabelText("Card name"), {
+            target: { value: "Custom Card" },
+        });
+        const box = within(form).getByRole("checkbox", {
+            name: "Enter a custom color (HEX)",
+        });
+        fireEvent.click(box); // check → reveal hex
+        fireEvent.change(within(form).getByLabelText("HEX color"), {
+            target: { value: "#123456" },
+        });
+        fireEvent.click(box); // uncheck → reset to a swatch
+
+        // Hex field is hidden again and the first palette swatch (Slate) is selected.
+        expect(within(form).queryByLabelText("HEX color")).toBeNull();
+        expect(
+            within(form)
+                .getByRole("button", { name: "Slate" })
+                .getAttribute("aria-pressed"),
+        ).toBe("true");
+
+        // What's submitted matches the visible swatch, not the discarded hex.
+        fireEvent.click(within(form).getByRole("button", { name: "Add card" }));
+        await waitFor(() =>
+            expect(addMock).toHaveBeenCalledWith(
+                expect.objectContaining({ color: "#6b7280" }),
+            ),
+        );
+    });
+
     it("edit on a custom-hex card pre-checks advanced and prefills the hex", () => {
         render(
             <CardsForm
