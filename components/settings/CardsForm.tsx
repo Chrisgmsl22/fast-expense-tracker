@@ -10,11 +10,12 @@ import { deleteCard } from "@/app/_actions/card/delete";
 import { updateCard } from "@/app/_actions/card/update";
 import type { FieldErrors } from "@/lib/actions/result";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
-import { CARD_PALETTE, isValidHex } from "@/lib/palette";
+import { CARD_PALETTE, isPaletteColor, isValidHex } from "@/lib/palette";
 import type { CardSettingsItem } from "@/lib/repositories/card.repository";
 import type { AddCardInput, UpdateCardInput } from "@/lib/schemas/card";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -94,7 +95,12 @@ function TypeField({
     );
 }
 
-/** Swatch grid over the shared palette + a validated custom `#RRGGBB` input. */
+/**
+ * Swatch grid over the shared palette, with the custom `#RRGGBB` field behind an
+ * opt-in "advanced" checkbox. The checkbox starts checked when the initial colour
+ * isn't a palette swatch (editing a card that already has a custom hex), so the
+ * user sees their value; otherwise the hex input stays hidden.
+ */
 function ColorField({
     color,
     onColor,
@@ -106,6 +112,7 @@ function ColorField({
 }) {
     const normalized = color.trim().toLowerCase();
     const previewValid = isValidHex(normalized);
+    const [showCustom, setShowCustom] = useState(() => !isPaletteColor(color));
     return (
         <div>
             <span className="text-sm font-medium">Colour</span>
@@ -130,25 +137,44 @@ function ColorField({
                     />
                 ))}
             </div>
-            <div className="mt-2 flex items-center gap-2">
-                <span
-                    aria-hidden
-                    className="size-6 shrink-0 rounded-md border"
-                    style={{
-                        backgroundColor: previewValid
-                            ? normalized
-                            : "transparent",
-                    }}
+
+            <div className="mt-3 flex items-center gap-2">
+                <Checkbox
+                    id={`${idPrefix}-custom-toggle`}
+                    checked={showCustom}
+                    onCheckedChange={(checked) =>
+                        setShowCustom(checked === true)
+                    }
                 />
-                <Input
-                    id={`${idPrefix}-color`}
-                    aria-label="Custom colour"
-                    value={color}
-                    onChange={(e) => onColor(e.target.value)}
-                    placeholder="#7c3aed"
-                    className="w-32 font-mono"
-                />
+                <Label
+                    htmlFor={`${idPrefix}-custom-toggle`}
+                    className="text-sm"
+                >
+                    Enter a custom color
+                </Label>
             </div>
+
+            {showCustom && (
+                <div className="mt-2 flex items-center gap-2">
+                    <span
+                        aria-hidden
+                        className="size-6 shrink-0 rounded-md border"
+                        style={{
+                            backgroundColor: previewValid
+                                ? normalized
+                                : "transparent",
+                        }}
+                    />
+                    <Input
+                        id={`${idPrefix}-color`}
+                        aria-label="Custom colour"
+                        value={color}
+                        onChange={(e) => onColor(e.target.value)}
+                        placeholder="#7c3aed"
+                        className="w-32 font-mono"
+                    />
+                </div>
+            )}
         </div>
     );
 }

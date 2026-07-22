@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
     CARD_PALETTE,
     CASH_COLOR,
+    isPaletteColor,
     isValidHex,
     normalizeHex,
 } from "@/lib/palette";
@@ -61,6 +62,18 @@ describe("CARD_PALETTE", () => {
     it("has no duplicate hex values", () => {
         const hexes = CARD_PALETTE.map((s) => s.hex);
         expect(new Set(hexes).size).toBe(hexes.length);
+    });
+});
+
+describe("isPaletteColor", () => {
+    it("recognizes a palette swatch (case-insensitively)", () => {
+        expect(isPaletteColor("#0D9488")).toBe(true);
+        expect(isPaletteColor("#16a34a")).toBe(true);
+    });
+
+    it("rejects a custom hex not in the palette", () => {
+        expect(isPaletteColor("#123456")).toBe(false);
+        expect(isPaletteColor("not-a-hex")).toBe(false);
     });
 });
 

@@ -119,13 +119,15 @@ describe("CardsForm", () => {
         );
     });
 
-    it("picks a palette swatch as the colour", async () => {
+    it("picks a palette swatch as the colour (custom hex stays hidden)", async () => {
         render(<CardsForm cards={[]} />);
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
         const form = screen.getByRole("form", { name: "Add card" });
         fireEvent.change(within(form).getByLabelText("Card name"), {
             target: { value: "Teal Card" },
         });
+        // The hex field is hidden by default — a swatch pick still works.
+        expect(within(form).queryByLabelText("Custom colour")).toBeNull();
         fireEvent.click(within(form).getByRole("button", { name: "Teal" }));
         fireEvent.click(within(form).getByRole("button", { name: "Add card" }));
 
@@ -134,6 +136,72 @@ describe("CardsForm", () => {
                 expect.objectContaining({ color: "#0d9488" }),
             ),
         );
+    });
+
+    it("hides the custom hex input until the advanced checkbox is ticked", () => {
+        render(<CardsForm cards={[]} />);
+        fireEvent.click(screen.getByRole("button", { name: "Add card" }));
+        const form = screen.getByRole("form", { name: "Add card" });
+
+        expect(within(form).queryByLabelText("Custom colour")).toBeNull();
+        fireEvent.click(
+            within(form).getByRole("checkbox", {
+                name: "Enter a custom color",
+            }),
+        );
+        expect(within(form).getByLabelText("Custom colour")).toBeDefined();
+    });
+
+    it("submits a typed custom hex once the advanced box is ticked", async () => {
+        render(<CardsForm cards={[]} />);
+        fireEvent.click(screen.getByRole("button", { name: "Add card" }));
+        const form = screen.getByRole("form", { name: "Add card" });
+        fireEvent.change(within(form).getByLabelText("Card name"), {
+            target: { value: "Custom Card" },
+        });
+        fireEvent.click(
+            within(form).getByRole("checkbox", {
+                name: "Enter a custom color",
+            }),
+        );
+        fireEvent.change(within(form).getByLabelText("Custom colour"), {
+            target: { value: "#123456" },
+        });
+        fireEvent.click(within(form).getByRole("button", { name: "Add card" }));
+
+        await waitFor(() =>
+            expect(addMock).toHaveBeenCalledWith(
+                expect.objectContaining({ color: "#123456" }),
+            ),
+        );
+    });
+
+    it("edit on a custom-hex card pre-checks advanced and prefills the hex", () => {
+        render(
+            <CardsForm
+                cards={[card({ id: "c1", name: "NU", color: "#abcdef" })]}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
+
+        const checkbox = screen.getByRole("checkbox", {
+            name: "Enter a custom color",
+        });
+        expect(checkbox.getAttribute("aria-checked")).toBe("true");
+        expect(
+            (screen.getByLabelText("Custom colour") as HTMLInputElement).value,
+        ).toBe("#abcdef");
+    });
+
+    it("edit on a palette-colour card leaves advanced unchecked", () => {
+        render(
+            <CardsForm
+                cards={[card({ id: "c1", name: "NU", color: "#9333ea" })]}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
+
+        expect(screen.queryByLabelText("Custom colour")).toBeNull();
     });
 
     it("locks the cash card — no edit control, shows a lock note", () => {

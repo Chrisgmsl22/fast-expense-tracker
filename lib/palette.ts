@@ -45,3 +45,9 @@ export function isValidHex(value: string): boolean {
 export function normalizeHex(value: string): string {
     return value.trim().toLowerCase();
 }
+
+/** True when `value` is one of the named palette swatches (normalized compare). */
+export function isPaletteColor(value: string): boolean {
+    const normalized = normalizeHex(value);
+    return CARD_PALETTE.some((swatch) => swatch.hex === normalized);
+}
