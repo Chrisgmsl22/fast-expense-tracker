@@ -140,7 +140,7 @@ describe("CardsForm", () => {
             target: { value: "Teal Card" },
         });
         // The hex field is hidden by default — a swatch pick still works.
-        expect(within(form).queryByLabelText("Custom colour")).toBeNull();
+        expect(within(form).queryByLabelText("HEX color")).toBeNull();
         fireEvent.click(within(form).getByRole("button", { name: "Teal" }));
         fireEvent.click(within(form).getByRole("button", { name: "Add card" }));
 
@@ -156,13 +156,13 @@ describe("CardsForm", () => {
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
         const form = screen.getByRole("form", { name: "Add card" });
 
-        expect(within(form).queryByLabelText("Custom colour")).toBeNull();
+        expect(within(form).queryByLabelText("HEX color")).toBeNull();
         fireEvent.click(
             within(form).getByRole("checkbox", {
-                name: "Enter a custom color",
+                name: "Enter a custom color (HEX)",
             }),
         );
-        expect(within(form).getByLabelText("Custom colour")).toBeDefined();
+        expect(within(form).getByLabelText("HEX color")).toBeDefined();
     });
 
     it("submits a typed custom hex once the advanced box is ticked", async () => {
@@ -174,10 +174,10 @@ describe("CardsForm", () => {
         });
         fireEvent.click(
             within(form).getByRole("checkbox", {
-                name: "Enter a custom color",
+                name: "Enter a custom color (HEX)",
             }),
         );
-        fireEvent.change(within(form).getByLabelText("Custom colour"), {
+        fireEvent.change(within(form).getByLabelText("HEX color"), {
             target: { value: "#123456" },
         });
         fireEvent.click(within(form).getByRole("button", { name: "Add card" }));
@@ -198,11 +198,11 @@ describe("CardsForm", () => {
         fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
 
         const checkbox = screen.getByRole("checkbox", {
-            name: "Enter a custom color",
+            name: "Enter a custom color (HEX)",
         });
         expect(checkbox.getAttribute("aria-checked")).toBe("true");
         expect(
-            (screen.getByLabelText("Custom colour") as HTMLInputElement).value,
+            (screen.getByLabelText("HEX color") as HTMLInputElement).value,
         ).toBe("#abcdef");
     });
 
@@ -214,7 +214,7 @@ describe("CardsForm", () => {
         );
         fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
 
-        expect(screen.queryByLabelText("Custom colour")).toBeNull();
+        expect(screen.queryByLabelText("HEX color")).toBeNull();
     });
 
     it("locks the cash card — no edit control, shows a lock note", () => {

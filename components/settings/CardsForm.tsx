@@ -159,7 +159,7 @@ function ColorField({
                     htmlFor={`${idPrefix}-custom-toggle`}
                     className="text-sm"
                 >
-                    Enter a custom color
+                    Enter a custom color (HEX)
                 </Label>
             </div>
 
@@ -176,10 +176,10 @@ function ColorField({
                     />
                     <Input
                         id={`${idPrefix}-color`}
-                        aria-label="Custom colour"
+                        aria-label="HEX color"
                         value={color}
                         onChange={(e) => onColor(e.target.value)}
-                        placeholder="#7c3aed"
+                        placeholder="#RRGGBB"
                         className="w-32 font-mono"
                     />
                 </div>
