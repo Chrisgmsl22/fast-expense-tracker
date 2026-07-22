@@ -251,7 +251,28 @@ describe("CardsForm", () => {
         expect(deleteMock).not.toHaveBeenCalled();
     });
 
-    it("edit → Delete when the card is unused", async () => {
+    it("edit → Delete opens a confirm dialog, then deletes on confirm", async () => {
+        render(
+            <CardsForm
+                cards={[card({ id: "c1", name: "NU", inUse: false })]}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
+        // First Delete click only opens the dialog — nothing deleted yet.
+        fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+        expect(deleteMock).not.toHaveBeenCalled();
+
+        const dialog = await screen.findByRole("dialog");
+        expect(dialog.textContent).toContain("Delete NU?");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+        await waitFor(() =>
+            expect(deleteMock).toHaveBeenCalledWith({ id: "c1" }),
+        );
+        expect(archiveMock).not.toHaveBeenCalled();
+    });
+
+    it("edit → Delete → Cancel dismisses the dialog without deleting", async () => {
         render(
             <CardsForm
                 cards={[card({ id: "c1", name: "NU", inUse: false })]}
@@ -260,10 +281,10 @@ describe("CardsForm", () => {
         fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
         fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-        await waitFor(() =>
-            expect(deleteMock).toHaveBeenCalledWith({ id: "c1" }),
-        );
-        expect(archiveMock).not.toHaveBeenCalled();
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+        expect(deleteMock).not.toHaveBeenCalled();
     });
 
     it("surfaces a server field error when saving an edit", async () => {
@@ -300,6 +321,8 @@ describe("CardsForm", () => {
         );
         fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
         fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
         await waitFor(() =>
             expect(

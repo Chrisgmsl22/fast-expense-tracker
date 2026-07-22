@@ -16,6 +16,14 @@ import type { AddCardInput, UpdateCardInput } from "@/lib/schemas/card";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -254,7 +262,11 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
     );
 }
 
-/** Expanded edit row: rename + recolor + Archive (used) or Delete (unused). */
+/**
+ * Expanded edit row: rename / recolor / retype, plus removal. Used cards Archive
+ * one-click (reversible via Restore); unused cards Delete behind a confirmation
+ * dialog (a hard delete can't be undone).
+ */
 function EditCardRow({
     card,
     onDone,
@@ -271,6 +283,7 @@ function EditCardRow({
     const [color, setColor] = useState(card.color);
     const [errors, setErrors] = useState<FieldErrors<UpdateCardInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [pending, startTransition] = useTransition();
 
     function handleSave(e: FormEvent<HTMLFormElement>) {
@@ -296,13 +309,10 @@ function EditCardRow({
         });
     }
 
-    function handleRemove() {
+    function archive() {
         startTransition(async () => {
             try {
-                // Used cards archive (keeps history); unused cards hard-delete.
-                const res = card.inUse
-                    ? await archiveCard({ id: card.id })
-                    : await deleteCard({ id: card.id });
+                const res = await archiveCard({ id: card.id });
                 if (res.ok) {
                     router.refresh();
                     onDone();
@@ -310,84 +320,144 @@ function EditCardRow({
                     setFormError(res.message);
                 }
             } catch {
-                setFormError("Something went wrong removing the card.");
+                setFormError("Something went wrong archiving the card.");
+            }
+        });
+    }
+
+    function confirmDelete() {
+        startTransition(async () => {
+            try {
+                const res = await deleteCard({ id: card.id });
+                if (res.ok) {
+                    router.refresh();
+                    onDone();
+                } else {
+                    setConfirmingDelete(false);
+                    setFormError(res.message);
+                }
+            } catch {
+                setConfirmingDelete(false);
+                setFormError("Something went wrong deleting the card.");
             }
         });
     }
 
     return (
-        <form
-            onSubmit={handleSave}
-            aria-label={`Edit ${card.name}`}
-            className="space-y-4 border-b py-4 last:border-b-0"
-        >
-            <div>
-                <Label htmlFor={`edit-card-name-${card.id}`}>Card name</Label>
-                <Input
-                    id={`edit-card-name-${card.id}`}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    aria-invalid={Boolean(errors.name)}
-                    aria-describedby={
-                        errors.name
-                            ? `edit-card-name-${card.id}-error`
-                            : undefined
-                    }
-                    className="mt-1.5"
-                />
-                <FieldError
-                    id={`edit-card-name-${card.id}-error`}
-                    message={errors.name?.[0]}
-                />
-            </div>
-
-            <TypeField
-                id={`edit-card-type-${card.id}`}
-                value={type}
-                onType={setType}
-            />
-
-            <ColorField
-                color={color}
-                onColor={setColor}
-                idPrefix={`edit-card-${card.id}`}
-            />
-
-            {formError && (
-                <p className="text-sm text-destructive" role="alert">
-                    {formError}
-                </p>
-            )}
-
-            <div className="flex items-center justify-between gap-2">
-                <Button
-                    type="button"
-                    variant="destructive"
-                    disabled={pending}
-                    onClick={handleRemove}
-                >
-                    {card.inUse ? (
-                        <>
-                            <Archive className="size-3.5" aria-hidden />
-                            Archive
-                        </>
-                    ) : (
-                        <>
-                            <Trash2 className="size-3.5" aria-hidden />
-                            Delete
-                        </>
-                    )}
-                </Button>
-                <div className="flex items-center gap-2">
-                    <Button type="button" variant="ghost" onClick={onDone}>
-                        Cancel
-                    </Button>
-                    <Button type="submit" disabled={pending}>
-                        {pending ? "Saving…" : "Save changes"}
-                    </Button>
+        <>
+            <form
+                onSubmit={handleSave}
+                aria-label={`Edit ${card.name}`}
+                className="space-y-4 border-b py-4 last:border-b-0"
+            >
+                <div>
+                    <Label htmlFor={`edit-card-name-${card.id}`}>
+                        Card name
+                    </Label>
+                    <Input
+                        id={`edit-card-name-${card.id}`}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        aria-invalid={Boolean(errors.name)}
+                        aria-describedby={
+                            errors.name
+                                ? `edit-card-name-${card.id}-error`
+                                : undefined
+                        }
+                        className="mt-1.5"
+                    />
+                    <FieldError
+                        id={`edit-card-name-${card.id}-error`}
+                        message={errors.name?.[0]}
+                    />
                 </div>
-            </div>
-        </form>
+
+                <TypeField
+                    id={`edit-card-type-${card.id}`}
+                    value={type}
+                    onType={setType}
+                />
+
+                <ColorField
+                    color={color}
+                    onColor={setColor}
+                    idPrefix={`edit-card-${card.id}`}
+                />
+
+                {formError && (
+                    <p className="text-sm text-destructive" role="alert">
+                        {formError}
+                    </p>
+                )}
+
+                <div className="flex items-center justify-between gap-2">
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={pending}
+                        onClick={
+                            card.inUse
+                                ? archive
+                                : () => setConfirmingDelete(true)
+                        }
+                    >
+                        {card.inUse ? (
+                            <>
+                                <Archive className="size-3.5" aria-hidden />
+                                Archive
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="size-3.5" aria-hidden />
+                                Delete
+                            </>
+                        )}
+                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button type="button" variant="ghost" onClick={onDone}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={pending}>
+                            {pending ? "Saving…" : "Save changes"}
+                        </Button>
+                    </div>
+                </div>
+            </form>
+
+            <Dialog
+                open={confirmingDelete}
+                onOpenChange={(open) => {
+                    if (!open) setConfirmingDelete(false);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete {card.name}?</DialogTitle>
+                        <DialogDescription>
+                            This can&apos;t be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setConfirmingDelete(false)}
+                            disabled={pending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={confirmDelete}
+                            disabled={pending}
+                        >
+                            {pending ? "Deleting…" : "Delete"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
 
