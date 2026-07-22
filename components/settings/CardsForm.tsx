@@ -2,11 +2,12 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { Archive, Lock, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 
 import { addCard } from "@/app/_actions/card/add";
 import { archiveCard } from "@/app/_actions/card/archive";
 import { deleteCard } from "@/app/_actions/card/delete";
+import { restoreCard } from "@/app/_actions/card/restore";
 import { updateCard } from "@/app/_actions/card/update";
 import type { FieldErrors } from "@/lib/actions/result";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
@@ -461,7 +462,7 @@ function EditCardRow({
     );
 }
 
-/** A read-only card row: colour dot, name, type, and the right-hand control. */
+/** A read-only ACTIVE card row: colour dot, name, type, and the right-hand control. */
 function DisplayRow({
     card,
     onEdit,
@@ -470,14 +471,8 @@ function DisplayRow({
     onEdit: () => void;
 }) {
     const isCash = card.type === "cash";
-    const isArchived = card.archivedAt !== null;
     return (
-        <div
-            className={cn(
-                "flex items-center gap-3 border-b py-2.5 last:border-b-0",
-                isArchived && "opacity-60",
-            )}
-        >
+        <div className="flex items-center gap-3 border-b py-2.5 last:border-b-0">
             <span
                 aria-hidden
                 className="size-4 shrink-0 rounded-md"
@@ -488,11 +483,7 @@ function DisplayRow({
                 {typeLabel(card.type)}
             </span>
             <div className="ml-auto flex items-center gap-2">
-                {isArchived ? (
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        Archived
-                    </span>
-                ) : isCash ? (
+                {isCash ? (
                     <span
                         className="inline-flex items-center gap-1 text-xs font-medium"
                         style={{ color: card.color }}
@@ -518,18 +509,83 @@ function DisplayRow({
 }
 
 /**
- * The Settings "Cards" section (spec 0006 §6). Lists the user's cards
- * and drives add / rename / recolor / archive / delete through IDOR-safe server
- * actions. The Cash card is locked (no controls); used cards archive while unused
- * ones delete, chosen up front from each card's `inUse` flag. Active cards are
+ * A read-only ARCHIVED card row: muted, with a single Restore control. Restore
+ * blocks when an active card already holds this name; that server message is
+ * surfaced inline on the row so the user knows to rename/archive the other one.
+ */
+function ArchivedRow({ card }: { card: CardSettingsItem }) {
+    const router = useRouter();
+    const [error, setError] = useState<string | null>(null);
+    const [pending, startTransition] = useTransition();
+
+    function handleRestore() {
+        setError(null);
+        startTransition(async () => {
+            try {
+                const res = await restoreCard({ id: card.id });
+                if (res.ok) {
+                    router.refresh();
+                } else {
+                    setError(res.message);
+                }
+            } catch {
+                setError("Something went wrong restoring the card.");
+            }
+        });
+    }
+
+    return (
+        <div className="border-b py-2.5 last:border-b-0">
+            <div className="flex items-center gap-3">
+                <span
+                    aria-hidden
+                    className="size-4 shrink-0 rounded-md opacity-60"
+                    style={{ backgroundColor: card.color }}
+                />
+                <span className="text-sm text-muted-foreground">
+                    {card.name}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                    {typeLabel(card.type)}
+                </span>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={handleRestore}
+                    disabled={pending}
+                    aria-label={`Restore ${card.name}`}
+                >
+                    <RotateCcw className="size-3.5" aria-hidden />
+                    {pending ? "Restoring…" : "Restore"}
+                </Button>
+            </div>
+            {error && (
+                <p className="mt-1.5 text-sm text-destructive" role="alert">
+                    {error}
+                </p>
+            )}
+        </div>
+    );
+}
+
+/**
+ * The Settings "Cards" section (spec 0006 §6). Lists the user's active cards
+ * (Cash pinned last) and drives add / rename / recolor / archive / delete through
+ * IDOR-safe server actions. The Cash card is locked (no controls); used cards
+ * archive (reversible) while unused ones delete (confirmed). Archived cards live
+ * in a de-emphasized section below with a one-click Restore. Active cards are
  * capped at `MAX_ACTIVE_CARDS`; at the cap the Add button is disabled.
  */
 export function CardsForm({ cards }: { cards: CardSettingsItem[] }) {
     const [adding, setAdding] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
-    const activeCount = cards.filter((c) => c.archivedAt === null).length;
-    const atCap = activeCount >= MAX_ACTIVE_CARDS;
+    // `listForSettings` already returns active-first (Cash last), then archived.
+    const active = cards.filter((c) => c.archivedAt === null);
+    const archived = cards.filter((c) => c.archivedAt !== null);
+    const atCap = active.length >= MAX_ACTIVE_CARDS;
 
     return (
         <section aria-label="Cards" className="rounded-xl border p-5">
@@ -564,12 +620,12 @@ export function CardsForm({ cards }: { cards: CardSettingsItem[] }) {
             )}
 
             <div className="mt-4">
-                {cards.length === 0 ? (
+                {active.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                         No cards yet — add your first one.
                     </p>
                 ) : (
-                    cards.map((card) =>
+                    active.map((card) =>
                         editingId === card.id ? (
                             <EditCardRow
                                 key={card.id}
@@ -589,6 +645,19 @@ export function CardsForm({ cards }: { cards: CardSettingsItem[] }) {
                     )
                 )}
             </div>
+
+            {archived.length > 0 && (
+                <div className="mt-6 border-t pt-4">
+                    <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        Archived
+                    </h3>
+                    <div className="mt-1">
+                        {archived.map((card) => (
+                            <ArchivedRow key={card.id} card={card} />
+                        ))}
+                    </div>
+                </div>
+            )}
         </section>
     );
 }

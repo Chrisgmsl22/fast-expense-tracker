@@ -124,28 +124,42 @@ records — this one does not.)
 ## 6. Card management
 
 CRUD in the Settings **Cards** section. Decisions refined at CHORE-6.c kickoff
-(2026-07-19, in-session sign-off) — these supersede the original bullets:
+(2026-07-19, in-session sign-off) and during review — these supersede the
+original bullets:
 
-- **Add** — name, type (`credit` | `debit` | `cash`), color. The color control is
-  a **swatch picker over a shared named palette** (`lib/palette.ts` — the seeded
-  colours plus a few extras, ending the seed↔login-page drift) **plus a validated
-  custom `#RRGGBB` hex field** (reverses the original "no free hex" — a picker
-  alone is too limiting once anyone can add cards). Palette source of truth:
-  [`domain-reference.md §4`](../reference/domain-reference.md).
-- **Rename / recolor** — edit an existing card. A **unique active card name per
-  user** (case-insensitive) is enforced in the add/rename action; archived names
+- **Add** — name, type (`credit` | `debit` only — see Cash below), color. The
+  color control is a **swatch picker over a shared named palette**
+  (`lib/palette.ts` — the seeded colours plus a few extras, ending the
+  seed↔login-page drift) **plus a validated custom `#RRGGBB` hex field behind an
+  opt-in "Enter a custom color" checkbox** (a picker alone is too limiting once
+  anyone can add cards, but the raw hex stays out of the way by default). Palette
+  source of truth: [`domain-reference.md §4`](../reference/domain-reference.md).
+- **Rename / recolor / retype** — edit an existing card, including switching its
+  type between `credit` and `debit` (never to `cash`). A **unique active card name
+  per user** (case-insensitive) is enforced in the add/edit action; archived names
   don't collide (you may re-add a name you archived).
 - **Remove — archive _or_ delete, by reference count:**
     - A card with **any** `Expense`/`Movement` references is **archived** (sets
-      `archivedAt`) — a hard delete would break history (FK RESTRICT) or, if forced,
-      strip the card label off every past record. Archived cards vanish from pickers
-      but stay attached to history, so months/totals never break.
+      `archivedAt`) — a hard delete would break history (FK `RESTRICT` on
+      `Expense.cardId`/`Movement.cardId`, which the delete action's server-side
+      ref re-check backs up). Archived cards vanish from pickers but stay attached
+      to history, so months/totals never break. **Archive is one-click** (it's
+      reversible via Restore).
     - A card with **zero** references may be **hard-deleted** (added by mistake,
       never used — no data impact). The delete action **re-checks references
-      server-side** and refuses if any exist.
-    - **No unarchive/restore** — plain CRUD; keep the UX simple.
+      server-side** and refuses if any exist, and the UI requires an **in-app
+      confirmation dialog** ("Delete [name]? This can't be undone.") since a hard
+      delete is irreversible.
+    - **Restore (unarchive) is supported.** Archived cards render in their own
+      de-emphasized section below the active list, each with a one-click
+      **Restore**. Restore **blocks on an active-name collision** (case-insensitive):
+      if a new active card has since taken the archived card's name, restore is
+      refused with an inline message asking the user to rename/archive the other
+      one first (the exact case: archive "NU" → add a new active "NU" → restore old
+      "NU").
 - **Cash is fully locked** — the always-present `type: "cash"` card cannot be
-  renamed, recoloured, archived, or deleted (app-wide cash convention; green).
+  added, renamed, recoloured, retyped, archived, or deleted (app-wide cash
+  convention; green). It always renders **last** in the active list.
 - **Cap: 10 active (non-archived) cards** per user (`MAX_ACTIVE_CARDS`), enforced
   in the add action. Archived cards don't count — archive an old one to free a slot.
 

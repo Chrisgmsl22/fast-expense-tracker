@@ -12,6 +12,7 @@ vi.mock("@/app/_actions/card/add", () => ({ addCard: vi.fn() }));
 vi.mock("@/app/_actions/card/update", () => ({ updateCard: vi.fn() }));
 vi.mock("@/app/_actions/card/archive", () => ({ archiveCard: vi.fn() }));
 vi.mock("@/app/_actions/card/delete", () => ({ deleteCard: vi.fn() }));
+vi.mock("@/app/_actions/card/restore", () => ({ restoreCard: vi.fn() }));
 
 import { CardsForm } from "@/components/settings/CardsForm";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
@@ -20,11 +21,13 @@ import { addCard } from "@/app/_actions/card/add";
 import { updateCard } from "@/app/_actions/card/update";
 import { archiveCard } from "@/app/_actions/card/archive";
 import { deleteCard } from "@/app/_actions/card/delete";
+import { restoreCard } from "@/app/_actions/card/restore";
 
 const addMock = addCard as unknown as Mock;
 const updateMock = updateCard as unknown as Mock;
 const archiveMock = archiveCard as unknown as Mock;
 const deleteMock = deleteCard as unknown as Mock;
+const restoreMock = restoreCard as unknown as Mock;
 
 function card(over: Partial<CardSettingsItem> = {}): CardSettingsItem {
     return {
@@ -46,6 +49,8 @@ beforeEach(() => {
     updateMock.mockResolvedValue({ ok: true, data: { id: "c1" } });
     archiveMock.mockResolvedValue({ ok: true, data: { id: "c1" } });
     deleteMock.mockResolvedValue({ ok: true, data: { id: "c1" } });
+    restoreMock.mockReset();
+    restoreMock.mockResolvedValue({ ok: true, data: { id: "c1", name: "NU" } });
 });
 
 describe("CardsForm", () => {
@@ -214,7 +219,28 @@ describe("CardsForm", () => {
         expect(screen.getByText("locked")).toBeDefined();
     });
 
-    it("marks an archived card and gives it no edit control", () => {
+    it("puts archived cards in their own section — Restore only, no edit/archive/delete", () => {
+        render(
+            <CardsForm
+                cards={[
+                    card({ id: "a1", name: "NU" }),
+                    card({ id: "c1", name: "Old", archivedAt: new Date() }),
+                ]}
+            />,
+        );
+        expect(screen.getByText("Archived")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Restore Old" }),
+        ).toBeDefined();
+        expect(screen.queryByRole("button", { name: "Edit Old" })).toBeNull();
+    });
+
+    it("omits the Archived section when there are no archived cards", () => {
+        render(<CardsForm cards={[card({ id: "a1", name: "NU" })]} />);
+        expect(screen.queryByText("Archived")).toBeNull();
+    });
+
+    it("restores an archived card", async () => {
         render(
             <CardsForm
                 cards={[
@@ -222,8 +248,34 @@ describe("CardsForm", () => {
                 ]}
             />,
         );
-        expect(screen.getByText("Archived")).toBeDefined();
-        expect(screen.queryByRole("button", { name: "Edit Old" })).toBeNull();
+        fireEvent.click(screen.getByRole("button", { name: "Restore Old" }));
+
+        await waitFor(() =>
+            expect(restoreMock).toHaveBeenCalledWith({ id: "c1" }),
+        );
+    });
+
+    it("surfaces a name-conflict message when restore is blocked", async () => {
+        restoreMock.mockResolvedValue({
+            ok: false,
+            code: "name_conflict",
+            message:
+                'You already have an active card named "NU" — rename or archive that one first.',
+        });
+        render(
+            <CardsForm
+                cards={[card({ id: "c1", name: "NU", archivedAt: new Date() })]}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Restore NU" }));
+
+        await waitFor(() =>
+            expect(
+                screen.getByText(
+                    'You already have an active card named "NU" — rename or archive that one first.',
+                ),
+            ).toBeDefined(),
+        );
     });
 
     it("disables Add at the active-card cap with a hint", () => {
