@@ -17,7 +17,7 @@ describe("updateCard (unit, injected fake repo)", () => {
         const id = repo.seed({ userId: "u1", name: "NU", color: "#9333ea" });
 
         const res = await updateCard(
-            { id, name: "Nubank", color: "#7c3aed" },
+            { id, name: "Nubank", type: "credit", color: "#7c3aed" },
             repo,
         );
 
@@ -26,12 +26,42 @@ describe("updateCard (unit, injected fake repo)", () => {
         expect(rows[0]).toMatchObject({ name: "Nubank", color: "#7c3aed" });
     });
 
+    it("changes the card type (credit → debit)", async () => {
+        const repo = new FakeCardRepository();
+        const id = repo.seed({ userId: "u1", name: "NU", type: "credit" });
+
+        const res = await updateCard(
+            { id, name: "NU", type: "debit", color: "#9333ea" },
+            repo,
+        );
+
+        expect(res.ok).toBe(true);
+        const rows = await repo.listForSettings("u1");
+        expect(rows[0]?.type).toBe("debit");
+    });
+
+    it("rejects changing a card to cash (validation)", async () => {
+        const repo = new FakeCardRepository();
+        const id = repo.seed({ userId: "u1", name: "NU", type: "credit" });
+
+        const res = await updateCard(
+            { id, name: "NU", type: "cash", color: "#9333ea" },
+            repo,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.type).toBeDefined();
+        expect((await repo.listForSettings("u1"))[0]?.type).toBe("credit");
+    });
+
     it("allows a pure recolor (same name — dup-check excludes self)", async () => {
         const repo = new FakeCardRepository();
         const id = repo.seed({ userId: "u1", name: "NU", color: "#9333ea" });
 
         const res = await updateCard(
-            { id, name: "NU", color: "#111111" },
+            { id, name: "NU", type: "credit", color: "#111111" },
             repo,
         );
         expect(res.ok).toBe(true);
@@ -40,7 +70,10 @@ describe("updateCard (unit, injected fake repo)", () => {
     it("rejects invalid input with field errors", async () => {
         const repo = new FakeCardRepository();
         const id = repo.seed({ userId: "u1", name: "NU" });
-        const res = await updateCard({ id, name: "", color: "#111111" }, repo);
+        const res = await updateCard(
+            { id, name: "", type: "credit", color: "#111111" },
+            repo,
+        );
 
         expect(res.ok).toBe(false);
         if (res.ok) return;
@@ -53,7 +86,7 @@ describe("updateCard (unit, injected fake repo)", () => {
         const repo = new FakeCardRepository();
         const id = repo.seed({ userId: "u1", name: "NU" });
         const res = await updateCard(
-            { id, name: "Nubank", color: "#111111" },
+            { id, name: "Nubank", type: "credit", color: "#111111" },
             repo,
         );
 
@@ -66,7 +99,7 @@ describe("updateCard (unit, injected fake repo)", () => {
         const repo = new FakeCardRepository();
         const id = repo.seed({ userId: "u1", name: "Cash", type: "cash" });
         const res = await updateCard(
-            { id, name: "Efectivo", color: "#111111" },
+            { id, name: "Efectivo", type: "credit", color: "#111111" },
             repo,
         );
 
@@ -80,7 +113,7 @@ describe("updateCard (unit, injected fake repo)", () => {
         repo.seed({ userId: "u1", name: "BBVA" });
         const id = repo.seed({ userId: "u1", name: "NU" });
         const res = await updateCard(
-            { id, name: "bbva", color: "#111111" },
+            { id, name: "bbva", type: "credit", color: "#111111" },
             repo,
         );
 
@@ -94,7 +127,7 @@ describe("updateCard (unit, injected fake repo)", () => {
         const repo = new FakeCardRepository();
         const id = repo.seed({ userId: "other", name: "NotMine" });
         const res = await updateCard(
-            { id, name: "Renamed", color: "#111111" },
+            { id, name: "Renamed", type: "credit", color: "#111111" },
             repo,
         );
 
@@ -108,7 +141,7 @@ describe("updateCard (unit, injected fake repo)", () => {
         const id = repo.seed({ userId: "u1", name: "NU" });
         repo.failOnWrite = true;
         const res = await updateCard(
-            { id, name: "Nubank", color: "#111111" },
+            { id, name: "Nubank", type: "credit", color: "#111111" },
             repo,
         );
 

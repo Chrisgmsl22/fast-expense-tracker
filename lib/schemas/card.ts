@@ -44,6 +44,8 @@ export const updateCardInputSchema = z.object({
     // and movement schemas rather than enforcing a strict UUID shape.
     id: z.string().min(1, "Card is required"),
     name: cardNameSchema,
+    // Editable, but never TO cash: a card can't become the locked system card.
+    type: addCardTypeSchema,
     color: cardColorSchema,
 });
 

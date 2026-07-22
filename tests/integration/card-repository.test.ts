@@ -127,18 +127,20 @@ describe("PrismaCardRepository (integration)", () => {
         expect(
             await repo.updateForUser(other.id, card.id, {
                 name: "Hacked",
+                type: "debit",
                 color: "#000000",
             }),
         ).toBe(0);
-        // The owner can.
+        // The owner can — including retyping credit → debit.
         expect(
             await repo.updateForUser(owner.id, card.id, {
                 name: "Renamed",
+                type: "debit",
                 color: "#111111",
             }),
         ).toBe(1);
         const rows = await repo.listForSettings(owner.id);
-        expect(rows[0]?.name).toBe("Renamed");
+        expect(rows[0]).toMatchObject({ name: "Renamed", type: "debit" });
     });
 
     it("referenceCount and inUse reflect attached expenses and movements", async () => {

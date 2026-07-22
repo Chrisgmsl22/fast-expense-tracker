@@ -26,9 +26,10 @@ export type UpdateCardResult = ActionResult<
 >;
 
 /**
- * Rename/recolor a card. IDOR-safe: writes are scoped to the session
- * user. The `type:"cash"` card is fully locked (no rename/recolor). The unique
- * active-name check excludes the card's own id so a pure recolor never trips it.
+ * Edit a card — rename / recolor / retype (credit⇄debit; never to cash).
+ * IDOR-safe: writes are scoped to the session user. The `type:"cash"` card is
+ * fully locked (no edit at all). The unique active-name check excludes the
+ * card's own id so a pure recolor never trips it.
  */
 export async function updateCard(
     input: unknown,
@@ -54,7 +55,7 @@ export async function updateCard(
         };
     }
 
-    const { id, name, color } = parsed.data;
+    const { id, name, type, color } = parsed.data;
 
     try {
         if (await repo.isCash(userId, id)) {
@@ -75,7 +76,11 @@ export async function updateCard(
             };
         }
 
-        const count = await repo.updateForUser(userId, id, { name, color });
+        const count = await repo.updateForUser(userId, id, {
+            name,
+            type,
+            color,
+        });
         if (count === 0) {
             return {
                 ok: false,

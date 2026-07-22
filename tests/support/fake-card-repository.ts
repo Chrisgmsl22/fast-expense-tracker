@@ -111,6 +111,7 @@ export class FakeCardRepository implements CardRepository {
         const card = this.cards.get(id);
         if (!card || card.userId !== userId) return 0;
         card.name = data.name;
+        card.type = data.type;
         card.color = data.color;
         return 1;
     }

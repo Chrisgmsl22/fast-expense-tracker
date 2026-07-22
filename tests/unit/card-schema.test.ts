@@ -71,19 +71,31 @@ describe("addCardInputSchema", () => {
 });
 
 describe("updateCardInputSchema", () => {
-    it("parses a valid update (id + name + colour, no type)", () => {
+    it("parses a valid update (id + name + type + colour)", () => {
         const parsed = updateCardInputSchema.safeParse({
             id: VALID_ID,
             name: "Renamed",
+            type: "debit",
             color: "#2563eb",
         });
         expect(parsed.success).toBe(true);
+    });
+
+    it("rejects changing a card to cash", () => {
+        const parsed = updateCardInputSchema.safeParse({
+            id: VALID_ID,
+            name: "Renamed",
+            type: "cash",
+            color: "#2563eb",
+        });
+        expect(parsed.success).toBe(false);
     });
 
     it("rejects a missing id", () => {
         const parsed = updateCardInputSchema.safeParse({
             id: "",
             name: "Renamed",
+            type: "credit",
             color: "#2563eb",
         });
         expect(parsed.success).toBe(false);
@@ -93,6 +105,7 @@ describe("updateCardInputSchema", () => {
         const parsed = updateCardInputSchema.safeParse({
             id: VALID_ID,
             name: "",
+            type: "credit",
             color: "#2563eb",
         });
         expect(parsed.success).toBe(false);

@@ -18,8 +18,8 @@ export type CardSettingsItem = {
 /** Fields set when adding a card; `type` is immutable after creation. */
 export type CardCreate = { name: string; type: string; color: string };
 
-/** Editable fields on rename/recolor. */
-export type CardUpdate = { name: string; color: string };
+/** Editable fields on a card edit (rename / recolor / retype). */
+export type CardUpdate = { name: string; type: string; color: string };
 
 /**
  * Data-access contract for cards — the "port". Actions depend on this interface,
@@ -131,7 +131,7 @@ export class PrismaCardRepository implements CardRepository {
     ): Promise<number> {
         const result = await this.db.card.updateMany({
             where: { id, userId },
-            data: { name: data.name, color: data.color },
+            data: { name: data.name, type: data.type, color: data.color },
         });
         return result.count;
     }

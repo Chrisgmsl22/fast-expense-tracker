@@ -53,6 +53,47 @@ function FieldError({ id, message }: { id: string; message?: string }) {
     );
 }
 
+/** Credit/Debit picker shared by the add + edit forms (Cash is never offered). */
+function TypeField({
+    id,
+    value,
+    onType,
+}: {
+    id: string;
+    value: AddCardType;
+    onType: (value: AddCardType) => void;
+}) {
+    return (
+        <div>
+            <Label htmlFor={id}>Type</Label>
+            <Select
+                value={value}
+                onValueChange={(v) =>
+                    onType(
+                        ADD_TYPE_OPTIONS.find((o) => o.value === v)?.value ??
+                            "credit",
+                    )
+                }
+            >
+                <SelectTrigger
+                    id={id}
+                    aria-label="Card type"
+                    className="mt-1.5 w-full"
+                >
+                    {typeLabel(value)}
+                </SelectTrigger>
+                <SelectContent>
+                    {ADD_TYPE_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+}
+
 /** Swatch grid over the shared palette + a validated custom `#RRGGBB` input. */
 function ColorField({
     color,
@@ -165,33 +206,7 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
                 />
             </div>
 
-            <div>
-                <Label htmlFor="add-card-type">Type</Label>
-                <Select
-                    value={type}
-                    onValueChange={(value) =>
-                        setType(
-                            ADD_TYPE_OPTIONS.find((o) => o.value === value)
-                                ?.value ?? "credit",
-                        )
-                    }
-                >
-                    <SelectTrigger
-                        id="add-card-type"
-                        aria-label="Card type"
-                        className="mt-1.5 w-full"
-                    >
-                        {typeLabel(type)}
-                    </SelectTrigger>
-                    <SelectContent>
-                        {ADD_TYPE_OPTIONS.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+            <TypeField id="add-card-type" value={type} onType={setType} />
 
             <ColorField color={color} onColor={setColor} idPrefix="add-card" />
 
@@ -223,6 +238,10 @@ function EditCardRow({
 }) {
     const router = useRouter();
     const [name, setName] = useState(card.name);
+    // Cash is never editable, so the current type is always credit/debit here.
+    const [type, setType] = useState<AddCardType>(
+        card.type === "debit" ? "debit" : "credit",
+    );
     const [color, setColor] = useState(card.color);
     const [errors, setErrors] = useState<FieldErrors<UpdateCardInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
@@ -232,7 +251,12 @@ function EditCardRow({
         e.preventDefault();
         startTransition(async () => {
             try {
-                const res = await updateCard({ id: card.id, name, color });
+                const res = await updateCard({
+                    id: card.id,
+                    name,
+                    type,
+                    color,
+                });
                 if (res.ok) {
                     router.refresh();
                     onDone();
@@ -290,6 +314,12 @@ function EditCardRow({
                     message={errors.name?.[0]}
                 />
             </div>
+
+            <TypeField
+                id={`edit-card-type-${card.id}`}
+                value={type}
+                onType={setType}
+            />
 
             <ColorField
                 color={color}

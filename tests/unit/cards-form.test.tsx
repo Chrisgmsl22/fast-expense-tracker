@@ -242,8 +242,33 @@ describe("CardsForm", () => {
         );
     });
 
-    it("edit → Save changes calls updateCard", async () => {
-        render(<CardsForm cards={[card({ id: "c1", name: "NU" })]} />);
+    it("edit form shows the type dropdown prefilled with the card's type", async () => {
+        render(
+            <CardsForm
+                cards={[card({ id: "c1", name: "BBVA", type: "debit" })]}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Edit BBVA" }));
+
+        // The trigger shows the current type; opening it reveals Credit/Debit.
+        expect(screen.getByLabelText("Card type").textContent).toContain(
+            "Debit",
+        );
+        fireEvent.click(screen.getByLabelText("Card type"));
+        await waitFor(() =>
+            expect(
+                screen.getByRole("option", { name: "Credit" }),
+            ).toBeDefined(),
+        );
+        expect(screen.queryByRole("option", { name: "Cash" })).toBeNull();
+    });
+
+    it("edit → Save changes calls updateCard with the type", async () => {
+        render(
+            <CardsForm
+                cards={[card({ id: "c1", name: "NU", type: "credit" })]}
+            />,
+        );
         fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
         fireEvent.change(screen.getByLabelText("Card name"), {
             target: { value: "Nubank" },
@@ -252,7 +277,11 @@ describe("CardsForm", () => {
 
         await waitFor(() =>
             expect(updateMock).toHaveBeenCalledWith(
-                expect.objectContaining({ id: "c1", name: "Nubank" }),
+                expect.objectContaining({
+                    id: "c1",
+                    name: "Nubank",
+                    type: "credit",
+                }),
             ),
         );
     });
