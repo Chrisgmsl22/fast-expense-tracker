@@ -42,8 +42,10 @@ export default async function ExpensesPage({
             db.subcategory.findMany({
                 select: { id: true, name: true, categoryId: true },
             }),
+            // Archived cards drop out of the picker (spec 0006 §6); history reads
+            // stay unfiltered so old expenses still resolve their card.
             db.card.findMany({
-                where: { userId },
+                where: { userId, archivedAt: null },
                 orderBy: { name: "asc" },
                 select: { id: true, name: true, color: true },
             }),

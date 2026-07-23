@@ -13,7 +13,19 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+// Card colours come from the shared palette (spec 0006 §6) so the seed, the
+// login-page dots, and the in-app picker can never drift apart again. Relative
+// `.ts` import (not the `@/` alias) so `node prisma/seed.ts` resolves it.
+import { CARD_PALETTE, CASH_COLOR } from "../lib/palette.ts";
+
 const BCRYPT_ROUNDS = 10;
+
+/** The seeded card colours, by palette swatch name. */
+function paletteHex(name: string): string {
+    const swatch = CARD_PALETTE.find((s) => s.name === name);
+    if (!swatch) throw new Error(`Unknown palette colour: ${name}`);
+    return swatch.hex;
+}
 
 type CategorySeed = {
     slug: string;
@@ -197,11 +209,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 // Category.color (see globals.css design-tokens note + domain-reference.md §4).
 // Card-color coding: Platinum gray, Gold gold, NU purple, BBVA blue, Cash green.
 export const CARD_SEED: readonly CardSeed[] = [
-    { name: "Amex Platinum", color: "#6b7280", type: "credit" },
-    { name: "Amex Gold", color: "#ca8a04", type: "credit" },
-    { name: "NU", color: "#9333ea", type: "credit" },
-    { name: "BBVA", color: "#2563eb", type: "debit" },
-    { name: "Cash", color: "#16a34a", type: "cash" },
+    { name: "Amex Platinum", color: paletteHex("Slate"), type: "credit" },
+    { name: "Amex Gold", color: paletteHex("Gold"), type: "credit" },
+    { name: "NU", color: paletteHex("Purple"), type: "credit" },
+    { name: "BBVA", color: paletteHex("Blue"), type: "debit" },
+    { name: "Cash", color: CASH_COLOR, type: "cash" },
 ];
 
 export type SeedOptions = {

@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
-import { settingsRepository } from "@/lib/repositories";
+import { cardRepository, settingsRepository } from "@/lib/repositories";
+import { CardsForm } from "@/components/settings/CardsForm";
 import { SplitRuleForm } from "@/components/settings/SplitRuleForm";
 
 // Per-request, DB-backed data — never prerender at build (no DB in preview builds, ADR-0004).
@@ -7,7 +8,6 @@ export const dynamic = "force-dynamic";
 
 /** Sections designed in the mockup but deferred past CHORE-6.a (spec 0006 §8). */
 const COMING_SOON = [
-    "Cards",
     "Budget rule",
     "Category limits",
     "Preferences",
@@ -25,7 +25,10 @@ export default async function SettingsPage() {
         return null;
     }
 
-    const settings = await settingsRepository.getSettings(userId);
+    const [settings, cards] = await Promise.all([
+        settingsRepository.getSettings(userId),
+        cardRepository.listForSettings(userId),
+    ]);
 
     return (
         <main className="mx-auto max-w-2xl p-4 sm:p-6 lg:p-8">
@@ -37,6 +40,8 @@ export default async function SettingsPage() {
                     partnerName={settings.partnerName}
                     defaultSharePercentage={settings.defaultSharePercentage}
                 />
+
+                <CardsForm cards={cards} />
 
                 {/* Deferred sections (spec 0006 §8) — placeholders so the page
                     reads as the full Settings surface without shipping them yet. */}

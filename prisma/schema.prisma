@@ -91,8 +91,11 @@ model Card {
   name      String
   color     String // card color coding — see domain-reference.md §4
   type      String // "credit" | "debit" | "cash"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Soft-archive (spec 0006 §6): an archived card drops out of pickers but stays
+  // attached to its history, so past months/totals never break. Null = active.
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   expenses  Expense[]
   movements Movement[]
@@ -110,7 +113,11 @@ model Expense {
   subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
 
   cardId String? // null = cash
-  card   Card?   @relation(fields: [cardId], references: [id])
+  // RESTRICT (spec 0006 §6): a card with expenses can't be hard-deleted — the DB
+  // backs up the action's reference re-check so history never silently loses its
+  // card label (Prisma's default for an optional relation is SetNull, which would
+  // do exactly that). Referenced cards are archived, not deleted.
+  card   Card?   @relation(fields: [cardId], references: [id], onDelete: Restrict)
 
   date        DateTime
   description String
@@ -201,7 +208,9 @@ model Movement {
   type   String
 
   cardId String? // set when type = "card_payment"
-  card   Card?   @relation(fields: [cardId], references: [id])
+  // RESTRICT — same as Expense.card: a referenced card is archived, never
+  // hard-deleted, so a card payment never silently loses its card (spec 0006 §6).
+  card   Card?   @relation(fields: [cardId], references: [id], onDelete: Restrict)
 
   note String?
 
