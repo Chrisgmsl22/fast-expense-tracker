@@ -74,18 +74,58 @@
         {
             "id": "CHORE-7",
             "title": "Toggle dashboard categories between my-share and total spend",
-            "description": "The dashboard Categories cards + 'Where the money went' show only your share (actualExpenditure, the 68% slice). Add a control to flip them to the full charged amount (ignoring the split) — e.g. Transport shows $2,000 total, not just your part. Aligns with CHORE-6 / spec 0006: in solo mode a user's share IS the total, so the category displays must already support a total basis; build this so the two dovetail (a shared user toggles; a solo user is effectively always 'total').",
+            "description": "CANCELLED (2026-07-22): shared-only feature — the toggle is inert in solo mode (a solo user's share IS the total), and the expected prod user base is solo, so the value-to-effort is low. Revisit only if a shared-mode user actually asks for it. Original intent: The dashboard Categories cards + 'Where the money went' show only your share (actualExpenditure, the 68% slice). Add a control to flip them to the full charged amount (ignoring the split) — e.g. Transport shows $2,000 total, not just your part. Aligns with CHORE-6 / spec 0006: in solo mode a user's share IS the total, so the category displays must already support a total basis; build this so the two dovetail (a shared user toggles; a solo user is effectively always 'total').",
             "plan": "Scope TBD at build time (decide with the user): a segmented 'My share ⇄ Total' control on the dashboard. Thread both sums per category from the dashboard data (amount-sum + actualExpenditure-sum) so the toggle is a pure client re-scope of the Categories cards + 'Where the money went'. Open question: whether the 50/25/25 buckets + 'Income vs spent' also re-scope (they encode budget-against-your-income, so likely stay my-share). Coordinate with CHORE-6.a/.b (sharesExpenses flag) so solo mode reuses the total-basis path rather than duplicating it.",
+            "status": "cancelled",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-8.a",
+            "title": "Per-user categories, subcategories, and budgets (multi-tenancy foundation)",
+            "description": "Category, Subcategory, and CategoryBudget are global (no userId) — one shared config for the whole DB. With public signup (8.d) every user would share the same category set, colors, and monthly budgets; one user editing a budget changes it for everyone. Expenses ARE userId-scoped, so spend stays private, but the scaffolding leaks. Make categories/subcategories/budgets per-user before any signup. Reverses ADR-0016 (budgets deliberately global for the single-user app). Foundation for CHORE-8.b–8.e.",
+            "plan": "Kicks off with a superseding ADR (reverses ADR-0016; docs/decisions is protected — sign-off first). (1) Schema: +userId on Category, Subcategory, CategoryBudget (relations to User); change CategoryBudget @@unique([categoryId,month]) -> @@unique([userId,categoryId,month]). (2) Owner data migration: backfill userId = owner on all existing Category/Subcategory/CategoryBudget rows so nothing orphans; dev via prisma migrate, PROD via a documented reviewed-SQL runbook (mirror spec 0005's careful-real-data approach — Neon MCP survey before/after). (3) Scope every category/budget read + write by userId: dashboard.repository (getCategorySpends/getCategoryBreakdown), category.repository, category-budget.repository, the set-budget action, seed. (4) Tests: per-user isolation (user A's budget/color invisible to B), userId scoping on every read/write, migration correctness. Depends on nothing new; blocks 8.b/8.c/8.d/8.e.",
+            "status": "in-progress",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-8.b",
+            "title": "New-user starter kit — default categories/subcategories/cards/settings",
+            "description": "A single provisioning routine that seeds a fresh account's starting data so a new user lands in a working, private tracker. Shared by the owner seed AND signup (8.d) so the two never drift. Depends on CHORE-8.a (per-user categories).",
+            "plan": "(1) A provisionNewUser(userId) domain/service routine that seeds, all userId-scoped: the default 13 categories + subcategories (the frozen reference in domain-reference.md), a default Cash card (REQUIRED — Cash is un-addable via the UI since 6.c) plus optional generic Credit + Debit starters, and a default Solo Settings row (sharesExpenses=false). (2) Refactor prisma/seed.ts to provision the owner via the same routine (DRY). (3) Tests: a freshly provisioned user has the full default set, isolated from other users; seed still works. Depends on 8.a.",
             "status": "open",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,
             "issue": null
         },
         {
-            "id": "CHORE-8",
+            "id": "CHORE-8.c",
+            "title": "Per-user category management in Settings",
+            "description": "Now that categories are per-user (8.a), give users a Settings 'Categories' section to manage them — mirroring the Cards section from 6.c. Rename / recolor / add / set monthly budget / archive. Makes the seeded default set adjustable per account.",
+            "plan": "Mirror the CHORE-6.c card vertical slice for Category: Zod schema, IDOR-safe userId-scoped CRUD actions, a Settings Categories section (client form), reads. Decide exact ops at pickup (rename/recolor/add/set-budget/archive; delete only if unused, else archive — categories are referenced by Expense[]). Coordinates with the existing inline dashboard budget editing (set-budget) so they share the same per-user path. Depends on 8.a.",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-8.d",
             "title": "Public signup, capped to a configurable max users in PROD",
-            "description": "Accounts are created manually today (seed / direct prod insert); spec 0006 §8 deferred public signup. People are interested in using the app, so add a real signup page — but bound it: PROD accepts at most N users (default 10) so onboarding stays small and controlled. Reverses the 'no signup' deferral in spec 0006 §8 (updated in this chore). Sequenced AFTER CHORE-6.a (a new account needs the default Settings row) and ideally CHORE-6.b (so a new user lands in a clean Solo tracker).",
-            "plan": "(1) Signup page + IDOR-N/A public server action: email + password (Zod-validated), bcrypt-hash the password (mirror the seed's hashing), create User + a default Settings row (Solo: sharesExpenses=false). (2) User cap: a MAX_USERS env var (default 10) checked in the action BEFORE creating the user — count existing users and reject at-cap with a clear 'signups are currently full' message; document the var in .env.example + coding-conventions.md. The cap is enforced wherever the env is set (PROD); local/dev can raise it. (3) After signup, sign the user in (or redirect to /login). (4) Update spec 0006 §8 to record signup is now in-scope behind the cap. Tests: action happy path, duplicate-email rejection, at-cap rejection (boundary: N-1 ok, N rejected), validation, password is hashed (never stored plain). Out of scope: email verification, password reset, onboarding wizard, social/OAuth login, rate-limiting beyond the cap (note as follow-up). Depends on CHORE-6.a (default Settings), coordinates with CHORE-6.b (Solo UX).",
+            "description": "Add a real signup page, bounded: PROD accepts at most N users (default 10) so onboarding stays small and controlled. Reverses the 'no signup' deferral in spec 0006 §8. A new account is provisioned via the 8.b starter kit so it lands in a clean, private Solo tracker. Depends on 8.a + 8.b.",
+            "plan": "(1) Signup page (app/(auth)/signup, mirror the login page/form -> server action pattern) + public server action: email + password + display name (Zod; password strength), bcrypt.hash(pw,10) like the seed, create User then provisionNewUser (8.b). Replace the SignUpComingSoon placeholder on the login page with a real link. (2) User cap: MAX_USERS env var (default 10) checked BEFORE create — db.user.count vs cap, reject at-cap with a clear 'signups are currently full' message; document in .env.example + coding-conventions.md. (3) After signup, sign the user in (auto) and route to onboarding (8.e). (4) Empty-state: dashboard shows a 'set your income' nudge when a user has no income (not a dead 0/0/0). (5) Update spec 0006 §8. Tests: happy path, duplicate-email reject, at-cap boundary (N-1 ok, N rejected), validation, password hashed (never plain). Out of scope: email verification, password reset, OAuth, rate-limiting beyond the cap. Depends on 8.a + 8.b.",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-8.e",
+            "title": "Signup onboarding wizard",
+            "description": "After a user signs up (8.d), walk them through a short multi-step onboarding (modal/wizard) to set up their account instead of dropping them on an empty dashboard. Built against a user-provided Claude design reference.",
+            "plan": "A multi-step wizard shown on first sign-in: welcome -> display name + fixed monthly income -> pick/confirm a card (from the starter kit) -> 'do you share expenses?' toggle (+ partner name + your % when on) -> budget rule (show the default 50/25/25 as a starting point) -> done. Persists via the existing settings / income / card paths (no new money model). Steps + visuals finalized against the shared design. Depends on 8.d (a just-signed-up user) + 8.a/8.b. Out of scope: re-running the wizard later (Settings already covers edits).",
             "status": "open",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,

@@ -20,6 +20,9 @@ export const choresConfig: RegisterConfig = {
         { value: "in-progress", label: "In progress" },
         { value: "shipped", label: "Shipped, awaiting merge" },
         { value: "merged", label: "Merged", terminal: true },
+        // Side-exit: considered but intentionally not built. Listed (not counted)
+        // with its reason in the description so the decision stays visible.
+        { value: "cancelled", label: "Cancelled" },
     ],
     requiredStringFields: ["title", "description", "plan"],
     nullableStringFields: ["spec", "pr"],
