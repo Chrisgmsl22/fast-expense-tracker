@@ -14,8 +14,8 @@ async function seedUser(email = "u@example.com") {
     });
 }
 
-async function seedCategory(slug = "groceries") {
-    return db.category.create({ data: { slug, name: "Groceries" } });
+async function seedCategory(userId: string, slug = "groceries") {
+    return db.category.create({ data: { userId, slug, name: "Groceries" } });
 }
 
 async function seedExpense(opts: {
@@ -47,7 +47,7 @@ describe("PrismaExpenseRepository.getForMonth (integration)", () => {
     it("returns only the user's expenses inside the CDMX month, newest first", async () => {
         const user = await seedUser("me@example.com");
         const other = await seedUser("other@example.com");
-        const cat = await seedCategory();
+        const cat = await seedCategory(user.id);
 
         await seedExpense({
             userId: user.id,
@@ -89,7 +89,7 @@ describe("PrismaExpenseRepository.getForMonth (integration)", () => {
 
     it("surfaces the card name + color", async () => {
         const user = await seedUser();
-        const cat = await seedCategory();
+        const cat = await seedCategory(user.id);
         const card = await db.card.create({
             data: {
                 userId: user.id,
@@ -116,7 +116,7 @@ describe("PrismaExpenseRepository.getForMonth (integration)", () => {
 
     it("surfaces the stored shared-split fields", async () => {
         const user = await seedUser();
-        const cat = await seedCategory();
+        const cat = await seedCategory(user.id);
         await seedExpense({
             userId: user.id,
             categoryId: cat.id,

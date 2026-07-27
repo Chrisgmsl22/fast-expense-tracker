@@ -24,8 +24,12 @@ const OTHER_NAME = "Other";
  * math (percent-of-category, ordering) lives in `lib/domain/category.ts`.
  */
 export interface CategoryRepository {
-    /** Category metadata by slug, or null if no such category. */
-    getBySlug(slug: string): Promise<CategoryMeta | null>;
+    /**
+     * Category metadata by slug for one user, or null if that user has no such
+     * category. Slugs are per-user (ADR-0022), so `userId` is required — a user
+     * can never resolve another user's category.
+     */
+    getBySlug(userId: string, slug: string): Promise<CategoryMeta | null>;
     /**
      * My-share spend (`actualExpenditure`) summed per subcategory for the month,
      * including **every** subcategory of the category (zero-spend rows kept), plus
@@ -48,9 +52,9 @@ export interface CategoryRepository {
 export class PrismaCategoryRepository implements CategoryRepository {
     constructor(private readonly db: PrismaClient) {}
 
-    getBySlug(slug: string): Promise<CategoryMeta | null> {
+    getBySlug(userId: string, slug: string): Promise<CategoryMeta | null> {
         return this.db.category.findUnique({
-            where: { slug },
+            where: { userId_slug: { userId, slug } },
             select: {
                 id: true,
                 slug: true,
@@ -75,7 +79,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
                 _sum: { actualExpenditure: true },
             }),
             this.db.subcategory.findMany({
-                where: { categoryId },
+                where: { userId, categoryId },
                 select: { id: true, name: true },
             }),
         ]);

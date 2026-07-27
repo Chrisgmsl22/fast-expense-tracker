@@ -204,6 +204,7 @@ async function main(): Promise<void> {
         }
 
         const categories = await db.category.findMany({
+            where: { userId: admin.id },
             include: { subcategories: true },
         });
         const cards = await db.card.findMany({ where: { userId: admin.id } });

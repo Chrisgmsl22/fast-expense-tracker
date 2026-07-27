@@ -33,20 +33,28 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  expenses  Expense[]
-  cards     Card[]
-  settings  Settings?
-  movements Movement[]
-  incomes   Income[]
+  expenses        Expense[]
+  cards           Card[]
+  settings        Settings?
+  movements       Movement[]
+  incomes         Income[]
+  categories      Category[]
+  subcategories   Subcategory[]
+  categoryBudgets CategoryBudget[]
 }
 
+// Per-user category (ADR-0022). Each account owns its own copy of the category
+// set — seeded from the shared starter kit. `slug` is unique **per user**
+// (`@@unique([userId, slug])`), not globally, so every user may have a `housing`.
 model Category {
   id               String   @id @default(uuid())
-  slug             String   @unique
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  slug             String
   name             String
   color            String   @default("#6b7280") // per-category hex; user-editable. See domain-reference.md §1
   isRelevant       Boolean  @default(true)
-  isSystemCategory Boolean  @default(true) // all system in temp app
+  isSystemCategory Boolean  @default(true) // starter-kit default for this user
   monthlyBudget    Float? // null = no budget set
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -54,15 +62,18 @@ model Category {
   subcategories Subcategory[]
   expenses      Expense[]
   budgets       CategoryBudget[]
+
+  @@unique([userId, slug])
 }
 
-// Per-month budget override for a category. `Category.monthlyBudget`
-// is the DEFAULT applied to any month without a row here; a row here supersedes
-// it for its `month`. Budgets follow the global/system model of Category itself
-// (no `userId`) — this is a single-user app; per-user budgets are out of scope.
-// See ADR-0016.
+// Per-month budget override for a category (ADR-0016), now per-user (ADR-0022).
+// `Category.monthlyBudget` is the DEFAULT applied to any month without a row
+// here; a row here supersedes it for its `month`. The override key is
+// `@@unique([userId, categoryId, month])` so each user owns their own overrides.
 model CategoryBudget {
   id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
   month      String // "YYYY-MM" — the month this override applies to (CDMX frame)
@@ -70,11 +81,15 @@ model CategoryBudget {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@unique([categoryId, month])
+  @@unique([userId, categoryId, month])
 }
 
+// Per-user subcategory (ADR-0022) — belongs to a per-user Category and carries
+// its own `userId` so every read/write can scope by the signed-in user.
 model Subcategory {
   id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
   name       String
@@ -85,17 +100,17 @@ model Subcategory {
 }
 
 model Card {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  name      String
-  color     String // card color coding — see domain-reference.md §4
-  type      String // "credit" | "debit" | "cash"
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  name       String
+  color      String // card color coding — see domain-reference.md §4
+  type       String // "credit" | "debit" | "cash"
   // Soft-archive (spec 0006 §6): an archived card drops out of pickers but stays
   // attached to its history, so past months/totals never break. Null = active.
   archivedAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   expenses  Expense[]
   movements Movement[]

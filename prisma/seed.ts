@@ -233,9 +233,10 @@ export type SeedSummary = {
 };
 
 /**
- * Seeds categories, subcategories, cards, and the admin user. Idempotent:
- * categories/user use `upsert` (unique slug/email); subcategories/cards have no
- * natural unique constraint, so they are created only when absent.
+ * Seeds the admin user, then their categories, subcategories, and cards.
+ * Idempotent: the user upserts on the unique email and categories upsert on the
+ * per-user `(userId, slug)` key (ADR-0022); subcategories/cards have no natural
+ * unique constraint, so they are created only when absent (scoped by userId).
  *
  * The find-then-create for subcategories/cards is check-then-act: it assumes a
  * single-process run (the `pnpm db:seed` CLI). Two concurrent seeds could race
@@ -246,12 +247,27 @@ export async function runSeed(
     db: PrismaClient,
     { adminEmail, adminPassword }: SeedOptions,
 ): Promise<SeedSummary> {
+    // The owner is created first: categories/subcategories are now per-user
+    // (ADR-0022), so they need the owner's id to be stamped on each row.
+    const passwordHash = await bcrypt.hash(adminPassword, BCRYPT_ROUNDS);
+    const admin = await db.user.upsert({
+        where: { email: adminEmail },
+        create: {
+            email: adminEmail,
+            name: "Christian",
+            password: passwordHash,
+        },
+        // Don't reset the password on re-seed; keep any rotated value.
+        update: {},
+    });
+
     let subcategoryCount = 0;
 
     for (const cat of CATEGORY_SEED) {
         const category = await db.category.upsert({
-            where: { slug: cat.slug },
+            where: { userId_slug: { userId: admin.id, slug: cat.slug } },
             create: {
+                userId: admin.id,
                 slug: cat.slug,
                 name: cat.name,
                 color: CATEGORY_COLORS[cat.slug] ?? "#6b7280",
@@ -268,28 +284,16 @@ export async function runSeed(
 
         for (const name of cat.subcategories) {
             const existing = await db.subcategory.findFirst({
-                where: { categoryId: category.id, name },
+                where: { userId: admin.id, categoryId: category.id, name },
             });
             if (!existing) {
                 await db.subcategory.create({
-                    data: { categoryId: category.id, name },
+                    data: { userId: admin.id, categoryId: category.id, name },
                 });
                 subcategoryCount += 1;
             }
         }
     }
-
-    const passwordHash = await bcrypt.hash(adminPassword, BCRYPT_ROUNDS);
-    const admin = await db.user.upsert({
-        where: { email: adminEmail },
-        create: {
-            email: adminEmail,
-            name: "Christian",
-            password: passwordHash,
-        },
-        // Don't reset the password on re-seed; keep any rotated value.
-        update: {},
-    });
 
     let cardCount = 0;
     for (const card of CARD_SEED) {

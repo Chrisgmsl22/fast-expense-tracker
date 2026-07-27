@@ -10,17 +10,23 @@ async function seedUser(email = "u@example.com") {
 }
 
 async function seedCategory(
+    userId: string,
     slug: string,
     isRelevant = true,
     monthlyBudget: number | null = null,
+    color = "#6b7280",
 ) {
     return db.category.create({
-        data: { slug, name: slug, isRelevant, monthlyBudget },
+        data: { userId, slug, name: slug, isRelevant, monthlyBudget, color },
     });
 }
 
-async function seedSubcategory(categoryId: string, name: string) {
-    return db.subcategory.create({ data: { categoryId, name } });
+async function seedSubcategory(
+    userId: string,
+    categoryId: string,
+    name: string,
+) {
+    return db.subcategory.create({ data: { userId, categoryId, name } });
 }
 
 async function seedExpense(opts: {
@@ -45,9 +51,10 @@ async function seedExpense(opts: {
 }
 
 describe("PrismaCategoryRepository.getBySlug (integration)", () => {
-    it("returns category metadata by slug", async () => {
-        await seedCategory("health", true, 4000);
-        const meta = await repo.getBySlug("health");
+    it("returns category metadata by slug for the owning user", async () => {
+        const user = await seedUser();
+        await seedCategory(user.id, "health", true, 4000);
+        const meta = await repo.getBySlug(user.id, "health");
         expect(meta).toMatchObject({
             slug: "health",
             name: "health",
@@ -57,17 +64,45 @@ describe("PrismaCategoryRepository.getBySlug (integration)", () => {
     });
 
     it("returns null for an unknown slug", async () => {
-        expect(await repo.getBySlug("nope")).toBeNull();
+        const user = await seedUser();
+        expect(await repo.getBySlug(user.id, "nope")).toBeNull();
+    });
+
+    it("never resolves another user's category with the same slug (ADR-0022)", async () => {
+        const alice = await seedUser("alice@example.com");
+        const bob = await seedUser("bob@example.com");
+        // Each owns a distinct "health": different color + budget.
+        await seedCategory(alice.id, "health", true, 4000, "#e11d48");
+        await seedCategory(bob.id, "health", false, 999, "#0d9488");
+
+        const aliceView = await repo.getBySlug(alice.id, "health");
+        const bobView = await repo.getBySlug(bob.id, "health");
+        // Alice sees only her own color + budget; Bob's edits are invisible.
+        expect(aliceView).toMatchObject({
+            color: "#e11d48",
+            monthlyBudget: 4000,
+            isRelevant: true,
+        });
+        expect(bobView).toMatchObject({
+            color: "#0d9488",
+            monthlyBudget: 999,
+            isRelevant: false,
+        });
+        expect(aliceView?.id).not.toBe(bobView?.id);
     });
 });
 
 describe("PrismaCategoryRepository.getSubcategorySpends (integration)", () => {
     it("sums my-share per subcategory and keeps zero-spend subcategories", async () => {
         const user = await seedUser();
-        const health = await seedCategory("health");
-        const doctors = await seedSubcategory(health.id, "Doctors appt");
-        const dentist = await seedSubcategory(health.id, "Dentist");
-        await seedSubcategory(health.id, "Medicine"); // exists, no spend
+        const health = await seedCategory(user.id, "health");
+        const doctors = await seedSubcategory(
+            user.id,
+            health.id,
+            "Doctors appt",
+        );
+        const dentist = await seedSubcategory(user.id, health.id, "Dentist");
+        await seedSubcategory(user.id, health.id, "Medicine"); // exists, no spend
 
         // Two doctor rows — sum on actualExpenditure, not amount.
         await seedExpense({
@@ -110,8 +145,12 @@ describe("PrismaCategoryRepository.getSubcategorySpends (integration)", () => {
 
     it("rolls null-subcategory spend up as an 'Other' row (only when present)", async () => {
         const user = await seedUser();
-        const health = await seedCategory("health");
-        const doctors = await seedSubcategory(health.id, "Doctors appt");
+        const health = await seedCategory(user.id, "health");
+        const doctors = await seedSubcategory(
+            user.id,
+            health.id,
+            "Doctors appt",
+        );
 
         await seedExpense({
             userId: user.id,
@@ -142,9 +181,9 @@ describe("PrismaCategoryRepository.getSubcategorySpends (integration)", () => {
     it("scopes to the user, category, and month", async () => {
         const user = await seedUser("me@example.com");
         const other = await seedUser("other@example.com");
-        const health = await seedCategory("health");
-        const sub = await seedSubcategory(health.id, "Doctors appt");
-        const food = await seedCategory("food");
+        const health = await seedCategory(user.id, "health");
+        const sub = await seedSubcategory(user.id, health.id, "Doctors appt");
+        const food = await seedCategory(user.id, "food");
 
         await seedExpense({
             userId: user.id,
@@ -194,9 +233,9 @@ describe("PrismaCategoryRepository.getExpensesForCategoryMonth (integration)", (
     it("returns the category's month expenses, date desc, scoped to user+category", async () => {
         const user = await seedUser("me@example.com");
         const other = await seedUser("other@example.com");
-        const health = await seedCategory("health");
-        const sub = await seedSubcategory(health.id, "Doctors appt");
-        const food = await seedCategory("food");
+        const health = await seedCategory(user.id, "health");
+        const sub = await seedSubcategory(user.id, health.id, "Doctors appt");
+        const food = await seedCategory(user.id, "food");
 
         await seedExpense({
             userId: user.id,

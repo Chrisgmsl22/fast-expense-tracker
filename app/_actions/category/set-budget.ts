@@ -30,12 +30,13 @@ export type SetCategoryBudgetResult = ActionResult<
 /**
  * Set a category's monthly limit for a given month + its default (ADR-0016).
  *
- * Orchestration only: validate → authenticate → resolve the category by slug →
- * write the default and the month override (a null `thisMonthAmount` clears the
- * override; a null `defaultAmount` clears the default) → map failures. Budgets
- * are global, so there is no per-user scoping — but a session is still required.
- * The caller refreshes the page on success (no `revalidatePath`, matching the
- * other actions in this repo).
+ * Orchestration only: validate → authenticate → resolve the caller's category
+ * by slug → write the default and the month override (a null `thisMonthAmount`
+ * clears the override; a null `defaultAmount` clears the default) → map
+ * failures. Budgets are per-user (ADR-0022): the slug resolves against the
+ * signed-in user and the write is stamped with their id, so a user can only
+ * read/write their own category + budget. The caller refreshes the page on
+ * success (no `revalidatePath`, matching the other actions in this repo).
  */
 export async function setCategoryBudget(
     input: unknown,
@@ -61,9 +62,10 @@ export async function setCategoryBudget(
         };
     }
 
+    const userId = session.user.id;
     const { slug, month, thisMonthAmount, defaultAmount } = parsed.data;
 
-    const category = await categoryRepo.getBySlug(slug);
+    const category = await categoryRepo.getBySlug(userId, slug);
     if (!category) {
         return {
             ok: false,
@@ -74,6 +76,7 @@ export async function setCategoryBudget(
 
     try {
         await budgetRepo.setBudget(
+            userId,
             category.id,
             month,
             defaultAmount,
