@@ -33,6 +33,10 @@ import {
     type SettingsRepository,
 } from "./settings.repository";
 import { PrismaCardRepository, type CardRepository } from "./card.repository";
+import {
+    PrismaUserProvisioningRepository,
+    type UserProvisioningRepository,
+} from "./user-provisioning.repository";
 
 /**
  * Composition root — the single place the concrete Prisma adapters are wired to
@@ -67,3 +71,11 @@ export const settingsRepository: SettingsRepository =
     new PrismaSettingsRepository(db);
 
 export const cardRepository: CardRepository = new PrismaCardRepository(db);
+
+/**
+ * New-user starter kit (ADR-0022 §3). The owner seed builds its own instance
+ * (it runs outside Next with its own client); this is the wiring the signup
+ * action injects.
+ */
+export const userProvisioningRepository: UserProvisioningRepository =
+    new PrismaUserProvisioningRepository(db);

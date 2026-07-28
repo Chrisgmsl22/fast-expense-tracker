@@ -76,8 +76,8 @@ delete until then.
 
 ## Notes
 
-- Note the seed's find-then-create for cards means re-seeding will **re-create**
-  an "Amex Gold" card (it's in `CARD_SEED`). If you delete it in 2b, also remove
-  it from `CARD_SEED` in `prisma/seed.ts` first (or the next `db:seed:prod` brings
+- Note the seed's create-if-absent for cards means re-seeding will **re-create**
+  an "Amex Gold" card (it's in `OWNER_CARDS`). If you delete it in 2b, also remove
+  it from `OWNER_CARDS` in `prisma/seed.ts` first (or the next `db:seed:prod` brings
   it back). Coordinate 2b with a seed edit, or defer 2b to CHORE-6.c's card
   management. Decide at run time.

@@ -25,6 +25,49 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-07-28 — Prod migrations auto-apply on deploy; and a "backfill to the owner" that guessed
+
+- **Symptom:** Two surprises in CHORE-8.a. (1) After the per-user-categories
+  migration ran on the dev DB, the dashboard showed **$0 category spend** while
+  card/settlement totals stayed correct. (2) We planned a careful manual prod
+  migration for _after_ the merge — then found prod had **already been migrated**
+  by the merge itself.
+- **Root cause:**
+    1. The migration backfills formerly-global category rows to "the owner,"
+       inferred as the **earliest-created `User`**. Dev had a stray earlier user, so
+       the real categories were homed to _it_, and the follow-up reseed minted a
+       second, unused set for the actual owner. Expenses still pointed at the
+       stray-owned rows, so the `userId`-scoped reads found nothing. Nothing was
+       corrupt — one ownership label was wrong.
+    2. `vercel.json`'s `buildCommand` runs `prisma migrate deploy` whenever
+       `VERCEL_ENV=production`. Merging to `main` deploys, and the deploy migrates.
+       The plan assumed a manual step; nobody checked the build command. (I asked
+       the user whether deploys were manual and took the answer at face value
+       instead of reading `vercel.json` — the file was the authority, not memory.)
+- **Fix / decision:**
+    1. Added a **fail-fast guard** to the migration: if category rows exist but the
+       user count is not exactly 1, `RAISE EXCEPTION` and roll back. An empty DB
+       skips it so fresh/CI databases still migrate. Silent mis-homing became a loud
+       abort. Dev was repaired surgically (delete the _unreferenced_ duplicate set,
+       re-home the real rows) — no wipe, no expense touched.
+    2. Runbook rewritten: migrations apply automatically on production deploy, so
+       the pre-flight survey belongs **before the merge**, not after.
+- **Lessons for next time:**
+    1. **A data migration that infers its target must assert the inference.** "The
+       earliest user is the owner" is a guess; on the wrong database it silently
+       mis-assigns real financial data. Encode the precondition as a guard so the
+       migration protects itself instead of relying on a human reading a runbook.
+    2. **Read the deploy config before planning migration ordering.** `vercel.json`
+       / CI build commands are the authority on when migrations run — not intuition,
+       and not the user's recollection. Check the file first; the answer changes the
+       whole sequencing plan.
+    3. **A weird render is data evidence, not cosmetic noise.** The $0 categories
+       looked like dev-only drift worth waving off; chasing it is what surfaced the
+       ownership bug and produced the guard. Explain the anomaly before dismissing it.
+    4. **Reach for the surgical repair before the wipe.** `migrate reset` was the
+       reflex; the actual fix was two `UPDATE`s plus deleting unreferenced rows.
+       The user pushing back on "why delete?" is what forced the better answer.
+
 ### 2026-07-13 — The `implementer` "writes nothing" was a malformed `tools:` grant + agent-def caching
 
 - **Symptom:** Every `implementer` subagent run did nothing — `tool_uses: 0`, tool

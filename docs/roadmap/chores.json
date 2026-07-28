@@ -86,7 +86,7 @@
             "title": "Per-user categories, subcategories, and budgets (multi-tenancy foundation)",
             "description": "Category, Subcategory, and CategoryBudget are global (no userId) — one shared config for the whole DB. With public signup (8.d) every user would share the same category set, colors, and monthly budgets; one user editing a budget changes it for everyone. Expenses ARE userId-scoped, so spend stays private, but the scaffolding leaks. Make categories/subcategories/budgets per-user before any signup. Reverses ADR-0016 (budgets deliberately global for the single-user app). Foundation for CHORE-8.b–8.e.",
             "plan": "Kicks off with a superseding ADR (reverses ADR-0016; docs/decisions is protected — sign-off first). (1) Schema: +userId on Category, Subcategory, CategoryBudget (relations to User); change CategoryBudget @@unique([categoryId,month]) -> @@unique([userId,categoryId,month]). (2) Owner data migration: backfill userId = owner on all existing Category/Subcategory/CategoryBudget rows so nothing orphans; dev via prisma migrate, PROD via a documented reviewed-SQL runbook (mirror spec 0005's careful-real-data approach — Neon MCP survey before/after). (3) Scope every category/budget read + write by userId: dashboard.repository (getCategorySpends/getCategoryBreakdown), category.repository, category-budget.repository, the set-budget action, seed. (4) Tests: per-user isolation (user A's budget/color invisible to B), userId scoping on every read/write, migration correctness. Depends on nothing new; blocks 8.b/8.c/8.d/8.e.",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/65",
             "issue": null
@@ -96,7 +96,7 @@
             "title": "New-user starter kit — default categories/subcategories/cards/settings",
             "description": "A single provisioning routine that seeds a fresh account's starting data so a new user lands in a working, private tracker. Shared by the owner seed AND signup (8.d) so the two never drift. Depends on CHORE-8.a (per-user categories).",
             "plan": "(1) A provisionNewUser(userId) domain/service routine that seeds, all userId-scoped: the default 13 categories + subcategories (the frozen reference in domain-reference.md), a default Cash card (REQUIRED — Cash is un-addable via the UI since 6.c) plus optional generic Credit + Debit starters, and a default Solo Settings row (sharesExpenses=false). (2) Refactor prisma/seed.ts to provision the owner via the same routine (DRY). (3) Tests: a freshly provisioned user has the full default set, isolated from other users; seed still works. Depends on 8.a.",
-            "status": "open",
+            "status": "in-progress",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,
             "issue": null
@@ -138,6 +138,16 @@
             "plan": "(1) Read-model, userId-scoped, behind the repository (no db in components): outstanding(card) = Sum of expense.amount charged to that card MINUS Sum of movement.amount where type='card_payment' and cardId matches. Use expense.amount (the FULL charge to the card) — NOT actualExpenditure: the card was charged the full amount regardless of any expense split; card balance is source-agnostic (spec 0005 §3). (2) Surface it on the dashboard 'Spend by card' area or a dedicated per-card view (exact surface: brainstorm on pickup); label 'based on logged expenses'. (3) CHORE-6.c interaction (careful): an archived card can still carry a nonzero outstanding balance, so this display MUST still show archived cards whose balance != 0 (never hide a card you still owe on) — pickers stay archived-filtered, this display does not. Coordinate with 6.c so archiving a card with a nonzero outstanding warns/blocks. Depends on CHORE-6.c. Tests: outstanding math (charges - payments; uses amount, ignores split), userId scoping, archived-but-nonzero card still shown, zero-balance card. Out of scope: reconciling against a real bank statement, editing card balances directly.",
             "status": "open",
             "spec": "docs/specs/0005-cash-basis-money-model.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-10",
+            "title": "Stop re-provisioning from overwriting user-edited categories and cards",
+            "description": "provisionNewUser (CHORE-8.b) deliberately REFRESHES rows it already owns on every re-run: categories get name/color/isRelevant/isSystemCategory rewritten, cards get color/type rewritten. That is the mechanism prod depends on to propagate reference corrections (it's how prod's legacy named card colors move to brand hex), so it must not simply be removed. But it becomes user-hostile once CHORE-8.c ships per-user category rename/recolor: a re-seed would silently revert a user's own edits. A second hazard exists today — cards match on name, so a card renamed in Settings isn't found and a re-seed creates a DUPLICATE row under the seed's original name (categories match on slug, so a renamed category is reverted rather than duplicated). Documented in docs/operations/setup.md §5 as an operator warning; this chore makes it structural. Depends on CHORE-8.c.",
+            "plan": "Decide the mechanism at pickup; two candidate shapes. (a) Seed-only refresh flag: provisionNewUser takes an explicit opt-in (e.g. refreshSystemDefaults: boolean, default false) so signup/self-heal provisioning is create-if-absent only, and ONLY the owner seed CLI passes true — keeps the prod migration path intact while making the destructive branch impossible to trigger accidentally. (b) Key on something stable and track user intent: keep matching cards on a stable key rather than name (or add @@unique([userId, name]) plus a userEdited/customized marker on Category/Card) and skip the refresh for rows the user has touched. Either way: cards need a stable match so a rename stops duplicating. Tests: re-provision after a rename/recolor leaves the user's values intact under the non-refresh path; the seed path still propagates a reference color change; a renamed card is matched, not duplicated. Update docs/operations/setup.md §5 once the hazard is gone.",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,
             "issue": null
         }
