@@ -20,10 +20,10 @@ async function seed() {
         data: { email: "other@example.com", password: "x", name: "Other" },
     });
     const category = await db.category.create({
-        data: { slug: "groceries", name: "Groceries" },
+        data: { userId: user.id, slug: "groceries", name: "Groceries" },
     });
     const category2 = await db.category.create({
-        data: { slug: "transport", name: "Transport" },
+        data: { userId: user.id, slug: "transport", name: "Transport" },
     });
     authMock.mockResolvedValue({ user: { id: user.id } });
     return { user, other, category, category2 };
@@ -113,7 +113,7 @@ describe("updateExpense (integration)", () => {
         const { user, category, category2 } = await seed();
         const { id } = await makeExpense(user.id, category.id);
         const sub = await db.subcategory.create({
-            data: { categoryId: category2.id, name: "Gas" },
+            data: { userId: user.id, categoryId: category2.id, name: "Gas" },
         });
 
         const res = await updateExpense({

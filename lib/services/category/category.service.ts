@@ -73,13 +73,13 @@ export async function getCategoryDetail(
     const budgetRepo = deps.budgetRepo ?? categoryBudgetRepository;
     const now = deps.now ?? new Date();
 
-    const meta = await categoryRepo.getBySlug(slug);
+    const meta = await categoryRepo.getBySlug(userId, slug);
     if (!meta) return null;
 
     const [subSpends, expenses, override] = await Promise.all([
         categoryRepo.getSubcategorySpends(userId, meta.id, month),
         categoryRepo.getExpensesForCategoryMonth(userId, meta.id, month),
-        budgetRepo.getOverride(meta.id, month),
+        budgetRepo.getOverride(userId, meta.id, month),
     ]);
 
     const spent = subSpends.reduce((sum, r) => sum + r.spent, 0);

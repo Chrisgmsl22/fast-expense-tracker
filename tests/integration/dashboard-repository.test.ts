@@ -10,12 +10,13 @@ async function seedUser(email = "u@example.com") {
 }
 
 async function seedCategory(
+    userId: string,
     slug: string,
     isRelevant = true,
     monthlyBudget: number | null = null,
 ) {
     return db.category.create({
-        data: { slug, name: slug, isRelevant, monthlyBudget },
+        data: { userId, slug, name: slug, isRelevant, monthlyBudget },
     });
 }
 
@@ -48,8 +49,8 @@ describe("PrismaDashboardRepository.getCategorySpends (integration)", () => {
 
     it("sums my-share (actualExpenditure) per category, with slug + isRelevant", async () => {
         const user = await seedUser();
-        const housing = await seedCategory("housing", true);
-        const fun = await seedCategory("disposable-income", false);
+        const housing = await seedCategory(user.id, "housing", true);
+        const fun = await seedCategory(user.id, "disposable-income", false);
 
         // Two housing rows in-month — should sum on actualExpenditure, not amount.
         await seedExpense({
@@ -96,7 +97,7 @@ describe("PrismaDashboardRepository.getCategorySpends (integration)", () => {
     it("excludes other months and other users", async () => {
         const user = await seedUser("me@example.com");
         const other = await seedUser("other@example.com");
-        const cat = await seedCategory("housing", true);
+        const cat = await seedCategory(user.id, "housing", true);
 
         await seedExpense({
             userId: user.id,
@@ -148,7 +149,7 @@ describe("PrismaDashboardRepository.getCardSpends (integration)", () => {
 
     it("sums my-share per card high→low and rolls null-card spend up as Cash", async () => {
         const user = await seedUser();
-        const cat = await seedCategory("housing", true);
+        const cat = await seedCategory(user.id, "housing", true);
         const bbva = await seedCard(user.id, "BBVA", "#2563eb");
 
         await seedExpense({
@@ -182,7 +183,7 @@ describe("PrismaDashboardRepository.getCardSpends (integration)", () => {
     it("scopes to the user + month", async () => {
         const user = await seedUser("me@example.com");
         const other = await seedUser("other@example.com");
-        const cat = await seedCategory("housing", true);
+        const cat = await seedCategory(user.id, "housing", true);
 
         await seedExpense({
             userId: user.id,
@@ -214,8 +215,8 @@ describe("PrismaDashboardRepository.getCardSpends (integration)", () => {
 
     it("excludes savings (a transfer, not card spend)", async () => {
         const user = await seedUser();
-        const groceries = await seedCategory("groceries", true);
-        const savings = await seedCategory("savings", true);
+        const groceries = await seedCategory(user.id, "groceries", true);
+        const savings = await seedCategory(user.id, "savings", true);
 
         await seedExpense({
             userId: user.id,
@@ -241,18 +242,22 @@ describe("PrismaDashboardRepository.getCardSpends (integration)", () => {
 });
 
 describe("PrismaDashboardRepository.getCategoryBreakdown (integration)", () => {
-    async function seedSubcategory(categoryId: string, name: string) {
-        return db.subcategory.create({ data: { categoryId, name } });
+    async function seedSubcategory(
+        userId: string,
+        categoryId: string,
+        name: string,
+    ) {
+        return db.subcategory.create({ data: { userId, categoryId, name } });
     }
 
     it("returns budget + spend + N-of-M subcats, excluding Unassigned, high→low", async () => {
         const user = await seedUser();
-        const housing = await seedCategory("housing", true, 14000);
-        const rent = await seedSubcategory(housing.id, "Rent");
-        await seedSubcategory(housing.id, "Mortgage"); // exists, no spend
-        const groceries = await seedCategory("groceries", true, 5000);
-        const gro = await seedSubcategory(groceries.id, "Groceries");
-        const unassigned = await seedCategory("unassigned", false);
+        const housing = await seedCategory(user.id, "housing", true, 14000);
+        const rent = await seedSubcategory(user.id, housing.id, "Rent");
+        await seedSubcategory(user.id, housing.id, "Mortgage"); // exists, no spend
+        const groceries = await seedCategory(user.id, "groceries", true, 5000);
+        const gro = await seedSubcategory(user.id, groceries.id, "Groceries");
+        const unassigned = await seedCategory(user.id, "unassigned", false);
 
         // Housing: two rows, one subcategorized (Rent), one not → 1 of 2 subcats.
         await seedExpense({
@@ -309,7 +314,7 @@ describe("PrismaDashboardRepository.getCategoryBreakdown (integration)", () => {
 
     it("carries a null budget through as null", async () => {
         const user = await seedUser();
-        const debt = await seedCategory("debt", true, null);
+        const debt = await seedCategory(user.id, "debt", true, null);
         await seedExpense({
             userId: user.id,
             categoryId: debt.id,
@@ -325,13 +330,23 @@ describe("PrismaDashboardRepository.getCategoryBreakdown (integration)", () => {
 
     it("resolves the per-month budget override over the default (ADR-0016)", async () => {
         const user = await seedUser();
-        const groceries = await seedCategory("groceries", true, 5000); // default
+        const groceries = await seedCategory(user.id, "groceries", true, 5000); // default
         await db.categoryBudget.create({
-            data: { categoryId: groceries.id, month: "2026-06", amount: 6500 },
+            data: {
+                userId: user.id,
+                categoryId: groceries.id,
+                month: "2026-06",
+                amount: 6500,
+            },
         });
         // Override for a different month must NOT affect June.
         await db.categoryBudget.create({
-            data: { categoryId: groceries.id, month: "2026-05", amount: 1000 },
+            data: {
+                userId: user.id,
+                categoryId: groceries.id,
+                month: "2026-05",
+                amount: 1000,
+            },
         });
         await seedExpense({
             userId: user.id,
@@ -343,5 +358,79 @@ describe("PrismaDashboardRepository.getCategoryBreakdown (integration)", () => {
 
         const [june] = await repo.getCategoryBreakdown(user.id, "2026-06");
         expect(june?.monthlyBudget).toBe(6500); // override wins for June
+    });
+});
+
+describe("PrismaDashboardRepository per-user isolation (ADR-0022)", () => {
+    async function seedSubcategory(
+        userId: string,
+        categoryId: string,
+        name: string,
+    ) {
+        return db.subcategory.create({ data: { userId, categoryId, name } });
+    }
+
+    it("getCategoryBreakdown reads the signed-in user's own color + budget", async () => {
+        const alice = await seedUser("alice@example.com");
+        const bob = await seedUser("bob@example.com");
+        // Same slug, different per-user color + budget.
+        const aliceGro = await seedCategory(alice.id, "groceries", true, 5000);
+        await seedCategory(bob.id, "groceries", true, 9999);
+        await db.category.update({
+            where: { id: aliceGro.id },
+            data: { color: "#65a30d" },
+        });
+        await seedSubcategory(alice.id, aliceGro.id, "Groceries");
+
+        await seedExpense({
+            userId: alice.id,
+            categoryId: aliceGro.id,
+            date: "2026-06-10T12:00:00Z",
+            amount: 3200,
+            actualExpenditure: 3200,
+        });
+        // Bob's override on his own groceries must not bleed into Alice's grid.
+        await db.categoryBudget.create({
+            data: {
+                userId: bob.id,
+                categoryId: aliceGro.id,
+                month: "2026-06",
+                amount: 1,
+            },
+        });
+
+        const [row] = await repo.getCategoryBreakdown(alice.id, "2026-06");
+        expect(row).toMatchObject({
+            slug: "groceries",
+            color: "#65a30d",
+            monthlyBudget: 5000, // Alice's default, not Bob's override
+            spent: 3200,
+        });
+    });
+
+    it("getCategorySpends never surfaces another user's category metadata", async () => {
+        const alice = await seedUser("alice@example.com");
+        const bob = await seedUser("bob@example.com");
+        const aliceCat = await seedCategory(alice.id, "housing", true);
+        await seedCategory(bob.id, "housing", false);
+
+        await seedExpense({
+            userId: alice.id,
+            categoryId: aliceCat.id,
+            date: "2026-06-05T12:00:00Z",
+            amount: 1000,
+            actualExpenditure: 1000,
+        });
+
+        const rows = await repo.getCategorySpends(alice.id, "2026-06");
+        expect(rows).toEqual([
+            {
+                slug: "housing",
+                name: "housing",
+                color: "#6b7280",
+                isRelevant: true, // Alice's, not Bob's isRelevant:false copy
+                spent: 1000,
+            },
+        ]);
     });
 });

@@ -26,23 +26,23 @@ function makeDb(
     const category = {
         upsert: vi.fn<
             (args: {
-                where: { slug: string };
+                where: { userId_slug: { userId: string; slug: string } };
                 create: unknown;
                 update: unknown;
             }) => Promise<{ id: string }>
-        >(async (args) => ({ id: `cat-${args.where.slug}` })),
+        >(async (args) => ({ id: `cat-${args.where.userId_slug.slug}` })),
     };
     const subcategory = {
         findFirst: vi.fn<
             (args: {
-                where: { categoryId: string; name: string };
+                where: { userId: string; categoryId: string; name: string };
             }) => Promise<{ id: string } | null>
         >(async (args) =>
             subExists(args.where.name) ? { id: "sub-existing" } : null,
         ),
         create: vi.fn<
             (args: {
-                data: { categoryId: string; name: string };
+                data: { userId: string; categoryId: string; name: string };
             }) => Promise<{ id: string }>
         >(async () => ({ id: "sub-new" })),
     };
@@ -154,22 +154,27 @@ describe("CARD_SEED data", () => {
 });
 
 describe("runSeed", () => {
-    it("upserts all 13 categories keyed by slug", async () => {
+    it("upserts all 13 categories keyed by the per-user (userId, slug)", async () => {
         const { db, category } = makeDb();
         await runSeed(db, ADMIN);
         expect(category.upsert).toHaveBeenCalledTimes(13);
-        const slugs = category.upsert.mock.calls.map((c) => c[0].where.slug);
-        expect(new Set(slugs)).toEqual(
+        const keys = category.upsert.mock.calls.map(
+            (c) => c[0].where.userId_slug,
+        );
+        // Every category is stamped with the owner id (ADR-0022).
+        expect(keys.every((k) => k.userId === "user-1")).toBe(true);
+        expect(new Set(keys.map((k) => k.slug))).toEqual(
             new Set(CATEGORY_SEED.map((c) => c.slug)),
         );
     });
 
-    it("writes a hex color on every category upsert", async () => {
+    it("writes a hex color and the owner userId on every category upsert", async () => {
         const { db, category } = makeDb();
         await runSeed(db, ADMIN);
         for (const call of category.upsert.mock.calls) {
-            const create = call[0].create as { color: string };
+            const create = call[0].create as { color: string; userId: string };
             expect(create.color).toMatch(/^#[0-9a-f]{6}$/i);
+            expect(create.userId).toBe("user-1");
         }
     });
 
@@ -183,6 +188,7 @@ describe("runSeed", () => {
         expect(subcategory.create).toHaveBeenCalledTimes(total);
         for (const call of subcategory.create.mock.calls) {
             expect(call[0].data.categoryId).toMatch(/^cat-/);
+            expect(call[0].data.userId).toBe("user-1"); // stamped per-user
         }
     });
 

@@ -14,8 +14,10 @@ async function seedUser(email = "u@example.com") {
     return db.user.create({ data: { email, password: "x", name: "Test" } });
 }
 
-async function seedCategory(slug = "groceries") {
-    return db.category.create({ data: { slug, name: slug, isRelevant: true } });
+async function seedCategory(userId: string, slug = "groceries") {
+    return db.category.create({
+        data: { userId, slug, name: slug, isRelevant: true },
+    });
 }
 
 describe("PrismaSettlementRepository.getForWindow (integration)", () => {
@@ -28,7 +30,7 @@ describe("PrismaSettlementRepository.getForWindow (integration)", () => {
 
     it("returns in-window expenses and movements (debt is a gf_fronted movement)", async () => {
         const user = await seedUser();
-        const cat = await seedCategory();
+        const cat = await seedCategory(user.id);
 
         await db.expense.create({
             data: {
@@ -71,7 +73,7 @@ describe("PrismaSettlementRepository.getForWindow (integration)", () => {
     it("excludes rows outside the window and other users' rows", async () => {
         const user = await seedUser("me@example.com");
         const other = await seedUser("other@example.com");
-        const cat = await seedCategory();
+        const cat = await seedCategory(user.id);
 
         // Out of window (May, August) + another user's in-window row.
         await db.expense.create({

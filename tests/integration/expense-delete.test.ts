@@ -20,7 +20,7 @@ async function seed() {
         data: { email: "other@example.com", password: "x", name: "Other" },
     });
     const category = await db.category.create({
-        data: { slug: "groceries", name: "Groceries" },
+        data: { userId: user.id, slug: "groceries", name: "Groceries" },
     });
     authMock.mockResolvedValue({ user: { id: user.id } });
     return { user, other, category };

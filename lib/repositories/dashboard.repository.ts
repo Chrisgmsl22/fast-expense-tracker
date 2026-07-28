@@ -78,9 +78,11 @@ export class PrismaDashboardRepository implements DashboardRepository {
         });
         if (grouped.length === 0) return [];
 
-        // One lookup for the metadata of just the categories with spend.
+        // One lookup for the metadata of just the categories with spend. Scoped
+        // by userId (ADR-0022) as defense-in-depth — the ids already come from
+        // the user's own expenses, but the filter keeps the read per-user.
         const categories = await this.db.category.findMany({
-            where: { id: { in: grouped.map((g) => g.categoryId) } },
+            where: { userId, id: { in: grouped.map((g) => g.categoryId) } },
             select: {
                 id: true,
                 slug: true,
@@ -178,7 +180,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
         const categoryIds = [...perCategory.keys()];
         const [categories, overrideRows] = await Promise.all([
             this.db.category.findMany({
-                where: { id: { in: categoryIds } },
+                where: { userId, id: { in: categoryIds } },
                 select: {
                     id: true,
                     slug: true,
@@ -188,9 +190,10 @@ export class PrismaDashboardRepository implements DashboardRepository {
                     _count: { select: { subcategories: true } },
                 },
             }),
-            // Per-month budget overrides for these categories (ADR-0016).
+            // Per-month budget overrides for these categories (ADR-0016),
+            // scoped to the signed-in user (ADR-0022).
             this.db.categoryBudget.findMany({
-                where: { month, categoryId: { in: categoryIds } },
+                where: { userId, month, categoryId: { in: categoryIds } },
                 select: { categoryId: true, amount: true },
             }),
         ]);

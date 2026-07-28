@@ -78,12 +78,23 @@ describe("setCategoryBudget (unit, injected fakes)", () => {
         if (!res.ok) expect(res.code).toBe("not_found");
     });
 
+    it("resolves the category and writes scoped to the signed-in user", async () => {
+        const budget = budgetRepo();
+        const cat = catRepo();
+        const getBySlug = vi.spyOn(cat, "getBySlug");
+        const res = await setCategoryBudget(valid, budget, cat);
+        expect(res.ok).toBe(true);
+        // Slug is resolved for the signed-in user (ADR-0022), never globally.
+        expect(getBySlug).toHaveBeenCalledWith("u1", "health");
+    });
+
     it("writes the default and the month override atomically", async () => {
         const budget = budgetRepo();
         const res = await setCategoryBudget(valid, budget, catRepo());
         expect(res.ok).toBe(true);
-        // One atomic call: (categoryId, month, defaultAmount, thisMonthAmount).
+        // One atomic call: (userId, categoryId, month, defaultAmount, thisMonth).
         expect(budget.setBudget).toHaveBeenCalledWith(
+            "u1",
             "cat1",
             "2026-06",
             1500,
@@ -100,6 +111,7 @@ describe("setCategoryBudget (unit, injected fakes)", () => {
         );
         expect(res.ok).toBe(true);
         expect(budget.setBudget).toHaveBeenCalledWith(
+            "u1",
             "cat1",
             "2026-06",
             1500,
@@ -115,6 +127,7 @@ describe("setCategoryBudget (unit, injected fakes)", () => {
             catRepo(),
         );
         expect(budget.setBudget).toHaveBeenCalledWith(
+            "u1",
             "cat1",
             "2026-06",
             null,

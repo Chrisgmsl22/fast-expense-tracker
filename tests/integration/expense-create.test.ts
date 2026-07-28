@@ -18,7 +18,7 @@ async function seedUserAndCategory() {
         data: { email: "me@example.com", password: "x", name: "Test" },
     });
     const category = await db.category.create({
-        data: { slug: "groceries", name: "Groceries" },
+        data: { userId: user.id, slug: "groceries", name: "Groceries" },
     });
     authMock.mockResolvedValue({ user: { id: user.id } });
     return { user, category };
@@ -75,12 +75,16 @@ describe("createExpense (integration)", () => {
     });
 
     it("rejects a subcategory that belongs to a different category", async () => {
-        const { category } = await seedUserAndCategory();
+        const { user, category } = await seedUserAndCategory();
         const otherCategory = await db.category.create({
-            data: { slug: "transport", name: "Transport" },
+            data: { userId: user.id, slug: "transport", name: "Transport" },
         });
         const sub = await db.subcategory.create({
-            data: { categoryId: otherCategory.id, name: "Gas" },
+            data: {
+                userId: user.id,
+                categoryId: otherCategory.id,
+                name: "Gas",
+            },
         });
 
         const res = await createExpense({

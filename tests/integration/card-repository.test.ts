@@ -17,8 +17,8 @@ async function seedUser() {
     });
 }
 
-async function seedCategory(slug = `cat-${Math.random()}`) {
-    return db.category.create({ data: { slug, name: slug } });
+async function seedCategory(userId: string, slug = `cat-${Math.random()}`) {
+    return db.category.create({ data: { userId, slug, name: slug } });
 }
 
 async function seedCard(
@@ -177,7 +177,7 @@ describe("PrismaCardRepository (integration)", () => {
 
     it("referenceCount and inUse reflect attached expenses and movements", async () => {
         const user = await seedUser();
-        const category = await seedCategory();
+        const category = await seedCategory(user.id);
         const card = await seedCard(user.id, { name: "Used" });
 
         expect(await repo.referenceCount(user.id, card.id)).toBe(0);
@@ -210,7 +210,7 @@ describe("PrismaCardRepository (integration)", () => {
 
     it("deleteForUser is refused at the DB (FK RESTRICT) when an expense references the card", async () => {
         const user = await seedUser();
-        const category = await seedCategory();
+        const category = await seedCategory(user.id);
         const card = await seedCard(user.id, { name: "Referenced" });
         await db.expense.create({
             data: {
