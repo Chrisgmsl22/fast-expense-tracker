@@ -74,15 +74,26 @@ SELECT
 
 Record the owner `id` (call it `<OWNER_USER_ID>`) and the three counts.
 
-## 2. Deploy the migration
+## 2. Deploy the migration — happens automatically on merge
 
-```bash
-# Uses .env.production.local (prod DATABASE_URL / DATABASE_URL_UNPOOLED).
-pnpm db:migrate:deploy
+**There is no manual step here.** `vercel.json` runs migrations as part of every
+production build:
+
+```jsonc
+"buildCommand": "prisma generate && if [ \"$VERCEL_ENV\" = \"production\" ]; then prisma migrate deploy; fi && next build"
 ```
 
-This runs the expand → backfill → contract migration atomically. If any step
-fails, the whole migration rolls back and prod stays on the old schema.
+So merging to `main` triggers a production deploy, which applies any pending
+migration **before** `next build` — the schema lands before the new code serves
+traffic, which is the correct order. The migration itself is atomic: if any step
+fails (including the single-user guard), it rolls back, the build fails, and prod
+stays on the old schema **and** the old code.
+
+Run `pnpm db:migrate:deploy` by hand only to recover from a failed or skipped
+deploy; on an already-migrated database it is a no-op ("No pending migrations").
+
+Because the apply is automatic, do the pre-flight survey (§1) **before merging**,
+not after — once the PR lands, the migration is already on its way.
 
 ## 3. Post-deploy verification (read-only, Neon MCP) — REQUIRED
 
@@ -119,6 +130,26 @@ Then confirm in the app: the owner's dashboard category grid, "Where the money
 went", and the category-detail screens render exactly as before, and inline
 budget editing still saves. Nothing should look different — the owner's data was
 re-homed to the owner.
+
+## Outcome — applied 2026-07-28
+
+Applied to prod automatically by the deploy for PR #65 (`_prisma_migrations`:
+`20260726000000_per_user_categories_budgets`, finished `2026-07-28T02:28:51Z`,
+no rollback). Post-deploy verification passed on every check:
+
+| Check                                 | Required | Actual |
+| ------------------------------------- | -------- | ------ |
+| `Category.userId` NULL                | 0        | 0      |
+| `Subcategory.userId` NULL             | 0        | 0      |
+| `CategoryBudget.userId` NULL          | 0        | 0      |
+| distinct owners in `Category`         | 1        | 1      |
+| rows not owned by the owner           | 0        | 0      |
+| expenses linked to another's category | 0        | 0      |
+
+Counts unchanged from the pre-flight baseline: **13 categories / 59
+subcategories / 0 budget overrides** (39 expenses). Both new indexes
+(`Category_userId_slug_key`, `CategoryBudget_userId_categoryId_month_key`) are
+present and both old global ones are gone.
 
 ## Rollback
 
