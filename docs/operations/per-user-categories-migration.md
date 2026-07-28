@@ -10,14 +10,19 @@ and after, and only proceed once the pre-flight assumption is confirmed.
 
 The Prisma migration `20260726000000_per_user_categories_budgets` is applied to
 prod the usual way (`pnpm db:migrate:deploy`, i.e. `prisma migrate deploy`). It
-is self-contained: it adds the columns, backfills them, and enforces the new
-constraints **in one transaction**, using the expand → backfill → contract
-pattern so no existing row is dropped:
+is self-contained: it adds the columns, guards the precondition, backfills, and
+enforces the new constraints **in one transaction**, using the
+expand → guard → backfill → contract pattern so no existing row is dropped:
 
 1. **Expand** — add `userId` as a **nullable** `TEXT` column to `Category`,
    `Subcategory`, and `CategoryBudget`.
-2. **Backfill** — set `userId` on every existing row to the **owner**, defined as
-   the earliest-created `User`:
+2. **Guard** — if any category/subcategory/budget row exists to backfill, assert
+   the database has **exactly one user**; otherwise `RAISE EXCEPTION` and roll the
+   whole migration back. This makes the "re-home every row to the owner" step
+   fail **loudly** rather than silently mis-home data if prod is ever not
+   single-user. An empty DB (no rows) skips the guard so fresh DBs still migrate.
+3. **Backfill** — set `userId` on every existing row to the **owner** (the sole
+   `User`, guaranteed single by step 2):
 
     ```sql
     UPDATE "Category"
@@ -26,7 +31,7 @@ pattern so no existing row is dropped:
     -- identical UPDATEs for "Subcategory" and "CategoryBudget"
     ```
 
-3. **Contract** — `SET NOT NULL` on all three columns; drop the global
+4. **Contract** — `SET NOT NULL` on all three columns; drop the global
    `Category_slug_key` and add `Category_userId_slug_key`; drop
    `CategoryBudget_categoryId_month_key` and add
    `CategoryBudget_userId_categoryId_month_key`; add the three `userId` foreign
@@ -36,14 +41,18 @@ No `Expense`, `Movement`, `Card`, `Income`, or `Settings` rows change — they
 already carry `userId`. The exact SQL lives in
 `prisma/migrations/20260726000000_per_user_categories_budgets/migration.sql`.
 
-## Why a runbook if the migration self-backfills
+## Why a runbook if the migration self-guards and self-backfills
 
-The embedded backfill assigns every category/subcategory/budget row to the
-**earliest-created user**. On this single-owner prod that user _is_ the owner, so
-the assignment is correct and automatic. The runbook exists to **confirm that
-assumption before deploy** (a second, earlier user would mis-home the data) and
-to **verify the result after**. If prod ever holds more than one user before this
-migration, STOP and hand-assign instead of deploying blind.
+The migration now **enforces** the single-user precondition itself (step 2): on a
+multi-user database it aborts with a clear error and rolls back, so it physically
+cannot silently mis-home data. On this single-owner prod that guard passes and the
+backfill assigns every row to the owner automatically.
+
+The runbook is therefore **defense-in-depth + verification**, not the sole safety
+net: survey to _confirm_ the single-owner precondition before deploy (so a failed
+guard is never a surprise), capture baseline counts, and _verify_ the result
+after. If the pre-flight ever shows more than one user, STOP and hand-assign
+instead of relying on the guard to reject the deploy.
 
 ## 1. Pre-flight survey (read-only, Neon MCP) — REQUIRED before deploy
 
