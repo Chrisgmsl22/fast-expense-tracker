@@ -96,7 +96,7 @@
             "title": "New-user starter kit — default categories/subcategories/cards/settings",
             "description": "A single provisioning routine that seeds a fresh account's starting data so a new user lands in a working, private tracker. Shared by the owner seed AND signup (8.d) so the two never drift. Depends on CHORE-8.a (per-user categories).",
             "plan": "(1) A provisionNewUser(userId) domain/service routine that seeds, all userId-scoped: the default 13 categories + subcategories (the frozen reference in domain-reference.md), a default Cash card (REQUIRED — Cash is un-addable via the UI since 6.c) plus optional generic Credit + Debit starters, and a default Solo Settings row (sharesExpenses=false). (2) Refactor prisma/seed.ts to provision the owner via the same routine (DRY). (3) Tests: a freshly provisioned user has the full default set, isolated from other users; seed still works. Depends on 8.a.",
-            "status": "open",
+            "status": "in-progress",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,
             "issue": null
