@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated test-coverage report (gitignored).
     "coverage/**",
+    // understand-anything working dir: generated graphs + its own .trash-*
+    // scratch scripts (gitignored). Not our source; regenerated per run.
+    ".ua/**",
   ]),
 ]);
 
