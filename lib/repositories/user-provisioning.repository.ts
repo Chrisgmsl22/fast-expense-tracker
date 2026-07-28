@@ -43,9 +43,9 @@ export interface UserProvisioningRepository {
      *
      * CHORE-8.d (signup) must not inherit that assumption — nobody re-runs
      * provisioning for a new user, and a half-provisioned account is usable but
-     * broken (no Cash card ⇒ cash spend can't be recorded at all). Signup must
-     * either wrap this call in `db.$transaction` or complete provisioning
-     * before issuing the session.
+     * broken (no Cash card ⇒ the expense form's card picker offers no Cash
+     * option). Signup must either wrap this call in `db.$transaction` or
+     * complete provisioning before issuing the session.
      */
     provisionNewUser(userId: string): Promise<ProvisionSummary>;
 

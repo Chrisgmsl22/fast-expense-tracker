@@ -127,14 +127,17 @@ rm .env.production.local                                        # don't leave pr
   `color`/`type` refreshed. That refresh is the mechanism that propagates
   reference corrections to prod (it's how prod's legacy named card colors move
   to brand hex), so don't remove it — but know it runs.
-- **Hazard — renamed rows.** Categories match on `slug`, cards on `name`. If a
-  category has been renamed in Settings, a re-seed **reverts the name**; if a
-  card has been renamed, a re-seed doesn't find it and **creates a second row**
-  under the seed's original name. Check for renames before re-seeding prod.
-  Tracked as CHORE-10.
+- **Hazard — renamed and deleted rows.** Categories match on `slug`, cards on
+  `name`. If a card has been renamed, a re-seed doesn't find it and **creates a
+  second row** under the seed's original name; if a card has been deleted in
+  Settings (only allowed for cards with zero references), a re-seed
+  **re-creates it**. Once category rename ships with CHORE-8.c, a renamed
+  category will likewise have its **name reverted** by a re-seed. Check for
+  renames and deletions before re-seeding prod. Tracked as CHORE-10.
 - User data **is** preserved: expenses, movements, the Settings row, the
-  fixed-income row, and any category/card the user added are only ever created
-  when absent — never overwritten.
+  fixed-income row, per-category budgets (`monthlyBudget`), and any
+  category/card the user added are only ever created when absent — never
+  overwritten.
 - `.env.production.local` is gitignored (`.env.*.local`); it holds **real prod
   credentials** — pull it only when seeding and delete it after.
 - This writes directly to the production database. Double-check the pulled
