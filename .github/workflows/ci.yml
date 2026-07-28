@@ -55,6 +55,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      # `prisma/seed.ts` runs under Node's strip-only TypeScript, which is
+      # stricter than the esbuild transform vitest uses: it rejects parameter
+      # properties (`constructor(private readonly db)`) and can't resolve `@/`
+      # aliases. Nothing else in CI executes the seed, so a "tidy-up" of
+      # lib/repositories/user-provisioning.repository.ts to either shape would
+      # break `pnpm db:seed` / `db:seed:prod` with every other check green.
+      # Importing is enough — `main()` is gated behind `import.meta.main`, so
+      # this touches no database and needs no credentials.
+      - name: Seed loads under Node's TypeScript stripper (no DB touched)
+        run: node --input-type=module -e "await import('./prisma/seed.ts')"
       - run: pnpm test
       # Integration tests against the Postgres service (real queries, real DB).
       - run: pnpm test:integration

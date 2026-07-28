@@ -119,9 +119,22 @@ pnpm db:seed:prod                                               # runs the seed 
 rm .env.production.local                                        # don't leave prod creds on disk
 ```
 
-- The seed is **idempotent**, so re-run `pnpm db:seed:prod` whenever the
-  category/card list in `docs/reference/domain-reference.md` changes — existing
-  rows are left untouched, only new ones are added.
+- The seed is **re-runnable, but not purely additive.** Re-run
+  `pnpm db:seed:prod` when the category/card list in
+  `docs/reference/domain-reference.md` changes — by design a re-run **rewrites**
+  the reference fields on rows it already owns: categories get
+  `name`/`color`/`isRelevant`/`isSystemCategory` refreshed, cards get
+  `color`/`type` refreshed. That refresh is the mechanism that propagates
+  reference corrections to prod (it's how prod's legacy named card colors move
+  to brand hex), so don't remove it — but know it runs.
+- **Hazard — renamed rows.** Categories match on `slug`, cards on `name`. If a
+  category has been renamed in Settings, a re-seed **reverts the name**; if a
+  card has been renamed, a re-seed doesn't find it and **creates a second row**
+  under the seed's original name. Check for renames before re-seeding prod.
+  Tracked as CHORE-10.
+- User data **is** preserved: expenses, movements, the Settings row, the
+  fixed-income row, and any category/card the user added are only ever created
+  when absent — never overwritten.
 - `.env.production.local` is gitignored (`.env.*.local`); it holds **real prod
   credentials** — pull it only when seeding and delete it after.
 - This writes directly to the production database. Double-check the pulled

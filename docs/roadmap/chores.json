@@ -140,6 +140,16 @@
             "spec": "docs/specs/0005-cash-basis-money-model.md",
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "CHORE-10",
+            "title": "Stop re-provisioning from overwriting user-edited categories and cards",
+            "description": "provisionNewUser (CHORE-8.b) deliberately REFRESHES rows it already owns on every re-run: categories get name/color/isRelevant/isSystemCategory rewritten, cards get color/type rewritten. That is the mechanism prod depends on to propagate reference corrections (it's how prod's legacy named card colors move to brand hex), so it must not simply be removed. But it becomes user-hostile once CHORE-8.c ships per-user category rename/recolor: a re-seed would silently revert a user's own edits. A second hazard exists today — cards match on name, so a card renamed in Settings isn't found and a re-seed creates a DUPLICATE row under the seed's original name (categories match on slug, so a renamed category is reverted rather than duplicated). Documented in docs/operations/setup.md §5 as an operator warning; this chore makes it structural. Depends on CHORE-8.c.",
+            "plan": "Decide the mechanism at pickup; two candidate shapes. (a) Seed-only refresh flag: provisionNewUser takes an explicit opt-in (e.g. refreshSystemDefaults: boolean, default false) so signup/self-heal provisioning is create-if-absent only, and ONLY the owner seed CLI passes true — keeps the prod migration path intact while making the destructive branch impossible to trigger accidentally. (b) Key on something stable and track user intent: keep matching cards on a stable key rather than name (or add @@unique([userId, name]) plus a userEdited/customized marker on Category/Card) and skip the refresh for rows the user has touched. Either way: cards need a stable match so a rename stops duplicating. Tests: re-provision after a rename/recolor leaves the user's values intact under the non-refresh path; the seed path still propagates a reference color change; a renamed card is matched, not duplicated. Update docs/operations/setup.md §5 once the hazard is gone.",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
         }
     ]
 }

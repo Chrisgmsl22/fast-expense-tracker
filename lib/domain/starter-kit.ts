@@ -201,7 +201,6 @@ export type StarterCard = {
     type: StarterCardType;
 };
 
-/** The name of the per-user cash sentinel card. */
 export const CASH_CARD_NAME = "Cash";
 
 /**

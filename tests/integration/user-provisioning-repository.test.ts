@@ -205,6 +205,36 @@ describe("provisionNewUser — re-provisioning the same account", () => {
         expect(await db.settings.count({ where: { userId: user.id } })).toBe(1);
     });
 
+    it("restores only the starter subcategory that went missing", async () => {
+        // The middle of the batched set-diff: neither all-missing (a fresh
+        // account) nor none-missing (the test above). A bug in the seen/missing
+        // partition would pass both extremes but fail here.
+        const user = await createUser();
+        await repository.provisionNewUser(user.id);
+        const housing = await db.category.findUniqueOrThrow({
+            where: { userId_slug: { userId: user.id, slug: "housing" } },
+        });
+        await db.subcategory.deleteMany({
+            where: { userId: user.id, categoryId: housing.id, name: "Rent" },
+        });
+        expect(await db.subcategory.count({ where: { userId: user.id } })).toBe(
+            STARTER_SUBCATEGORY_COUNT - 1,
+        );
+
+        const summary = await repository.provisionNewUser(user.id);
+
+        expect(summary.subcategoriesCreated).toBe(1);
+        // The restored row is specifically Rent-under-Housing, and nothing else
+        // was duplicated along the way.
+        const rent = await db.subcategory.findMany({
+            where: { userId: user.id, categoryId: housing.id, name: "Rent" },
+        });
+        expect(rent).toHaveLength(1);
+        expect(await db.subcategory.count({ where: { userId: user.id } })).toBe(
+            STARTER_SUBCATEGORY_COUNT,
+        );
+    });
+
     it("keeps the user's own subcategories and cards", async () => {
         const user = await createUser();
         await repository.provisionNewUser(user.id);

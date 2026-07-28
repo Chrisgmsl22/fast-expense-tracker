@@ -1,8 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 
-// Relative `.ts` import (not the `@/` alias) because `prisma/seed.ts` runs
-// under plain Node, which can't resolve tsconfig path aliases, and reaches this
-// module. See the note at the top of `lib/domain/starter-kit.ts`.
+// Relative `.ts` import, not the `@/` alias — see the note at the top of
+// `lib/domain/starter-kit.ts`. Guarded by CI's "Seed loads under Node's
+// TypeScript stripper" step.
 import {
     STARTER_CARDS,
     STARTER_CATEGORIES,
@@ -37,9 +37,15 @@ export interface UserProvisioningRepository {
      * therefore adds nothing and, for the system categories, restores the
      * starter name/color/`isRelevant` — see `ensureCategories`.
      *
-     * Not transactional: a run that fails partway leaves a partially-provisioned
-     * account, which re-running fully repairs. (Deliberate — matches the seed's
-     * long-standing behavior and keeps this the simplest thing that works.)
+     * **Not transactional**, and that is only safe for today's single caller:
+     * the seed CLI, which the repo owner re-runs by hand, so a run that fails
+     * partway is repaired manually. There is no automatic repair path.
+     *
+     * CHORE-8.d (signup) must not inherit that assumption — nobody re-runs
+     * provisioning for a new user, and a half-provisioned account is usable but
+     * broken (no Cash card ⇒ cash spend can't be recorded at all). Signup must
+     * either wrap this call in `db.$transaction` or complete provisioning
+     * before issuing the session.
      */
     provisionNewUser(userId: string): Promise<ProvisionSummary>;
 
@@ -80,6 +86,9 @@ export class PrismaUserProvisioningRepository implements UserProvisioningReposit
     // parameter-property shorthand the other adapters use: `prisma/seed.ts`
     // loads this module under Node's strip-only TypeScript mode, which rejects
     // parameter properties outright (ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX).
+    // Vitest/esbuild accept the shorthand, so no test would catch a "tidy-up"
+    // back to it — CI's "Seed loads under Node's TypeScript stripper" step is
+    // what guards this.
     private readonly db: PrismaClient;
 
     constructor(db: PrismaClient) {
