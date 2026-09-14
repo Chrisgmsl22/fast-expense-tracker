@@ -1,7 +1,7 @@
 # 0007 — Funding source and settlement cycles
 
 **Date**: 2026-09-14
-**Status**: Draft — design agreed in session, awaiting review
+**Status**: Draft — design agreed in session; every open question now decided
 **Type**: Domain / money model
 **Builds on**: [spec 0005](./0005-cash-basis-money-model.md), [ADR-0020](../decisions/0020-cash-basis-money-model.md)
 **Amends**: ADR-0020 §4 (transfers are invisible to the expenses view)
@@ -175,20 +175,24 @@ silently drops anything unsettled older than last month.
 A is the foundation. D is independent and by far the largest; it should be split
 again at pickup.
 
-## 6. Open question
+## 6. Reimbursement timing — decided
 
-**Which month does a reimbursement land in?** Medicine bought in March, refund
-received in April.
+**A reimbursement lands in the month of the expense, not the month the refund
+arrives.** Medicine bought in March and refunded in April is neutralised in
+**March**. Confirmed by the user, 2026-09-14.
 
-- **Month of the expense (March).** March's true cost was zero, so March tells
-  the truth. The cost is that a closed month's numbers change after the fact.
-- **Month the refund arrives (April).** Nothing restates, but March overstates
-  spending and April understates it.
+The reason follows from §2: the budget says what **this month's income** funded,
+and March's income ultimately funded nothing here. Dating it April would leave
+March overstating spending and April understating it, so neither month would be
+true.
 
-Recommendation: **month of the expense**, because the budget's job is to say what
-this month's income actually funded, and March's income funded nothing here. The
-user usually pays the card off the moment the refund lands, so the two months are
-normally the same and the question rarely bites.
+The accepted cost: marking an expense reimbursed **restates a month that has
+already closed**. In practice the card is paid off the moment the refund lands,
+so the two months are usually the same and the restatement rarely happens.
+
+Implementation consequence: any cached or precomputed monthly figure must be
+invalidated when `fundedFrom` changes, including for a past month. A slice that
+adds month caching later must not assume a closed month is immutable.
 
 ## 7. Out of scope
 
