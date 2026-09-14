@@ -7,7 +7,7 @@ context. Those drift, duplicate, and aren't read at startup, so they rot.
 
 ## The test: cold-resumable
 
-> Close the chat. Open a blank session. Run the CLAUDE.md startup ritual
+> Close the chat. Open a blank session. Orient per AGENTS.md
 > (roadmap README → active phase file → ADRs). Does it know **where we are**,
 > **what's next**, **why** past decisions were made, and **what to avoid**?
 

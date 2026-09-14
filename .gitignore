@@ -57,6 +57,12 @@ next-env.d.ts
 # Local MCP server config (Neon, Vercel, etc.) — may carry endpoints/auth; never commit to a public repo
 .mcp.json
 
+# Per-tool agent config written by other clients; may carry credentials
+# (docs/lessons.md 2026-07-28).
+.codex/
+.cursor/
+.gemini/
+
 # Next.js scaffold additions (slice 0.1)
 !.yarn/patches
 !.yarn/plugins

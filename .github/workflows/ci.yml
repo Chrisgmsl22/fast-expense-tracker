@@ -1,14 +1,14 @@
 name: CI
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+    pull_request:
+    push:
+        branches: [main]
 
 # Newer pushes to the same ref supersede in-flight runs (e.g. a PR force-push).
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    group: ci-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 
 # Least privilege: CI only needs to read the repo. On a finding gitleaks still
 # exits non-zero and fails the job — that's the outcome we want. We deliberately
@@ -16,75 +16,80 @@ concurrency:
 # step just errors harmlessly instead of the action gaining write scope on a
 # public repo. The blocking signal is the failed check, not a PR comment.
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  quality:
-    name: Lint · Typecheck · Test
-    runs-on: ubuntu-latest
-    # Ephemeral Postgres for integration tests (ADR-0004). The service creates the
-    # test database; the suite's globalSetup runs `prisma migrate deploy` against it.
-    services:
-      postgres:
-        image: postgres:17
+    quality:
+        name: Lint · Typecheck · Test
+        runs-on: ubuntu-latest
+        # Ephemeral Postgres for integration tests (ADR-0004). The service creates the
+        # test database; the suite's globalSetup runs `prisma migrate deploy` against it.
+        services:
+            postgres:
+                image: postgres:17
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: fast_expense_tracker_test
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 5
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: fast_expense_tracker_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      # Throwaway CI-only creds (match the service above). Both URLs point at the
-      # service container; locally the suite defaults to the Docker test DB.
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fast_expense_tracker_test?schema=public
-      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/fast_expense_tracker_test?schema=public
-    steps:
-      - uses: actions/checkout@v4
-      # pnpm version is read from package.json "packageManager" — don't pin it
-      # again here, or action-setup errors on a version mismatch.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      # Integration tests against the Postgres service (real queries, real DB).
-      - run: pnpm test:integration
-      # Coverage is an ADVISORY report (continue-on-error): the v8/istanbul
-      # reporters unreliably drop executed Prisma-importing modules in this
-      # environment, so it isn't a trustworthy gate — the gate is tests passing
-      # (unit + integration). See ADR-0011 + docs/conventions/testing.md.
-      - name: Coverage report (advisory — ADR-0011)
-        run: pnpm test:coverage
-        continue-on-error: true
+            # Throwaway CI-only creds (match the service above). Both URLs point at the
+            # service container; locally the suite defaults to the Docker test DB.
+            DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fast_expense_tracker_test?schema=public
+            DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/fast_expense_tracker_test?schema=public
+        steps:
+            - uses: actions/checkout@v4
+            # Harness guards — bash + git + jq only, so they run before the toolchain.
+            - name: Agent frontmatter guard
+              run: bash scripts/check-agent-frontmatter.sh
+            - name: Hook tests
+              run: bash scripts/test-hooks.sh
+            # pnpm version is read from package.json "packageManager" — don't pin it
+            # again here, or action-setup errors on a version mismatch.
+            - uses: pnpm/action-setup@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: .nvmrc
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm lint
+            - run: pnpm typecheck
+            - run: pnpm test
+            # Integration tests against the Postgres service (real queries, real DB).
+            - run: pnpm test:integration
+            # Coverage is an ADVISORY report (continue-on-error): the v8/istanbul
+            # reporters unreliably drop executed Prisma-importing modules in this
+            # environment, so it isn't a trustworthy gate — the gate is tests passing
+            # (unit + integration). See ADR-0011 + docs/conventions/testing.md.
+            - name: Coverage report (advisory — ADR-0011)
+              run: pnpm test:coverage
+              continue-on-error: true
 
-  secret-guards:
-    name: Secret guards
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # Full history so gitleaks can scan every commit, not just the tip.
-          fetch-depth: 0
-      - name: Guard against committed .env files
-        run: |
-          tracked=$(git ls-files | grep -E '(^|/)\.env' | grep -v '\.env\.example$' || true)
-          if [ -n "$tracked" ]; then
-            echo "::error::Tracked env file(s) other than .env.example detected:"
-            echo "$tracked"
-            exit 1
-          fi
-          echo "OK — no stray .env files tracked."
-      - name: Scan for secret values (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          # No GITLEAKS_LICENSE needed — gitleaks-action is free for public repos.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secret-guards:
+        name: Secret guards
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  # Full history so gitleaks can scan every commit, not just the tip.
+                  fetch-depth: 0
+            - name: Guard against committed .env files
+              run: |
+                  tracked=$(git ls-files | grep -E '(^|/)\.env' | grep -v '\.env\.example$' || true)
+                  if [ -n "$tracked" ]; then
+                    echo "::error::Tracked env file(s) other than .env.example detected:"
+                    echo "$tracked"
+                    exit 1
+                  fi
+                  echo "OK — no stray .env files tracked."
+            - name: Scan for secret values (gitleaks)
+              uses: gitleaks/gitleaks-action@v2
+              env:
+                  # No GITLEAKS_LICENSE needed — gitleaks-action is free for public repos.
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

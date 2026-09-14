@@ -5,12 +5,16 @@
 # Read-only. Fetches origin, then tells the agent whether the current branch's
 # work has already landed in origin/main (PR merged) or is still in flight.
 # It NEVER mutates git state — detection only. The agent acts on the verdict
-# per the "Branch-sync policy" in CLAUDE.md.
+# per the branch verdicts described in AGENTS.md §Orient.
 #
 # Verdict relies on `git merge-base --is-ancestor`, which is correct for the
 # repo's merge-commit strategy. Squash/rebase merges rewrite commit SHAs, so a
 # merged branch would read as NOT-an-ancestor → the "in progress" branch below
 # tells the agent to confirm via the GitHub MCP before trusting it.
+#
+# A fresh branch sitting exactly AT origin/main is an ancestor too, so "merged"
+# also requires the tip to trail origin/main — the same tip comparison
+# worktree-status.sh uses (docs/lessons.md 2026-08-05).
 
 set -uo pipefail
 
@@ -62,8 +66,15 @@ if [ "$BRANCH" = "HEAD" ]; then
 fi
 
 # --- On a feature/topic branch ---------------------------------------------
-if git merge-base --is-ancestor HEAD "$REMOTE_MAIN" 2>/dev/null; then
-  emit "[branch-status] On '${BRANCH}'. Its commits ARE in ${REMOTE_MAIN} → PR merged. Tree: ${TREE}. ACTION (CLAUDE.md branch-sync policy): if tree is clean → checkout ${DEFAULT_BRANCH}, git pull --ff-only, then delete LOCAL branch '${BRANCH}' (git branch -d). If tree is dirty → STOP and report the uncommitted changes; do not switch."
+HEAD_SHA="$(git rev-parse HEAD 2>/dev/null || echo head)"
+MAIN_SHA="$(git rev-parse "refs/remotes/${REMOTE_MAIN}" 2>/dev/null || echo main)"
+
+if [ "$HEAD_SHA" = "$MAIN_SHA" ]; then
+  emit "[branch-status] On '${BRANCH}' at ${REMOTE_MAIN} with no commits of its own (tree: ${TREE}). Fresh branch — nothing merged yet; start the work."
 fi
 
-emit "[branch-status] On '${BRANCH}'. Commits NOT in ${REMOTE_MAIN} yet (ahead ${AHEAD}, behind ${BEHIND}, tree: ${TREE}). Likely work-in-progress. Per CLAUDE.md branch-sync policy: the git ancestor check is blind to squash/rebase merges, so before assuming unmerged, confirm the PR state for '${BRANCH}' via the GitHub MCP (mcp__github__pull_request_read / list_pull_requests by head branch). If MERGED → treat as the merged case (switch + pull + delete local). If OPEN/none → summarize what remains on this slice for the user."
+if git merge-base --is-ancestor HEAD "$REMOTE_MAIN" 2>/dev/null; then
+  emit "[branch-status] On '${BRANCH}'. Its commits ARE in ${REMOTE_MAIN} → PR merged. Tree: ${TREE}. ACTION: if tree is clean → checkout ${DEFAULT_BRANCH}, git pull --ff-only, then delete LOCAL branch '${BRANCH}' (git branch -d). If tree is dirty → STOP and report the uncommitted changes; do not switch."
+fi
+
+emit "[branch-status] On '${BRANCH}'. Commits NOT in ${REMOTE_MAIN} yet (ahead ${AHEAD}, behind ${BEHIND}, tree: ${TREE}). Likely work-in-progress. Note: the git ancestor check is blind to squash/rebase merges, so before assuming unmerged, confirm the PR state for '${BRANCH}' via the GitHub MCP (mcp__github__pull_request_read / list_pull_requests by head branch). If MERGED → treat as the merged case (switch + pull + delete local). If OPEN/none → summarize what remains on this slice for the user."

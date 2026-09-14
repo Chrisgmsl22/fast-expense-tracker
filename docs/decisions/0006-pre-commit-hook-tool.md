@@ -76,7 +76,7 @@ artifacts and the lockfile.
 ## Notes
 
 - **Opt-out**: `git commit --no-verify` skips the hook — reserved for rare human
-  cases. **Agents must never use `--no-verify`** (CLAUDE.md rule #12); fix the
+  cases. **Agents must never use `--no-verify`** (`AGENTS.md` §Rules); fix the
   failing hook instead.
 - `eslint-config-prettier` was intentionally **not** added: `eslint-config-next`
   defers formatting to Prettier (no stylistic-rule conflict), and Prettier runs

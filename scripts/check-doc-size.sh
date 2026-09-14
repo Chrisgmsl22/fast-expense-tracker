@@ -13,7 +13,7 @@ set -uo pipefail
 cap_for() {
     case "$1" in
     docs/reference/*) echo 0 ;;
-    CLAUDE.md) echo 0 ;;
+    AGENTS.md | CLAUDE.md) echo 0 ;;
     *README.md) echo 150 ;;
     docs/decisions/*) echo 200 ;;
     docs/conventions/*) echo 300 ;;

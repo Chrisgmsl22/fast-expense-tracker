@@ -21,10 +21,10 @@ The user has explicitly flagged secret handling as a non-negotiable concern.
 ### Hard rules
 
 1. **`.env*` files are gitignored.** The `.gitignore` excludes:
-   - `.env`
-   - `.env.local`, `.env.development.local`, `.env.test.local`, `.env.production.local`
-   - `.env.development`, `.env.test`, `.env.production`
-   - `.env.*.local`
+    - `.env`
+    - `.env.local`, `.env.development.local`, `.env.test.local`, `.env.production.local`
+    - `.env.development`, `.env.test`, `.env.production`
+    - `.env.*.local`
 
 2. **Only `.env.example` is committed.** It contains variable names and
    placeholder values (e.g., `DATABASE_URL=""`). Never real secrets, even
@@ -54,9 +54,9 @@ The user has explicitly flagged secret handling as a non-negotiable concern.
    Set up in Phase 0.
 
 9. **Adding a new env var requires:**
-   - Add to `.env.example` with a comment explaining what it is.
-   - Document in `docs/conventions/coding-conventions.md` (Auth section, App config section, etc.).
-   - Reference via `process.env` only in server-side code OR `NEXT_PUBLIC_*` for client-needed values.
+    - Add to `.env.example` with a comment explaining what it is.
+    - Document in `docs/conventions/coding-conventions.md` (Auth section, App config section, etc.).
+    - Reference via `process.env` only in server-side code OR `NEXT_PUBLIC_*` for client-needed values.
 
 ### `NEXT_PUBLIC_*` policy
 
@@ -70,10 +70,10 @@ The user has explicitly flagged secret handling as a non-negotiable concern.
 
 1. **Don't push** if it's local-only. Use `git reset` to undo before remote sync.
 2. **If already pushed:**
-   - **Rotate the secret immediately** at its source (Neon, Vercel auth secret regen, etc.).
-   - **Scrub history** with `git filter-repo` or BFG Repo-Cleaner.
-   - **Force-push** with the user's explicit approval (this rewrites public history).
-   - **Write a post-mortem ADR** documenting what happened and how the process changed to prevent recurrence.
+    - **Rotate the secret immediately** at its source (Neon, Vercel auth secret regen, etc.).
+    - **Scrub history** with `git filter-repo` or BFG Repo-Cleaner.
+    - **Force-push** with the user's explicit approval (this rewrites public history).
+    - **Write a post-mortem ADR** documenting what happened and how the process changed to prevent recurrence.
 3. **Assume the worst.** A leaked secret should be treated as compromised
    regardless of whether evidence of misuse exists.
 
@@ -96,5 +96,5 @@ The user has explicitly flagged secret handling as a non-negotiable concern.
 
 - `.env.example` — the committed template
 - `.gitignore` — the exclusion list
-- `CLAUDE.md` (Security section) — AI assistant rules for secret handling
+- `AGENTS.md` §Rules — agent rules for secret handling
 - `docs/conventions/coding-conventions.md` (Security section) — coding rules
