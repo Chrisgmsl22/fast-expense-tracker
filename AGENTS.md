@@ -66,6 +66,14 @@ merged ones each session; confirm via the GitHub MCP before acting on it.
 it. Christian reviews; that is the operating model. Save the questions for the
 list below and for genuine ambiguity.
 
+**Never merge or approve a pull request, and never push to `main`.** Opening the
+PR is yours; merging is Christian's, always. This is not a sign-off you can ask
+for in the moment — "ship it", "let's do it", or "can we do it now" means finish
+the PR and hand over the link. Green checks answer whether it is safe, never
+whether it is your call. A merge here deploys to production and can run a
+migration against real financial data. When work is blocked behind a merge, name
+the PR he needs to merge instead of clearing the block yourself.
+
 Ask for sign-off in-conversation before you:
 
 - **Commit or push anything.** Christian asks for commits explicitly.
