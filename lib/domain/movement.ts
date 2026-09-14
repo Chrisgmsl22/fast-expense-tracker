@@ -9,20 +9,17 @@
 
 import { SAVINGS_SLUG } from "./dashboard";
 
-/** All `Movement.type` values in the schema. Only two ship in the Add menu. */
+/** All `Movement.type` values in the schema. */
 export type MovementType =
     | "card_payment"
     | "gf_paid"
     | "gf_received"
-    // A thing the partner fronted that you owe her — settlement-only (ADR-0020).
-    // Never a cash event, so it's excluded from the month feed; the settlement
-    // page is the one place it shows.
+    // A thing the partner fronted that you owe her (ADR-0020). It shows in the
+    // month feed and the settlement journal, but no cash left your account, so
+    // it enters no total and never becomes an expense.
     | "gf_fronted"
     | "income"
     | "other";
-
-/** The movement kinds the user can create from the Add menu. */
-export const CREATABLE_MOVEMENT_TYPES = ["card_payment", "gf_paid"] as const;
 
 /** Minimal shape the couple-balance math needs from a shared expense. */
 export type ExpenseShare = { amount: number; actualExpenditure: number };

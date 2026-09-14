@@ -48,6 +48,16 @@ const expenses: ExpenseListItem[] = [
     },
 ];
 
+/** A thing the partner fronted that he owes back — never a cash outflow. */
+const debt: MovementListItem = {
+    id: "d1",
+    date: new Date("2026-06-19T06:00:00Z"),
+    amount: 1500,
+    type: "gf_fronted",
+    card: null,
+    note: "she covered the vet",
+};
+
 describe("MonthFeed", () => {
     it("lists the month's expenses with share subtext and card fallback", () => {
         render(
@@ -286,6 +296,75 @@ describe("MonthFeed", () => {
         // running balance stays live and settleable via /settlement (ADR-0021,
         // decision 8; nothing is frozen).
         expect(screen.queryByRole("link")).toBeNull();
+    });
+
+    it("shows a gf_fronted debt in the feed, note first", () => {
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[debt]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+        expect(screen.getByText("she covered the vet")).toBeDefined();
+        expect(screen.getByText(/I owe Brenda/)).toBeDefined();
+        // A debt is not a payment — the opposite wording must not appear.
+        expect(screen.queryByText("Paid Brenda")).toBeNull();
+    });
+
+    it("falls back to 'I owe {partner}' when the debt has no note", () => {
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[{ ...debt, note: null }]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+        // Same wording the settlement journal uses for a note-less debt.
+        expect(screen.getByText("I owe Brenda")).toBeDefined();
+    });
+
+    it("changes no footer total when a debt is present (no cash moved)", () => {
+        const movements: MovementListItem[] = [
+            {
+                id: "m2",
+                date: new Date("2026-06-22T06:00:00Z"),
+                amount: 200,
+                type: "gf_paid",
+                card: null,
+                note: "netted week",
+            },
+        ];
+        const { unmount } = render(
+            <MonthFeed
+                expenses={expenses}
+                movements={movements}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+        const without = screen.getByTestId("feed-totals").textContent;
+        unmount();
+
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[...movements, debt]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+        // Charged / What I really spent / Set aside / Paid to Brenda / Total —
+        // every figure identical (ADR-0020).
+        expect(screen.getByTestId("feed-totals").textContent).toBe(without);
+        // …and the debt really is on screen, so this isn't a vacuous pass.
+        expect(screen.getByText("she covered the vet")).toBeDefined();
     });
 
     it("shows no card (not Cash) for a savings row", () => {

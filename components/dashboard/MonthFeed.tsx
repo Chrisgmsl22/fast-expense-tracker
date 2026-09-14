@@ -6,14 +6,18 @@ import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
 import { CASH_COLOR } from "@/lib/palette";
-import { movementDisplay } from "@/components/movement/movement-display";
+import {
+    movementDisplay,
+    movementRowText,
+} from "@/components/movement/movement-display";
 import { SettlementChip } from "./SettlementChip";
 
 /**
  * Right-rail month feed — a read-only list of the month's expenses **and money
  * movements** (card payments, transfers to the partner), newest first, with a
  * pinned footer. Movements are colour-tagged (card payment blue, "I paid
- * {partner}" gold) and never enter the spend total. The footer splits money into
+ * {partner}" gold, "I owe {partner}" orange) and never enter the spend total —
+ * a debt she fronted is shown for awareness only. The footer splits money into
  * Charged / What I really spent (consumption) / Set aside (savings) / Paid to
  * {partner} / Total. Who-owes-whom lives in the settlement slice, not here
  * (ADR-0018).
@@ -237,13 +241,10 @@ function MovementRow({
     movement: MovementListItem;
     partnerName: string;
 }) {
-    const { label, amountClass, rowTint } = movementDisplay(
-        m.type,
-        partnerName,
-    );
-    // Card payments carry their card name; transfers carry their note.
-    const subline =
-        m.type === "card_payment" ? (m.card?.name ?? "") : (m.note ?? "");
+    const { amountClass, rowTint } = movementDisplay(m.type, partnerName);
+    // Card payments carry their card name; transfers carry their note; a debt
+    // leads with its note (what she fronted).
+    const { title, subline } = movementRowText(m, partnerName);
 
     return (
         <li
@@ -251,7 +252,7 @@ function MovementRow({
         >
             <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">
-                    {label}
+                    {title}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {formatExpenseDate(m.date)}

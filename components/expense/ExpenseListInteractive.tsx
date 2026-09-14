@@ -4,10 +4,13 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
-import { computeFeedTotals } from "@/lib/domain/movement";
+import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
 import { buildFeed } from "@/lib/feed";
 import { CASH_COLOR } from "@/lib/palette";
-import { movementDisplay } from "@/components/movement/movement-display";
+import {
+    movementDisplay,
+    movementRowText,
+} from "@/components/movement/movement-display";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +28,7 @@ import {
     type CardOption,
 } from "./ExpenseForm";
 import { CardPaymentForm } from "@/components/movement/CardPaymentForm";
+import { PartnerDebtForm } from "@/components/movement/PartnerDebtForm";
 import { TransferForm } from "@/components/movement/TransferForm";
 import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
 import { deleteExpense } from "@/app/_actions/expense/delete";
@@ -78,11 +82,40 @@ function CategoryPill({ name, color }: { name: string; color: string }) {
 const ROW_GRID = "sm:grid-cols-[5.5rem_minmax(0,1fr)_10rem_9rem_8rem_4rem]";
 
 /**
+ * Body of the movement delete confirmation. Same phrasing as the settlement
+ * journal's own delete (`SettlementJournal.tsx`) — row title, amount in
+ * parentheses — so one action reads the same on both screens. A debt also warns
+ * that the couple balance moves, which is invisible from this screen.
+ */
+function movementDeleteMessage(
+    m: MovementListItem,
+    partnerName: string,
+): string {
+    const { title } = movementRowText(m, partnerName);
+    const removed = `${title} (${formatMxn(m.amount)}) will be permanently removed.`;
+    return m.type === "gf_fronted"
+        ? `${removed} What you owe ${partnerName} on the settlement page will change.`
+        : removed;
+}
+
+/** Heading of the movement edit dialog — one per form it can open. */
+function movementEditTitle(
+    type: MovementType | undefined,
+    partnerName: string,
+): string {
+    if (type === "card_payment") return "Edit card payment";
+    if (type === "gf_fronted") return `Edit what you owe ${partnerName}`;
+    return "Edit transfer";
+}
+
+/**
  * Client list, re-skinned to Confirmed designs V1 + money movements
  * (ADR-0018). Expenses keep category filter chips, pills, and
- * edit/delete. Money movements (card payments blue, "I paid {partner}" amber)
- * interleave by date in the unfiltered ("All") view — they have no category, so a
- * category filter hides them — and are editable + deletable (CHORE-5).
+ * edit/delete. Money movements (card payment blue, "I paid {partner}" gold, "I
+ * owe {partner}" orange) interleave by date in the unfiltered ("All") view —
+ * they have no category, so a category filter hides them — and are editable +
+ * deletable (CHORE-5). A debt she fronted is shown for awareness only: no cash
+ * left the account, so it enters no total.
  */
 export function ExpenseListInteractive({
     expenses,
@@ -448,13 +481,36 @@ export function ExpenseListInteractive({
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>
-                            {editingMovement?.type === "card_payment"
-                                ? "Edit card payment"
-                                : "Edit transfer"}
+                            {movementEditTitle(
+                                editingMovement?.type,
+                                partnerName,
+                            )}
                         </DialogTitle>
                     </DialogHeader>
                     {editingMovement &&
-                        (editingMovement.type === "card_payment" ? (
+                        (editingMovement.type === "gf_fronted" ? (
+                            // A debt needs its own form. The transfer form saves
+                            // through updateTransfer, which refuses any row that
+                            // isn't gf_paid/gf_received — so it would open, save
+                            // nothing, and answer "Transfer not found."
+                            <PartnerDebtForm
+                                key={editingMovement.id}
+                                debt={{
+                                    id: editingMovement.id,
+                                    date: toDateInputValue(
+                                        editingMovement.date,
+                                    ),
+                                    amount: String(editingMovement.amount),
+                                    note: editingMovement.note ?? "",
+                                }}
+                                partnerName={partnerName}
+                                onCancel={() => setEditingMovement(null)}
+                                onSuccess={() => {
+                                    setEditingMovement(null);
+                                    router.refresh();
+                                }}
+                            />
+                        ) : editingMovement.type === "card_payment" ? (
                             <CardPaymentForm
                                 key={editingMovement.id}
                                 cards={cards}
@@ -555,10 +611,17 @@ export function ExpenseListInteractive({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete this movement?</DialogTitle>
+                        <DialogTitle>
+                            {deletingMovement?.type === "gf_fronted"
+                                ? "Delete this debt?"
+                                : "Delete this movement?"}
+                        </DialogTitle>
                         <DialogDescription>
                             {deletingMovement
-                                ? `${movementDisplay(deletingMovement.type, partnerName).label} of ${formatMxn(deletingMovement.amount)} will be permanently removed.`
+                                ? movementDeleteMessage(
+                                      deletingMovement,
+                                      partnerName,
+                                  )
                                 : ""}
                         </DialogDescription>
                     </DialogHeader>
@@ -726,20 +789,20 @@ function MovementRow({
     onEdit: () => void;
     onDelete: () => void;
 }) {
-    const {
-        label,
-        amountClass: amountColor,
-        rowTint,
-    } = movementDisplay(m.type, partnerName);
-    const subline =
-        m.type === "card_payment" ? (m.card?.name ?? "") : (m.note ?? "");
+    const { amountClass: amountColor, rowTint } = movementDisplay(
+        m.type,
+        partnerName,
+    );
+    // `title` names the row's own thing (a debt's note), so two debts don't get
+    // one shared accessible name on their edit/delete controls.
+    const { title, subline } = movementRowText(m, partnerName);
 
     return (
         <li
             className={`group flex items-center gap-3 border-l-[3px] py-3 pr-1 pl-4 sm:py-2.5 ${rowTint}`}
         >
             <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{label}</span>
+                <span className="block truncate font-medium">{title}</span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {formatExpenseDate(m.date)}
                     {subline ? ` · ${subline}` : ""}
@@ -755,7 +818,7 @@ function MovementRow({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Edit ${label}`}
+                    aria-label={`Edit ${title}`}
                     onClick={onEdit}
                     disabled={pending}
                 >
@@ -765,7 +828,7 @@ function MovementRow({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Delete ${label}`}
+                    aria-label={`Delete ${title}`}
                     onClick={onDelete}
                     disabled={pending}
                 >

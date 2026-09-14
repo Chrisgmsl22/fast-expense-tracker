@@ -15,6 +15,9 @@ vi.mock("@/components/movement/CardPaymentForm", () => ({
 vi.mock("@/components/movement/TransferForm", () => ({
     TransferForm: () => <div data-testid="transfer-form" />,
 }));
+vi.mock("@/components/movement/PartnerDebtForm", () => ({
+    PartnerDebtForm: () => <div data-testid="partner-debt-form" />,
+}));
 
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
 
@@ -38,6 +41,14 @@ describe("AddExpenseButton", () => {
         expect(screen.getByText("Card payment")).toBeDefined();
         expect(screen.getByText("I paid Brenda")).toBeDefined();
         expect(screen.getByText("Brenda paid me")).toBeDefined();
+        expect(screen.getByText("I owe Brenda")).toBeDefined();
+    });
+
+    it("opens the debt form from the 'I owe {partner}' item", () => {
+        render(<AddExpenseButton {...props} sharesExpenses />);
+        openMenu();
+        fireEvent.click(screen.getByText("I owe Brenda"));
+        expect(screen.getByTestId("partner-debt-form")).toBeDefined();
     });
 
     it("hides the partner transfer items in Solo mode (CHORE-6.b)", () => {
@@ -49,5 +60,6 @@ describe("AddExpenseButton", () => {
         // Partner money movements are gone.
         expect(screen.queryByText("I paid Brenda")).toBeNull();
         expect(screen.queryByText("Brenda paid me")).toBeNull();
+        expect(screen.queryByText("I owe Brenda")).toBeNull();
     });
 });
