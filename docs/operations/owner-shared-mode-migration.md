@@ -30,26 +30,33 @@ No expense / movement / card rows change. New accounts stay Solo by default.
 Verify after: the owner's dashboard/settlement render with "Brenda", and the
 Settings "I share expenses" toggle shows on with the name + 68% prefilled.
 
-## 2. BUG-2 rider — re-seed prod category colors + drop the retired Amex Gold card
+## 2. BUG-2 rider — category colors (now automatic) + drop the retired Amex Gold card
 
-Folded into this same prod trip (see `docs/roadmap/bugs.json` → BUG-2). No app
-code — a data-only fix.
+See `docs/roadmap/bugs.json` → BUG-2. Data-only, no app code. 2a needs no manual
+step any more; 2b is still a human decision on this prod trip.
 
-### 2a. Category colors (prod never re-seeded since per-slug colors landed)
+### 2a. Category colors — **no manual step. Handled by a migration.**
 
 Prod `Category.color` rows still hold the schema default `#6b7280` (gray). The
-seed already refreshes `Category.color` on upsert, so the safe path is to re-run
-the prod seed, which is idempotent:
+fix ships as a data migration:
 
-```bash
-# Uses .env.production.local (ADMIN_EMAIL/ADMIN_PASSWORD + prod DATABASE_URL).
-pnpm db:seed:prod
-```
+    prisma/migrations/20260914000000_backfill_category_colors/migration.sql
 
-This upserts the 13 categories with their authoritative per-slug hex
-(`prisma/seed.ts` → `CATEGORY_COLORS`) and leaves user data (expenses, movements,
-income, the owner's edited card colors) intact. Verify the dashboard category
-dots + "Where the money went" bars render in color afterward.
+`vercel.json` runs `prisma migrate deploy` on every production build, so the
+backfill applies on merge. Nothing to run by hand, and no production credentials
+are needed. The migration sets the per-slug hex only on rows still holding the
+gray default, is idempotent, and touches `Category.color` and nothing else.
+Verify afterwards that the dashboard category dots + "Where the money went" bars
+render in color.
+
+> **Do not use `pnpm db:seed:prod` for this.** An earlier revision of this
+> section said to re-seed production. That is retracted. The seed also upserts
+> `Card` rows, and it matches them **by name**: `prisma/seed.ts:301-321` does
+> `findFirst({ name })`, then either `update({ color, type })` or `create`. So a
+> re-seed rewrites every card's `color`/`type`, and any card the owner **renamed**
+> in Settings is not found and is **re-created as a duplicate**. The owner has
+> edited cards since CHORE-6.c shipped, so a re-seed would damage real data to
+> fix a color.
 
 ### 2b. FK-safe delete of the retired "Amex Gold" card
 
