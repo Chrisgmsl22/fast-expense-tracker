@@ -125,7 +125,26 @@ describe("SettlementChip", () => {
 
 describe("SettlementBreakdown", () => {
     it("renders the four lines and the net", () => {
-        render(<SettlementBreakdown balance={sheOwes} partnerName="Brenda" />);
+        render(
+            <SettlementBreakdown
+                balance={sheOwes}
+                breakdownItems={{
+                    partner_share: [
+                        {
+                            id: "e1",
+                            date: new Date("2026-07-10T06:00:00Z"),
+                            description: "Groceries",
+                            amount: 700,
+                            gross: 2187.5,
+                        },
+                    ],
+                    your_debt: [],
+                    partner_paid: [],
+                    you_paid: [],
+                }}
+                partnerName="Brenda"
+            />,
+        );
         expect(
             screen.getByText(/32% of shared expenses you logged/),
         ).toBeDefined();

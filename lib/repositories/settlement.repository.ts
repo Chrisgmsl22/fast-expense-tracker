@@ -10,6 +10,8 @@ export type SettlementExpenseRow = {
     amount: number;
     actualExpenditure: number;
     isShared: boolean;
+    /** Tie-break for two rows on the same `date`. Optional so in-memory fakes may omit it. */
+    createdAt?: Date;
 };
 
 /** A movement the couple-balance math reads. */
@@ -20,6 +22,8 @@ export type SettlementMovementRow = {
     type: MovementType;
     /** Free-text label — the "I owe {partner}" debt's description, if any. */
     note: string | null;
+    /** Tie-break for two rows on the same `date`. Optional so in-memory fakes may omit it. */
+    createdAt?: Date;
 };
 
 export type SettlementWindowRows = {
@@ -53,7 +57,9 @@ export class PrismaSettlementRepository implements SettlementRepository {
         const [expenses, movements] = await Promise.all([
             this.db.expense.findMany({
                 where: { userId, date: { gte: start, lt: end } },
-                orderBy: { date: "desc" },
+                // Newest first, `createdAt` breaking a same-date tie — the order
+                // both the journal and the breakdown rows keep.
+                orderBy: [{ date: "desc" }, { createdAt: "desc" }],
                 select: {
                     id: true,
                     date: true,
@@ -61,17 +67,21 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     amount: true,
                     actualExpenditure: true,
                     isShared: true,
+                    createdAt: true,
                 },
             }),
             this.db.movement.findMany({
                 where: { userId, date: { gte: start, lt: end } },
-                orderBy: { date: "desc" },
+                // Newest first, `createdAt` breaking a same-date tie — the order
+                // both the journal and the breakdown rows keep.
+                orderBy: [{ date: "desc" }, { createdAt: "desc" }],
                 select: {
                     id: true,
                     date: true,
                     amount: true,
                     type: true,
                     note: true,
+                    createdAt: true,
                 },
             }),
         ]);

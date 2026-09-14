@@ -66,6 +66,7 @@ export default async function SettlementPage() {
                     />
                     <SettlementBreakdown
                         balance={settlement.balance}
+                        breakdownItems={settlement.breakdownItems}
                         partnerName={partnerName}
                     />
                     <SettlementJournalKey partnerName={partnerName} />
