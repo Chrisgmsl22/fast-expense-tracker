@@ -456,7 +456,7 @@ A slice is "shipped" when:
 
 ## 10. References
 
-- [CLAUDE.md](../../CLAUDE.md) — top-level project guide
+- [AGENTS.md](../../AGENTS.md) — top-level project guide
 - [ADR-0000](../decisions/0000-using-adrs.md) — Using ADRs
 - [ADR-0001](../decisions/0001-tech-stack.md) — Tech stack (Next.js + Neon + Vercel)
 - [ADR-0002](../decisions/0002-agent-led-development.md) — Agent-led development with named subagents

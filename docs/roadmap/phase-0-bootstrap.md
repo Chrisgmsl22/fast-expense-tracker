@@ -58,7 +58,7 @@ separation**: Neon holds real data only (one `production` branch); local + CI
 run Docker Postgres; preview deploys are build-only. Scope expanded from the
 original "Vercel deploy hookup" — see [ADR-0004](../decisions/0004-db-environment-isolation.md).
 The interim Neon-integration + preview-branch approach was tried and dropped
-(see `docs/lessons.md` 2026-05-31).
+(see [`docs/lessons/2026-h1.md`](../lessons/2026-h1.md) 2026-05-31).
 
 ##### Tasks
 

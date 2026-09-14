@@ -7,7 +7,7 @@ A temporary personal expense tracker built while [MoneyFlow](https://github.com/
 shared expenses with a proper 68/32 split, categorize spend, and watch budgets.
 This app is the temporary bridge.
 
-**What's different:** this repo is intentionally an *agent-led* project — agents
+**What's different:** this repo is intentionally an _agent-led_ project — agents
 write the code, I review. The opposite of MoneyFlow, which is hand-written for
 learning. Same code-quality bar, but speed > deliberate practice.
 
@@ -17,7 +17,7 @@ learning. Same code-quality bar, but speed > deliberate practice.
 - Postgres on Neon — same shape as MoneyFlow's schema for easy migration later
 - Prisma ORM
 - Tailwind CSS + shadcn/ui
-- Auth.js (Credentials provider) — *lands in Phase 1*
+- Auth.js (Credentials provider) — _lands in Phase 1_
 - Hosted on Vercel
 
 ## Getting started
@@ -54,30 +54,30 @@ Then open [http://localhost:3000](http://localhost:3000).
 
 ### Scripts
 
-| Command | What it does |
-|---|---|
-| `pnpm dev` | Start the Next.js dev server (hot reload) |
-| `pnpm build` | Production build |
-| `pnpm start` | Serve the production build |
-| `pnpm lint` | Run ESLint |
-| `pnpm typecheck` | Type-check with `tsc --noEmit` (no emit) |
-| `pnpm test` | Run the Vitest suite once |
-| `pnpm db:generate` | Regenerate the Prisma client |
-| `pnpm db:migrate` | Create + apply a migration in dev (reads `.env.local`) |
-| `pnpm db:migrate:deploy` | Apply pending migrations (CI / production) |
+| Command                  | What it does                                           |
+| ------------------------ | ------------------------------------------------------ |
+| `pnpm dev`               | Start the Next.js dev server (hot reload)              |
+| `pnpm build`             | Production build                                       |
+| `pnpm start`             | Serve the production build                             |
+| `pnpm lint`              | Run ESLint                                             |
+| `pnpm typecheck`         | Type-check with `tsc --noEmit` (no emit)               |
+| `pnpm test`              | Run the Vitest suite once                              |
+| `pnpm db:generate`       | Regenerate the Prisma client                           |
+| `pnpm db:migrate`        | Create + apply a migration in dev (reads `.env.local`) |
+| `pnpm db:migrate:deploy` | Apply pending migrations (CI / production)             |
 
 ## Where to find things
 
-| You want to know… | Look here |
-|---|---|
-| Project goals + non-goals | [docs/specs/0001-initial-design.md](./docs/specs/0001-initial-design.md) |
-| Current phase + what's next | [docs/roadmap/README.md](./docs/roadmap/README.md) |
-| One-time external setup (Neon, Vercel, env) | [docs/operations/setup.md](./docs/operations/setup.md) |
-| Why a design choice was made | [docs/decisions/](./docs/decisions/) |
-| Data model + seed data + shared-expense math | [docs/reference/domain-reference.md](./docs/reference/domain-reference.md) |
-| Coding conventions | [docs/conventions/coding-conventions.md](./docs/conventions/coding-conventions.md) |
-| How agents work on this repo | [docs/conventions/agent-workflow.md](./docs/conventions/agent-workflow.md) |
-| AI assistant instructions | [CLAUDE.md](./CLAUDE.md) |
+| You want to know…                            | Look here                                                                          |
+| -------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Project goals + non-goals                    | [docs/specs/0001-initial-design.md](./docs/specs/0001-initial-design.md)           |
+| Current phase + what's next                  | [docs/roadmap/README.md](./docs/roadmap/README.md)                                 |
+| One-time external setup (Neon, Vercel, env)  | [docs/operations/setup.md](./docs/operations/setup.md)                             |
+| Why a design choice was made                 | [docs/decisions/](./docs/decisions/)                                               |
+| Data model + seed data + shared-expense math | [docs/reference/domain-reference.md](./docs/reference/domain-reference.md)         |
+| Coding conventions                           | [docs/conventions/coding-conventions.md](./docs/conventions/coding-conventions.md) |
+| How agents work on this repo                 | [docs/conventions/agent-workflow.md](./docs/conventions/agent-workflow.md)         |
+| AI assistant instructions                    | [AGENTS.md](./AGENTS.md)                                                           |
 
 ## License
 

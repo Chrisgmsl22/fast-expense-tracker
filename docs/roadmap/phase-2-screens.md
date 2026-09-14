@@ -47,7 +47,7 @@ New `/dashboard` route — the post-login landing ([`ui-build-plan.md §5`](./ui
 
 #### 2.4a: Dashboard foundation — service + shell + buckets + stat strip `[PR]`
 
-`getDashboardSummary(userId, month)` aggregation (totals via `actualExpenditure`) + the `/dashboard` route + topbar (month nav, Total income chip, "My view · 68%", + Add) + post-login landing change (`/expenses` → `/dashboard`). Renders the **buckets hero** (Essentials/Discretionary/Savings — colored top border, amount, "of $X · $Y left", Progress; over → danger) + the **stat strip** (Income in / Spent my-share / Net so far / Daily avg · N left). Bucket classification (CLAUDE.md): Essentials = `isRelevant` − Savings; Discretionary = non-relevant − Unassigned; **Savings = its own bucket** ("Savings/Inv" = one bucket, resolves open-Q #4). Foundation 2.4b/2.4c hang off.
+`getDashboardSummary(userId, month)` aggregation (totals via `actualExpenditure`) + the `/dashboard` route + topbar (month nav, Total income chip, "My view · 68%", + Add) + post-login landing change (`/expenses` → `/dashboard`). Renders the **buckets hero** (Essentials/Discretionary/Savings — colored top border, amount, "of $X · $Y left", Progress; over → danger) + the **stat strip** (Income in / Spent my-share / Net so far / Daily avg · N left). Bucket classification (AGENTS.md §Domain): Essentials = `isRelevant` − Savings; Discretionary = non-relevant − Unassigned; **Savings = its own bucket** ("Savings/Inv" = one bucket, resolves open-Q #4). Foundation 2.4b/2.4c hang off.
 
 #### 2.4b: Dashboard charts — radar + spend-by-card `[PR]`
 

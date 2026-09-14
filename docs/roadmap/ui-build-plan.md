@@ -122,7 +122,7 @@ So implementers never have to guess:
   (dot + Progress vs `monthlyBudget`, null → "no limit"); **right rail** (month
   expenses feed + Charged/My-share footer). New `getDashboardSummary(userId,
 month)` service (totals use `actualExpenditure`).
-- **Bucket classification (CLAUDE.md):** Essentials = `isRelevant` − Savings;
+- **Bucket classification (AGENTS.md §Domain):** Essentials = `isRelevant` − Savings;
   Discretionary = non-relevant − Unassigned; **Savings = its own bucket**.
 - **Out / defer:** card-payment rail lines (slice 7); income popover "add" (uses
   the Income screen from slice 4); budget-editing UI (separate).

@@ -18,11 +18,11 @@ These are ceilings; aim well under them.
 | README / index | `**/README.md`          | 150              |
 | Other docs     | `docs/*.md` (default)   | 300              |
 | Reference      | `docs/reference/*.md`   | exempt           |
-| Instructions   | `CLAUDE.md`             | exempt           |
+| Instructions   | `AGENTS.md`             | exempt           |
 
 **Plans** are the deliberate exception — they show every step, so they run long.
 **Reference** docs (frozen lookup tables: categories, domain math) are exempt —
-length is the point. **`CLAUDE.md`** is exempt — it's long-form instructions.
+length is the point. **`AGENTS.md`** is exempt — it's long-form instructions.
 
 ## When you're over the cap
 
