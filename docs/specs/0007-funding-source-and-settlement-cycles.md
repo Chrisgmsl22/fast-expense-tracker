@@ -4,7 +4,7 @@
 **Status**: Draft — design agreed in session; every open question now decided
 **Type**: Domain / money model
 **Builds on**: [spec 0005](./0005-cash-basis-money-model.md), [ADR-0020](../decisions/0020-cash-basis-money-model.md)
-**Amends**: ADR-0020 §4 (transfers are invisible to the expenses view)
+**Amends**: the settlement window from [ADR-0019](../decisions/0019-two-sided-couple-balance.md); refines [ADR-0018](../decisions/0018-money-movements-not-settlement-ritual.md) §5 (feed rendering)
 **Kicks off with**: an ADR for sign-off — `docs/decisions/` is protected
 
 > Written from a design session on 2026-09-14, driven by real usage. A fresh
@@ -105,7 +105,17 @@ mistake ADR-0020 §3 already refuses for the partner's money.
 
 ### 3.4 Money paid to the partner appears in the Expenses view
 
-Amends ADR-0020 §4, which kept transfers out of the expenses view entirely.
+This **upholds** [ADR-0020](../decisions/0020-cash-basis-money-model.md) §4 and
+refines [ADR-0018](../decisions/0018-money-movements-not-settlement-ritual.md) §5.
+
+An earlier draft of this spec claimed it amended ADR-0020 §4 because transfers
+were "invisible to the expenses view". That was wrong on both counts. §4 says
+transfers are cash rather than budget expenses, carrying an optional note and
+never a category — it says nothing about visibility, and a partner payment here
+stays uncategorised and outside the budget, so §4 is upheld. ADR-0018 §5 already
+had movements rendering interleaved by date in **both** feeds, the expenses list
+included. What is new is the dedicated section and highlight, which is a
+refinement of that rendering, not a reversal of anything.
 
 - A `gf_paid` movement shows in the Expenses screen in **its own section**, with
   its own highlight colour.
@@ -208,6 +218,9 @@ adds month caching later must not assume a closed month is immutable.
 
 - [spec 0005](./0005-cash-basis-money-model.md) — the three ledgers this builds on
 - [ADR-0018](../decisions/0018-money-movements-not-settlement-ritual.md) — records
-  the undercount this spec fixes
-- [ADR-0020](../decisions/0020-cash-basis-money-model.md) — §4 amended here, §1
-  and §6 upheld
+  the undercount this spec fixes; §5's interleaved feed rendering is refined into
+  a dedicated section here
+- [ADR-0019](../decisions/0019-two-sided-couple-balance.md) — its settlement
+  window is replaced by the open cycle (§3.5)
+- [ADR-0020](../decisions/0020-cash-basis-money-model.md) — §1, §4 and §6 all
+  upheld. Nothing in it is amended.
