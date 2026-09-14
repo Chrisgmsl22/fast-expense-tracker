@@ -5,7 +5,12 @@ import type {
     MovementWriteData,
 } from "@/lib/repositories/movement.repository";
 
-type StoredMovement = { id: string; userId: string } & MovementWriteData;
+type StoredMovement = {
+    id: string;
+    userId: string;
+    /** Set when this transfer closed a settlement cycle — the row is frozen. */
+    closedAt: Date | null;
+} & MovementWriteData;
 
 /**
  * In-memory `MovementRepository` for unit tests. Satisfies the exact contract the
@@ -33,7 +38,7 @@ export class FakeMovementRepository implements MovementRepository {
     seed(
         id: string,
         userId: string,
-        over: Partial<MovementWriteData> = {},
+        over: Partial<MovementWriteData & { closedAt: Date | null }> = {},
     ): void {
         this.rows.set(id, {
             id,
@@ -43,6 +48,7 @@ export class FakeMovementRepository implements MovementRepository {
             type: "card_payment",
             cardId: null,
             note: null,
+            closedAt: null,
             ...over,
         });
     }
@@ -78,6 +84,7 @@ export class FakeMovementRepository implements MovementRepository {
             type: row.type,
             cardId: row.cardId,
             note: row.note,
+            closedAt: row.closedAt,
         };
     }
 
@@ -86,7 +93,12 @@ export class FakeMovementRepository implements MovementRepository {
         data: MovementWriteData,
     ): Promise<{ id: string }> {
         if (this.failOnWrite) throw new Error("fake: insert failed");
-        const row: StoredMovement = { id: `mv_${++this.seq}`, userId, ...data };
+        const row: StoredMovement = {
+            id: `mv_${++this.seq}`,
+            userId,
+            closedAt: null,
+            ...data,
+        };
         this.rows.set(row.id, row);
         this.inserts.push(row);
         return { id: row.id };
@@ -99,7 +111,8 @@ export class FakeMovementRepository implements MovementRepository {
     ): Promise<number> {
         if (this.failOnWrite) throw new Error("fake: update failed");
         const row = this.rows.get(id);
-        if (!row || row.userId !== userId) return 0;
+        // Mirrors the Prisma where-clause, cycle-marker guard included.
+        if (!row || row.userId !== userId || row.closedAt) return 0;
         this.rows.set(id, { ...row, ...data });
         this.updates.push({ id, userId, data });
         return 1;
@@ -108,7 +121,8 @@ export class FakeMovementRepository implements MovementRepository {
     async deleteForUser(userId: string, id: string): Promise<number> {
         if (this.failOnWrite) throw new Error("fake: delete failed");
         const row = this.rows.get(id);
-        if (!row || row.userId !== userId) return 0;
+        // Mirrors the Prisma where-clause, cycle-marker guard included.
+        if (!row || row.userId !== userId || row.closedAt) return 0;
         this.rows.delete(id);
         return 1;
     }

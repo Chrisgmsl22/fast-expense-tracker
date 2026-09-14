@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    canCloseCycle,
     computeCoupleBalance,
     isBalanceSettled,
 } from "@/lib/domain/settlement";
@@ -129,6 +130,16 @@ describe("isBalanceSettled", () => {
     it("is false when you still owe her", () => {
         const r = computeCoupleBalance(inputs({ yourDebtToPartner: 250 }));
         expect(isBalanceSettled(r)).toBe(false);
+    });
+
+    it("only a transfer may carry the cycle marker", () => {
+        expect(canCloseCycle("gf_paid")).toBe(true);
+        expect(canCloseCycle("gf_received")).toBe(true);
+        // A debt or a card payment never closes a cycle — real money squares it.
+        expect(canCloseCycle("gf_fronted")).toBe(false);
+        expect(canCloseCycle("card_payment")).toBe(false);
+        expect(canCloseCycle("income")).toBe(false);
+        expect(canCloseCycle("other")).toBe(false);
     });
 
     it("treats sub-cent Float drift as settled", () => {

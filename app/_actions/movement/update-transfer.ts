@@ -21,6 +21,8 @@ export type UpdateTransferCode =
     | "validation"
     | "unauthenticated"
     | "not_found"
+    /** The row closed a settlement cycle, so it is frozen (spec 0007 §3.5). */
+    | "cycle_closed"
     | "db_error";
 
 export type UpdateTransferResult = ActionResult<
@@ -76,6 +78,17 @@ export async function updateTransfer(
                 ok: false,
                 code: "not_found",
                 message: "Transfer not found.",
+            };
+        }
+
+        // A marker's amount and direction are what a closed settlement says it
+        // settled. Editing them would rewrite history, so refuse before writing.
+        if (existing.closedAt) {
+            return {
+                ok: false,
+                code: "cycle_closed",
+                message:
+                    "This transfer closed a settlement and can't be edited.",
             };
         }
 

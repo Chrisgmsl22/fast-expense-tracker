@@ -34,6 +34,7 @@ const EXPENSES: SettlementExpenseRow[] = [
         amount: 1000,
         actualExpenditure: 680,
         isShared: true,
+        createdAt: JULY,
     },
     {
         id: "e2",
@@ -42,6 +43,7 @@ const EXPENSES: SettlementExpenseRow[] = [
         amount: 450.5,
         actualExpenditure: 306.34,
         isShared: true,
+        createdAt: JUNE,
     },
     {
         id: "e3",
@@ -50,6 +52,7 @@ const EXPENSES: SettlementExpenseRow[] = [
         amount: 500,
         actualExpenditure: 500,
         isShared: false,
+        createdAt: JULY,
     },
 ];
 
@@ -60,12 +63,46 @@ const MOVEMENTS: SettlementMovementRow[] = [
         amount: 300,
         type: "gf_fronted",
         note: "Uber home",
+        createdAt: JULY,
+        closedAt: null,
     },
-    { id: "m2", date: JUNE, amount: 120, type: "gf_fronted", note: null },
-    { id: "m3", date: JULY, amount: 20.25, type: "gf_received", note: null },
-    { id: "m4", date: JUNE, amount: 100, type: "gf_paid", note: "rent" },
+    {
+        id: "m2",
+        date: JUNE,
+        amount: 120,
+        type: "gf_fronted",
+        note: null,
+        createdAt: JUNE,
+        closedAt: null,
+    },
+    {
+        id: "m3",
+        date: JULY,
+        amount: 20.25,
+        type: "gf_received",
+        note: null,
+        createdAt: JULY,
+        closedAt: null,
+    },
+    {
+        id: "m4",
+        date: JUNE,
+        amount: 100,
+        type: "gf_paid",
+        note: "rent",
+        createdAt: JUNE,
+        closedAt: null,
+    },
     // Never part of the balance, so never part of any line.
-    { id: "m5", date: JULY, amount: 999, type: "card_payment", note: null },
+    {
+        id: "m5",
+        date: JULY,
+        amount: 999,
+        type: "card_payment",
+        note: null,
+        createdAt: JULY,
+        closedAt: null,
+    },
 ];
 
 /** Read a rendered money string back as a number, the way a reader adds them up. */
@@ -124,6 +161,7 @@ describe("getSettlement breakdown items", () => {
             amount: 33.33,
             actualExpenditure: 22.6644,
             isShared: true,
+            createdAt: JULY,
         }));
         const s = await run(thirds, []);
         const line = s.balance.breakdown.find(
@@ -148,6 +186,7 @@ describe("getSettlement breakdown items", () => {
             amount: 33.33,
             actualExpenditure: 22.6644,
             isShared: true,
+            createdAt: JULY,
         }));
         const s = await run(thirds, MOVEMENTS);
 
@@ -243,6 +282,7 @@ describe("getSettlement breakdown items", () => {
             type: "gf_paid",
             note: id,
             createdAt: new Date(createdAt),
+            closedAt: null,
         });
 
         const s = await run(

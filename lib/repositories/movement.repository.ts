@@ -30,6 +30,13 @@ export type MovementEditable = {
     type: MovementType;
     cardId: string | null;
     note: string | null;
+    /**
+     * Set when this transfer closed a settlement cycle (spec 0007 §3.5). Such a
+     * row is frozen: editing its amount would rewrite what a closed cycle
+     * settled, and deleting it would dissolve the boundary and merge that cycle
+     * back into the open one.
+     */
+    closedAt: Date | null;
 };
 
 /**
@@ -98,6 +105,7 @@ export class PrismaMovementRepository implements MovementRepository {
                 type: true,
                 cardId: true,
                 note: true,
+                closedAt: true,
             },
         });
         return row ? { ...row, type: row.type as MovementType } : null;
@@ -115,6 +123,10 @@ export class PrismaMovementRepository implements MovementRepository {
      * `id`: a row that isn't the user's matches nothing, the count stays 0, and
      * the caller reports not-found instead of mutating another user's row (IDOR
      * guard) — mirrors the expense repository.
+     *
+     * `closedAt: null` freezes a cycle marker here, at the data boundary: its
+     * amount and direction are what a closed settlement says it settled, so no
+     * edit path can rewrite them.
      */
     async updateForUser(
         id: string,
@@ -122,7 +134,7 @@ export class PrismaMovementRepository implements MovementRepository {
         data: MovementWriteData,
     ): Promise<number> {
         const result = await this.db.movement.updateMany({
-            where: { id, userId },
+            where: { id, userId, closedAt: null },
             data,
         });
         return result.count;
@@ -133,10 +145,13 @@ export class PrismaMovementRepository implements MovementRepository {
      * `id`: a row that isn't the user's matches nothing and the count stays 0,
      * so the caller reports not-found instead of deleting another user's row
      * (IDOR guard).
+     *
+     * `closedAt: null` also protects a cycle marker: deleting it would dissolve
+     * the boundary and silently merge a closed settlement into the open one.
      */
     async deleteForUser(userId: string, id: string): Promise<number> {
         const result = await this.db.movement.deleteMany({
-            where: { id, userId },
+            where: { id, userId, closedAt: null },
         });
         return result.count;
     }

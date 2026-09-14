@@ -14,6 +14,8 @@ export type DeleteMovementCode =
     | "validation"
     | "unauthenticated"
     | "not_found"
+    /** The row closed a settlement cycle, so it is frozen (spec 0007 §3.5). */
+    | "cycle_closed"
     | "db_error";
 
 export type DeleteMovementResult = ActionResult<
@@ -55,6 +57,18 @@ export async function deleteMovement(
     try {
         const count = await repo.deleteForUser(userId, id);
         if (count === 0) {
+            // The delete where-clause excludes cycle markers, so a zero count
+            // means either "not yours / gone" or "frozen". Tell them apart, so
+            // a frozen row never reads as a missing one.
+            const existing = await repo.getById(userId, id);
+            if (existing?.closedAt) {
+                return {
+                    ok: false,
+                    code: "cycle_closed",
+                    message:
+                        "This transfer closed a settlement and can't be deleted.",
+                };
+            }
             return {
                 ok: false,
                 code: "not_found",

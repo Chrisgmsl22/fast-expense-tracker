@@ -8,9 +8,10 @@ import { getSettlement } from "@/lib/services/settlement/settlement.service";
 import { SettlementActions } from "@/components/settlement/SettlementActions";
 import { SettlementBalanceCard } from "@/components/settlement/SettlementBalanceCard";
 import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown";
+import { SettlementCloseCard } from "@/components/settlement/SettlementCloseCard";
 import { SettlementHelp } from "@/components/settlement/SettlementHelp";
-import { SettlementJournal } from "@/components/settlement/SettlementJournal";
 import { SettlementJournalKey } from "@/components/settlement/SettlementJournalKey";
+import { SettlementViews } from "@/components/settlement/SettlementViews";
 
 // Per-request, DB-backed — never prerender at build (no DB in preview builds).
 export const dynamic = "force-dynamic";
@@ -36,6 +37,17 @@ export default async function SettlementPage() {
         redirect("/dashboard");
     }
     const partnerName = resolvePartnerName(settings.partnerName);
+    // The offer to close only stands when the settlement is square AND there is
+    // a transfer in the open cycle to carry the marker (spec 0007 §3.5).
+    const canClose =
+        isBalanceSettled(settlement.balance) &&
+        settlement.closableMovementId !== null;
+    // "2026-09" → "September", the same label the other month screens use. UTC:
+    // the value is a calendar month, not a timestamp to shift.
+    const monthLabel = new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        timeZone: "UTC",
+    }).format(new Date(`${settlement.month.label}-01T12:00:00Z`));
 
     return (
         <main className="p-4 sm:p-6 lg:p-8">
@@ -59,6 +71,9 @@ export default async function SettlementPage() {
                         carriedOver={settlement.carriedOver}
                         partnerName={partnerName}
                     />
+                    {canClose && (
+                        <SettlementCloseCard partnerName={partnerName} />
+                    )}
                     <SettlementActions
                         direction={settlement.balance.direction}
                         netAmount={settlement.balance.amount}
@@ -71,8 +86,11 @@ export default async function SettlementPage() {
                     />
                     <SettlementJournalKey partnerName={partnerName} />
                 </div>
-                <SettlementJournal
-                    journal={settlement.journal}
+                <SettlementViews
+                    openJournal={settlement.journal}
+                    monthJournal={settlement.month.journal}
+                    monthLabel={monthLabel}
+                    history={settlement.history}
                     partnerName={partnerName}
                 />
             </div>

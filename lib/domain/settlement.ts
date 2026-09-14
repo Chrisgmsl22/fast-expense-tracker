@@ -91,3 +91,17 @@ export function computeCoupleBalance(inputs: SettlementInputs): CoupleBalance {
 export function isBalanceSettled(balance: CoupleBalance): boolean {
     return Math.abs(balance.balance) < 0.005;
 }
+
+/**
+ * The only movement types that may carry the cycle marker (spec 0007 §3.5). A
+ * cycle closes when real money squares the balance, so only a transfer can be
+ * the closing event — never a card payment, never an "I owe {partner}" debt.
+ */
+export const CYCLE_CLOSING_TYPES = ["gf_paid", "gf_received"] as const;
+
+export type CycleClosingType = (typeof CYCLE_CLOSING_TYPES)[number];
+
+/** True when this movement type is allowed to carry the cycle marker. */
+export function canCloseCycle(type: string): type is CycleClosingType {
+    return (CYCLE_CLOSING_TYPES as readonly string[]).includes(type);
+}

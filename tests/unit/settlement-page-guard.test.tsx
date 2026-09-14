@@ -23,10 +23,19 @@ vi.mock("@/lib/services/settlement/settlement.service", () => ({
 
 import SettlementPage from "@/app/(dashboard)/settlement/page";
 
+/** The cycle fields every settlement now carries (spec 0007 §3.5). */
+const cycleStub = {
+    openedAt: null,
+    closableMovementId: null,
+    month: { label: "2026-07", journal: [] },
+    history: [],
+};
+
 const settledStub = {
     balance: { balance: 0, amount: 0, direction: "settled", breakdown: [] },
     carriedOver: { present: false, amount: 0 },
     journal: [],
+    ...cycleStub,
 };
 
 const unsettledStub = {
@@ -38,6 +47,7 @@ const unsettledStub = {
     },
     carriedOver: { present: false, amount: 0 },
     journal: [],
+    ...cycleStub,
 };
 
 beforeEach(() => {

@@ -229,8 +229,21 @@ model Movement {
 
   note String?
 
+  // Settlement-cycle marker (spec 0007 §3.5). Non-null says both "this transfer
+  // closed a cycle" AND "the cycle ended at this instant" — one column, so the
+  // fact and the boundary can never disagree. There is no cycle table: cycles
+  // are DERIVED from the sequence of markers (spec 0005 §2: store atomic facts,
+  // derive every view). The boundary is the CLOSE instant, not the transfer's
+  // own `createdAt`, so a row entered between that transfer and the user's
+  // confirmation is filed under the cycle whose balance already counted it.
+  // Valid only on gf_paid/gf_received; a CHECK in the migration enforces that
+  // on insert AND update.
+  closedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, date])
+  // Serves the marker scan that derives the cycle boundaries.
+  @@index([userId, closedAt])
 }

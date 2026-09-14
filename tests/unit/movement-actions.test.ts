@@ -6,6 +6,7 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 import { addCardPayment } from "@/app/_actions/movement/add-card-payment";
 import { addTransfer } from "@/app/_actions/movement/add-transfer";
 import { deleteMovement } from "@/app/_actions/movement/delete";
+import { updateTransfer } from "@/app/_actions/movement/update-transfer";
 import { FakeMovementRepository } from "@/tests/support/fake-movement-repository";
 
 describe("movement actions (unit, injected fake repo)", () => {
@@ -145,6 +146,73 @@ describe("movement actions (unit, injected fake repo)", () => {
             expect(res.ok).toBe(false);
             if (res.ok) return;
             expect(res.code).toBe("unauthenticated");
+        });
+
+        it("refuses to delete the transfer that closed a settlement", async () => {
+            // Deleting it would dissolve the boundary and merge a closed cycle
+            // back into the open one (spec 0007 §3.5).
+            const repo = new FakeMovementRepository();
+            repo.seed("mv1", "u1", {
+                type: "gf_received",
+                closedAt: new Date("2026-07-12T00:00:00Z"),
+            });
+
+            const res = await deleteMovement({ id: "mv1" }, repo);
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.code).toBe("cycle_closed");
+            expect(res.message).toMatch(/closed a settlement/i);
+            // Still there.
+            expect(await repo.getById("u1", "mv1")).not.toBeNull();
+        });
+    });
+
+    describe("updateTransfer", () => {
+        it("edits an ordinary transfer", async () => {
+            const repo = new FakeMovementRepository();
+            repo.seed("mv1", "u1", { type: "gf_received", amount: 100 });
+
+            const res = await updateTransfer(
+                {
+                    id: "mv1",
+                    date: "2026-07-10",
+                    amount: "150",
+                    direction: "gf_received",
+                },
+                repo,
+            );
+
+            expect(res.ok).toBe(true);
+            expect(repo.updates).toHaveLength(1);
+        });
+
+        it("refuses to edit the transfer that closed a settlement", async () => {
+            // Its amount and direction are what that closed cycle settled.
+            const repo = new FakeMovementRepository();
+            repo.seed("mv1", "u1", {
+                type: "gf_received",
+                amount: 320,
+                closedAt: new Date("2026-07-12T00:00:00Z"),
+            });
+
+            const res = await updateTransfer(
+                {
+                    id: "mv1",
+                    date: "2026-07-10",
+                    amount: "999",
+                    direction: "gf_paid",
+                },
+                repo,
+            );
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.code).toBe("cycle_closed");
+            expect(repo.updates).toHaveLength(0);
+            const row = await repo.getById("u1", "mv1");
+            expect(row?.amount).toBe(320);
+            expect(row?.type).toBe("gf_received");
         });
     });
 });

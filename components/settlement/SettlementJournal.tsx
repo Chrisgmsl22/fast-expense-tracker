@@ -46,6 +46,21 @@ function transferTitle(
         : `Transfer — you paid ${partnerName}`;
 }
 
+/**
+ * A transfer's second line: its date, its note, and — when the transfer closed a
+ * settlement — why it now has no edit or delete control. Without that last part
+ * the row just looks inert, and the reason for it is invisible.
+ */
+function transferSubtitle(row: TransferRow): string {
+    return [
+        formatExpenseDate(row.date),
+        row.note,
+        row.locked ? "closed a settlement · locked" : null,
+    ]
+        .filter(Boolean)
+        .join(" · ");
+}
+
 function rowTitle(row: DeletableRow, partnerName: string): string {
     return row.kind === "partner_debt"
         ? row.description
@@ -63,9 +78,25 @@ function rowTitle(row: DeletableRow, partnerName: string): string {
 export function SettlementJournal({
     journal,
     partnerName,
+    title = "Movement journal",
+    emptyMessage = "Nothing to settle yet.",
+    bare = false,
+    readOnly = false,
 }: {
     journal: SettlementJournalItem[];
     partnerName: string;
+    /** Heading for this projection of the rows ("Open settlement", a month, …). */
+    title?: string;
+    /** What an empty set of rows says — a real empty state, never a bare zero. */
+    emptyMessage?: string;
+    /** Drop the card chrome when the caller already provides it (History). */
+    bare?: boolean;
+    /**
+     * Hide the edit/delete controls. A closed cycle is a filed record: its rows
+     * are frozen server-side, so offering the buttons would only lead to a
+     * refusal.
+     */
+    readOnly?: boolean;
 }) {
     const router = useRouter();
     const [editing, setEditing] = useState<PartnerDebtEditable | null>(null);
@@ -120,12 +151,16 @@ export function SettlementJournal({
         });
     }
 
+    const shell = bare ? "" : "rounded-xl border p-5";
+
     if (journal.length === 0) {
         return (
-            <div className="rounded-xl border p-5">
-                <p className="font-semibold">Movement journal</p>
-                <p className="mt-3 text-sm text-muted-foreground">
-                    Nothing to settle yet.
+            <div className={shell}>
+                {!bare && <p className="font-semibold">{title}</p>}
+                <p
+                    className={`text-sm text-muted-foreground ${bare ? "" : "mt-3"}`}
+                >
+                    {emptyMessage}
                 </p>
             </div>
         );
@@ -136,13 +171,15 @@ export function SettlementJournal({
     const firstCarriedId = journal.find((j) => j.carriedOver)?.id;
 
     return (
-        <div className="rounded-xl border p-5">
-            <div className="flex items-baseline justify-between">
-                <p className="font-semibold">Movement journal</p>
-                <p className="text-xs text-muted-foreground">
-                    shared expenses · debts · transfers
-                </p>
-            </div>
+        <div className={shell}>
+            {!bare && (
+                <div className="flex items-baseline justify-between">
+                    <p className="font-semibold">{title}</p>
+                    <p className="text-xs text-muted-foreground">
+                        shared expenses · debts · transfers
+                    </p>
+                </div>
+            )}
 
             {actionError && !deleting && (
                 <p className="mt-3 text-sm text-destructive" role="alert">
@@ -162,7 +199,13 @@ export function SettlementJournal({
                             item={item}
                             partnerName={partnerName}
                             actions={
-                                item.kind === "partner_debt" ? (
+                                // A locked row drops its controls wherever it
+                                // renders. The row carries the fact, so a view
+                                // cannot reintroduce the buttons by forgetting
+                                // `readOnly` — learning a row is frozen only
+                                // after confirming a delete is not acceptable.
+                                readOnly || item.locked ? null : item.kind ===
+                                  "partner_debt" ? (
                                     <RowActions
                                         label={item.description}
                                         pending={pending}
@@ -390,11 +433,7 @@ function JournalRow({
                     ? `Transfer — ${partnerName} paid you`
                     : `Transfer — you paid ${partnerName}`
             }
-            subtitle={
-                item.note
-                    ? `${formatExpenseDate(item.date)} · ${item.note}`
-                    : formatExpenseDate(item.date)
-            }
+            subtitle={transferSubtitle(item)}
             amount={formatMxn(item.amount)}
             amountClass={inbound ? "text-positive" : "text-transfer"}
             actions={actions}
