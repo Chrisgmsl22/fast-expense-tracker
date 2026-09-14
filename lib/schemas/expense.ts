@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import {
+    FUNDING_SOURCES,
+    REIMBURSABLE_CATEGORY_SLUG,
+    allowsReimbursed,
+} from "@/lib/domain/funding";
+
 /**
  * Validation for capturing an expense (slice 1.4).
  *
@@ -23,6 +29,9 @@ export const expenseInputSchema = z
         // thing the partner fronted is a `gf_fronted` movement now, never an
         // expense. Kept on the schema until the `paidBy` column is dropped.
         paidBy: z.literal("you").default("you"),
+        // Which month's money funded this (spec 0007 §3.1). Defaulted, so a
+        // form that never sends the field keeps today's behaviour.
+        fundedFrom: z.enum(FUNDING_SOURCES).default("income"),
     })
     .refine((v) => !v.isShared || v.yourPercentage < 1, {
         message: "A shared expense needs your share below 100%",
@@ -30,3 +39,29 @@ export const expenseInputSchema = z
     });
 
 export type ExpenseInput = z.infer<typeof expenseInputSchema>;
+
+/**
+ * The Health restriction on `reimbursed` (spec 0007 §3.3), enforced on create
+ * **and** on update.
+ *
+ * It lives in its own schema rather than on `expenseInputSchema` because the
+ * rule reads the category's *slug*, and the form only sends a `categoryId`. The
+ * action resolves the slug from the database and parses it here, so the check
+ * never trusts a client-supplied slug. Both actions run it, which is what stops
+ * an edit that moves a reimbursed expense out of Health from silently stranding
+ * the value: the update fails with this message instead.
+ */
+export const expenseFundingSchema = z
+    .object({
+        fundedFrom: z.enum(FUNDING_SOURCES),
+        /** Resolved server-side from `categoryId`; null when it doesn't resolve. */
+        categorySlug: z.string().nullable(),
+    })
+    .refine(
+        (v) =>
+            v.fundedFrom !== "reimbursed" || allowsReimbursed(v.categorySlug),
+        {
+            message: `Only ${REIMBURSABLE_CATEGORY_SLUG} expenses can be marked reimbursed. Change the funding source before moving this expense to another category.`,
+            path: ["fundedFrom"],
+        },
+    );

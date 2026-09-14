@@ -33,6 +33,7 @@ function exp(over: Partial<ExpenseListItem> & { id: string }): ExpenseListItem {
         description: over.description ?? "x",
         amount: over.amount ?? 100,
         actualExpenditure: over.actualExpenditure ?? 100,
+        fundedFrom: "income" as const,
         isShared: over.isShared ?? false,
         category: over.category ?? {
             id: "cat1",

@@ -38,6 +38,7 @@ const editable = {
     isShared: true,
     yourPercentage: 0.68,
     paidBy: "you",
+    fundedFrom: "income" as const,
 };
 
 function renderForm(props?: Partial<Parameters<typeof ExpenseForm>[0]>) {
@@ -303,5 +304,73 @@ describe("ExpenseForm", () => {
                 expect.objectContaining({ id: "e1", cardId: undefined }),
             ),
         );
+    });
+    describe("funding source (spec 0007 §3.1/§3.3)", () => {
+        it("defaults to this month's income — the path of least effort", async () => {
+            (createExpense as unknown as Mock).mockResolvedValue({
+                ok: true,
+                data: { id: "new1" },
+            });
+            renderForm();
+
+            expect(screen.getByLabelText("Funded from")).toBeDefined();
+            expect(screen.getByText("This month's income")).toBeDefined();
+
+            fireEvent.change(screen.getByLabelText(/description/i), {
+                target: { value: "Coffee" },
+            });
+            fireEvent.change(screen.getByLabelText(/amount/i), {
+                target: { value: "45" },
+            });
+            fireEvent.submit(
+                screen.getByRole("form", { name: /add expense/i }),
+            );
+
+            await waitFor(() =>
+                expect(createExpense).toHaveBeenCalledWith(
+                    expect.objectContaining({ fundedFrom: "income" }),
+                ),
+            );
+        });
+
+        it("offers the user's own savings wording, and no reimbursed option off health", async () => {
+            renderForm();
+            fireEvent.click(screen.getByLabelText("Funded from"));
+
+            await waitFor(() =>
+                expect(
+                    screen.getByRole("option", {
+                        name: "Paid with money I already had",
+                    }),
+                ).toBeDefined(),
+            );
+            expect(
+                screen.queryByRole("option", { name: "Fully reimbursed" }),
+            ).toBeNull();
+        });
+
+        it("offers reimbursed once the category is health", async () => {
+            renderForm({ expense: { ...editable, categoryId: "c2" } });
+            fireEvent.click(screen.getByLabelText("Funded from"));
+
+            await waitFor(() =>
+                expect(
+                    screen.getByRole("option", { name: "Fully reimbursed" }),
+                ).toBeDefined(),
+            );
+        });
+
+        it("prefills a savings-funded row and warns it sits outside the budget", () => {
+            renderForm({
+                expense: { ...editable, fundedFrom: "savings" as const },
+            });
+
+            expect(
+                screen.getByText("Paid with money I already had"),
+            ).toBeDefined();
+            expect(
+                screen.getByText(/doesn't count toward this month's budget/i),
+            ).toBeDefined();
+        });
     });
 });

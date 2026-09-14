@@ -31,11 +31,13 @@ describe("computeFeedTotals", () => {
         amount: 1000,
         actualExpenditure: 680,
         category: { slug: "groceries" },
+        fundedFrom: "income" as const,
     };
     const savings = {
         amount: 5000,
         actualExpenditure: 5000,
         category: { slug: "savings" },
+        fundedFrom: "income" as const,
     };
 
     it("splits consumption from the savings transfer", () => {
@@ -63,6 +65,7 @@ describe("computeFeedTotals", () => {
             whatIReallySpent: 0,
             setAside: 0,
             paidToPartner: 0,
+            notFromIncome: 0,
             total: 0,
         });
     });

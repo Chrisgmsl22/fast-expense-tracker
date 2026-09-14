@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
+import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
+import { FundingBadge } from "./FundingBadge";
 import { buildFeed } from "@/lib/feed";
 import { CASH_COLOR } from "@/lib/palette";
 import {
@@ -380,6 +382,14 @@ export function ExpenseListInteractive({
                         </span>
                     </span>
                 )}
+                {totals.notFromIncome > 0 && (
+                    <span className="text-background/70">
+                        {NON_INCOME_FUNDED_LABEL}{" "}
+                        <span className="font-semibold text-background">
+                            {formatMxn(totals.notFromIncome)}
+                        </span>
+                    </span>
+                )}
                 <span className="text-background/70">
                     What I really spent{" "}
                     <span className="rounded-full bg-spent-tint px-2 py-0.5 font-semibold text-spent">
@@ -413,6 +423,14 @@ export function ExpenseListInteractive({
                             Set aside{" "}
                             <span className="font-medium text-background">
                                 {formatMxn(totals.setAside)}
+                            </span>
+                        </span>
+                    )}
+                    {totals.notFromIncome > 0 && (
+                        <span>
+                            Not from income{" "}
+                            <span className="font-medium text-background">
+                                {formatMxn(totals.notFromIncome)}
                             </span>
                         </span>
                     )}
@@ -691,8 +709,13 @@ function ExpenseRow({
 
             {/* Description (+ mobile date · card subline) */}
             <span className="min-w-0">
-                <span className="block truncate font-medium sm:font-normal">
-                    {expense.description}
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium sm:font-normal">
+                        {expense.description}
+                    </span>
+                    {expense.fundedFrom === "income" ? null : (
+                        <FundingBadge fundedFrom={expense.fundedFrom} />
+                    )}
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground sm:hidden">
                     {formatExpenseDate(expense.date)}

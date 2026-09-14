@@ -20,6 +20,7 @@ const expenses: ExpenseListItem[] = [
         description: "Soriana",
         amount: 1820,
         actualExpenditure: 1237,
+        fundedFrom: "income" as const,
         isShared: true,
         category: {
             id: "c1",
@@ -36,6 +37,7 @@ const expenses: ExpenseListItem[] = [
         description: "Uber",
         amount: 185,
         actualExpenditure: 185,
+        fundedFrom: "income" as const,
         isShared: false,
         category: {
             id: "c2",
@@ -140,6 +142,7 @@ describe("MonthFeed", () => {
                 description: "Groceries",
                 amount: 1000,
                 actualExpenditure: 680,
+                fundedFrom: "income" as const,
                 isShared: true,
                 category: {
                     id: "cg",
@@ -156,6 +159,7 @@ describe("MonthFeed", () => {
                 description: "Emergency fund",
                 amount: 5000,
                 actualExpenditure: 5000,
+                fundedFrom: "income" as const,
                 isShared: false,
                 category: {
                     id: "cs",
@@ -375,6 +379,7 @@ describe("MonthFeed", () => {
                 description: "Emergency fund",
                 amount: 5000,
                 actualExpenditure: 5000,
+                fundedFrom: "income" as const,
                 isShared: false,
                 category: {
                     id: "cs",

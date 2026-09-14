@@ -24,11 +24,13 @@ function fakeDashboardRepo(
     spends: CategorySpend[],
     cards: CardSpend[] = [],
     categoryBudgets: CategoryBudgetItem[] = [],
+    nonIncomeFundedTotal = 0,
 ): DashboardRepository {
     return {
         getCategorySpends: async () => spends,
         getCardSpends: async () => cards,
         getCategoryBreakdown: async () => categoryBudgets,
+        getNonIncomeFundedTotal: async () => nonIncomeFundedTotal,
     };
 }
 

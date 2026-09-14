@@ -114,4 +114,80 @@ describe("updateExpense (unit, injected fake repo)", () => {
         if (res.ok) return;
         expect(res.code).toBe("db_error");
     });
+    describe("funding source on edit (spec 0007 §3.3)", () => {
+        it("keeps a reimbursed health expense reimbursed", async () => {
+            const repo = new FakeExpenseRepository();
+            repo.seedExpense("e1", "u1", { fundedFrom: "reimbursed" });
+            repo.setCategorySlug("cat1", "health");
+
+            const res = await updateExpense(
+                validInput({ fundedFrom: "reimbursed" }),
+                repo,
+            );
+
+            expect(res.ok).toBe(true);
+            expect(repo.updates[0]?.data.fundedFrom).toBe("reimbursed");
+        });
+
+        it("refuses to move a reimbursed expense out of health", async () => {
+            // The other direction of the rule: without this the value would be
+            // silently stranded on a category that can never carry it.
+            const repo = new FakeExpenseRepository();
+            repo.seedExpense("e1", "u1", {
+                categoryId: "cat-health",
+                fundedFrom: "reimbursed",
+            });
+            repo.setCategorySlug("cat-health", "health");
+            repo.setCategorySlug("cat-shopping", "shopping");
+
+            const res = await updateExpense(
+                validInput({
+                    categoryId: "cat-shopping",
+                    fundedFrom: "reimbursed",
+                }),
+                repo,
+            );
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.code).toBe("validation");
+            expect(res.fieldErrors?.fundedFrom?.[0]).toContain("health");
+            // Nothing was written — the row keeps its old, valid state.
+            expect(repo.updates).toHaveLength(0);
+        });
+
+        it("allows the same move once the funding source is cleared", async () => {
+            const repo = new FakeExpenseRepository();
+            repo.seedExpense("e1", "u1", {
+                categoryId: "cat-health",
+                fundedFrom: "reimbursed",
+            });
+            repo.setCategorySlug("cat-shopping", "shopping");
+
+            const res = await updateExpense(
+                validInput({
+                    categoryId: "cat-shopping",
+                    fundedFrom: "income",
+                }),
+                repo,
+            );
+
+            expect(res.ok).toBe(true);
+            expect(repo.updates[0]?.data.fundedFrom).toBe("income");
+        });
+
+        it("can mark an existing expense savings-funded without touching its amount", async () => {
+            const repo = new FakeExpenseRepository();
+            repo.seedExpense("e1", "u1");
+
+            const res = await updateExpense(
+                validInput({ fundedFrom: "savings", amount: 3000 }),
+                repo,
+            );
+
+            expect(res.ok).toBe(true);
+            expect(repo.updates[0]?.data.fundedFrom).toBe("savings");
+            expect(repo.updates[0]?.data.amount).toBe(3000);
+        });
+    });
 });

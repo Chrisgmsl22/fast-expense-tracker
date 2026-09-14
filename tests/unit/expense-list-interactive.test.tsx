@@ -75,6 +75,7 @@ const expenses = [
         description: "Tacos",
         amount: 200,
         actualExpenditure: 136,
+        fundedFrom: "income" as const,
         isShared: true,
         category: { id: "c1", slug: "food", name: "Food", color: "#ef4444" },
         subcategory: { name: "Restaurants" },
@@ -86,6 +87,7 @@ const expenses = [
         description: "Uber",
         amount: 1000,
         actualExpenditure: 1000,
+        fundedFrom: "income" as const,
         isShared: false,
         category: {
             id: "c2",
@@ -176,6 +178,7 @@ describe("ExpenseListInteractive", () => {
                 description: "Emergency fund",
                 amount: 5000,
                 actualExpenditure: 5000,
+                fundedFrom: "income" as const,
                 isShared: false,
                 category: {
                     id: "cs",
@@ -539,5 +542,67 @@ describe("ExpenseListInteractive", () => {
         // non-transfer row: a dead-end dialog answering "Transfer not found."
         expect(await screen.findByText(/editing debt mv3/i)).toBeDefined();
         expect(screen.queryByTestId("transfer-form")).toBeNull();
+    });
+    describe("funding-source badges (spec 0007 §3.1)", () => {
+        const fundedRows = [
+            {
+                id: "f1",
+                date: new Date("2026-05-15T06:00:00Z"),
+                description: "Shoes",
+                amount: 200,
+                actualExpenditure: 200,
+                fundedFrom: "savings" as const,
+                isShared: false,
+                category: {
+                    id: "c1",
+                    slug: "shopping",
+                    name: "Shopping",
+                    color: "#ef4444",
+                },
+                subcategory: null,
+                card: { name: "Amex", color: "#ca8a04" },
+            },
+            {
+                id: "f2",
+                date: new Date("2026-05-12T06:00:00Z"),
+                description: "Medicine",
+                amount: 800,
+                actualExpenditure: 800,
+                fundedFrom: "reimbursed" as const,
+                isShared: false,
+                category: {
+                    id: "c4",
+                    slug: "health",
+                    name: "Health",
+                    color: "#14b8a6",
+                },
+                subcategory: null,
+                card: { name: "Amex", color: "#ca8a04" },
+            },
+        ];
+
+        it("badges a savings-funded row and a reimbursed row distinctly", () => {
+            render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
+
+            const savingsBadge = screen.getByText("from savings");
+            const reimbursedBadge = screen.getByText("reimbursed");
+            expect(savingsBadge).toBeDefined();
+            expect(reimbursedBadge).toBeDefined();
+            // Distinct per value, and reusing existing tokens (no new colours).
+            expect(savingsBadge.className).toContain("bg-transfer-tint");
+            expect(reimbursedBadge.className).toContain("bg-payment-tint");
+        });
+
+        it("shows the row at its full amount — the badge explains, it doesn't discount", () => {
+            render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
+            expect(screen.getByText("Shoes")).toBeDefined();
+            expect(screen.getByText("$200.00")).toBeDefined();
+        });
+
+        it("leaves an income-funded row unbadged", () => {
+            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            expect(screen.queryByText("from savings")).toBeNull();
+            expect(screen.queryByText("reimbursed")).toBeNull();
+        });
     });
 });

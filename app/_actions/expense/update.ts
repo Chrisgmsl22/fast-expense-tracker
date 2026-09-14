@@ -9,7 +9,11 @@ import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { computeActualExpenditure } from "@/lib/domain/expense";
 import { expenseRepository } from "@/lib/repositories";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
-import { expenseInputSchema, type ExpenseInput } from "@/lib/schemas/expense";
+import {
+    expenseFundingSchema,
+    expenseInputSchema,
+    type ExpenseInput,
+} from "@/lib/schemas/expense";
 
 /** The edit payload carries the row id alongside the expense fields. */
 const idSchema = z.object({ id: z.string().min(1) });
@@ -67,6 +71,24 @@ export async function updateExpense(
     const v = parsed.data;
 
     try {
+        // The reimbursed-is-Health-only rule (spec 0007 §3.3). The slug is
+        // resolved from the DB, never taken from the client, and the same check
+        // runs on update — so moving a reimbursed expense out of Health fails
+        // here instead of stranding the value on a non-health row.
+        const categorySlug = await repo.getCategorySlug(userId, v.categoryId);
+        const funding = expenseFundingSchema.safeParse({
+            fundedFrom: v.fundedFrom,
+            categorySlug,
+        });
+        if (!funding.success) {
+            return {
+                ok: false,
+                code: "validation",
+                message: "Invalid expense",
+                fieldErrors: toFieldErrors<ExpenseInput>(funding.error),
+            };
+        }
+
         if (v.subcategoryId) {
             const categoryId = await repo.getSubcategoryCategoryId(
                 v.subcategoryId,
@@ -96,6 +118,7 @@ export async function updateExpense(
             yourPercentage: v.yourPercentage,
             actualExpenditure: computeActualExpenditure(v),
             paidBy: v.paidBy,
+            fundedFrom: v.fundedFrom,
             notes: v.notes ?? null,
         });
         if (count === 0) {

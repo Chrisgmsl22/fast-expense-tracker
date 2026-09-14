@@ -101,6 +101,12 @@ export async function getCategoryDetail(
         over: hasLimit && spent > limit!,
         pctOfLimit: hasLimit ? (spent / limit!) * 100 : 0,
         daysLeft,
+        // Deliberately counts EVERY row in `expenses`, savings-funded and
+        // reimbursed included, while `spent` above counts only income-funded
+        // rows (spec 0007 §2). The two answer different questions on purpose:
+        // this labels the list the user is looking at, so it must match the
+        // rows on screen; `spent` is a budget figure. Filtering the count
+        // instead would print "2 expenses" above three visible rows.
         expenseCount: expenses.length,
         subcatWithSpend: subSpends.filter((r) => r.id !== null && r.spent > 0)
             .length,

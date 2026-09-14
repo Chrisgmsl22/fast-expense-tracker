@@ -148,6 +148,15 @@ model Expense {
   // later chore can drop it. All reads treat expenses as the user's own.
   paidBy            String  @default("you")
 
+  // Which month's money funded this purchase (spec 0007 §3.1):
+  // income | savings | reimbursed. Only "income" counts toward the 50/25/25
+  // budget — savings was already counted in the month it was set aside, and a
+  // reimbursed purchase was paid back by a third party. A String (not a DB
+  // enum) to match `Movement.type` and `paidBy`; the Zod enum is the guard.
+  // The card never reads this: a card payment stays source-agnostic (ADR-0020
+  // §6), so spend-by-card still sees the full amount.
+  fundedFrom        String  @default("income")
+
   // Forward-compat fields (UI ships in later phases — spec §3)
   isRecurring      Boolean @default(false) // Phase 3
   originalAmount   Float? // Phase 5 (multi-currency reference)

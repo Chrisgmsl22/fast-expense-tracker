@@ -11,6 +11,7 @@ function exp(over: Partial<ExpenseListItem> & { id: string }): ExpenseListItem {
         description: over.description ?? "Dr. Salinas",
         amount: over.amount ?? 1400,
         actualExpenditure: over.actualExpenditure ?? 1400,
+        fundedFrom: "income" as const,
         isShared: over.isShared ?? false,
         category: over.category ?? {
             id: "cat1",
@@ -47,6 +48,7 @@ describe("CategoryExpenses", () => {
                         isShared: true,
                         amount: 1000,
                         actualExpenditure: 680,
+                        fundedFrom: "income" as const,
                     }),
                 ]}
                 color="#0d9488"

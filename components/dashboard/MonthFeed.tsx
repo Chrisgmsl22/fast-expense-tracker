@@ -1,5 +1,7 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
+import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
+import { FundingBadge } from "@/components/expense/FundingBadge";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
@@ -132,6 +134,16 @@ export function MonthFeed({
                             </span>
                         </div>
                     )}
+                    {totals.notFromIncome > 0 && (
+                        <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                                {NON_INCOME_FUNDED_LABEL}
+                            </span>
+                            <span className="px-2 tabular-nums text-muted-foreground">
+                                {formatMxn(totals.notFromIncome)}
+                            </span>
+                        </div>
+                    )}
                     {totals.paidToPartner > 0 && (
                         <div className="flex items-center justify-between">
                             <span className="font-medium text-foreground">
@@ -191,8 +203,13 @@ function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
                 />
             )}
             <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                    {e.description}
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-medium">
+                        {e.description}
+                    </span>
+                    {e.fundedFrom === "income" ? null : (
+                        <FundingBadge fundedFrom={e.fundedFrom} />
+                    )}
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                     {formatExpenseDate(e.date)}

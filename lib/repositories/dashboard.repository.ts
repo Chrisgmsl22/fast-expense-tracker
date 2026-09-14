@@ -3,6 +3,10 @@ import type { PrismaClient } from "@prisma/client";
 import { getMonthRangeUtc } from "@/lib/dates";
 import { budgetForMonth } from "@/lib/domain/category";
 import { SAVINGS_SLUG, type CategorySpend } from "@/lib/domain/dashboard";
+import {
+    BUDGET_FUNDING_FILTER,
+    BUDGET_FUNDING_SOURCE,
+} from "@/lib/domain/funding";
 import { CASH_COLOR } from "@/lib/palette";
 
 /** One card's my-share spend for the month (the spend-by-card bar/legend). */
@@ -61,6 +65,12 @@ export interface DashboardRepository {
         userId: string,
         month: string,
     ): Promise<CategoryBudgetItem[]>;
+    /**
+     * My-share total for the month that did NOT come from this month's income —
+     * the rows the budget filter excludes. Surfaced as one dashboard line so
+     * the spend stays visible instead of vanishing (spec 0007 §3.1).
+     */
+    getNonIncomeFundedTotal(userId: string, month: string): Promise<number>;
 }
 
 export class PrismaDashboardRepository implements DashboardRepository {
@@ -71,9 +81,18 @@ export class PrismaDashboardRepository implements DashboardRepository {
         month: string,
     ): Promise<CategorySpend[]> {
         const { start, end } = getMonthRangeUtc(month);
+        // Marking an expense reimbursed changes THIS expense's month, not the
+        // month the refund arrived (spec 0007 §6, confirmed by the user). So a
+        // closed month's totals are not immutable: reimbursing a March expense
+        // in April lowers March's spend after the fact. That is intended —
+        // March's income funded nothing here, so March should say so.
         const grouped = await this.db.expense.groupBy({
             by: ["categoryId"],
-            where: { userId, date: { gte: start, lt: end } },
+            where: {
+                userId,
+                date: { gte: start, lt: end },
+                ...BUDGET_FUNDING_FILTER,
+            },
             _sum: { actualExpenditure: true },
         });
         if (grouped.length === 0) return [];
@@ -115,6 +134,12 @@ export class PrismaDashboardRepository implements DashboardRepository {
             by: ["cardId"],
             // Savings is a transfer, not card spend — exclude it so it doesn't
             // show as a phantom "Cash" segment.
+            //
+            // NO funding filter here, on purpose (spec 0007 §3.2): the card saw
+            // the full charge whatever money settled it, and one payment can
+            // cover many purchases, so tagging the payment could never be
+            // honest. Shoes bought from savings still show at full value in
+            // spend-by-card; only the budget skips them.
             where: {
                 userId,
                 date: { gte: start, lt: end },
@@ -149,6 +174,22 @@ export class PrismaDashboardRepository implements DashboardRepository {
             .sort((a, b) => b.spent - a.spent);
     }
 
+    async getNonIncomeFundedTotal(
+        userId: string,
+        month: string,
+    ): Promise<number> {
+        const { start, end } = getMonthRangeUtc(month);
+        const total = await this.db.expense.aggregate({
+            where: {
+                userId,
+                date: { gte: start, lt: end },
+                fundedFrom: { not: BUDGET_FUNDING_SOURCE },
+            },
+            _sum: { actualExpenditure: true },
+        });
+        return total._sum.actualExpenditure ?? 0;
+    }
+
     async getCategoryBreakdown(
         userId: string,
         month: string,
@@ -158,7 +199,11 @@ export class PrismaDashboardRepository implements DashboardRepository {
         // and distinct non-null subcategoryIds give "N subcats with spend".
         const grouped = await this.db.expense.groupBy({
             by: ["categoryId", "subcategoryId"],
-            where: { userId, date: { gte: start, lt: end } },
+            where: {
+                userId,
+                date: { gte: start, lt: end },
+                ...BUDGET_FUNDING_FILTER,
+            },
             _sum: { actualExpenditure: true },
         });
         if (grouped.length === 0) return [];

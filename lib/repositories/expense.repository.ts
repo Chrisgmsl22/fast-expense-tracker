@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
+import { toFundingSource, type FundingSource } from "@/lib/domain/funding";
 
 export type ExpenseListItem = {
     id: string;
@@ -9,6 +10,8 @@ export type ExpenseListItem = {
     amount: number;
     actualExpenditure: number;
     isShared: boolean;
+    /** Which month's money funded it (spec 0007 §3.1) — drives the row badge. */
+    fundedFrom: FundingSource;
     category: { id: string; slug: string; name: string; color: string };
     subcategory: { name: string } | null;
     card: { name: string; color: string } | null;
@@ -27,6 +30,7 @@ export type ExpenseEditable = {
     isShared: boolean;
     yourPercentage: number;
     paidBy: string;
+    fundedFrom: FundingSource;
 };
 
 /**
@@ -46,6 +50,7 @@ export type ExpenseWriteData = {
     yourPercentage: number;
     actualExpenditure: number;
     paidBy: "you" | "gf";
+    fundedFrom: FundingSource;
     notes: string | null;
 };
 
@@ -61,6 +66,12 @@ export interface ExpenseRepository {
     getById(userId: string, id: string): Promise<ExpenseEditable | null>;
     getForMonth(userId: string, month: string): Promise<ExpenseListItem[]>;
     getSubcategoryCategoryId(subcategoryId: string): Promise<string | null>;
+    /**
+     * The category's slug, for the `reimbursed`-is-Health-only rule (spec 0007
+     * §3.3). Scoped by user: a category id the user doesn't own resolves to
+     * null, which is not Health, so the rule fails closed.
+     */
+    getCategorySlug(userId: string, categoryId: string): Promise<string | null>;
     insert(userId: string, data: ExpenseWriteData): Promise<{ id: string }>;
     updateForUser(
         id: string,
@@ -77,8 +88,8 @@ export interface ExpenseRepository {
 export class PrismaExpenseRepository implements ExpenseRepository {
     constructor(private readonly db: PrismaClient) {}
 
-    getById(userId: string, id: string): Promise<ExpenseEditable | null> {
-        return this.db.expense.findFirst({
+    async getById(userId: string, id: string): Promise<ExpenseEditable | null> {
+        const row = await this.db.expense.findFirst({
             where: { id, userId },
             select: {
                 id: true,
@@ -92,13 +103,20 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 isShared: true,
                 yourPercentage: true,
                 paidBy: true,
+                fundedFrom: true,
             },
         });
+        if (!row) return null;
+        // The column is a plain String, so narrow it here rather than casting.
+        return { ...row, fundedFrom: toFundingSource(row.fundedFrom) };
     }
 
-    getForMonth(userId: string, month: string): Promise<ExpenseListItem[]> {
+    async getForMonth(
+        userId: string,
+        month: string,
+    ): Promise<ExpenseListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
-        return this.db.expense.findMany({
+        const rows = await this.db.expense.findMany({
             where: { userId, date: { gte: start, lt: end } },
             orderBy: { date: "desc" },
             select: {
@@ -108,6 +126,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 amount: true,
                 actualExpenditure: true,
                 isShared: true,
+                fundedFrom: true,
                 category: {
                     select: { id: true, slug: true, name: true, color: true },
                 },
@@ -115,6 +134,10 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 card: { select: { name: true, color: true } },
             },
         });
+        return rows.map((r) => ({
+            ...r,
+            fundedFrom: toFundingSource(r.fundedFrom),
+        }));
     }
 
     async getSubcategoryCategoryId(
@@ -125,6 +148,17 @@ export class PrismaExpenseRepository implements ExpenseRepository {
             select: { categoryId: true },
         });
         return sub?.categoryId ?? null;
+    }
+
+    async getCategorySlug(
+        userId: string,
+        categoryId: string,
+    ): Promise<string | null> {
+        const category = await this.db.category.findFirst({
+            where: { id: categoryId, userId },
+            select: { slug: true },
+        });
+        return category?.slug ?? null;
     }
 
     insert(userId: string, data: ExpenseWriteData): Promise<{ id: string }> {

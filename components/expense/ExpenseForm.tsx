@@ -20,6 +20,12 @@ import {
     type UpdateExpenseResult,
 } from "@/app/_actions/expense/update";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
+import {
+    FUNDING_SOURCE_LABEL,
+    allowsReimbursed,
+    fundingSourceAfterCategoryChange,
+    type FundingSource,
+} from "@/lib/domain/funding";
 import { toDateInputValue } from "@/lib/dates";
 import { formatMxn } from "@/lib/format";
 import type { FieldErrors } from "@/lib/actions/result";
@@ -105,6 +111,16 @@ export function ExpenseForm({
     const [description, setDescription] = useState(expense?.description ?? "");
     const [notes, setNotes] = useState(expense?.notes ?? "");
     const [isShared, setIsShared] = useState(expense?.isShared ?? false);
+    // Which month's money funded this (spec 0007 §3.1). `income` is the default
+    // and the path of least effort: ignore the control and nothing changes.
+    const [fundedFrom, setFundedFrom] = useState<FundingSource>(
+        expense?.fundedFrom ?? "income",
+    );
+    // Set when a category change drops `reimbursed`, so the form can explain
+    // where the choice went instead of silently changing it.
+    const [reimbursedClearedBy, setReimbursedClearedBy] = useState<
+        string | null
+    >(null);
     // An already-shared row keeps its stored split so historical splits stay
     // correct (CLAUDE.md domain note + immutable history, ADR-0021) — even in
     // Solo mode, editing a historical shared row must not rewrite its split.
@@ -136,6 +152,11 @@ export function ExpenseForm({
         (s) => s.id === subcategoryId,
     );
     const selectedCard = cards.find((c) => c.id === cardId);
+    // `reimbursed` is offered only on Health (spec 0007 §3.3).
+    const canReimburse = allowsReimbursed(selectedCategory?.slug ?? null);
+    const fundingOptions: FundingSource[] = canReimburse
+        ? ["income", "savings", "reimbursed"]
+        : ["income", "savings"];
 
     const amountNumber = Number.parseFloat(amount);
     const yourShare = Number.isFinite(amountNumber)
@@ -146,13 +167,24 @@ export function ExpenseForm({
 
     function handleCategoryChange(value: string) {
         setCategoryId(value);
+        // `reimbursed` is Health-only (spec 0007 §3.3). Leaving it selected on
+        // another category would fail server-side validation, so drop back to
+        // the default rather than let the user submit a doomed form.
+        const next = categories.find((c) => c.id === value);
+        const nextFunding = fundingSourceAfterCategoryChange(
+            fundedFrom,
+            next?.slug ?? null,
+        );
+        setFundedFrom(nextFunding);
+        setReimbursedClearedBy(
+            nextFunding === fundedFrom ? null : (next?.name ?? null),
+        );
         // A subcategory belongs to one category; drop it when it no longer fits.
         const stillValid = subcategories.some(
             (s) => s.id === subcategoryId && s.categoryId === value,
         );
         if (!stillValid) setSubcategoryId("");
         // Savings has no card — clear any selected card when switching to it.
-        const next = categories.find((c) => c.id === value);
         if (next?.slug === SAVINGS_SLUG) setCardId("");
     }
 
@@ -171,6 +203,7 @@ export function ExpenseForm({
             notes: notes || undefined,
             isShared,
             yourPercentage: String(yourPercentage),
+            fundedFrom,
             // Every expense is the user's (ADR-0018); `paidBy` defaults "you"
             // in the schema, so the form no longer sends it.
         };
@@ -192,6 +225,7 @@ export function ExpenseForm({
                         setDescription("");
                         setNotes("");
                         setIsShared(false);
+                        setFundedFrom("income");
                     }
                     onSuccess?.();
                 } else {
@@ -407,6 +441,48 @@ export function ExpenseForm({
                     onChange={(e) => setNotes(e.target.value)}
                     className="mt-1.5 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:text-sm"
                 />
+            </div>
+
+            {/* Funding source (spec 0007 §3.1). Default `income` = today's
+                behaviour, so ignoring this control costs nothing. */}
+            <div>
+                <Label htmlFor="fundedFrom">Funded from</Label>
+                <Select
+                    value={fundedFrom}
+                    onValueChange={(value) => {
+                        setFundedFrom(
+                            (value as FundingSource | null) ?? "income",
+                        );
+                        setReimbursedClearedBy(null);
+                    }}
+                >
+                    <SelectTrigger
+                        id="fundedFrom"
+                        aria-label="Funded from"
+                        className="mt-1.5 w-full"
+                    >
+                        {FUNDING_SOURCE_LABEL[fundedFrom]}
+                    </SelectTrigger>
+                    <SelectContent>
+                        {fundingOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                                {FUNDING_SOURCE_LABEL[option]}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                {fundedFrom === "income" ? null : (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Doesn&apos;t count toward this month&apos;s budget. It
+                        still shows in the list and in spend by card.
+                    </p>
+                )}
+                {reimbursedClearedBy ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        {`"${FUNDING_SOURCE_LABEL.reimbursed}" isn't available for ${reimbursedClearedBy}, so this is back to ${FUNDING_SOURCE_LABEL.income.toLowerCase()}.`}
+                    </p>
+                ) : null}
+                {fieldError("fundedFrom")}
             </div>
 
             {/* Solo mode (Settings.sharesExpenses = false) has no split — the

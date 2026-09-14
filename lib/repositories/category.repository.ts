@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
 import type { SubcategorySpendRow } from "@/lib/domain/category";
+import { BUDGET_FUNDING_FILTER, toFundingSource } from "@/lib/domain/funding";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /** Category metadata for the detail header + budget math. */
@@ -75,7 +76,14 @@ export class PrismaCategoryRepository implements CategoryRepository {
         const [grouped, subcategories] = await Promise.all([
             this.db.expense.groupBy({
                 by: ["subcategoryId"],
-                where: { userId, categoryId, date: { gte: start, lt: end } },
+                // Budget figures count only income-funded rows (spec 0007 §2),
+                // same filter the dashboard reads use.
+                where: {
+                    userId,
+                    categoryId,
+                    date: { gte: start, lt: end },
+                    ...BUDGET_FUNDING_FILTER,
+                },
                 _sum: { actualExpenditure: true },
             }),
             this.db.subcategory.findMany({
@@ -105,13 +113,15 @@ export class PrismaCategoryRepository implements CategoryRepository {
         return rows;
     }
 
-    getExpensesForCategoryMonth(
+    async getExpensesForCategoryMonth(
         userId: string,
         categoryId: string,
         month: string,
     ): Promise<ExpenseListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
-        return this.db.expense.findMany({
+        // No funding filter: this is the LIST, not a total. A savings-funded row
+        // still belongs on screen (badged); only the aggregates above skip it.
+        const rows = await this.db.expense.findMany({
             where: { userId, categoryId, date: { gte: start, lt: end } },
             orderBy: { date: "desc" },
             select: {
@@ -121,6 +131,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
                 amount: true,
                 actualExpenditure: true,
                 isShared: true,
+                fundedFrom: true,
                 category: {
                     select: { id: true, slug: true, name: true, color: true },
                 },
@@ -128,5 +139,9 @@ export class PrismaCategoryRepository implements CategoryRepository {
                 card: { select: { name: true, color: true } },
             },
         });
+        return rows.map((r) => ({
+            ...r,
+            fundedFrom: toFundingSource(r.fundedFrom),
+        }));
     }
 }

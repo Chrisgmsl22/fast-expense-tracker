@@ -8,6 +8,7 @@
  */
 
 import { SAVINGS_SLUG } from "./dashboard";
+import { BUDGET_FUNDING_SOURCE, type FundingSource } from "./funding";
 
 /** All `Movement.type` values in the schema. */
 export type MovementType =
@@ -42,25 +43,50 @@ export type FeedTotalExpense = {
     amount: number;
     actualExpenditure: number;
     category: { slug: string };
+    /** Which month's money funded it (spec 0007 §3.1). */
+    fundedFrom: FundingSource;
 };
 
-/** The four figures the feed footer shows (ADR-0018 §1). */
+/** The figures the feed footer shows (ADR-0018 §1, extended by spec 0007). */
 export type FeedTotals = {
-    /** Raw card/cash charges — consumption only (excludes savings transfers). */
+    /**
+     * Raw card/cash charges — consumption only (excludes savings transfers).
+     * Counts EVERY funding source at full value: you really did charge it, and
+     * this is the cash-reconciliation figure (spec 0007 §3.2).
+     */
     charged: number;
-    /** Your share of consumption — the budget number ("What I really spent"). */
+    /**
+     * Your share of consumption funded by THIS month's income — the budget
+     * number. Excludes savings-funded and reimbursed rows so it equals the sum
+     * the dashboard's buckets are built from (spec 0007 §2).
+     */
     whatIReallySpent: number;
-    /** My-share allocated to Savings this month. */
+    /**
+     * My-share allocated to Savings this month, income-funded only — so it
+     * matches the dashboard's savings bucket.
+     */
     setAside: number;
     /** Transfers you sent the partner (`gf_paid`). */
     paidToPartner: number;
-    /** Money that actually left = spent + set aside + paid to partner. */
+    /**
+     * My-share that this month's income did NOT fund (savings-funded or
+     * reimbursed). Surfaced so `charged` and `whatIReallySpent` reconcile and
+     * nothing is hidden; excluded from the budget figures above.
+     */
+    notFromIncome: number;
+    /**
+     * This month's income that left = spent + set aside + paid to partner.
+     * `notFromIncome` is deliberately NOT added: it came from another month's
+     * money, so folding it in would re-create the contradiction with the
+     * buckets that spec 0007 exists to remove.
+     */
     total: number;
 };
 
 /**
  * Footer totals for a month, splitting consumption from the savings transfer so
- * "What I really spent" matches the dashboard's Spent. Card payments never enter
+ * "What I really spent" matches the dashboard's Spent — including its funding
+ * filter, so the footer can never contradict the buckets above it. Card payments never enter
  * here: their charges were already counted as expenses, so adding them would
  * double-count. `paidToPartner` is the summed `gf_paid` amount — new outflow
  * (your share of things the partner fronted) not otherwise captured.
@@ -72,11 +98,21 @@ export function computeFeedTotals(
     let charged = 0;
     let whatIReallySpent = 0;
     let setAside = 0;
+    let notFromIncome = 0;
     for (const e of expenses) {
-        if (e.category.slug === SAVINGS_SLUG) {
+        const isSavingsCategory = e.category.slug === SAVINGS_SLUG;
+        // `charged` is source-agnostic on purpose — the card saw the charge
+        // whatever money settled it (spec 0007 §3.2, ADR-0020 §6).
+        if (!isSavingsCategory) charged += e.amount;
+
+        if (e.fundedFrom !== BUDGET_FUNDING_SOURCE) {
+            // Another month's money (or a refund). Kept out of BOTH budget
+            // figures — including `setAside`, so moving old savings into the
+            // Savings category isn't counted as allocating income twice.
+            notFromIncome += e.actualExpenditure;
+        } else if (isSavingsCategory) {
             setAside += e.actualExpenditure;
         } else {
-            charged += e.amount;
             whatIReallySpent += e.actualExpenditure;
         }
     }
@@ -85,6 +121,7 @@ export function computeFeedTotals(
         whatIReallySpent,
         setAside,
         paidToPartner,
+        notFromIncome,
         total: whatIReallySpent + setAside + paidToPartner,
     };
 }
