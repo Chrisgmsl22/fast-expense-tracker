@@ -15,8 +15,8 @@
             "id": "BUG-2",
             "title": "Category colors render gray in production",
             "description": "Category dots + 'Where the money went' bars show neutral gray in prod; card colors are fine. Not a Tailwind purge (colors applied via inline style). Prod Category.color rows still hold the schema default #6b7280 — prod was never re-seeded since per-slug colors landed.",
-            "proposedSolution": "Confirm prod state via Neon MCP, then carefully re-seed prod (seed already refreshes Category.color on upsert). Bundle: FK-safely delete the Amex Gold card (no longer owned). Folded into CHORE-6.a's manual owner prod-migration trip — SQL/steps in docs/operations/owner-shared-mode-migration.md §2. No app code.",
-            "status": "open",
+            "proposedSolution": "Fixed by the data migration prisma/migrations/20260914000000_backfill_category_colors. It sets Category.color per slug from literals copied out of prisma/seed.ts → CATEGORY_COLORS, updates only rows still holding the gray default #6b7280 (so a user-chosen color survives), is scoped by slug not userId, leaves the 'unassigned' sentinel gray on purpose, and touches no other table. vercel.json runs `prisma migrate deploy` on every prod build, so it applies on merge with no manual prod access. RETRACTED — the earlier 're-seed prod' instruction: the seed also upserts Cards and matches them by NAME (prisma/seed.ts:301-321 — findFirst({ name }), then update({ color, type }) or create), so a prod re-seed rewrites every card's color/type and re-creates any card the owner renamed in Settings as a duplicate. The Amex Gold rider (docs/operations/owner-shared-mode-migration.md §2b) is untouched and stays manual. No app code.",
+            "status": "fixed",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,
             "issue": null
