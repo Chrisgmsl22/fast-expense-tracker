@@ -85,6 +85,12 @@ const closedCycle: ClosedSettlementCycle = {
     closedOn: new Date("2026-06-30T06:00:00Z"),
     settledAmount: 420,
     journal: [{ ...openRow, id: "e3", description: "Closed groceries" }],
+    summary: {
+        spentUnsplit: 1000,
+        youOwed: 220,
+        sheOwed: 320,
+        outcome: { kind: "partner_paid", amount: 100 },
+    },
 };
 
 function renderViews(
@@ -146,6 +152,43 @@ describe("SettlementViews", () => {
         expect(
             screen.getByText(/No settlement was closed in July/i),
         ).toBeDefined();
+    });
+
+    it("footers a closed settlement with its four figures, in words", () => {
+        renderViews();
+        fireEvent.click(screen.getByRole("tab", { name: "History" }));
+        fireEvent.click(screen.getByRole("button", { name: /Settled/ }));
+
+        const footer = screen.getByTestId("cycle-summary");
+        expect(footer.textContent).toContain("Spent (unsplit)");
+        expect(footer.textContent).toContain("$1,000.00");
+        expect(footer.textContent).toContain("You owed Brenda");
+        expect(footer.textContent).toContain("$220.00");
+        expect(footer.textContent).toContain("Brenda owed you");
+        expect(footer.textContent).toContain("$320.00");
+        // How it ended, stated rather than signed.
+        expect(footer.textContent).toContain("Brenda paid you");
+        expect(footer.textContent).toContain("$100.00");
+    });
+
+    it("says a cycle came out even instead of showing a zero", () => {
+        renderViews({
+            history: [
+                {
+                    ...closedCycle,
+                    summary: {
+                        ...closedCycle.summary,
+                        outcome: { kind: "even" },
+                    },
+                },
+            ],
+        });
+        fireEvent.click(screen.getByRole("tab", { name: "History" }));
+        fireEvent.click(screen.getByRole("button", { name: /Settled/ }));
+
+        expect(screen.getByTestId("cycle-summary").textContent).toContain(
+            "Came out even",
+        );
     });
 
     it("labels the month tab with the selected month, never 'This month'", () => {

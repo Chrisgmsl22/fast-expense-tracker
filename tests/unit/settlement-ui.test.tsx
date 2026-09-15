@@ -310,11 +310,8 @@ describe("SettlementJournal", () => {
         expect(within(dialog).getByText('Edit "I owe Brenda"')).toBeDefined();
         // Prefilled straight from the journal row — no server round-trip.
         expect(
-            (
-                within(dialog).getByLabelText(
-                    /Amount you owe/,
-                ) as HTMLInputElement
-            ).value,
+            (within(dialog).getByLabelText(/What you owe/) as HTMLInputElement)
+                .value,
         ).toBe("300");
     });
 

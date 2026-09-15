@@ -93,6 +93,31 @@ export type SettlementBreakdownItems = Record<
     SettlementBreakdownItem[]
 >;
 
+/**
+ * How a closed cycle ended, in words rather than a signed number: one of you
+ * paid, or nobody had to.
+ */
+export type CycleOutcome =
+    | { kind: "you_paid"; amount: number }
+    | { kind: "partner_paid"; amount: number }
+    | { kind: "even" };
+
+/** The four figures the closed-cycle footer shows (spec 0007 §6b, slice H). */
+export type ClosedCycleSummary = {
+    /**
+     * Everything the cycle bought, at full price — NO split applied. A shared
+     * expense contributes its gross; a debt contributes what it recorded, which
+     * is already his share and carries no gross to recover.
+     */
+    spentUnsplit: number;
+    /** What you owed her across the cycle. */
+    youOwed: number;
+    /** What she owed you across the cycle. */
+    sheOwed: number;
+    /** Who settled it, and for how much. */
+    outcome: CycleOutcome;
+};
+
 /** One closed settlement cycle, as the History view reads it (spec 0007 §3.5). */
 export type ClosedSettlementCycle = {
     /** The marker movement's id — the transfer that closed this cycle. */
@@ -102,6 +127,8 @@ export type ClosedSettlementCycle = {
     /** The closing transfer's amount — what it took to square the cycle. */
     settledAmount: number;
     journal: SettlementJournalItem[];
+    /** The footer figures, derived from the SAME rows the journal shows. */
+    summary: ClosedCycleSummary;
 };
 
 export type Settlement = {
@@ -394,11 +421,45 @@ function buildHistory(
             // A closed cycle spans whatever months it spans, so no row is
             // "carried over" relative to it.
             journal: buildJournal(cycleRows, () => false),
+            summary: summarizeCycle(cycleRows),
         });
         lowerBound = upperBound;
     }
 
     return cycles.reverse();
+}
+
+/**
+ * The closed cycle's four figures, read off THE SAME rows the journal renders —
+ * never a second query and never a re-derivation, so the footer cannot disagree
+ * with the rows above it.
+ */
+function summarizeCycle(rows: SettlementRowsByLine): ClosedCycleSummary {
+    const sum = (list: { amount: number }[]): number =>
+        roundCents(list.reduce((total, r) => total + r.amount, 0));
+
+    // "No split applied": a shared expense contributes the full amount you paid,
+    // not her share of it. A debt has no gross — what was recorded is already
+    // your share — so it contributes that.
+    const spentUnsplit = roundCents(
+        rows.partner_share.reduce((total, r) => total + (r.gross ?? 0), 0) +
+            rows.your_debt.reduce((total, r) => total + r.amount, 0),
+    );
+
+    const youPaid = sum(rows.you_paid);
+    const partnerPaid = sum(rows.partner_paid);
+    const net = roundCents(youPaid - partnerPaid);
+
+    return {
+        spentUnsplit,
+        youOwed: sum(rows.your_debt),
+        sheOwed: sum(rows.partner_share),
+        outcome: isZeroCents(net)
+            ? { kind: "even" }
+            : net > 0
+              ? { kind: "you_paid", amount: net }
+              : { kind: "partner_paid", amount: Math.abs(net) },
+    };
 }
 
 /** The debt row's label when it was logged without a note. */

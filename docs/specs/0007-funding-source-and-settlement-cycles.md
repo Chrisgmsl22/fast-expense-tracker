@@ -247,22 +247,36 @@ impossible rather than merely discouraged: no `Total` spanning both.
 
 ### Decisions
 
-1. **A debt she fronted is an Expense, not a Movement.** His framing: _"not
-   treat it as cash, but as a debit transfer or something like that"_ — a real
-   purchase that happens to have moved no card of his. It carries a category and
-   counts in the buckets and the category rollups, _"included in the rest"_.
+> **Decision 1 was REVERSED on 2026-09-16, after use.** The debt was the expense;
+> now the **payment** is. What follows is the current model; the superseded one
+> and the reason are recorded in §6b. Everything else in §6a stands: the two
+> ledgers, the "never summed" rule, the `combined-expenses` home, the "Covered
+> for me" subcategory, and the spend-by-card exclusion.
 
-    **The amount logged is his share, never what she actually paid.** _"I don't
-    need to know how much she fronted. Whatever I owe her is what I care about."_
-    So a $1,000 shared dinner is logged as his $680. There is no 32% split to
-    apply and no partner share to derive — the figure entered **is** the
-    consumption.
+1. **The payment you send her is the Expense. The debt she fronted is settlement
+   only.** He logged a carwash she paid at **$500** — her outlay — while he owed
+   about **$380**, because the form asked for a purchase he had not made. His
+   correction: _"I do not want to add whatever she covered for me, I only want to
+   log the expenses I made, in this case, paying her my portion (380ish not
+   500)… when I make a payment, maybe we can turn that into the actual expense."_
 
-    **It defaults to the `combined-expenses` category, which already exists for
-    exactly this.** It is already marked relevant (essentials) and he already
-    uses it. That answers _"maybe through a different category so its easier to
-    tell"_ without inventing one, and without a new category whose bucket nobody
-    could classify. He can change it per entry.
+    So:
+
+    | Thing                  | Where it lives                                           | Budget  |
+    | ---------------------- | -------------------------------------------------------- | ------- |
+    | A debt she fronted     | Settlement only — not an expense, not in the feed        | no      |
+    | A payment you send her | An **Expense** in `combined-expenses` → "Covered for me" | **yes** |
+
+    The settlement balance still needs both sides — debts on one, payments on the
+    other. Only **where each lives** changed.
+
+    **A debt records what HE OWES, never what she paid.** That much is unchanged
+    from the reversed decision, and the form must ask in those words: the $500
+    entry happened because the question was ambiguous.
+
+    **`combined-expenses` is still the home**, for the same reasons: it exists,
+    it is already marked relevant, and he already uses it. He can change it per
+    entry.
 
     **Rename its subcategory "Purchases made by girlfriend" → "Covered for
     me".** Chosen by Christian, 2026-09-14. His objection to the old name: _"its
@@ -283,60 +297,82 @@ impossible rather than merely discouraged: no `Total` spanning both.
     database as phantom cards. Migrate by id, never by name, and verify no
     duplicate appears after a re-provision.
 
-2. **It carries a funding source like any other purchase** (§3.1). Settling it
-   from savings tags the **debt**, never the transfer — same reasoning as §3.2,
-   since a transfer is a net covering several debts and could never be
-   attributed honestly.
-3. **A debt leaves the chronological feed.** His words: _"adding my debts to her
-   adds too much noise. There's the settlement page for that."_ It stays visible
-   in the buckets, the category rollups and the settlement page. The **transfer**
-   is the feed row, because that is the cash event.
-4. **"What I really spent" becomes the cash-out figure** and so includes
-   transfers to her: _"that is also money that left my account."_ The
-   `Paid to {partner}` line stays as its breakdown. The `Total` row that summed
-   across ledgers is **removed**, not relabelled.
+2. **The payment carries a funding source like any other purchase** (§3.1).
+   Paying her from savings tags the **payment**, which is now the expense. The
+   debt carries nothing: it is not consumption and never reaches a bucket.
+3. **A debt never appears in the chronological feed.** His words: _"adding my
+   debts to her adds too much noise. There's the settlement page for that."_
+   Under the reversed model it also leaves the buckets and the category
+   rollups — the settlement page is its only home. The **payment** is the feed
+   row, because it is both the cash event and, now, the expense.
 
-    **A fronted expense is excluded from this figure**, and that exclusion is what
-    keeps the books straight. Its cash equivalent is the transfer, which is
-    already counted. Counting both would bill him twice for one dinner. So each
-    ledger sees that money exactly once, by a different route:
+    Its yellow highlight follows it: the tone that marked a transfer row stays
+    with the payment in its new life as an expense row.
 
-    | Ledger                | Counts the fronted dinner as |
-    | --------------------- | ---------------------------- |
-    | Consumption (buckets) | the **expense**, $680        |
-    | Cash ("really spent") | the **transfer**, $680       |
+4. **One payment, counted once per ledger.** The payment is the expense, so both
+   ledgers see it — but by the same row, not two:
 
-    Never both in one figure. This is the single rule most likely to be got
-    wrong, because each side looks correct in isolation.
+    | Ledger                | Counts the $380 payment as |
+    | --------------------- | -------------------------- |
+    | Consumption (buckets) | the **expense**, $380      |
+    | Cash ("really spent") | the **same expense**, $380 |
+
+    There is no second row to reconcile and no exclusion to remember, which is
+    the main practical gain of the reversal. A debt contributes to neither
+    ledger; it only moves the settlement balance.
 
 5. **Transfers gain the funding-source control.** §3.1 already says they carry
-   it; this makes the UI explicit. A transfer paid from savings leaves both
+   it; this makes the UI explicit. A payment made from savings leaves both
    ledgers for the month.
 
 ### The trap — read this before writing code
 
-Making a debt an expense again is **exactly what ADR-0020 §1 reversed**, and the
-reason was BUG-1: a debt with no card surfaced as a phantom `Cash` row in
-spend-by-card.
-
-The defect was never that the debt reached the budget. It was that it reached
-**spend-by-card**, which groups by `cardId` and reads null as cash. So exclude it
-there, at the query boundary, exactly as savings-funded rows are excluded from
-budget reads — never by subtracting afterwards.
-
 **Do not reintroduce `paidBy: "gf"`.** That column is deprecated and every read
-has dropped it. Whatever marks a fronted expense must be new and explicit, and
-the settlement layer must still read it as the debt side of the balance.
+has dropped it. Whatever marks a payment-expense must be new and explicit, and
+the settlement layer must still read it as the "you paid her" side of the
+balance.
+
+BUG-1 — a card-less debt surfacing as a phantom `Cash` row in spend-by-card —
+is why ADR-0020 §1 pulled debts out of the expense table in the first place.
+Under the reversed model a debt is not an expense at all, so the hazard is gone
+by construction; a payment-expense has a real card or is genuinely cash. Keep
+the spend-by-card exclusion for as long as any legacy `isFronted` row can still
+be read, and only then retire it.
+
+## 6b. The reversal of decision 1
+
+**2026-09-16.** §6a decision 1 made a debt she fronted an expense in the budget.
+One day of real use showed the question it asks is the wrong one: he logged a
+carwash at **$500**, her outlay, when his share was about **$380**.
+
+> _"I do not want to add whatever she covered for me, I only want to log the
+> expenses I made, in this case, paying her my portion (380ish not 500)… when I
+> make a payment, maybe we can turn that into the actual expense."_
+
+What changed, exactly:
+
+| Concern             | §6a (superseded)                   | Current                      |
+| ------------------- | ---------------------------------- | ---------------------------- |
+| The expense         | The debt she fronted               | **The payment you send her** |
+| The debt            | Categorised consumption, in budget | **Settlement only**          |
+| Reconciling the two | Exclude the fronted row from cash  | Nothing to exclude           |
+
+What survived the reversal, unchanged: the two-ledger rule, `combined-expenses`
+as the home, the "Covered for me" subcategory rename (it describes the payment
+better than it described the debt), and the principle that a debt records **what
+he owes**, never her outlay.
 
 ### Slices
 
-| Slice | Scope                                                                                                           |
-| ----- | --------------------------------------------------------------------------------------------------------------- |
-| E     | The debt becomes categorised consumption: schema, form, budget reads, spend-by-card exclusion, settlement reads |
-| F     | Feed rework: debts out, `Total` removed, "what I really spent" becomes cash out                                 |
-| G     | Funding source on transfers (the deferred half of slice C)                                                      |
+| Slice | Scope                                                                                            |
+| ----- | ------------------------------------------------------------------------------------------------ |
+| E     | ~~Debt becomes consumption~~ — **landed, then reversed by E′**                                   |
+| E′    | Invert: payment becomes the expense, debt returns to settlement-only, migrate the converted rows |
+| F     | Feed rework: debts out, `Total` removed, "what I really spent" becomes cash out                  |
+| G     | Funding source on payments (the deferred half of slice C)                                        |
+| H     | Closed-settlement summary footer: total unsplit spend, what each owed, how it ended              |
 
-E before F. G is independent.
+E′ before F. G and H are independent.
 
 ## 7. Out of scope
 

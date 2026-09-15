@@ -87,7 +87,7 @@ describe("SettlementActions", () => {
         fireEvent.click(screen.getByRole("button", { name: /I owe Brenda/ }));
 
         const dialog = await screen.findByRole("dialog");
-        expect(within(dialog).getByLabelText(/Amount you owe/)).toBeDefined();
+        expect(within(dialog).getByLabelText(/What you owe/)).toBeDefined();
         expect(
             within(dialog).queryByRole("combobox", { name: "Category" }),
         ).toBeNull();

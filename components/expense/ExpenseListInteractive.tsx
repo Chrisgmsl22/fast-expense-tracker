@@ -12,6 +12,7 @@ import {
     movementRowText,
 } from "@/components/movement/movement-display";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
+import { TotalsBar } from "@/components/money/TotalsBar";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -355,47 +356,43 @@ export function ExpenseListInteractive({
             {/* Totals — desktop footer sits just below the bounded list and
                 stays put; sticky bottom-4 keeps it visible if the page itself
                 still scrolls on shorter viewports. */}
-            <div
-                data-testid="totals-desktop"
-                className="sticky bottom-4 z-30 mt-4 hidden items-center justify-end gap-6 rounded-lg bg-foreground px-5 py-3 text-sm text-background shadow-lg sm:flex"
-            >
-                <span className="text-background/70">
-                    Charged{" "}
-                    <span className="font-semibold text-background">
-                        {formatMxn(totals.charged)}
-                    </span>
-                </span>
-                {totals.setAside > 0 && (
-                    <span className="text-background/70">
-                        Set aside{" "}
-                        <span className="font-semibold text-background">
-                            {formatMxn(totals.setAside)}
-                        </span>
-                    </span>
-                )}
-                {totals.paidToPartner > 0 && (
-                    <span className="text-background/70">
-                        Paid to {partnerName}{" "}
-                        <span className="font-semibold text-background">
-                            {formatMxn(totals.paidToPartner)}
-                        </span>
-                    </span>
-                )}
-                <span className="text-background/70">
-                    What I really spent{" "}
-                    <span className="rounded-full bg-spent-tint px-2 py-0.5 font-semibold text-spent">
-                        {formatMxn(totals.whatIReallySpent)}
-                    </span>
-                </span>
-                {(totals.setAside > 0 || totals.paidToPartner > 0) && (
-                    <span className="border-l border-background/20 pl-6 text-background/70">
-                        Total{" "}
-                        <span className="ml-1 text-base font-semibold text-background">
-                            {formatMxn(totals.total)}
-                        </span>
-                    </span>
-                )}
-            </div>
+            <TotalsBar
+                testId="totals-desktop"
+                className="sticky bottom-4 z-30 mt-4 hidden shadow-lg sm:flex"
+                items={[
+                    { label: "Charged", value: formatMxn(totals.charged) },
+                    ...(totals.setAside > 0
+                        ? [
+                              {
+                                  label: "Set aside",
+                                  value: formatMxn(totals.setAside),
+                              },
+                          ]
+                        : []),
+                    ...(totals.paidToPartner > 0
+                        ? [
+                              {
+                                  label: `Paid to ${partnerName}`,
+                                  value: formatMxn(totals.paidToPartner),
+                              },
+                          ]
+                        : []),
+                    {
+                        label: "What I really spent",
+                        value: formatMxn(totals.whatIReallySpent),
+                        tone: "highlight" as const,
+                    },
+                    ...(totals.setAside > 0 || totals.paidToPartner > 0
+                        ? [
+                              {
+                                  label: "Total",
+                                  value: formatMxn(totals.total),
+                                  tone: "strong" as const,
+                              },
+                          ]
+                        : []),
+                ]}
+            />
 
             {/* Totals — mobile pinned bar */}
             <div

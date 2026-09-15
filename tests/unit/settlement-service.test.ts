@@ -380,6 +380,66 @@ describe("getSettlement — settlement cycles", () => {
         ]);
     });
 
+    it("summarises a closed cycle from the rows it shows", async () => {
+        // In the cycle: a $1,000 shared expense (her share $320), a $220 debt
+        // you owe her, and the $320 transfer she sent that closed it.
+        const s = await run(
+            [
+                expense({
+                    id: "eShared",
+                    createdAt: ENTERED_BEFORE_CLOSE,
+                    amount: 1000,
+                    actualExpenditure: 680,
+                }),
+            ],
+            [
+                movement({
+                    id: "mDebt",
+                    type: "gf_fronted",
+                    amount: 220,
+                    createdAt: ENTERED_BEFORE_CLOSE,
+                }),
+                closingTransfer,
+            ],
+            [marker],
+        );
+
+        const { summary } = s.history[0]!;
+        // Unsplit: the FULL $1,000, not the $320 share, plus the $220 debt.
+        expect(summary.spentUnsplit).toBe(1220);
+        expect(summary.youOwed).toBe(220);
+        expect(summary.sheOwed).toBe(320);
+        expect(summary.outcome).toEqual({ kind: "partner_paid", amount: 320 });
+    });
+
+    it("reports an even cycle rather than a bare zero", async () => {
+        const s = await run([], [], [marker]);
+        expect(s.history[0]!.summary.outcome).toEqual({ kind: "even" });
+    });
+
+    it("the summary reconciles with the rows above it", async () => {
+        const s = await run(
+            [
+                expense({
+                    id: "eShared",
+                    createdAt: ENTERED_BEFORE_CLOSE,
+                    amount: 1000,
+                    actualExpenditure: 680,
+                }),
+            ],
+            [closingTransfer],
+            [marker],
+        );
+        const cycle = s.history[0]!;
+        // Σ of the partner-share rows the journal renders === the footer figure.
+        const fromRows = cycle.journal.reduce(
+            (total, j) =>
+                j.kind === "your_expense" ? total + j.partnerShare : total,
+            0,
+        );
+        expect(fromRows).toBe(cycle.summary.sheOwed);
+    });
+
     it("names the newest transfer in the open cycle as the one a close would mark", async () => {
         const s = await run(
             [expense()],

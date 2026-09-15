@@ -131,7 +131,18 @@ export function PartnerDebtForm({
                     {fieldError("date")}
                 </div>
                 <div className="sm:col-span-2">
-                    <Label htmlFor="debt-amount">Amount you owe (MXN)</Label>
+                    <Label htmlFor="debt-amount">
+                        {`What you owe ${partnerName} (MXN)`}
+                    </Label>
+                    {/* The $500 carwash: he typed what SHE paid because the
+                        question was ambiguous. Say whose figure this is, at the
+                        field, not only in a heading the form may not show. */}
+                    <p
+                        id="debt-amount-help"
+                        className="mt-0.5 text-xs text-muted-foreground"
+                    >
+                        Your share only — not what {partnerName} paid.
+                    </p>
                     <div className="relative mt-1.5">
                         <span
                             aria-hidden
@@ -142,6 +153,7 @@ export function PartnerDebtForm({
                         <Input
                             id="debt-amount"
                             name="amount"
+                            aria-describedby="debt-amount-help"
                             type="number"
                             inputMode="decimal"
                             step="0.01"

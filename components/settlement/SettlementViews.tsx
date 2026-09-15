@@ -8,9 +8,12 @@ import {
     CollapsiblePanel,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { TotalsBar } from "@/components/money/TotalsBar";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type {
+    ClosedCycleSummary,
     ClosedSettlementCycle,
+    CycleOutcome,
     SettlementJournalItem,
 } from "@/lib/services/settlement/settlement.service";
 import { SettlementJournal } from "./SettlementJournal";
@@ -154,6 +157,59 @@ export function SettlementViews({
     );
 }
 
+/**
+ * How the cycle ended, in words. A signed number would make the reader work out
+ * the direction; the whole point of this line is that they should not have to.
+ */
+function outcomeText(outcome: CycleOutcome, partnerName: string): string {
+    if (outcome.kind === "even") return "Came out even";
+    return outcome.kind === "you_paid"
+        ? `You paid ${partnerName}`
+        : `${partnerName} paid you`;
+}
+
+/**
+ * The closed cycle's four figures, in the expenses list's totals-bar language.
+ * Every figure comes from `cycle.summary`, which the service derives from the
+ * same rows rendered above it — so the footer cannot quote money the rows do not.
+ */
+function CycleSummaryFooter({
+    summary,
+    partnerName,
+}: {
+    summary: ClosedCycleSummary;
+    partnerName: string;
+}) {
+    return (
+        <TotalsBar
+            className="mt-3"
+            testId="cycle-summary"
+            items={[
+                {
+                    label: "Spent (unsplit)",
+                    value: formatMxn(summary.spentUnsplit),
+                },
+                {
+                    label: `You owed ${partnerName}`,
+                    value: formatMxn(summary.youOwed),
+                },
+                {
+                    label: `${partnerName} owed you`,
+                    value: formatMxn(summary.sheOwed),
+                },
+                {
+                    label: outcomeText(summary.outcome, partnerName),
+                    value:
+                        summary.outcome.kind === "even"
+                            ? "—"
+                            : formatMxn(summary.outcome.amount),
+                    tone: "strong",
+                },
+            ]}
+        />
+    );
+}
+
 /** Cycles closed in the selected month, newest first, each openable. */
 function ClosedCycles({
     history,
@@ -205,6 +261,10 @@ function ClosedCycles({
                                     journal={cycle.journal}
                                     partnerName={partnerName}
                                     emptyMessage="This settlement closed with no rows in it."
+                                />
+                                <CycleSummaryFooter
+                                    summary={cycle.summary}
+                                    partnerName={partnerName}
                                 />
                             </div>
                         </CollapsiblePanel>

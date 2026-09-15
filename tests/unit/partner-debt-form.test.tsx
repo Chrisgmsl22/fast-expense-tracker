@@ -33,7 +33,7 @@ describe("PartnerDebtForm", () => {
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
         });
-        fireEvent.change(screen.getByLabelText(/Amount you owe/), {
+        fireEvent.change(screen.getByLabelText(/What you owe/), {
             target: { value: "500" },
         });
         fireEvent.click(screen.getByRole("button", { name: "Log debt" }));
@@ -62,7 +62,7 @@ describe("PartnerDebtForm", () => {
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
         });
-        fireEvent.change(screen.getByLabelText(/Amount you owe/), {
+        fireEvent.change(screen.getByLabelText(/What you owe/), {
             target: { value: "0" },
         });
         fireEvent.click(screen.getByRole("button", { name: "Log debt" }));
@@ -92,10 +92,10 @@ describe("PartnerDebtForm", () => {
 
         // Prefilled from the debt prop.
         expect(
-            (screen.getByLabelText(/Amount you owe/) as HTMLInputElement).value,
+            (screen.getByLabelText(/What you owe/) as HTMLInputElement).value,
         ).toBe("680");
         // Edit its amount, then save.
-        fireEvent.change(screen.getByLabelText(/Amount you owe/), {
+        fireEvent.change(screen.getByLabelText(/What you owe/), {
             target: { value: "700" },
         });
         fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
