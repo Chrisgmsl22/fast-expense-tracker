@@ -82,6 +82,7 @@ export default async function CategoryDetailPage({
                 <SubcategoryBreakdown
                     bars={detail.breakdown}
                     color={detail.meta.color}
+                    partnerName={settings.partnerName}
                 />
                 <CategoryExpenses
                     expenses={detail.expenses}

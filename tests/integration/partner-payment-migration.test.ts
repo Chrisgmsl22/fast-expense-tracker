@@ -139,3 +139,38 @@ describe("gf_paid → payment expense (spec 0007 §6b)", () => {
         expect(await db.expense.count({ where: { userId: user.id } })).toBe(0);
     });
 });
+
+describe("a closed cycle survives the migration", () => {
+    it("never converts the marker of a cycle closed by an outbound payment", async () => {
+        // `closedAt` is the cycle boundary and lives only on `Movement`.
+        // Converting a marker into an `Expense` would drop it, and the cycle's
+        // rows would fall back into the open one with the balance moving —
+        // silently destroying a closed settlement. Christian's five closed
+        // cycles all happen to be `gf_received`; production will have both.
+        const { user } = await seedUserWithCombined("marker@example.com");
+        const closedAt = new Date("2026-09-13T20:38:00Z");
+        const marker = await db.movement.create({
+            data: {
+                userId: user.id,
+                date: new Date("2026-09-11T12:00:00Z"),
+                amount: 500,
+                type: "gf_paid",
+                closedAt,
+                createdAt: ENTERED_AT,
+            },
+        });
+
+        await replayMigration(MIGRATION);
+
+        // Still a movement, still carrying the boundary.
+        const kept = await db.movement.findUnique({
+            where: { id: marker.id },
+        });
+        expect(kept?.type).toBe("gf_paid");
+        expect(kept?.closedAt?.toISOString()).toBe(closedAt.toISOString());
+        // And it was not copied into the expense table either.
+        expect(await db.expense.findUnique({ where: { id: marker.id } })).toBe(
+            null,
+        );
+    });
+});

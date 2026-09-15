@@ -190,3 +190,49 @@ describe("closeSettlementCycle", () => {
         expect(await settlementRepo.getCycleMarkers()).toHaveLength(0);
     });
 });
+
+describe("closeSettlementCycle — the direction the tests never covered", () => {
+    beforeEach(() => {
+        authMock.mockReset();
+        authMock.mockResolvedValue({ user: { id: "u1" } });
+    });
+
+    it("refuses, loudly, when the cycle was squared without a transfer", async () => {
+        // The ordinary flow after the inversion: she fronted $300, he paid her
+        // $300 — and the payment is an EXPENSE now, so the open cycle holds no
+        // markable movement. `closedAt` lives on `Movement`, so there is
+        // nothing here to carry the boundary.
+        //
+        // This used to answer ok:true/alreadyClosed:true — a success report for
+        // work not done, on a cycle with rows still in it.
+        const { settlementRepo, deps } = setup(
+            [
+                expense({
+                    id: "ePayment",
+                    isPartnerPayment: true,
+                    amount: 300,
+                    actualExpenditure: 300,
+                    isShared: false,
+                }),
+            ],
+            [movement({ id: "mDebt", type: "gf_fronted", amount: 300 })],
+        );
+
+        const res = await closeSettlementCycle(deps);
+
+        expect(res.ok).toBe(false);
+        if (!res.ok) expect(res.code).toBe("no_marker");
+        expect(await settlementRepo.getCycleMarkers()).toHaveLength(0);
+    });
+
+    it("still reports an EMPTY cycle as already closed", async () => {
+        // Nothing to mark and nothing in it — a double submit lands here, and
+        // that genuinely is closed.
+        const { deps } = setup([], []);
+
+        const res = await closeSettlementCycle(deps);
+
+        expect(res.ok).toBe(true);
+        if (res.ok) expect(res.data.alreadyClosed).toBe(true);
+    });
+});

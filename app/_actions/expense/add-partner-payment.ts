@@ -69,7 +69,7 @@ export async function addPartnerPayment(
         return {
             ok: false,
             code: "validation",
-            message: "Invalid debt",
+            message: "Invalid payment",
             fieldErrors: toFieldErrors<PartnerPaymentInput>(parsed.error),
         };
     }
@@ -112,7 +112,7 @@ export async function addPartnerPayment(
                 return {
                     ok: false,
                     code: "validation",
-                    message: "Invalid debt",
+                    message: "Invalid payment",
                     fieldErrors: {
                         subcategoryId: [
                             "Subcategory doesn't belong to the selected category",
@@ -148,7 +148,7 @@ export async function addPartnerPayment(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the debt. Please try again.",
+            message: "Could not save the payment. Please try again.",
         };
     }
 }

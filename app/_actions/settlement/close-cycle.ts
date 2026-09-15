@@ -14,6 +14,13 @@ import {
 export type CloseSettlementCycleCode =
     | "unauthenticated"
     | "not_settled"
+    /**
+     * Square, but nothing in the open cycle can carry the boundary: `closedAt`
+     * lives on `Movement`, and a cycle settled only by a payment-expense has no
+     * movement to mark (spec 0007 §6b). Reported rather than swallowed — this
+     * used to answer `ok:true`, a success for work not done.
+     */
+    | "no_marker"
     | "db_error";
 
 export type CloseSettlementCycleResult = ActionResult<
@@ -66,12 +73,24 @@ export async function closeSettlementCycle(
         }
 
         const movementId = settlement.closableMovementId;
-        // No transfer in the open cycle: either nothing has happened since the
-        // last close, or a second submit landed after the first one closed it.
         if (!movementId) {
+            // An EMPTY cycle really is already closed — a second submit lands
+            // here after the first one marked it.
+            if (settlement.journal.length === 0) {
+                return {
+                    ok: true,
+                    data: { markedMovementId: null, alreadyClosed: true },
+                };
+            }
+            // A cycle with rows but no markable movement is NOT closed. Saying
+            // "ok" for it reports success for work not done — the failure mode
+            // this repo keeps shipping. See the `no_marker` code.
             return {
-                ok: true,
-                data: { markedMovementId: null, alreadyClosed: true },
+                ok: false,
+                code: "no_marker",
+                message:
+                    "This settlement can't be closed yet: closing marks a transfer " +
+                    "with your partner, and this one holds none.",
             };
         }
 

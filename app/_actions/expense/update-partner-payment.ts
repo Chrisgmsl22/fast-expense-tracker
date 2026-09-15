@@ -16,7 +16,7 @@ import {
     type PartnerPaymentInput,
 } from "@/lib/schemas/expense";
 
-/** The edit payload carries the row id alongside the debt fields. */
+/** The edit payload carries the row id alongside the payment fields. */
 const idSchema = z.object({ id: z.string().min(1) });
 
 /** Failure modes the caller can branch on. `not_found` also covers "not yours". */
@@ -39,14 +39,14 @@ export type UpdatePartnerPaymentDeps = {
 };
 
 /**
- * Edit a debt the partner fronted (spec 0007 §6a). Mirrors `addPartnerPayment`,
+ * Edit money you sent the partner (spec 0007 §6b). Mirrors `addPartnerPayment`,
  * with the write **scoped by `userId`** (IDOR guard — a mismatch matches zero
  * rows → `not_found`).
  *
- * Only an `isPartnerPayment` expense is editable here: refusing an ordinary one stops a
- * normal purchase being retyped into a debt through this action, which would
- * move the couple balance by a row the user never meant to owe. The action is
- * the enforcement seam, not the UI.
+ * Only an `isPartnerPayment` expense is editable here: refusing an ordinary one
+ * stops a normal purchase being retyped into a settlement payment through this
+ * action, which would move the couple balance by a row the user never meant to
+ * settle. The action is the enforcement seam, not the UI.
  *
  * Category and subcategory are NOT touched — this form does not offer them, and
  * writing them back from a payload that never carried them would silently undo a
@@ -65,13 +65,13 @@ export async function updatePartnerPayment(
         return {
             ok: false,
             code: "validation",
-            message: "Invalid debt",
+            message: "Invalid payment",
             fieldErrors: toFieldErrors<PartnerPaymentInput>(parsed.error),
         };
     }
     const idParsed = idSchema.safeParse(input);
     if (!idParsed.success) {
-        return { ok: false, code: "validation", message: "Invalid debt" };
+        return { ok: false, code: "validation", message: "Invalid payment" };
     }
     const { id } = idParsed.data;
 
@@ -89,7 +89,11 @@ export async function updatePartnerPayment(
     try {
         const existing = await expenseRepo.getById(userId, id);
         if (!existing || !existing.isPartnerPayment) {
-            return { ok: false, code: "not_found", message: "Debt not found." };
+            return {
+                ok: false,
+                code: "not_found",
+                message: "Payment not found.",
+            };
         }
 
         const { partnerName } = await settingsRepo.getSettings(userId);
@@ -113,7 +117,11 @@ export async function updatePartnerPayment(
             notes: existing.notes,
         });
         if (count === 0) {
-            return { ok: false, code: "not_found", message: "Debt not found." };
+            return {
+                ok: false,
+                code: "not_found",
+                message: "Payment not found.",
+            };
         }
         return { ok: true, data: { id } };
     } catch (e) {
@@ -121,7 +129,7 @@ export async function updatePartnerPayment(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the debt. Please try again.",
+            message: "Could not save the payment. Please try again.",
         };
     }
 }

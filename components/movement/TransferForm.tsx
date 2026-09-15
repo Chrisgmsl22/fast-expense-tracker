@@ -28,6 +28,14 @@ type Props = {
     initialAmount?: string;
     /** When present, the form edits this transfer instead of creating one. */
     transfer?: TransferEditable;
+    /**
+     * Which table the row being edited lives in. A payment you sent is an
+     * Expense (spec 0007 §6b), but a LEGACY `gf_paid` movement the migration
+     * could not convert is still a movement — and routing an edit by direction
+     * alone sends it to the expense action, which answers "not found" for a row
+     * in plain sight. New rows are always expenses, hence the default.
+     */
+    source?: "expense" | "movement";
     partnerName: string;
     onSuccess?: () => void;
     onCancel?: () => void;
@@ -49,6 +57,7 @@ export function TransferForm({
     direction = "gf_paid",
     initialAmount = "",
     transfer,
+    source = "expense",
     partnerName,
     onSuccess,
     onCancel,
@@ -81,33 +90,34 @@ export function TransferForm({
                 // Money you SEND her is an expense (spec 0007 §6b) — the only
                 // half of a settlement that is real spending of yours. Money she
                 // sends you stays a movement: it is her cash, not your purchase.
-                const res = outbound
-                    ? transfer
-                        ? await updatePartnerPayment({
-                              id: transfer.id,
-                              date,
-                              amount,
-                              note: note || undefined,
-                          })
-                        : await addPartnerPayment({
-                              date,
-                              amount,
-                              note: note || undefined,
-                          })
-                    : transfer
-                      ? await updateTransfer({
-                            id: transfer.id,
-                            date,
-                            amount,
-                            direction,
-                            note: note || undefined,
-                        })
-                      : await addTransfer({
-                            date,
-                            amount,
-                            direction,
-                            note: note || undefined,
-                        });
+                const res =
+                    outbound && source === "expense"
+                        ? transfer
+                            ? await updatePartnerPayment({
+                                  id: transfer.id,
+                                  date,
+                                  amount,
+                                  note: note || undefined,
+                              })
+                            : await addPartnerPayment({
+                                  date,
+                                  amount,
+                                  note: note || undefined,
+                              })
+                        : transfer
+                          ? await updateTransfer({
+                                id: transfer.id,
+                                date,
+                                amount,
+                                direction,
+                                note: note || undefined,
+                            })
+                          : await addTransfer({
+                                date,
+                                amount,
+                                direction,
+                                note: note || undefined,
+                            });
                 if (res.ok) {
                     setErrors({});
                     setFormError(null);

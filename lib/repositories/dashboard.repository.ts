@@ -119,13 +119,13 @@ export class PrismaDashboardRepository implements DashboardRepository {
             // wrong:
             //
             //  - Savings: a transfer, not a purchase.
-            //  - A fronted expense (spec 0007 §6a): the partner's card moved,
-            //    not one of yours. It has no `cardId`, and this query reads a
-            //    null `cardId` as cash — so including it would show her spending
-            //    as a phantom "Cash" segment. That phantom row IS BUG-1, the
-            //    defect that got ADR-0020 §1 to pull fronted debts out of
-            //    expenses altogether. The debt belongs in the budget; it never
-            //    belonged here.
+            //  - A payment to the partner (spec 0007 §6b): money you sent her,
+            //    usually straight from a bank account with no card attached. It
+            //    has no `cardId`, and this query reads a null `cardId` as cash —
+            //    so including it would show a settlement payment as a phantom
+            //    "Cash" segment. That phantom row IS BUG-1. The payment belongs
+            //    in the budget, which it reaches as an ordinary expense; it
+            //    never belonged in spend-by-CARD.
             where: {
                 userId,
                 date: { gte: start, lt: end },

@@ -78,10 +78,19 @@ SELECT
 FROM "Movement" m
 JOIN "Category" c
   ON c."userId" = m."userId" AND c."slug" = 'combined-expenses'
-WHERE m."type" = 'gf_paid';
+WHERE m."type" = 'gf_paid'
+  -- A marker carries the cycle boundary and `Expense` has no `closedAt`, so
+  -- converting one would DELETE a closed cycle: its rows would fall back into
+  -- the open cycle and the balance would move. A marker stays a movement until
+  -- the boundary has a home on both tables (see the hand-back).
+  AND m."closedAt" IS NULL;
 
 -- Only the ones that found a home are removed; anything left keeps counting in
 -- the settlement balance through the legacy `gf_paid` read.
 DELETE FROM "Movement" m
 WHERE m."type" = 'gf_paid'
+  -- Belt and braces: a marker was never inserted above, so it cannot match the
+  -- EXISTS either. Stating it twice means a future edit to the INSERT cannot
+  -- quietly turn this into a cycle-deleting statement.
+  AND m."closedAt" IS NULL
   AND EXISTS (SELECT 1 FROM "Expense" e WHERE e."id" = m."id");

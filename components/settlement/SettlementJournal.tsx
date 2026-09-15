@@ -53,21 +53,20 @@ function transferTitle(
  * does in both feeds, so the same debt reads the same everywhere. When there is
  * no note the title already says "I owe {partner}", so the date stands alone.
  *
- * The tail explains a missing control, and `locked` outranks `source` for the
- * same reason it does for the buttons: a locked row has no delete either, so
- * telling its reader to "delete to change" would name a way out that is not
- * there. Locked says locked; only an editable row mentions its source.
+ * The tail explains a missing control. Only `locked` does that now: a locked row
+ * has no delete either, so telling its reader to "delete to change" would name a
+ * way out that is not there.
  */
 function debtSubtitle(row: PartnerDebtRow, partnerName: string): string {
     const label = defaultDebtDescription(partnerName);
     return [
         formatExpenseDate(row.date),
         row.description === label ? null : label,
-        row.locked
-            ? "closed a settlement · locked"
-            : row.source === "movement"
-              ? "older entry · delete to change"
-              : null,
+        // Only a locked row explains a missing control now: a movement-backed
+        // debt is the ordinary, editable case (spec 0007 §6b), so the old
+        // "older entry · delete to change" tail was telling every debt it
+        // could not be edited while the edit button sat beside it.
+        row.locked ? "closed a settlement · locked" : null,
     ]
         .filter(Boolean)
         .join(" · ");
@@ -168,13 +167,14 @@ export function SettlementJournal({
     function confirmDelete() {
         if (!deleting) return;
         startTransition(async () => {
-            // A debt is an expense now (spec 0007 §6a) — except for a legacy
-            // `gf_fronted` movement the migration could not convert, which still
-            // counts in the balance and still renders here. The row carries
-            // which table it came from, so neither kind is deleted through the
-            // other's table and told "not found" for a row in plain sight.
+            // Route on the ROW's own table, never on its kind. After the
+            // inversion (spec 0007 §6b) a payment is an expense and a debt is a
+            // movement, so a kind-based branch sent every payment to
+            // `deleteMovement` — which either matched nothing or matched the
+            // leftover movement sharing its id, and reported success while the
+            // row survived on screen. That is this repo's documented failure
+            // mode: an action that says "done" and changes nothing.
             const res =
-                deleting.kind === "partner_debt" &&
                 deleting.source === "expense"
                     ? await deleteExpense({ id: deleting.id })
                     : await deleteMovement({ id: deleting.id });
@@ -245,13 +245,14 @@ export function SettlementJournal({
                                     <RowActions
                                         label={item.description}
                                         pending={pending}
-                                        // A legacy movement-backed debt has no
-                                        // edit form left — the form it used to
-                                        // open now writes expenses. Delete and
-                                        // re-log it; the subtitle says so rather
-                                        // than offering a button that fails.
+                                        // A debt is a movement by design now
+                                        // (spec 0007 §6b) and `PartnerDebtForm`
+                                        // writes `updatePartnerDebt`, so the
+                                        // movement-backed row is the EDITABLE
+                                        // one. The old gate said the opposite
+                                        // and left every debt uneditable.
                                         onEdit={
-                                            item.source === "expense"
+                                            item.source === "movement"
                                                 ? () => openEdit(item)
                                                 : undefined
                                         }
@@ -319,6 +320,7 @@ export function SettlementJournal({
                         <TransferForm
                             key={editingTransfer.id}
                             direction={editingTransfer.direction}
+                            source={editingTransfer.source}
                             transfer={transferEdit}
                             partnerName={partnerName}
                             onCancel={() => setEditingTransfer(null)}

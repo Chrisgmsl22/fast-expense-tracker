@@ -1,5 +1,6 @@
 import type { SubcategoryBar } from "@/lib/domain/category";
 import { formatMxn } from "@/lib/format";
+import { subcategoryLabel } from "@/lib/expense-display";
 
 /**
  * "Spend by subcategory" — the screen's headline. One bar per subcategory with
@@ -11,9 +12,12 @@ import { formatMxn } from "@/lib/format";
 export function SubcategoryBreakdown({
     bars,
     color,
+    partnerName = null,
 }: {
     bars: SubcategoryBar[];
     color: string;
+    /** Resolves the computed subcategory label; null when no partner is set. */
+    partnerName?: string | null;
 }) {
     const withSpend = bars.filter((b) => b.spent > 0);
     const zero = bars.filter((b) => b.spent === 0);
@@ -38,7 +42,9 @@ export function SubcategoryBreakdown({
                     {withSpend.map((b) => (
                         <li key={b.id ?? "other"}>
                             <div className="flex items-baseline justify-between gap-3 text-sm">
-                                <span className="truncate">{b.name}</span>
+                                <span className="truncate">
+                                    {subcategoryLabel(b.name, partnerName)}
+                                </span>
                                 <span className="whitespace-nowrap">
                                     <span className="font-semibold">
                                         {formatMxn(b.spent)}
@@ -66,7 +72,9 @@ export function SubcategoryBreakdown({
             {zero.length > 0 && (
                 <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground/60">
                     {zero.map((b) => (
-                        <span key={b.id ?? "other"}>{b.name} — $0</span>
+                        <span key={b.id ?? "other"}>
+                            {subcategoryLabel(b.name, partnerName)} — $0
+                        </span>
                     ))}
                 </p>
             )}

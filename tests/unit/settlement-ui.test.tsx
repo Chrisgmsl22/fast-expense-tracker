@@ -204,7 +204,8 @@ describe("SettlementJournal", () => {
             locked: false,
             description: "I owe Brenda",
             amount: 300,
-            source: "expense",
+            // A debt is a movement again (spec 0007 §6b).
+            source: "movement",
         },
     ];
 
@@ -242,12 +243,10 @@ describe("SettlementJournal", () => {
         expect(screen.queryByLabelText("Edit Groceries")).toBeNull();
     });
 
-    // The debt row is an `Expense{isPartnerPayment:true}` now (spec 0007 §6a), so the
-    // journal deletes it through the expense action. Sending it to
-    // `deleteMovement` would match no movement and report "not found" for a row
-    // sitting in plain sight.
-    it("opens the delete confirm and deletes the debt as an expense", async () => {
-        deleteExpenseMock.mockResolvedValue({ ok: true, data: { id: "e2" } });
+    // A DEBT is a movement again (spec 0007 §6b), so it deletes through the
+    // movement action. Routing is by the row's own `source`, never by its kind.
+    it("opens the delete confirm and deletes the debt as a movement", async () => {
+        deleteMock.mockResolvedValue({ ok: true, data: { id: "e2" } });
         render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
 
@@ -255,10 +254,9 @@ describe("SettlementJournal", () => {
         expect(within(dialog).getByText("Delete this debt?")).toBeDefined();
         fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
         await waitFor(() =>
-            expect(deleteExpenseMock).toHaveBeenCalledWith({ id: "e2" }),
+            expect(deleteMock).toHaveBeenCalledWith({ id: "e2" }),
         );
-        // A transfer still goes to the movement action — the two never cross.
-        expect(deleteMock).not.toHaveBeenCalled();
+        expect(deleteExpenseMock).not.toHaveBeenCalled();
     });
 
     // I-1: a legacy `gf_fronted` movement the migration could not convert still
@@ -289,7 +287,7 @@ describe("SettlementJournal", () => {
         expect(deleteExpenseMock).not.toHaveBeenCalledWith({ id: "legacy1" });
     });
 
-    it("offers no edit button on a legacy movement-backed debt", () => {
+    it("offers edit AND delete on a movement-backed debt", () => {
         const legacy: SettlementJournalItem = {
             kind: "partner_debt",
             id: "legacy1",
@@ -302,11 +300,13 @@ describe("SettlementJournal", () => {
         };
         render(<SettlementJournal journal={[legacy]} partnerName="Brenda" />);
 
-        // The form it used to open now writes expenses, so the button would
-        // always fail. The row says why instead.
-        expect(screen.queryByLabelText("Edit I owe Brenda")).toBeNull();
+        // A debt is a movement by design now (spec 0007 §6b) and
+        // `PartnerDebtForm` writes `updatePartnerDebt`, so it is editable. The
+        // old gate had this backwards and left EVERY debt uneditable, with a
+        // "delete to change" subtitle that was simply untrue.
+        expect(screen.getByLabelText("Edit I owe Brenda")).toBeDefined();
         expect(screen.getByLabelText("Delete I owe Brenda")).toBeDefined();
-        expect(screen.getByText(/delete to change/)).toBeDefined();
+        expect(screen.queryByText(/delete to change/)).toBeNull();
     });
 
     it("loads the debt into an edit form, prefilled from the row", async () => {
@@ -365,5 +365,83 @@ describe("SettlementJournal", () => {
         await waitFor(() =>
             expect(deleteMock).toHaveBeenCalledWith({ id: "m1" }),
         );
+    });
+});
+
+describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () => {
+    const payment: SettlementJournalItem = {
+        kind: "transfer",
+        id: "ePay",
+        date: new Date("2026-07-11T06:00:00Z"),
+        carriedOver: false,
+        locked: false,
+        direction: "gf_paid",
+        amount: 150,
+        note: null,
+        source: "expense",
+    };
+
+    beforeEach(() => {
+        deleteMock.mockReset();
+        deleteExpenseMock.mockReset();
+    });
+
+    it("deletes a payment through the EXPENSE action, not the movement one", async () => {
+        // The reported defect: the dialog closed, no error appeared, and the
+        // $150 row survived — `deleteMovement` matched nothing (or matched the
+        // leftover movement of the same id) and answered as though it worked.
+        deleteExpenseMock.mockResolvedValue({ ok: true, data: { id: "ePay" } });
+        render(<SettlementJournal journal={[payment]} partnerName="Brenda" />);
+        fireEvent.click(
+            screen.getByLabelText("Delete Transfer — you paid Brenda"),
+        );
+
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+        await waitFor(() =>
+            expect(deleteExpenseMock).toHaveBeenCalledWith({ id: "ePay" }),
+        );
+        expect(deleteMock).not.toHaveBeenCalled();
+    });
+
+    it("surfaces a failed delete instead of closing quietly", async () => {
+        deleteExpenseMock.mockResolvedValue({
+            ok: false,
+            code: "not_found",
+            message: "Expense not found.",
+        });
+        render(<SettlementJournal journal={[payment]} partnerName="Brenda" />);
+        fireEvent.click(
+            screen.getByLabelText("Delete Transfer — you paid Brenda"),
+        );
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+        expect(await screen.findByRole("alert")).toHaveProperty(
+            "textContent",
+            "Expense not found.",
+        );
+    });
+
+    it("still routes money SHE sent through the movement action", async () => {
+        deleteMock.mockResolvedValue({ ok: true, data: { id: "mIn" } });
+        const received: SettlementJournalItem = {
+            ...payment,
+            id: "mIn",
+            direction: "gf_received",
+            source: "movement",
+        };
+        render(<SettlementJournal journal={[received]} partnerName="Brenda" />);
+        fireEvent.click(
+            screen.getByLabelText("Delete Transfer — Brenda paid you"),
+        );
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+        await waitFor(() =>
+            expect(deleteMock).toHaveBeenCalledWith({ id: "mIn" }),
+        );
+        expect(deleteExpenseMock).not.toHaveBeenCalled();
     });
 });
