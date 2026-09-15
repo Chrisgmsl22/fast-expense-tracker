@@ -259,11 +259,31 @@ impossible rather than merely discouraged: no `Total` spanning both.
     consumption.
 
     **It defaults to the `combined-expenses` category, which already exists for
-    exactly this.** Its seeded subcategories are "Purchases made by girlfriend ·
-    Purchases made between the two · Cats", it is already marked relevant
-    (essentials), and he has used it. That answers _"maybe through a different
-    category so its easier to tell"_ without inventing one, and without a new
-    category whose bucket nobody could classify. He can change it per entry.
+    exactly this.** It is already marked relevant (essentials) and he already
+    uses it. That answers _"maybe through a different category so its easier to
+    tell"_ without inventing one, and without a new category whose bucket nobody
+    could classify. He can change it per entry.
+
+    **Rename its subcategory "Purchases made by girlfriend" → "Fronted for
+    me".** His objection: _"its not really a purchase she did, Im only paying
+    her a portion, my portion, so i dont want to confuse things."_ He is right —
+    the row is his share, not her purchase, so the old name describes the wrong
+    event.
+
+    "Fronted for me" is short like its siblings (Rent, Cats), uses the word the
+    app already uses for this, says nothing about who paid, and centres his
+    share. It is also **partner-neutral**, where the seeded name says
+    "girlfriend" — wrong for any other account now the partner is configurable
+    (CHORE-6.a). If he prefers: "My share, fronted" or "Covered for me", a
+    one-line change either way.
+
+    **The rename is a trap.** It touches the frozen reference
+    (`docs/reference/domain-reference.md` row 9), the starter kit, and existing
+    rows in dev and production. The seed matches subcategories **by name**, so
+    renaming without migrating existing rows **creates a duplicate** instead of
+    renaming — the hazard CHORE-10 exists to fix, already visible in the dev
+    database as phantom cards. Migrate by id, never by name, and verify no
+    duplicate appears after a re-provision.
 
 2. **It carries a funding source like any other purchase** (§3.1). Settling it
    from savings tags the **debt**, never the transfer — same reasoning as §3.2,
