@@ -204,6 +204,92 @@ Implementation consequence: any cached or precomputed monthly figure must be
 invalidated when `fundedFrom` changes, including for a past month. A slice that
 adds month caching later must not assume a closed month is immutable.
 
+## 6a. Amendment — consumption and cash, told apart
+
+**Added 2026-09-14 after hands-on use. Reverses §3.4's "the debt stays
+settlement-only" and replaces ADR-0018 §5's single `Total`.**
+
+### The problem, in his own numbers
+
+Queried from the live local database for September:
+
+| Figure                            | Amount    |
+| --------------------------------- | --------- |
+| My own expenses, my share         | $1,325.99 |
+| What she fronted (debts I logged) | $1,950.00 |
+| What I transferred to her         | $8,011.20 |
+
+More of his consumption ran through her than through his own cards, and **none of
+it reached a bucket**. The budget understated the month by 60%. July, which looks
+more like ordinary use, understated by 4%. His verdict: _"I want it to reach my
+budget because it is real money from my current month that I actually spent."_
+
+Meanwhile the feed footer adds `1,325.99 + 8,011.20 = 9,337.19` and calls it
+`Total` — a figure true in neither ledger, because it mixes what he consumed with
+what left his account.
+
+### The rule
+
+**Two ledgers, one question each. They are never added together, and no screen
+may show a figure that sums across them.**
+
+| Ledger                              | Question                          | Contents                                                       |
+| ----------------------------------- | --------------------------------- | -------------------------------------------------------------- |
+| **Consumption** — drives 50/25/25   | What did this month's income buy? | my share of my own expenses **+ my share of what she fronted** |
+| **Cash out** — reconciles to a bank | What left my account?             | card payments + transfers to her + cash expenses               |
+
+Both exclude anything funded from savings or reimbursed.
+
+The same pesos appear in both at different moments — she fronts the food
+(consumption), he transfers the money later (cash). That is correct and is not a
+double count, **because the two are never summed**. The UI must make that
+impossible rather than merely discouraged: no `Total` spanning both.
+
+### Decisions
+
+1. **A debt she fronted is consumption and enters the budget.** It carries a
+   **category** and counts in the buckets and the category rollups.
+2. **It carries a funding source like any other purchase** (§3.1). Settling it
+   from savings tags the **debt**, never the transfer — same reasoning as §3.2,
+   since a transfer is a net covering several debts and could never be
+   attributed honestly.
+3. **A debt leaves the chronological feed.** His words: _"adding my debts to her
+   adds too much noise. There's the settlement page for that."_ It stays visible
+   in the buckets, the category rollups and the settlement page. The **transfer**
+   is the feed row, because that is the cash event.
+4. **"What I really spent" becomes the cash-out figure** and so includes
+   transfers to her: _"that is also money that left my account."_ The
+   `Paid to {partner}` line stays as its breakdown. The `Total` row that summed
+   across ledgers is **removed**, not relabelled.
+5. **Transfers gain the funding-source control.** §3.1 already says they carry
+   it; this makes the UI explicit. A transfer paid from savings leaves both
+   ledgers for the month.
+
+### The trap — read this before writing code
+
+Making a debt an expense again is **exactly what ADR-0020 §1 reversed**, and the
+reason was BUG-1: a debt with no card surfaced as a phantom `Cash` row in
+spend-by-card.
+
+The defect was never that the debt reached the budget. It was that it reached
+**spend-by-card**, which groups by `cardId` and reads null as cash. So exclude it
+there, at the query boundary, exactly as savings-funded rows are excluded from
+budget reads — never by subtracting afterwards.
+
+**Do not reintroduce `paidBy: "gf"`.** That column is deprecated and every read
+has dropped it. Whatever marks a fronted expense must be new and explicit, and
+the settlement layer must still read it as the debt side of the balance.
+
+### Slices
+
+| Slice | Scope                                                                                                           |
+| ----- | --------------------------------------------------------------------------------------------------------------- |
+| E     | The debt becomes categorised consumption: schema, form, budget reads, spend-by-card exclusion, settlement reads |
+| F     | Feed rework: debts out, `Total` removed, "what I really spent" becomes cash out                                 |
+| G     | Funding source on transfers (the deferred half of slice C)                                                      |
+
+E before F. G is independent.
+
 ## 7. Out of scope
 
 - **Partial refunds.** `reimbursed` assumes the full amount. Storing a refunded
