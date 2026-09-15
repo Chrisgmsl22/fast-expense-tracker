@@ -1,6 +1,9 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
-import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
-import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
+import { computeFeedTotals } from "@/lib/domain/movement";
+import {
+    NON_INCOME_FUNDED_LABEL,
+    nonIncomeFundedTransferLabel,
+} from "@/lib/domain/funding";
 import { FundingBadge } from "@/components/expense/FundingBadge";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
@@ -51,8 +54,7 @@ export function MonthFeed({
 }) {
     const feed = buildFeed(expenses, movements);
 
-    const paidToPartner = sumByType(movements, "gf_paid");
-    const totals = computeFeedTotals(expenses, paidToPartner);
+    const totals = computeFeedTotals(expenses, movements);
 
     const count = feed.length;
 
@@ -154,6 +156,19 @@ export function MonthFeed({
                             </span>
                         </div>
                     )}
+                    {/* The cash half of "not from income" — its own line, right
+                        under the figure it left. Never added to the consumption
+                        line above it (spec 0007 §6a). */}
+                    {totals.notFromIncomeTransfers > 0 && (
+                        <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                                {nonIncomeFundedTransferLabel(partnerName)}
+                            </span>
+                            <span className="px-2 tabular-nums text-muted-foreground">
+                                {formatMxn(totals.notFromIncomeTransfers)}
+                            </span>
+                        </div>
+                    )}
                     {/* Total only when it says something beyond "what I really
                         spent" — i.e. savings or a transfer added to it. Dark band
                         (flush to the card bottom) so it's easy to spot. */}
@@ -178,12 +193,6 @@ export function MonthFeed({
             )}
         </div>
     );
-}
-
-function sumByType(movements: MovementListItem[], type: MovementType): number {
-    return movements
-        .filter((m) => m.type === type)
-        .reduce((sum, m) => sum + m.amount, 0);
 }
 
 /** One expense line (neutral). */
@@ -268,8 +277,13 @@ function MovementRow({
             className={`flex items-center gap-3 border-l-[3px] py-2.5 pr-4 pl-4 ${rowTint}`}
         >
             <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                    {title}
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-medium">
+                        {title}
+                    </span>
+                    {m.fundedFrom === "income" ? null : (
+                        <FundingBadge fundedFrom={m.fundedFrom} />
+                    )}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {formatExpenseDate(m.date)}

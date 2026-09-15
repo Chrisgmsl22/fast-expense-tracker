@@ -4,6 +4,7 @@ import {
     type CoupleBalance,
     type SettlementInputs,
 } from "@/lib/domain/settlement";
+import type { TransferFundingSource } from "@/lib/domain/funding";
 import { partnerShareTotal } from "@/lib/domain/movement";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import { settlementRepository, settingsRepository } from "@/lib/repositories";
@@ -41,6 +42,13 @@ export type SettlementJournalItem = {
           amount: number;
           /** Free-text label ("what it was toward"); null when none. */
           note: string | null;
+          /**
+           * Which month's money funded it (spec 0007 §3.1) — carried so the
+           * row's edit form prefills the control instead of resetting it to
+           * `income` on save. It changes no figure on this page: the balance
+           * counts every transfer at full value whatever funded it.
+           */
+          fundedFrom: TransferFundingSource;
       }
 );
 
@@ -192,6 +200,7 @@ function buildJournal(
                 direction: m.type,
                 amount: m.amount,
                 note: m.note?.trim() || null,
+                fundedFrom: m.fundedFrom,
             });
         }
         // A card payment doesn't touch the couple balance → never in the journal.

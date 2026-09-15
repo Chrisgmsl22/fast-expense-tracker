@@ -59,6 +59,9 @@ export async function addTransfer(
             type: v.direction,
             cardId: null,
             note: v.note ?? null,
+            // Only meaningful on `gf_paid`: the schema rejects `savings` on an
+            // inbound transfer (spec 0007 §3.1).
+            fundedFrom: v.fundedFrom,
         });
         return { ok: true, data: { id: created.id } };
     } catch (e) {

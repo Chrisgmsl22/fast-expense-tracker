@@ -35,6 +35,7 @@ const movement = (
     amount: 100,
     type: "gf_paid",
     note: null,
+    fundedFrom: "income",
     ...over,
 });
 
@@ -98,6 +99,57 @@ describe("getSettlement", () => {
         expect(s.balance.direction).toBe("settled");
         expect(s.journal).toHaveLength(2); // the expense + the transfer
         expect(s.journal.some((j) => j.kind === "transfer")).toBe(true);
+    });
+
+    describe("the funding source never moves the balance (spec 0007 §6a)", () => {
+        // The two ledgers are separate. Paying her from savings really did
+        // reach her, so it reduces what you owe by the full amount — only the
+        // budget and cash figures (the feed) skip it. Filtering here too would
+        // be the easy mistake: each side looks correct in isolation.
+        const transfer = (fundedFrom: "income" | "savings") =>
+            movement({ id: "mt", type: "gf_paid", amount: 300, fundedFrom });
+
+        /** You owe her 500; the transfer pays 300 of it, whatever funded it. */
+        const debt = movement({
+            id: "mdebt",
+            type: "gf_fronted",
+            amount: 500,
+        });
+
+        it("gives a savings-funded transfer the same balance as an income-funded one", async () => {
+            const fromIncome = await run([], [debt, transfer("income")]);
+            const fromSavings = await run([], [debt, transfer("savings")]);
+
+            expect(fromSavings.balance).toEqual(fromIncome.balance);
+            // And the figure is the real one: 500 owed − 300 sent.
+            expect(fromSavings.balance.direction).toBe("you_owe");
+            expect(fromSavings.balance.amount).toBe(200);
+        });
+
+        it("settles a debt to zero when paid entirely from savings", async () => {
+            const s = await run(
+                [],
+                [
+                    debt,
+                    movement({
+                        id: "mt",
+                        type: "gf_paid",
+                        amount: 500,
+                        fundedFrom: "savings",
+                    }),
+                ],
+            );
+            expect(s.balance.direction).toBe("settled");
+            expect(s.balance.amount).toBe(0);
+        });
+
+        it("carries the source onto the journal row so an edit can't reset it", async () => {
+            const s = await run([], [transfer("savings")]);
+            const row = s.journal.find((j) => j.kind === "transfer");
+            expect(row).toBeDefined();
+            if (row?.kind === "transfer")
+                expect(row.fundedFrom).toBe("savings");
+        });
     });
 
     it("a card payment is never a journal row (ADR-0020)", async () => {

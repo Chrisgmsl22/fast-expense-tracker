@@ -8,7 +8,11 @@
  */
 
 import { SAVINGS_SLUG } from "./dashboard";
-import { BUDGET_FUNDING_SOURCE, type FundingSource } from "./funding";
+import {
+    BUDGET_FUNDING_SOURCE,
+    type FundingSource,
+    type TransferFundingSource,
+} from "./funding";
 
 /** All `Movement.type` values in the schema. */
 export type MovementType =
@@ -66,21 +70,45 @@ export type FeedTotals = {
      * matches the dashboard's savings bucket.
      */
     setAside: number;
-    /** Transfers you sent the partner (`gf_paid`). */
+    /**
+     * Transfers you sent the partner (`gf_paid`), funded by THIS month's income
+     * only. A transfer paid out of savings is excluded for the same reason a
+     * savings-funded expense is: that money was counted as savings in the month
+     * it was set aside (spec 0007 §6a decision 5). It still counts in full
+     * toward the settlement balance — that is a different ledger.
+     */
     paidToPartner: number;
     /**
-     * My-share that this month's income did NOT fund (savings-funded or
-     * reimbursed). Surfaced so `charged` and `whatIReallySpent` reconcile and
-     * nothing is hidden; excluded from the budget figures above.
+     * CONSUMPTION ledger: my share of savings-funded or reimbursed expenses.
+     * Surfaced so the excluded spend stays visible instead of vanishing.
+     *
+     * Transfers are deliberately NOT in here. They are the CASH ledger, and
+     * spec 0007 §6a forbids any figure that sums across the two: she fronts a
+     * $680 dinner (consumption) and he transfers $680 later (cash), so one
+     * combined line would print $1,360 for one dinner. The two excluded figures
+     * stay apart for the same reason `whatIReallySpent` and `paidToPartner` do.
      */
     notFromIncome: number;
     /**
+     * CASH ledger: savings-funded transfers to the partner — the money that
+     * left `paidToPartner`. Its own field, never folded into `notFromIncome`
+     * (see above) and never into `total`.
+     */
+    notFromIncomeTransfers: number;
+    /**
      * This month's income that left = spent + set aside + paid to partner.
-     * `notFromIncome` is deliberately NOT added: it came from another month's
-     * money, so folding it in would re-create the contradiction with the
-     * buckets that spec 0007 exists to remove.
+     * Neither excluded figure is added: that money came from another month, so
+     * folding it in would re-create the contradiction with the buckets that
+     * spec 0007 exists to remove.
      */
     total: number;
+};
+
+/** Minimal movement shape the footer totals read. */
+export type FeedTotalMovement = {
+    type: MovementType;
+    amount: number;
+    fundedFrom: TransferFundingSource;
 };
 
 /**
@@ -88,13 +116,31 @@ export type FeedTotals = {
  * "What I really spent" matches the dashboard's Spent — including its funding
  * filter, so the footer can never contradict the buckets above it. Card payments never enter
  * here: their charges were already counted as expenses, so adding them would
- * double-count. `paidToPartner` is the summed `gf_paid` amount — new outflow
+ * double-count. `paidToPartner` sums the `gf_paid` movements — new outflow
  * (your share of things the partner fronted) not otherwise captured.
+ *
+ * It takes the movement ROWS, not a pre-summed number, on purpose: that keeps
+ * the funding filter at the one boundary where the figure is derived, so neither
+ * feed can sum `gf_paid` its own way and neither can forget to skip a
+ * savings-funded transfer (spec 0007 §6a decision 5).
  */
 export function computeFeedTotals(
     expenses: FeedTotalExpense[],
-    paidToPartner: number,
+    movements: FeedTotalMovement[],
 ): FeedTotals {
+    let paidToPartner = 0;
+    let notFromIncomeTransfers = 0;
+    for (const m of movements) {
+        if (m.type !== "gf_paid") continue;
+        // The boundary: a savings-funded transfer never reaches the cash
+        // figures. It moves to its own field instead of being subtracted
+        // somewhere downstream, so no later arithmetic has to remember it
+        // exists — and it stays out of `notFromIncome`, which is the other
+        // ledger (spec 0007 §6a).
+        if (m.fundedFrom === BUDGET_FUNDING_SOURCE) paidToPartner += m.amount;
+        else notFromIncomeTransfers += m.amount;
+    }
+
     let charged = 0;
     let whatIReallySpent = 0;
     let setAside = 0;
@@ -122,6 +168,7 @@ export function computeFeedTotals(
         setAside,
         paidToPartner,
         notFromIncome,
+        notFromIncomeTransfers,
         total: whatIReallySpent + setAside + paidToPartner,
     };
 }

@@ -58,6 +58,7 @@ const debt: MovementListItem = {
     type: "gf_fronted",
     card: null,
     note: "she covered the vet",
+    fundedFrom: "income",
 };
 
 describe("MonthFeed", () => {
@@ -119,6 +120,7 @@ describe("MonthFeed", () => {
                 type: "gf_received",
                 card: null,
                 note: null,
+                fundedFrom: "income",
             },
         ];
         render(
@@ -214,6 +216,7 @@ describe("MonthFeed", () => {
                 type: "card_payment",
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
+                fundedFrom: "income",
             },
             {
                 id: "m2",
@@ -222,6 +225,7 @@ describe("MonthFeed", () => {
                 type: "gf_paid",
                 card: null,
                 note: "netted week",
+                fundedFrom: "income",
             },
         ];
         render(
@@ -240,6 +244,95 @@ describe("MonthFeed", () => {
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.getByText("Paid to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
+    });
+
+    it("keeps a savings-funded transfer out of 'Paid to Brenda' but badged in the list", () => {
+        // Spec 0007 §6a decision 5: it used no part of this month's income, so
+        // it leaves the cash figures — while staying visible as a row, and
+        // still counting in full toward the settlement balance elsewhere.
+        const movements: MovementListItem[] = [
+            {
+                id: "m1",
+                date: new Date("2026-06-22T06:00:00Z"),
+                amount: 8000,
+                type: "gf_paid",
+                card: null,
+                note: "settled from savings",
+                fundedFrom: "savings",
+            },
+            {
+                id: "m2",
+                date: new Date("2026-06-23T06:00:00Z"),
+                amount: 200,
+                type: "gf_paid",
+                card: null,
+                note: "netted week",
+                fundedFrom: "income",
+            },
+        ];
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={movements}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+
+        expect(screen.getByText("from savings")).toBeDefined();
+        const totals = within(screen.getByTestId("feed-totals"));
+        // Only the income-funded 200 reaches the figure.
+        expect(totals.getByText("$200.00")).toBeDefined();
+        expect(totals.queryByText("$8,200.00")).toBeNull();
+        // The excluded money is surfaced under its OWN cash line, named for the
+        // partner — never merged into the consumption line (spec 0007 §6a).
+        expect(totals.getByText("Paid to Brenda from savings")).toBeDefined();
+        expect(totals.getByText("$8,000.00")).toBeDefined();
+        expect(totals.queryByText("Not from this month's income")).toBeNull();
+    });
+
+    it("prints the consumption and cash exclusions as two lines, never one sum", () => {
+        // The §6a flow: a $680 dinner she fronted (consumption, savings-funded)
+        // and the $680 transfer settling it (cash, savings-funded). One line
+        // reading $1,360 would bill the same dinner twice.
+        render(
+            <MonthFeed
+                expenses={[
+                    {
+                        ...expenses[0]!,
+                        id: "fronted",
+                        description: "Dinner she fronted",
+                        amount: 680,
+                        actualExpenditure: 680,
+                        fundedFrom: "savings",
+                    },
+                ]}
+                movements={[
+                    {
+                        id: "m1",
+                        date: new Date("2026-06-22T06:00:00Z"),
+                        amount: 680,
+                        type: "gf_paid",
+                        card: null,
+                        note: "settling the dinner",
+                        fundedFrom: "savings",
+                    },
+                ]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+
+        const totals = within(screen.getByTestId("feed-totals"));
+        expect(totals.getByText("Not from this month's income")).toBeDefined();
+        expect(totals.getByText("Paid to Brenda from savings")).toBeDefined();
+        // Three times $680, never once $1,360: Charged (source-agnostic), the
+        // consumption exclusion, and the cash exclusion. Each is one ledger's
+        // view of the money; no line adds two of them together.
+        expect(totals.getAllByText("$680.00")).toHaveLength(3);
+        expect(totals.queryByText("$1,360.00")).toBeNull();
     });
 
     it("renders the settlement chip in Shared mode when a balance is passed", () => {
@@ -268,6 +361,7 @@ describe("MonthFeed", () => {
                 type: "card_payment",
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
+                fundedFrom: "income",
             },
             {
                 id: "m2",
@@ -276,6 +370,7 @@ describe("MonthFeed", () => {
                 type: "gf_paid",
                 card: null,
                 note: "netted week",
+                fundedFrom: "income",
             },
         ];
         render(
@@ -341,6 +436,7 @@ describe("MonthFeed", () => {
                 type: "gf_paid",
                 card: null,
                 note: "netted week",
+                fundedFrom: "income",
             },
         ];
         const { unmount } = render(

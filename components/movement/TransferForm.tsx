@@ -5,6 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+} from "@/components/ui/select";
+import {
+    FUNDING_SOURCE_LABEL,
+    TRANSFER_FUNDING_SOURCES,
+    type TransferFundingSource,
+} from "@/lib/domain/funding";
+import {
     addTransfer,
     type AddTransferResult,
 } from "@/app/_actions/movement/add-transfer";
@@ -23,6 +34,7 @@ export type TransferEditable = {
     date: string;
     amount: string;
     note: string;
+    fundedFrom: TransferFundingSource;
 };
 
 type Props = {
@@ -54,6 +66,11 @@ export function TransferForm({
     const [date, setDate] = useState(transfer?.date ?? "");
     const [amount, setAmount] = useState(transfer?.amount ?? initialAmount);
     const [note, setNote] = useState(transfer?.note ?? "");
+    // Which month's money funded it (spec 0007 §3.1). `income` is the default
+    // and the path of least effort: ignore the control and nothing changes.
+    const [fundedFrom, setFundedFrom] = useState<TransferFundingSource>(
+        transfer?.fundedFrom ?? "income",
+    );
 
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<TransferInput>>({});
@@ -69,6 +86,14 @@ export function TransferForm({
           ? `Log ${partnerName}'s payment`
           : `Log payment to ${partnerName}`;
 
+    // Money coming IN from her is funded by nothing of yours, so the control is
+    // hidden for that direction and the value sent is always the neutral
+    // default — which also clears the tag if an outbound transfer is flipped
+    // inbound, rather than stranding it.
+    const outboundFundedFrom: TransferFundingSource = inbound
+        ? "income"
+        : fundedFrom;
+
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         const form = e.currentTarget;
@@ -81,12 +106,14 @@ export function TransferForm({
                           amount,
                           direction,
                           note: note || undefined,
+                          fundedFrom: outboundFundedFrom,
                       })
                     : await addTransfer({
                           date,
                           amount,
                           direction,
                           note: note || undefined,
+                          fundedFrom: outboundFundedFrom,
                       });
                 if (res.ok) {
                     setErrors({});
@@ -95,6 +122,10 @@ export function TransferForm({
                     setDate("");
                     setAmount("");
                     setNote("");
+                    // Only when creating. An edit form that stayed mounted
+                    // would otherwise show `income` over a row it just saved
+                    // as savings-funded.
+                    if (!transfer) setFundedFrom("income");
                     onSuccess?.();
                 } else {
                     setErrors(res.fieldErrors ?? {});
@@ -184,6 +215,52 @@ export function TransferForm({
                     className="mt-1.5"
                 />
             </div>
+
+            {/* Funding source (spec 0007 §3.1 + §6a decision 5). Same wording as
+                an expense's control, minus `reimbursed` — that one is Health-only
+                (§3.3) and a transfer has no category. Outbound only: money she
+                sends you isn't funded by anything of yours. */}
+            {inbound ? null : (
+                <div>
+                    <Label htmlFor="tr-fundedFrom">Funded from</Label>
+                    <Select
+                        value={fundedFrom}
+                        onValueChange={(value) =>
+                            setFundedFrom(
+                                (value as TransferFundingSource | null) ??
+                                    "income",
+                            )
+                        }
+                    >
+                        <SelectTrigger
+                            id="tr-fundedFrom"
+                            aria-label="Funded from"
+                            className="mt-1.5 w-full"
+                        >
+                            {FUNDING_SOURCE_LABEL[fundedFrom]}
+                        </SelectTrigger>
+                        <SelectContent>
+                            {TRANSFER_FUNDING_SOURCES.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                    {FUNDING_SOURCE_LABEL[option]}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {fundedFrom === "income" ? null : (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Doesn&apos;t count toward this month&apos;s budget
+                            or what you really spent. It still settles what you
+                            owe {partnerName}.
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {/* Outside the branch above: an inbound transfer hides the control
+                but can still be rejected for its funding source, and that
+                message has to land somewhere the user can see it. */}
+            {fieldError("fundedFrom")}
 
             {formError && (
                 <p className="text-sm text-destructive" role="alert">
