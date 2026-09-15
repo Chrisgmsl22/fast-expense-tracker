@@ -23,7 +23,7 @@ import type {
 import type { SettingsRepository } from "@/lib/repositories/settings.repository";
 
 /** Where a debt row is stored — see `SettlementJournalItem`'s `partner_debt`. */
-export type DebtSource = "expense" | "movement";
+export type RowSource = "expense" | "movement";
 
 /** One balance-affecting row for the settlement journal. */
 export type SettlementJournalItem = {
@@ -50,18 +50,17 @@ export type SettlementJournalItem = {
     | {
           kind: "partner_debt";
           description: string;
-          /** Your share of what she fronted — the `-` this row adds. */
+          /** What you owe her for this row — the `-` it adds to the balance. */
           amount: number;
           /**
-           * Which table the row lives in. A debt is an `Expense{isFronted:true}`
-           * now (spec 0007 §6a), but a legacy `gf_fronted` movement the
-           * migration could not convert still counts in the balance and still
-           * renders here. The two look identical on screen and are edited and
-           * deleted through different actions, so the row carries its own
-           * origin: a view that guessed would send half of them to the wrong
-           * table and report "not found" for a row in plain sight.
+           * Which table the row lives in. A debt is a `Movement{gf_fronted}`
+           * again (spec 0007 §6b) — settlement only. The field stays because
+           * rows of one kind can still come from either table during a
+           * conversion, and the two are edited through different actions: a view
+           * that guessed would send half of them to the wrong table and report
+           * "not found" for a row in plain sight.
            */
-          source: DebtSource;
+          source: RowSource;
       }
     | {
           kind: "transfer";
@@ -69,6 +68,12 @@ export type SettlementJournalItem = {
           amount: number;
           /** Free-text label ("what it was toward"); null when none. */
           note: string | null;
+          /**
+           * Which table this row lives in. A payment you SENT is an
+           * `Expense{isPartnerPayment:true}` now (spec 0007 §6b); money she sent
+           * you, and any legacy `gf_paid`, are still movements.
+           */
+          source: RowSource;
       }
 );
 
@@ -173,67 +178,80 @@ export type SettlementViewOptions = {
 };
 
 /**
- * Drop any legacy `gf_fronted` movement that has already become an expense.
+ * Drop any legacy `gf_paid` movement that has already become a payment-expense.
  *
  * The conversion migration reuses the movement's id for the expense it creates,
- * so a converted pair is recognisable without a join table. The migration is
- * atomic — it inserts and deletes in one transaction — so a twin should never
- * exist. This says "should never" out loud instead of trusting it: a partial
- * restore, a replay against a half-migrated copy, or a hand-run INSERT would
- * otherwise count one debt twice, and a silently doubled IOU is the kind of
- * error nobody spots until they pay it.
+ * so a converted pair is recognisable without a join table. The migration
+ * inserts and deletes together, so a twin should never exist. This says "should
+ * never" out loud instead of trusting it: a partial restore or a replay against
+ * a half-migrated copy would otherwise count one payment twice, and a silently
+ * doubled settlement figure is the kind of error nobody spots until they pay it.
  *
- * The movement fallback is **transitional, not permanent**. It exists for one
- * case: an account with no `combined-expenses` category when the migration ran,
- * which had nowhere honest to file the debt. Such an account is converted by
- * creating that category and re-running the migration's conversion step; until
- * then its debts still count in the balance and can still be deleted. Nothing
- * writes `gf_fronted` anymore, so the set only shrinks.
+ * The movement fallback is **transitional, not permanent**. It covers an account
+ * whose payments could not be filed — no `combined-expenses` category when the
+ * migration ran. Those payments still count in the balance until it is
+ * converted. Nothing writes `gf_paid` anymore, so the set only shrinks.
  */
 function withoutConvertedTwins(
     movements: SettlementMovementRow[],
     expenses: SettlementExpenseRow[],
 ): SettlementMovementRow[] {
     const convertedIds = new Set(
-        expenses.filter((e) => e.isFronted).map((e) => e.id),
+        expenses.filter((e) => e.isPartnerPayment).map((e) => e.id),
     );
     if (convertedIds.size === 0) return movements;
     return movements.filter(
-        (m) => !(m.type === "gf_fronted" && convertedIds.has(m.id)),
+        (m) => !(m.type === "gf_paid" && convertedIds.has(m.id)),
     );
 }
 
-/** Net the four balance inputs from a set of window rows (spec 0004 §2.4). */
+/**
+ * Net the four balance inputs from a set of window rows (spec 0004 §2.4).
+ *
+ * Which table each side reads was REVERSED in spec 0007 §6b:
+ *
+ * | Side         | Source                                            |
+ * | ------------ | ------------------------------------------------- |
+ * | she owes you | your ordinary expenses, her share of each         |
+ * | you owe her  | `gf_fronted` movements — settlement only          |
+ * | you paid her | `Expense{isPartnerPayment}` (+ legacy `gf_paid`)  |
+ * | she paid you | `gf_received` movements                           |
+ *
+ * The balance is **unchanged** by the reversal: the same money nets the same
+ * way. Only the table each thing lives in moved.
+ */
 function inputsFrom(
     expenses: SettlementExpenseRow[],
     movements: SettlementMovementRow[],
 ): SettlementInputs {
-    // Expenses now split two ways (spec 0007 §6a): the ones you paid, where the
-    // partner owes you her share, and the ones she fronted, where you owe her
-    // the whole row. They pull the balance in opposite directions, so each is
-    // read once and only once — the sort happens here, before any summing, so no
-    // row can land on both sides. `partnerShareTotal` sums
+    // Expenses split two ways: ordinary purchases of yours, where she owes you
+    // her share, and payments you sent her, which draw the balance down. Each is
+    // read once and only once — the sort happens before any summing, so no row
+    // can land on both sides. `partnerShareTotal` sums
     // (amount − actualExpenditure), 0 for a solo expense, so summing the rest is
     // safe.
-    const yourExpenses = expenses.filter((e) => !e.isFronted);
-    const frontedExpenses = expenses.filter((e) => e.isFronted);
+    const yourExpenses = expenses.filter((e) => !e.isPartnerPayment);
+    const paymentExpenses = expenses.filter((e) => e.isPartnerPayment);
     const partnerShareOfYourExpenses = partnerShareTotal(yourExpenses);
 
-    // A fronted row's `actualExpenditure` IS what you owe her: the amount logged
-    // was already your share (spec 0007 §6a decision 1).
-    let yourDebtToPartner = frontedExpenses.reduce(
+    // A payment row's `actualExpenditure` IS what you sent her — no split is
+    // applied to it (spec 0007 §6b).
+    let moneyYouPaidPartner = paymentExpenses.reduce(
         (sum, e) => sum + e.actualExpenditure,
         0,
     );
     let moneyPartnerPaidYou = 0;
-    let moneyYouPaidPartner = 0;
+    let yourDebtToPartner = 0;
     for (const m of withoutConvertedTwins(movements, expenses)) {
-        if (m.type === "gf_paid") moneyYouPaidPartner += m.amount;
+        // A debt she fronted: settlement only, and provisional — something she
+        // owes you can cancel it before any money moves, which is exactly why it
+        // is not an expense (spec 0007 §6b).
+        if (m.type === "gf_fronted") yourDebtToPartner += m.amount;
         else if (m.type === "gf_received") moneyPartnerPaidYou += m.amount;
-        // LEGACY `gf_fronted` (spec 0007 §6a): the migration converted these to
-        // expenses, but an account the conversion had to skip keeps its debts
-        // here. Still counted, so no balance silently loses a row.
-        else if (m.type === "gf_fronted") yourDebtToPartner += m.amount;
+        // LEGACY `gf_paid` (spec 0007 §6b): the migration converted these to
+        // payment-expenses; an account it had to skip keeps them here. Still
+        // counted, so no balance silently loses a row.
+        else if (m.type === "gf_paid") moneyYouPaidPartner += m.amount;
     }
 
     return {
@@ -530,7 +548,7 @@ type SettlementRow = SettlementBreakdownItem & {
     /** This row closed a cycle, so it is frozen — see `SettlementJournalItem`. */
     locked: boolean;
     /** Debt rows only: which table the row lives in. Null on every other line. */
-    source: DebtSource | null;
+    source: RowSource | null;
 };
 
 type SettlementRowsByLine = Record<SettlementBreakdownKey, SettlementRow[]>;
@@ -565,14 +583,14 @@ function buildSettlementRows(
     // Sort the source rows, not the built ones: only the source carries
     // `createdAt`, the same-date tie-break.
     for (const e of [...expenses].sort(byNewest)) {
-        // A fronted expense is the OTHER side of the balance: you owe her the
-        // whole row, so it lands on `your_debt` and is never read for a partner
-        // share. The `continue` is what keeps one fronted amount on exactly one
-        // line — an edit that made `amount` and `actualExpenditure` differ would
-        // otherwise leak a phantom partner share out of the same row.
-        if (e.isFronted) {
-            rows.your_debt.push({
-                line: "your_debt",
+        // A payment you sent her draws the balance DOWN, so it lands on
+        // `you_paid` and is never read for a partner share. The `continue` is
+        // what keeps one payment on exactly one line — an edit that made
+        // `amount` and `actualExpenditure` differ would otherwise leak a phantom
+        // partner share out of the same row.
+        if (e.isPartnerPayment) {
+            rows.you_paid.push({
+                line: "you_paid",
                 source: "expense",
                 id: e.id,
                 date: e.date,
@@ -580,7 +598,7 @@ function buildSettlementRows(
                 amount: e.actualExpenditure,
                 gross: null,
                 note: null,
-                // Only a transfer can carry the cycle marker.
+                // Only a transfer movement can carry the cycle marker.
                 locked: false,
             });
             continue;
@@ -615,13 +633,12 @@ function buildSettlementRows(
             locked: m.closedAt !== null,
         };
         if (m.type === "gf_fronted") {
-            // A thing she fronted that you owe her — the "you owe" side of the
-            // balance (ADR-0020). The note is the label; blank falls back.
+            // A thing she fronted that you owe her — the "you owe" side, and
+            // settlement's alone (spec 0007 §6b). The note is the label; blank
+            // falls back.
             rows.your_debt.push({
                 ...base,
                 line: "your_debt",
-                // The legacy shape: still owed, still counted, but it lives in
-                // the movement table and is reached by the movement actions.
                 source: "movement",
                 description: debtDescription(m.note, partnerName),
                 note: m.note?.trim() || null,
@@ -714,8 +731,9 @@ function buildJournal(
             locked: row.locked,
             description: row.description,
             amount: row.amount,
-            // Both debt loops above set a source, so this only narrows the type.
-            source: row.source ?? "expense",
+            // A debt is a movement again (spec 0007 §6b); the fallback only
+            // narrows the type.
+            source: row.source ?? "movement",
         });
     }
 
@@ -730,6 +748,11 @@ function buildJournal(
                 direction: line === "partner_paid" ? "gf_received" : "gf_paid",
                 amount: row.amount,
                 note: row.note,
+                // A payment you sent is an expense now, so the journal's edit
+                // and delete controls must reach the expense actions, not the
+                // movement ones. `gf_received` and any legacy `gf_paid` are
+                // still movements.
+                source: row.source ?? "movement",
             });
         }
     }

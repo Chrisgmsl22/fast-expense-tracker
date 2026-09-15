@@ -30,14 +30,11 @@ export function movementDisplay(
                 amountClass: "text-positive",
                 rowTint: "border-positive bg-positive-tint",
             };
-        // No cash left your account, so this row is information only and enters
-        // no total (ADR-0020). Tone matches the settlement journal's debt rows.
-        case "gf_fronted":
-            return {
-                label: `I owe ${partnerName}`,
-                amountClass: "text-debt",
-                rowTint: "border-debt bg-debt-tint",
-            };
+        // No `gf_fronted` case: a debt she fronted never reaches a feed now
+        // (spec 0007 §6b) — the month query excludes it, and the settlement
+        // journal renders its own rows. A case nothing can reach is worse than
+        // no case: it reads as support that does not exist.
+        //
         // gf_paid (money you sent) + any non-card fallback.
         default:
             return {
@@ -57,10 +54,8 @@ type MovementRowSource = {
 
 /**
  * The two text lines of a feed row: a title and an optional subline (the date is
- * prefixed by the caller). Both feeds share this so a debt reads the same on the
- * dashboard and on the expenses list. A debt's note *names the thing she
- * fronted*, so it becomes the title and the generic label drops to the subline;
- * with no note the label is the title, matching the settlement journal.
+ * prefixed by the caller). Both feeds share this so a movement reads the same on
+ * the dashboard and on the expenses list.
  */
 export function movementRowText(
     m: MovementRowSource,
@@ -68,11 +63,6 @@ export function movementRowText(
 ): { title: string; subline: string } {
     const { label } = movementDisplay(m.type, partnerName);
     const note = m.note?.trim() ?? "";
-    if (m.type === "gf_fronted") {
-        return note
-            ? { title: note, subline: label }
-            : { title: label, subline: "" };
-    }
     return {
         title: label,
         subline: m.type === "card_payment" ? (m.card?.name ?? "") : note,

@@ -39,7 +39,7 @@ const splitAttack = {
 function seededRepo() {
     const repo = new FakeExpenseRepository();
     repo.seedExpense("debt1", "u1", {
-        isFronted: true,
+        isPartnerPayment: true,
         categoryId: "combined",
         amount: DEBT,
         actualExpenditure: DEBT,
@@ -58,7 +58,7 @@ function settlementFrom(row: SettlementExpenseRow) {
     return getSettlement("u1", { settlementRepo, settingsRepo, now: NOW });
 }
 
-describe("editing a fronted debt through the ordinary expense form", () => {
+describe("editing a partner payment through the ordinary expense form", () => {
     beforeEach(() => {
         authMock.mockReset();
         authMock.mockResolvedValue({ user: { id: "u1" } });
@@ -81,16 +81,17 @@ describe("editing a fronted debt through the ordinary expense form", () => {
         const settlement = await settlementFrom({
             id: "debt1",
             date: DAY,
-            description: "I owe Brenda",
+            description: "Paid Brenda",
             amount: DEBT,
             actualExpenditure: DEBT,
             isShared: false,
-            isFronted: true,
+            isPartnerPayment: true,
             createdAt: DAY,
         });
-        expect(settlement.balance.direction).toBe("you_owe");
+        // A payment draws the balance the other way now (spec 0007 §6b).
+        expect(settlement.balance.direction).toBe("she_owes");
         expect(settlement.balance.amount).toBe(DEBT);
-        expect(settlement.breakdownItems.your_debt[0]!.amount).toBe(DEBT);
+        expect(settlement.breakdownItems.you_paid[0]!.amount).toBe(DEBT);
         expect(settlement.breakdownItems.partner_share).toHaveLength(0);
     });
 
@@ -138,7 +139,7 @@ describe("editing a fronted debt through the ordinary expense form", () => {
 
     it("still applies a split to an ordinary expense", async () => {
         const repo = new FakeExpenseRepository();
-        repo.seedExpense("e9", "u1", { isFronted: false });
+        repo.seedExpense("e9", "u1", { isPartnerPayment: false });
         await updateExpense({ ...splitAttack, id: "e9", amount: 1000 }, repo);
 
         // The clamp is for fronted rows only — normal sharing is untouched.

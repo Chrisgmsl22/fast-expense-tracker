@@ -76,7 +76,7 @@ const expenses = [
         amount: 200,
         actualExpenditure: 136,
         isShared: true,
-        isFronted: false,
+        isPartnerPayment: false,
         category: { id: "c1", slug: "food", name: "Food", color: "#ef4444" },
         subcategory: { name: "Restaurants" },
         card: { name: "Amex", color: "#ca8a04" },
@@ -88,7 +88,7 @@ const expenses = [
         amount: 1000,
         actualExpenditure: 1000,
         isShared: false,
-        isFronted: false,
+        isPartnerPayment: false,
         category: {
             id: "c2",
             slug: "transport",
@@ -147,7 +147,7 @@ describe("ExpenseListInteractive", () => {
         ).toBeDefined();
     });
 
-    it("labels a covered debt 'Covered by {partner}', never Cash", () => {
+    it("labels a partner payment, never Cash", () => {
         // Her card moved, not one of his, so the row has no card. The bare
         // `?? "Cash"` fallback printed the BUG-1 symptom on this very screen.
         render(
@@ -158,16 +158,14 @@ describe("ExpenseListInteractive", () => {
                         id: "fronted",
                         description: "Sushi",
                         card: null,
-                        isFronted: true,
+                        isPartnerPayment: true,
                     },
                 ]}
                 {...props}
             />,
         );
 
-        expect(screen.getAllByText(/Covered by Brenda/).length).toBeGreaterThan(
-            0,
-        );
+        expect(screen.getAllByText(/Paid Brenda/).length).toBeGreaterThan(0);
         expect(screen.queryByText(/\bCash\b/)).toBeNull();
     });
 
@@ -203,7 +201,7 @@ describe("ExpenseListInteractive", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 isShared: false,
-                isFronted: false,
+                isPartnerPayment: false,
                 category: {
                     id: "cs",
                     slug: "savings",
@@ -332,17 +330,28 @@ describe("ExpenseListInteractive", () => {
         ).toBeDefined();
     });
 
-    it("interleaves money movements in the All view and folds them into the footer", () => {
+    it("interleaves movements and folds a partner payment into the footer", () => {
+        // Money sent to the partner is an EXPENSE now (spec 0007 §6b), so the
+        // footer's "Paid to" figure comes from that row, not from a movement.
+        const payment = {
+            ...expenses[0]!,
+            id: "ePay",
+            description: "Settled up",
+            amount: 300,
+            actualExpenditure: 300,
+            isShared: false,
+            isPartnerPayment: true,
+            card: null,
+        };
         render(
             <ExpenseListInteractive
-                expenses={expenses}
+                expenses={[...expenses, payment]}
                 {...{ ...props, movements }}
             />,
         );
-        // Card payment + transfer lines present (no partner-money tag anymore).
+        // The card payment row still renders; the payment row carries her label.
         expect(screen.getByText("Card payment")).toBeDefined();
-        expect(screen.getByText("Paid Brenda")).toBeDefined();
-        // Footer shows the transfer under "Paid to Brenda".
+        expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = screen.getByTestId("totals-desktop");
         expect(within(totals).getByText("Paid to Brenda")).toBeDefined();
         expect(within(totals).getByText("$300.00")).toBeDefined();
@@ -469,16 +478,23 @@ describe("ExpenseListInteractive", () => {
         await waitFor(() => expect(refreshMock).toHaveBeenCalled());
     });
 
-    it("shows a debt she fronted, with the note as the row description", () => {
+    it("never shows a debt she fronted, even when handed one", () => {
+        // Settlement-only (spec 0007 §6b). The month query excludes it and
+        // `buildFeed` drops it again, so no caller can put the orange "I owe"
+        // row back beside real spending.
         render(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements: [...movements, debt] }}
             />,
         );
-        expect(screen.getByText("she covered the vet")).toBeDefined();
-        // The generic label drops to the subline, so the row still reads as a debt.
-        expect(screen.getByText(/I owe Brenda/)).toBeDefined();
+        expect(screen.queryByText("she covered the vet")).toBeNull();
+        expect(screen.queryByText(/I owe Brenda/)).toBeNull();
+        // Its edit and delete controls go with it — editing a debt is the
+        // settlement page's job now.
+        expect(
+            screen.queryByRole("button", { name: /she covered the vet/ }),
+        ).toBeNull();
     });
 
     it("leaves the totals untouched when a debt is present", () => {
@@ -496,75 +512,5 @@ describe("ExpenseListInteractive", () => {
         );
         // No cash left the account, so no figure may move (ADR-0020).
         expect(screen.getByTestId("totals-desktop").textContent).toBe(without);
-    });
-
-    it("names each debt's controls after its own note, not the shared label", () => {
-        const second: MovementListItem = {
-            ...debt,
-            id: "mv4",
-            note: "she covered the flights",
-        };
-        render(
-            <ExpenseListInteractive
-                expenses={expenses}
-                {...{ ...props, movements: [debt, second] }}
-            />,
-        );
-        // Two debts, two distinct accessible names — getByRole throws on a tie.
-        expect(
-            screen.getByRole("button", { name: "Edit she covered the vet" }),
-        ).toBeDefined();
-        expect(
-            screen.getByRole("button", {
-                name: "Delete she covered the flights",
-            }),
-        ).toBeDefined();
-    });
-
-    it("warns that the settlement balance moves when deleting a debt", async () => {
-        render(
-            <ExpenseListInteractive
-                expenses={expenses}
-                {...{ ...props, movements: [debt] }}
-            />,
-        );
-        fireEvent.click(
-            screen.getByRole("button", { name: "Delete she covered the vet" }),
-        );
-        expect(await screen.findByText("Delete this debt?")).toBeDefined();
-        expect(
-            await screen.findByText(
-                /she covered the vet \(\$1,500\.00\) will be permanently removed\. What you owe Brenda on the settlement page will change\./,
-            ),
-        ).toBeDefined();
-    });
-
-    it("opens the debt form — never the transfer form — for a gf_fronted row", async () => {
-        (getMovementForEdit as unknown as Mock).mockResolvedValue({
-            id: "mv3",
-            date: new Date("2026-05-16T06:00:00Z"),
-            amount: 1500,
-            type: "gf_fronted",
-            cardId: null,
-            note: "she covered the vet",
-        });
-        render(
-            <ExpenseListInteractive
-                expenses={expenses}
-                {...{ ...props, movements: [...movements, debt] }}
-            />,
-        );
-
-        // The control is named after the row's own note, not the shared label.
-        fireEvent.click(
-            screen.getByRole("button", { name: "Edit she covered the vet" }),
-        );
-        await waitFor(() =>
-            expect(getMovementForEdit).toHaveBeenCalledWith("mv3"),
-        );
-        // The transfer form saves through updateTransfer, which refuses a
-        // non-transfer row: a dead-end dialog answering "Transfer not found."
-        expect(await screen.findByText(/editing debt mv3/i)).toBeDefined();
-        expect(screen.queryByTestId("transfer-form")).toBeNull();
     });
 });

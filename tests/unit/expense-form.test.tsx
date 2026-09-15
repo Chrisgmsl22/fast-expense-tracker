@@ -36,7 +36,7 @@ const editable = {
     description: "Tacos",
     notes: null,
     isShared: true,
-    isFronted: false,
+    isPartnerPayment: false,
     yourPercentage: 0.68,
     paidBy: "you",
 };
@@ -107,7 +107,7 @@ describe("ExpenseForm", () => {
     // nothing, so the user believes he changed something. The state has to be
     // legible before anyone clicks.
     it("offers no split and no card on a debt the partner covered", () => {
-        renderForm({ expense: { ...editable, isFronted: true } });
+        renderForm({ expense: { ...editable, isPartnerPayment: true } });
 
         const shared = screen.getByRole("checkbox", {
             name: /shared expense/i,
@@ -207,7 +207,7 @@ describe("ExpenseForm", () => {
         const unsharedRow = {
             ...editable,
             isShared: false,
-            isFronted: false,
+            isPartnerPayment: false,
             yourPercentage: 1,
         };
         (updateExpense as unknown as Mock).mockResolvedValue({

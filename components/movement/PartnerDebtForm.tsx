@@ -5,15 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    addFrontedExpense,
-    type AddFrontedExpenseResult,
-} from "@/app/_actions/expense/add-fronted";
+    addPartnerDebt,
+    type AddPartnerDebtResult,
+} from "@/app/_actions/movement/add-partner-debt";
 import {
-    updateFrontedExpense,
-    type UpdateFrontedExpenseResult,
-} from "@/app/_actions/expense/update-fronted";
+    updatePartnerDebt,
+    type UpdatePartnerDebtResult,
+} from "@/app/_actions/movement/update-partner-debt";
 import type { FieldErrors } from "@/lib/actions/result";
-import type { FrontedExpenseInput } from "@/lib/schemas/expense";
+import type { PartnerDebtInput } from "@/lib/schemas/movement";
 
 /** Prefilled fields when the form edits an existing debt (strings for inputs). */
 export type PartnerDebtEditable = {
@@ -33,14 +33,15 @@ type Props = {
 
 /**
  * Log an "I owe {partner}" debt — something she fronted that you owe her back
- * (spec 0007 §6a). It is saved as an `Expense{isFronted:true}`, so it counts in
- * your categories and buckets: it is real consumption from this month's income.
- * It stays out of spend-by-card and the cash figure, because no money of yours
- * moved yet — the transfer that settles it is the cash event.
+ * (spec 0007 §6b). It is saved as a `Movement{type:"gf_fronted"}`: **settlement
+ * only**. It reaches no bucket, no category rollup and not the expenses list.
  *
- * The amount is **what you owe**, not what she paid, so there is no split to
- * enter. It files itself under Combined Expenses → "Covered for me"; change
- * either from the expense row afterwards.
+ * Why not an expense: a debt is provisional. Something she owes you can reduce
+ * or cancel it before any money moves, so booking it as spending would record a
+ * purchase he may never make. The **payment** that settles it is the expense.
+ *
+ * The amount is **what you owe**, never what she paid — the ambiguity that put a
+ * $500 carwash in the budget when his share was $380.
  */
 export function PartnerDebtForm({
     debt,
@@ -53,7 +54,7 @@ export function PartnerDebtForm({
     const [note, setNote] = useState(debt?.note ?? "");
 
     const [pending, startTransition] = useTransition();
-    const [errors, setErrors] = useState<FieldErrors<FrontedExpenseInput>>({});
+    const [errors, setErrors] = useState<FieldErrors<PartnerDebtInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -61,16 +62,14 @@ export function PartnerDebtForm({
         const form = e.currentTarget;
         startTransition(async () => {
             try {
-                const res:
-                    | AddFrontedExpenseResult
-                    | UpdateFrontedExpenseResult = debt
-                    ? await updateFrontedExpense({
+                const res: AddPartnerDebtResult | UpdatePartnerDebtResult = debt
+                    ? await updatePartnerDebt({
                           id: debt.id,
                           date,
                           amount,
                           note: note || undefined,
                       })
-                    : await addFrontedExpense({
+                    : await addPartnerDebt({
                           date,
                           amount,
                           note: note || undefined,
@@ -93,7 +92,7 @@ export function PartnerDebtForm({
         });
     }
 
-    const fieldError = (name: keyof FrontedExpenseInput) => {
+    const fieldError = (name: keyof PartnerDebtInput) => {
         const msg = errors[name]?.[0];
         return msg ? (
             <p className="mt-1 text-sm text-destructive" role="alert">
@@ -113,7 +112,7 @@ export function PartnerDebtForm({
             }
         >
             <p className="text-sm text-muted-foreground">
-                {`Something ${partnerName} fronted that you owe her back. Enter what YOU owe, not what she paid. It counts in your budget under Combined Expenses, and it adds to what you owe her until a transfer settles it.`}
+                {`Something ${partnerName} fronted that you owe her back. Enter what YOU owe, not what she paid. This is settlement only — it does not touch your budget. The payment you make later is the expense.`}
             </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

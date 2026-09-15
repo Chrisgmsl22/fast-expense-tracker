@@ -13,6 +13,26 @@ const sheOwes: CoupleBalance = {
     breakdown: [],
 };
 
+// Money sent to the partner is an EXPENSE now (spec 0007 §6b), so the footer
+// figure and the row both come from this one row.
+const partnerPayment: ExpenseListItem = {
+    id: "ePay",
+    date: new Date("2026-06-22T06:00:00Z"),
+    description: "Settled up",
+    amount: 200,
+    actualExpenditure: 200,
+    isShared: false,
+    isPartnerPayment: true,
+    category: {
+        id: "c9",
+        slug: "combined-expenses",
+        name: "Combined Expenses",
+        color: "#d97706",
+    },
+    subcategory: { name: "Covered for me" },
+    card: null,
+};
+
 const expenses: ExpenseListItem[] = [
     {
         id: "e1",
@@ -21,7 +41,7 @@ const expenses: ExpenseListItem[] = [
         amount: 1820,
         actualExpenditure: 1237,
         isShared: true,
-        isFronted: false,
+        isPartnerPayment: false,
         category: {
             id: "c1",
             slug: "groceries",
@@ -38,7 +58,7 @@ const expenses: ExpenseListItem[] = [
         amount: 185,
         actualExpenditure: 185,
         isShared: false,
-        isFronted: false,
+        isPartnerPayment: false,
         category: {
             id: "c2",
             slug: "transport",
@@ -78,7 +98,7 @@ describe("MonthFeed", () => {
         expect(screen.getByText("solo")).toBeDefined();
     });
 
-    it("labels a covered debt 'Covered by {partner}', never Cash", () => {
+    it("labels a partner payment, never Cash", () => {
         // The row has no card because HER card moved. Falling back to the word
         // Cash — as a bare `?? "Cash"` does — puts the BUG-1 symptom back on
         // screen even though the totals are right.
@@ -91,7 +111,7 @@ describe("MonthFeed", () => {
                         description: "Sushi",
                         card: null,
                         isShared: false,
-                        isFronted: true,
+                        isPartnerPayment: true,
                     },
                 ]}
                 movements={[]}
@@ -103,7 +123,7 @@ describe("MonthFeed", () => {
 
         // The label sits beside a colour dot in the same line, so match the
         // text node rather than the whole element.
-        expect(screen.getByText(/Covered by Brenda/)).toBeDefined();
+        expect(screen.getByText(/Paid Brenda/)).toBeDefined();
         expect(screen.queryByText(/\bCash\b/)).toBeNull();
     });
 
@@ -172,7 +192,7 @@ describe("MonthFeed", () => {
                 amount: 1000,
                 actualExpenditure: 680,
                 isShared: true,
-                isFronted: false,
+                isPartnerPayment: false,
                 category: {
                     id: "cg",
                     slug: "groceries",
@@ -189,7 +209,7 @@ describe("MonthFeed", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 isShared: false,
-                isFronted: false,
+                isPartnerPayment: false,
                 category: {
                     id: "cs",
                     slug: "savings",
@@ -244,18 +264,10 @@ describe("MonthFeed", () => {
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
             },
-            {
-                id: "m2",
-                date: new Date("2026-06-22T06:00:00Z"),
-                amount: 200,
-                type: "gf_paid",
-                card: null,
-                note: "netted week",
-            },
         ];
         render(
             <MonthFeed
-                expenses={expenses}
+                expenses={[...expenses, partnerPayment]}
                 movements={movements}
                 monthLabel="June 2026"
                 partnerName="Brenda"
@@ -265,7 +277,7 @@ describe("MonthFeed", () => {
         // Card payment line present (no partner-money tag anymore).
         expect(screen.getByText("Card payment")).toBeDefined();
         // Transfer line + footer "Paid to Brenda" figure.
-        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.getByText("Paid to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
@@ -298,18 +310,10 @@ describe("MonthFeed", () => {
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
             },
-            {
-                id: "m2",
-                date: new Date("2026-06-22T06:00:00Z"),
-                amount: 200,
-                type: "gf_paid",
-                card: null,
-                note: "netted week",
-            },
         ];
         render(
             <MonthFeed
-                expenses={expenses}
+                expenses={[...expenses, partnerPayment]}
                 movements={movements}
                 monthLabel="June 2026"
                 settlement={sheOwes}
@@ -321,7 +325,7 @@ describe("MonthFeed", () => {
         expect(screen.getByText("Card payment")).toBeDefined();
         // Historical partner data stays visible (immutable history, ADR-0021):
         // the transfer row + the monthly "Paid to Brenda" footer figure.
-        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.getByText("Paid to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
@@ -331,7 +335,11 @@ describe("MonthFeed", () => {
         expect(screen.queryByRole("link")).toBeNull();
     });
 
-    it("shows a gf_fronted debt in the feed, note first", () => {
+    it("never shows a debt she fronted, even when handed one", () => {
+        // Settlement-only (spec 0007 §6b): a debt is provisional and may shrink
+        // or vanish before money moves, so it must not sit beside real
+        // spending. The month query excludes it and `buildFeed` drops it again,
+        // so a caller assembling its own list cannot put the orange row back.
         render(
             <MonthFeed
                 expenses={expenses}
@@ -341,37 +349,15 @@ describe("MonthFeed", () => {
                 sharesExpenses
             />,
         );
-        expect(screen.getByText("she covered the vet")).toBeDefined();
-        expect(screen.getByText(/I owe Brenda/)).toBeDefined();
-        // A debt is not a payment — the opposite wording must not appear.
-        expect(screen.queryByText("Paid Brenda")).toBeNull();
-    });
-
-    it("falls back to 'I owe {partner}' when the debt has no note", () => {
-        render(
-            <MonthFeed
-                expenses={expenses}
-                movements={[{ ...debt, note: null }]}
-                monthLabel="June 2026"
-                partnerName="Brenda"
-                sharesExpenses
-            />,
-        );
-        // Same wording the settlement journal uses for a note-less debt.
-        expect(screen.getByText("I owe Brenda")).toBeDefined();
+        expect(screen.queryByText("she covered the vet")).toBeNull();
+        expect(screen.queryByText(/I owe Brenda/)).toBeNull();
     });
 
     it("changes no footer total when a debt is present (no cash moved)", () => {
-        const movements: MovementListItem[] = [
-            {
-                id: "m2",
-                date: new Date("2026-06-22T06:00:00Z"),
-                amount: 200,
-                type: "gf_paid",
-                card: null,
-                note: "netted week",
-            },
-        ];
+        // A debt reaches NO ledger (spec 0007 §6b), so adding one must not move
+        // a single figure. Both renders carry the same expenses; only the debt
+        // differs.
+        const movements: MovementListItem[] = [];
         const { unmount } = render(
             <MonthFeed
                 expenses={expenses}
@@ -396,8 +382,9 @@ describe("MonthFeed", () => {
         // Charged / What I really spent / Set aside / Paid to Brenda / Total —
         // every figure identical (ADR-0020).
         expect(screen.getByTestId("feed-totals").textContent).toBe(without);
-        // …and the debt really is on screen, so this isn't a vacuous pass.
-        expect(screen.getByText("she covered the vet")).toBeDefined();
+        // …and the debt is not on screen at all: it reaches no ledger AND no
+        // feed (spec 0007 §6b).
+        expect(screen.queryByText("she covered the vet")).toBeNull();
     });
 
     it("shows no card (not Cash) for a savings row", () => {
@@ -409,7 +396,7 @@ describe("MonthFeed", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 isShared: false,
-                isFronted: false,
+                isPartnerPayment: false,
                 category: {
                     id: "cs",
                     slug: "savings",

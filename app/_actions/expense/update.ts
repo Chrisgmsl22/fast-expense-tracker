@@ -110,7 +110,7 @@ export async function updateExpense(
         // answering such a request with "saved" would tell the caller a change
         // landed when none did. Accept-then-ignore is the shape of the silent
         // save failure this repo already shipped once.
-        if (existing.isFronted && (v.isShared || v.cardId)) {
+        if (existing.isPartnerPayment && (v.isShared || v.cardId)) {
             return {
                 ok: false,
                 code: "validation",
@@ -134,7 +134,7 @@ export async function updateExpense(
         // Belt and braces for what does pass: the figure entered IS the
         // consumption, so `amount` and `actualExpenditure` stay equal whatever
         // else rode along (a stray `yourPercentage` on an unshared payload).
-        const money = existing.isFronted
+        const money = existing.isPartnerPayment
             ? {
                   isShared: false,
                   yourPercentage: 1,
@@ -151,7 +151,7 @@ export async function updateExpense(
             subcategoryId: v.subcategoryId ?? null,
             // Her card moved, not one of his — a fronted row has no card of his
             // to point at, and leaving one on would put it back in spend-by-card.
-            cardId: existing.isFronted ? null : (v.cardId ?? null),
+            cardId: existing.isPartnerPayment ? null : (v.cardId ?? null),
             date: cdmxCalendarDateToUtc(v.date),
             description: v.description,
             amount: v.amount,

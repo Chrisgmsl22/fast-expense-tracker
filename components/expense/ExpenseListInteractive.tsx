@@ -29,7 +29,6 @@ import {
     type CardOption,
 } from "./ExpenseForm";
 import { CardPaymentForm } from "@/components/movement/CardPaymentForm";
-import { PartnerDebtForm } from "@/components/movement/PartnerDebtForm";
 import { TransferForm } from "@/components/movement/TransferForm";
 import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
 import { deleteExpense } from "@/app/_actions/expense/delete";
@@ -85,38 +84,31 @@ const ROW_GRID = "sm:grid-cols-[5.5rem_minmax(0,1fr)_10rem_9rem_8rem_4rem]";
 /**
  * Body of the movement delete confirmation. Same phrasing as the settlement
  * journal's own delete (`SettlementJournal.tsx`) — row title, amount in
- * parentheses — so one action reads the same on both screens. A debt also warns
- * that the couple balance moves, which is invisible from this screen.
+ * parentheses — so one action reads the same on both screens.
  */
 function movementDeleteMessage(
     m: MovementListItem,
     partnerName: string,
 ): string {
     const { title } = movementRowText(m, partnerName);
-    const removed = `${title} (${formatMxn(m.amount)}) will be permanently removed.`;
-    return m.type === "gf_fronted"
-        ? `${removed} What you owe ${partnerName} on the settlement page will change.`
-        : removed;
+    return `${title} (${formatMxn(m.amount)}) will be permanently removed.`;
 }
 
 /** Heading of the movement edit dialog — one per form it can open. */
-function movementEditTitle(
-    type: MovementType | undefined,
-    partnerName: string,
-): string {
+function movementEditTitle(type: MovementType | undefined): string {
     if (type === "card_payment") return "Edit card payment";
-    if (type === "gf_fronted") return `Edit what you owe ${partnerName}`;
     return "Edit transfer";
 }
 
 /**
  * Client list, re-skinned to Confirmed designs V1 + money movements
  * (ADR-0018). Expenses keep category filter chips, pills, and
- * edit/delete. Money movements (card payment blue, "I paid {partner}" gold, "I
- * owe {partner}" orange) interleave by date in the unfiltered ("All") view —
- * they have no category, so a category filter hides them — and are editable +
- * deletable (CHORE-5). A debt she fronted is shown for awareness only: no cash
- * left the account, so it enters no total.
+ * edit/delete. Money movements (card payment blue, "{partner} paid me" green)
+ * interleave by date in the unfiltered ("All") view — they have no category, so
+ * a category filter hides them — and are editable + deletable (CHORE-5).
+ *
+ * A debt she fronted does NOT appear here: it is settlement-only and
+ * provisional (spec 0007 §6b). Money you SENT her does, as an ordinary expense.
  */
 export function ExpenseListInteractive({
     expenses,
@@ -182,14 +174,12 @@ export function ExpenseListInteractive({
         [filtered, movements, showMovements],
     );
 
-    const paidToPartner = showMovements
-        ? movements
-              .filter((m) => m.type === "gf_paid")
-              .reduce((sum, m) => sum + m.amount, 0)
-        : 0;
     // Same helper the dashboard feed uses, so "What I really spent" is the same
-    // consumption number on both screens — savings excluded (ADR-0018 §1).
-    const totals = computeFeedTotals(filtered, paidToPartner);
+    // consumption number on both screens — savings excluded (ADR-0018 §1). A
+    // payment to the partner is an expense now (spec 0007 §6b), so it is already
+    // among these rows: the helper returns `paidToPartner` as a breakdown of the
+    // total rather than a separate sum to add on.
+    const totals = computeFeedTotals(filtered);
 
     function openEdit(id: string) {
         setActionError(null);
@@ -479,36 +469,14 @@ export function ExpenseListInteractive({
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>
-                            {movementEditTitle(
-                                editingMovement?.type,
-                                partnerName,
-                            )}
+                            {movementEditTitle(editingMovement?.type)}
                         </DialogTitle>
                     </DialogHeader>
+                    {/* No debt branch: a `gf_fronted` row never reaches this
+                        list (spec 0007 §6b), so it can never be the row being
+                        edited. Debts are edited on the settlement page. */}
                     {editingMovement &&
-                        (editingMovement.type === "gf_fronted" ? (
-                            // A debt needs its own form. The transfer form saves
-                            // through updateTransfer, which refuses any row that
-                            // isn't gf_paid/gf_received — so it would open, save
-                            // nothing, and answer "Transfer not found."
-                            <PartnerDebtForm
-                                key={editingMovement.id}
-                                debt={{
-                                    id: editingMovement.id,
-                                    date: toDateInputValue(
-                                        editingMovement.date,
-                                    ),
-                                    amount: String(editingMovement.amount),
-                                    note: editingMovement.note ?? "",
-                                }}
-                                partnerName={partnerName}
-                                onCancel={() => setEditingMovement(null)}
-                                onSuccess={() => {
-                                    setEditingMovement(null);
-                                    router.refresh();
-                                }}
-                            />
-                        ) : editingMovement.type === "card_payment" ? (
+                        (editingMovement.type === "card_payment" ? (
                             <CardPaymentForm
                                 key={editingMovement.id}
                                 cards={cards}
@@ -609,11 +577,7 @@ export function ExpenseListInteractive({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>
-                            {deletingMovement?.type === "gf_fronted"
-                                ? "Delete this debt?"
-                                : "Delete this movement?"}
-                        </DialogTitle>
+                        <DialogTitle>Delete this movement?</DialogTitle>
                         <DialogDescription>
                             {deletingMovement
                                 ? movementDeleteMessage(

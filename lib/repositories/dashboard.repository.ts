@@ -130,7 +130,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
                 userId,
                 date: { gte: start, lt: end },
                 category: { slug: { not: SAVINGS_SLUG } },
-                isFronted: false,
+                isPartnerPayment: false,
             },
             _sum: { actualExpenditure: true },
         });

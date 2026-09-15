@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
 vi.mock("@/auth", () => ({ auth: authMock }));
 
-import { addFrontedExpense } from "@/app/_actions/expense/add-fronted";
-import { updateFrontedExpense } from "@/app/_actions/expense/update-fronted";
+import { addPartnerPayment } from "@/app/_actions/expense/add-partner-payment";
+import { updatePartnerPayment } from "@/app/_actions/expense/update-partner-payment";
 import type { CategoryRepository } from "@/lib/repositories/category.repository";
 import { FakeExpenseRepository } from "@/tests/support/fake-expense-repository";
 import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
@@ -22,11 +22,11 @@ function categoryRepo(
         getBySlug: async () => null,
         getSubcategorySpends: async () => [],
         getExpensesForCategoryMonth: async () => [],
-        getFrontedDefaults: async () => defaults,
+        getPartnerPaymentDefaults: async () => defaults,
     };
 }
 
-function deps(over: Partial<Parameters<typeof addFrontedExpense>[1]> = {}) {
+function deps(over: Partial<Parameters<typeof addPartnerPayment>[1]> = {}) {
     const expenseRepo = over.expenseRepo ?? new FakeExpenseRepository();
     const settingsRepo = over.settingsRepo ?? new FakeSettingsRepository();
     if (settingsRepo instanceof FakeSettingsRepository) {
@@ -48,7 +48,7 @@ const input = (over: Record<string, unknown> = {}) => ({
     ...over,
 });
 
-describe("addFrontedExpense (unit, injected fakes)", () => {
+describe("addPartnerPayment (unit, injected fakes)", () => {
     beforeEach(() => {
         authMock.mockReset();
         authMock.mockResolvedValue({ user: { id: "u1" } });
@@ -57,7 +57,7 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
     it("stores the debt as an expense carrying the fronted marker", async () => {
         const repo = new FakeExpenseRepository();
         repo.setSubcategory("covered", "combined");
-        const res = await addFrontedExpense(
+        const res = await addPartnerPayment(
             input(),
             deps({ expenseRepo: repo }),
         );
@@ -68,14 +68,14 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
         // The marker is its own column. It is NOT `paidBy`, which stays "you":
         // that column is deprecated and every read has dropped it, so hanging
         // this meaning back on it would revive exactly what ADR-0020 removed.
-        expect(row.isFronted).toBe(true);
+        expect(row.isPartnerPayment).toBe(true);
         expect(row.paidBy).toBe("you");
     });
 
     it("treats the amount as his share — no split is applied", async () => {
         const repo = new FakeExpenseRepository();
         repo.setSubcategory("covered", "combined");
-        await addFrontedExpense(
+        await addPartnerPayment(
             input({ amount: 680 }),
             deps({ expenseRepo: repo }),
         );
@@ -95,7 +95,7 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
     it("defaults to combined-expenses and its 'Covered for me' subcategory", async () => {
         const repo = new FakeExpenseRepository();
         repo.setSubcategory("covered", "combined");
-        await addFrontedExpense(input(), deps({ expenseRepo: repo }));
+        await addPartnerPayment(input(), deps({ expenseRepo: repo }));
 
         expect(repo.inserts[0]!.categoryId).toBe("combined");
         expect(repo.inserts[0]!.subcategoryId).toBe("covered");
@@ -104,7 +104,7 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
     it("lets the caller file it under a different category", async () => {
         const repo = new FakeExpenseRepository();
         repo.setSubcategory("s9", "groceries");
-        await addFrontedExpense(
+        await addPartnerPayment(
             input({ categoryId: "groceries", subcategoryId: "s9" }),
             deps({ expenseRepo: repo }),
         );
@@ -116,7 +116,7 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
     it("refuses a subcategory belonging to another category", async () => {
         const repo = new FakeExpenseRepository();
         repo.setSubcategory("s9", "groceries");
-        const res = await addFrontedExpense(
+        const res = await addPartnerPayment(
             input({ categoryId: "personal", subcategoryId: "s9" }),
             deps({ expenseRepo: repo }),
         );
@@ -130,7 +130,7 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
 
     it("does not pair the default subcategory with a caller-chosen category", async () => {
         const repo = new FakeExpenseRepository();
-        await addFrontedExpense(
+        await addPartnerPayment(
             input({ categoryId: "groceries" }),
             deps({ expenseRepo: repo }),
         );
@@ -143,8 +143,8 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
     it("labels an untitled debt 'I owe {partner}' and keeps a note as the description", async () => {
         const repo = new FakeExpenseRepository();
         repo.setSubcategory("covered", "combined");
-        await addFrontedExpense(input(), deps({ expenseRepo: repo }));
-        await addFrontedExpense(
+        await addPartnerPayment(input(), deps({ expenseRepo: repo }));
+        await addPartnerPayment(
             input({ note: "  Sushi  " }),
             deps({ expenseRepo: repo }),
         );
@@ -155,7 +155,7 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
 
     it("refuses when the user has no category to file it under", async () => {
         const repo = new FakeExpenseRepository();
-        const res = await addFrontedExpense(
+        const res = await addPartnerPayment(
             input(),
             deps({ expenseRepo: repo, categoryRepo: categoryRepo(null) }),
         );
@@ -168,7 +168,7 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
 
     it("rejects invalid input and an unauthenticated caller", async () => {
         const repo = new FakeExpenseRepository();
-        const invalid = await addFrontedExpense(
+        const invalid = await addPartnerPayment(
             input({ amount: -5 }),
             deps({ expenseRepo: repo }),
         );
@@ -176,7 +176,7 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
         if (!invalid.ok) expect(invalid.code).toBe("validation");
 
         authMock.mockResolvedValue(null);
-        const anon = await addFrontedExpense(
+        const anon = await addPartnerPayment(
             input(),
             deps({ expenseRepo: repo }),
         );
@@ -190,7 +190,7 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
         repo.setSubcategory("covered", "combined");
         repo.failOnWrite = true;
         vi.spyOn(console, "error").mockImplementation(() => {});
-        const res = await addFrontedExpense(
+        const res = await addPartnerPayment(
             input(),
             deps({ expenseRepo: repo }),
         );
@@ -202,7 +202,7 @@ describe("addFrontedExpense (unit, injected fakes)", () => {
     });
 });
 
-describe("updateFrontedExpense (unit, injected fakes)", () => {
+describe("updatePartnerPayment (unit, injected fakes)", () => {
     beforeEach(() => {
         authMock.mockReset();
         authMock.mockResolvedValue({ user: { id: "u1" } });
@@ -211,7 +211,7 @@ describe("updateFrontedExpense (unit, injected fakes)", () => {
     function seeded() {
         const repo = new FakeExpenseRepository();
         repo.seedExpense("e1", "u1", {
-            isFronted: true,
+            isPartnerPayment: true,
             categoryId: "groceries",
             subcategoryId: "s9",
             notes: "split with the cats",
@@ -223,7 +223,7 @@ describe("updateFrontedExpense (unit, injected fakes)", () => {
 
     it("saves the new amount on both money columns", async () => {
         const repo = seeded();
-        const res = await updateFrontedExpense(
+        const res = await updatePartnerPayment(
             { id: "e1", ...input({ amount: 720 }) },
             deps({ expenseRepo: repo }),
         );
@@ -235,7 +235,7 @@ describe("updateFrontedExpense (unit, injected fakes)", () => {
 
     it("preserves the category, subcategory and notes the form never showed", async () => {
         const repo = seeded();
-        await updateFrontedExpense(
+        await updatePartnerPayment(
             { id: "e1", ...input() },
             deps({ expenseRepo: repo }),
         );
@@ -248,8 +248,8 @@ describe("updateFrontedExpense (unit, injected fakes)", () => {
 
     it("refuses an ordinary expense, so a purchase can't be retyped as a debt", async () => {
         const repo = new FakeExpenseRepository();
-        repo.seedExpense("e2", "u1", { isFronted: false });
-        const res = await updateFrontedExpense(
+        repo.seedExpense("e2", "u1", { isPartnerPayment: false });
+        const res = await updatePartnerPayment(
             { id: "e2", ...input() },
             deps({ expenseRepo: repo }),
         );
@@ -262,8 +262,8 @@ describe("updateFrontedExpense (unit, injected fakes)", () => {
 
     it("refuses another user's row (IDOR guard)", async () => {
         const repo = new FakeExpenseRepository();
-        repo.seedExpense("e3", "someone-else", { isFronted: true });
-        const res = await updateFrontedExpense(
+        repo.seedExpense("e3", "someone-else", { isPartnerPayment: true });
+        const res = await updatePartnerPayment(
             { id: "e3", ...input() },
             deps({ expenseRepo: repo }),
         );

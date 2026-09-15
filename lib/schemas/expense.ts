@@ -20,8 +20,8 @@ export const expenseInputSchema = z
         yourPercentage: z.coerce.number().min(0).max(1).default(1),
         // DEPRECATED (ADR-0020): every expense is the user's own. Locked to
         // "you" so no request can retype who paid. A partner-fronted expense is
-        // marked by `isFronted`, which this form cannot set — see
-        // `frontedExpenseInputSchema`. Kept until the `paidBy` column is dropped.
+        // marked by `isPartnerPayment`, which this form cannot set — see
+        // `partnerPaymentInputSchema`. Kept until the `paidBy` column is dropped.
         paidBy: z.literal("you").default("you"),
     })
     .refine((v) => !v.isShared || v.yourPercentage < 1, {
@@ -40,7 +40,7 @@ export type ExpenseInput = z.infer<typeof expenseInputSchema>;
  * are optional and default to `combined-expenses` / "Covered for me"; sending
  * them lets the user file the debt somewhere else.
  */
-export const frontedExpenseInputSchema = z.object({
+export const partnerPaymentInputSchema = z.object({
     date: z.coerce.date(),
     amount: z.coerce.number().positive("Amount must be greater than 0"),
     note: z.string().max(200).optional(),
@@ -48,4 +48,4 @@ export const frontedExpenseInputSchema = z.object({
     subcategoryId: z.string().min(1).optional(),
 });
 
-export type FrontedExpenseInput = z.infer<typeof frontedExpenseInputSchema>;
+export type PartnerPaymentInput = z.infer<typeof partnerPaymentInputSchema>;

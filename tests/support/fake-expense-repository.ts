@@ -20,7 +20,7 @@ const DEFAULT_WRITE: ExpenseInsertData = {
     actualExpenditure: 100,
     paidBy: "you",
     notes: null,
-    isFronted: false,
+    isPartnerPayment: false,
 };
 
 /**
@@ -75,7 +75,7 @@ export class FakeExpenseRepository implements ExpenseRepository {
             isShared: row.isShared,
             yourPercentage: row.yourPercentage,
             paidBy: row.paidBy,
-            isFronted: row.isFronted,
+            isPartnerPayment: row.isPartnerPayment,
         };
     }
 
@@ -110,13 +110,13 @@ export class FakeExpenseRepository implements ExpenseRepository {
         if (this.failOnWrite) throw new Error("fake: update failed");
         const existing = this.rows.get(id);
         if (!existing || existing.userId !== userId) return 0;
-        // `isFronted` is write-once: the real adapter's update shape has no such
+        // `isPartnerPayment` is write-once: the real adapter's update shape has no such
         // field, so the fake must not let an update change it either.
         this.rows.set(id, {
             id,
             userId,
             ...data,
-            isFronted: existing.isFronted,
+            isPartnerPayment: existing.isPartnerPayment,
         });
         this.updates.push({ id, userId, data });
         return 1;

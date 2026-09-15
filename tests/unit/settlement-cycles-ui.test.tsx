@@ -21,11 +21,17 @@ vi.mock("@/app/_actions/expense/delete", () => ({
     deleteExpense: vi.fn(),
 }));
 vi.mock("@/app/_actions/movement/delete", () => ({ deleteMovement: vi.fn() }));
-vi.mock("@/app/_actions/expense/add-fronted", () => ({
-    addFrontedExpense: vi.fn(),
+vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
+    addPartnerDebt: vi.fn(),
 }));
-vi.mock("@/app/_actions/expense/update-fronted", () => ({
-    updateFrontedExpense: vi.fn(),
+vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
+    updatePartnerDebt: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/add-partner-payment", () => ({
+    addPartnerPayment: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/update-partner-payment", () => ({
+    updatePartnerPayment: vi.fn(),
 }));
 vi.mock("@/app/_actions/movement/add-transfer", () => ({
     addTransfer: vi.fn(),
@@ -71,6 +77,7 @@ const lockedTransfer: SettlementJournalItem = {
     direction: "gf_received",
     amount: 320,
     note: null,
+    source: "movement",
 };
 
 /** An ordinary transfer, for contrast: it keeps its controls. */

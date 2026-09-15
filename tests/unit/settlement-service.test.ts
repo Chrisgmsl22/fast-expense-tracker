@@ -35,7 +35,7 @@ const expense = (
         amount: 1000,
         actualExpenditure: 680,
         isShared: true,
-        isFronted: false,
+        isPartnerPayment: false,
         createdAt: date,
         ...over,
     };
@@ -88,24 +88,56 @@ describe("getSettlement", () => {
         if (row.kind === "your_expense") expect(row.partnerShare).toBe(320);
     });
 
-    // Spec 0007 §6a: a debt she fronted is an `Expense{isFronted:true}` now, so
+    // Spec 0007 §6a: a debt she fronted is an `Expense{isPartnerPayment:true}` now, so
     // the debt side of the balance is read off an expense rather than a
     // movement. The money is identical — same $300, same line, same journal row
     // — which is why this reads exactly like the legacy case below it.
-    it("reads a fronted expense as the debt side of the balance", async () => {
+    it("reads a payment EXPENSE as the money-you-paid side (spec 0007 §6b)", async () => {
         const s = await run([
             expense(),
             expense({
-                id: "efronted",
-                description: "I owe Brenda",
-                isFronted: true,
+                id: "ePayment",
+                description: "Paid Brenda",
+                isPartnerPayment: true,
                 amount: 300,
                 actualExpenditure: 300,
                 isShared: false,
             }),
         ]);
 
-        // she owes 320 (your shared), you owe 300 (fronted) → she owes 20
+        // she owes 320 (your shared), you already paid her 300 → she owes 620.
+        // A payment draws the balance the OTHER way from the debt it settles.
+        expect(s.balance.direction).toBe("she_owes");
+        expect(s.balance.amount).toBe(620);
+        const paid = s.journal.find(
+            (j) => j.kind === "transfer" && j.direction === "gf_paid",
+        );
+        expect(paid).toBeDefined();
+        if (paid?.kind === "transfer") {
+            expect(paid.amount).toBe(300);
+            // The row lives in the expense table now, so the journal's edit and
+            // delete must reach the expense actions.
+            expect(paid.source).toBe("expense");
+        }
+        expect(s.breakdownItems.you_paid).toHaveLength(1);
+    });
+
+    it("reads a gf_fronted MOVEMENT as the debt side", async () => {
+        const s = await run(
+            [expense()],
+            [
+                movement({
+                    id: "mDebt",
+                    type: "gf_fronted",
+                    amount: 300,
+                    note: "I owe Brenda",
+                }),
+            ],
+        );
+
+        // she owes 320 (your shared), you owe 300 (her front) → she owes 20.
+        // Same arithmetic the old model produced from an expense — the balance
+        // is unchanged by the reversal, only the source moved.
         expect(s.balance.direction).toBe("she_owes");
         expect(s.balance.amount).toBe(20);
         const debt = s.journal.find((j) => j.kind === "partner_debt");
@@ -113,58 +145,55 @@ describe("getSettlement", () => {
         if (debt?.kind === "partner_debt") {
             expect(debt.amount).toBe(300);
             expect(debt.description).toBe("I owe Brenda");
+            expect(debt.source).toBe("movement");
         }
         expect(s.breakdownItems.your_debt).toHaveLength(1);
-        const debtRow = s.journal.find((j) => j.kind === "partner_debt");
-        if (debtRow?.kind === "partner_debt") {
-            expect(debtRow.source).toBe("expense");
-        }
     });
 
-    it("never counts a fronted expense on the partner-share line as well", async () => {
+    it("never counts a payment on the partner-share line as well", async () => {
         // An edit through the ordinary expense form could leave `amount` and
-        // `actualExpenditure` apart on a fronted row. It must still land on ONE
-        // line: the partner does not owe a share of a debt he owes her.
+        // `actualExpenditure` apart on a payment row. It must still land on ONE
+        // line: she does not owe you a share of money you sent her.
         const s = await run([
             expense({
-                id: "efronted",
-                isFronted: true,
+                id: "ePayment",
+                isPartnerPayment: true,
                 amount: 1000,
                 actualExpenditure: 680,
                 isShared: true,
             }),
         ]);
 
-        expect(s.breakdownItems.your_debt).toHaveLength(1);
-        expect(s.breakdownItems.your_debt[0]!.amount).toBe(680);
+        expect(s.breakdownItems.you_paid).toHaveLength(1);
+        expect(s.breakdownItems.you_paid[0]!.amount).toBe(680);
         expect(s.breakdownItems.partner_share).toHaveLength(0);
-        expect(s.balance.direction).toBe("you_owe");
+        expect(s.balance.direction).toBe("she_owes");
         expect(s.balance.amount).toBe(680);
     });
 
-    it("counts a converted debt once, even if its old movement survives", async () => {
-        // The conversion migration reuses the movement's id for the expense, and
-        // deletes the movement in the same transaction — so a twin should never
-        // exist. A partial restore or a replay against a half-migrated copy
-        // could still produce one, and a silently doubled IOU is the kind of
-        // error nobody catches until they pay it.
+    it("counts a converted payment once, even if its old movement survives", async () => {
+        // The conversion migration reuses the movement's id for the expense and
+        // deletes the movement with it, so a twin should never exist. A partial
+        // restore or a replay against a half-migrated copy could still produce
+        // one, and a silently doubled settlement figure is the kind of error
+        // nobody catches until they pay it.
         const s = await run(
             [
                 expense({
                     id: "shared",
-                    isFronted: true,
+                    isPartnerPayment: true,
                     amount: 300,
                     actualExpenditure: 300,
                     isShared: false,
-                    description: "I owe Brenda",
+                    description: "Paid Brenda",
                 }),
             ],
-            [movement({ id: "shared", type: "gf_fronted", amount: 300 })],
+            [movement({ id: "shared", type: "gf_paid", amount: 300 })],
         );
 
-        expect(s.balance.direction).toBe("you_owe");
+        expect(s.balance.direction).toBe("she_owes");
         expect(s.balance.amount).toBe(300);
-        expect(s.breakdownItems.your_debt).toHaveLength(1);
+        expect(s.breakdownItems.you_paid).toHaveLength(1);
     });
 
     it("still nets a LEGACY gf_fronted movement and a transfer to zero", async () => {

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
+import { settingsRepository } from "@/lib/repositories";
 import { getCategoryDetail } from "@/lib/services/category/category.service";
 import { CategoryDetailHeader } from "@/components/category/CategoryDetailHeader";
 import { CategoryExpenses } from "@/components/category/CategoryExpenses";
@@ -33,7 +34,10 @@ export default async function CategoryDetailPage({
         return null;
     }
 
-    const detail = await getCategoryDetail(userId, slug, month);
+    const [detail, settings] = await Promise.all([
+        getCategoryDetail(userId, slug, month),
+        settingsRepository.getSettings(userId),
+    ]);
     if (!detail) {
         notFound();
     }
@@ -82,6 +86,7 @@ export default async function CategoryDetailPage({
                 <CategoryExpenses
                     expenses={detail.expenses}
                     color={detail.meta.color}
+                    partnerName={settings.partnerName}
                 />
             </div>
         </main>

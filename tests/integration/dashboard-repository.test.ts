@@ -28,7 +28,7 @@ async function seedExpense(opts: {
     actualExpenditure: number;
     subcategoryId?: string;
     cardId?: string;
-    isFronted?: boolean;
+    isPartnerPayment?: boolean;
 }) {
     return db.expense.create({
         data: {
@@ -40,7 +40,7 @@ async function seedExpense(opts: {
             description: "x",
             amount: opts.amount,
             actualExpenditure: opts.actualExpenditure,
-            isFronted: opts.isFronted ?? false,
+            isPartnerPayment: opts.isPartnerPayment ?? false,
         },
     });
 }
@@ -510,7 +510,7 @@ describe("a fronted expense and spend-by-card (BUG-1, integration)", () => {
             date: "2026-09-10T12:00:00Z",
             amount: 680,
             actualExpenditure: 680,
-            isFronted: true,
+            isPartnerPayment: true,
         });
 
         const cards = await repo.getCardSpends(user.id, "2026-09");
@@ -537,7 +537,7 @@ describe("a fronted expense and spend-by-card (BUG-1, integration)", () => {
             date: "2026-09-10T12:00:00Z",
             amount: 680,
             actualExpenditure: 680,
-            isFronted: true,
+            isPartnerPayment: true,
         });
 
         const cards = await repo.getCardSpends(user.id, "2026-09");
@@ -556,7 +556,7 @@ describe("a fronted expense and spend-by-card (BUG-1, integration)", () => {
             date: "2026-09-10T12:00:00Z",
             amount: 680,
             actualExpenditure: 680,
-            isFronted: true,
+            isPartnerPayment: true,
         });
 
         const spends = await repo.getCategorySpends(user.id, "2026-09");

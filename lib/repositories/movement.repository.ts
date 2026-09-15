@@ -69,13 +69,20 @@ export class PrismaMovementRepository implements MovementRepository {
     ): Promise<MovementListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
         const rows = await this.db.movement.findMany({
-            // Every movement of the month, `gf_fronted` included: a debt she
-            // fronted is information the feed shows, so it's visible where the
-            // user looks. It is still not a cash event — the feed totals sum
-            // expenses plus `gf_paid` only, so a debt changes no figure, and it
-            // never becomes an Expense, so budget/categories/cards are untouched
-            // (ADR-0020). The settlement page keeps its own window repository.
-            where: { userId, date: { gte: start, lt: end } },
+            // `gf_fronted` is EXCLUDED: a debt she fronted is settlement-only
+            // (spec 0007 §6b). It is provisional — something she owes you can
+            // shrink or cancel it before any money moves — so showing it beside
+            // real spending invites reading it as money already gone. The
+            // settlement page reads its own window repository and still shows
+            // it, still counts it, and still edits it there.
+            //
+            // Filtered at the QUERY, not hidden at render: a row that never
+            // arrives cannot be forgotten by a view written later.
+            where: {
+                userId,
+                date: { gte: start, lt: end },
+                type: { not: "gf_fronted" },
+            },
             orderBy: { date: "desc" },
             select: {
                 id: true,

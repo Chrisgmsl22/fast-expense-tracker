@@ -92,8 +92,8 @@ export async function createExpense(
             paidBy: v.paidBy,
             notes: v.notes ?? null,
             // A purchase you made. A debt the partner fronted goes through
-            // `addFrontedExpense`, the only writer of a fronted row.
-            isFronted: false,
+            // `addPartnerPayment`, the only writer of a fronted row.
+            isPartnerPayment: false,
         });
         return { ok: true, data: { id: created.id } };
     } catch (e) {

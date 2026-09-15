@@ -6,67 +6,67 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
-import { frontedDescription } from "@/lib/domain/expense";
+import { partnerPaymentDescription } from "@/lib/domain/expense";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import { expenseRepository, settingsRepository } from "@/lib/repositories";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
 import type { SettingsRepository } from "@/lib/repositories/settings.repository";
 import {
-    frontedExpenseInputSchema,
-    type FrontedExpenseInput,
+    partnerPaymentInputSchema,
+    type PartnerPaymentInput,
 } from "@/lib/schemas/expense";
 
 /** The edit payload carries the row id alongside the debt fields. */
 const idSchema = z.object({ id: z.string().min(1) });
 
 /** Failure modes the caller can branch on. `not_found` also covers "not yours". */
-export type UpdateFrontedExpenseCode =
+export type UpdatePartnerPaymentCode =
     | "validation"
     | "unauthenticated"
     | "not_found"
     | "db_error";
 
-export type UpdateFrontedExpenseResult = ActionResult<
+export type UpdatePartnerPaymentResult = ActionResult<
     { id: string },
-    FrontedExpenseInput,
-    UpdateFrontedExpenseCode
+    PartnerPaymentInput,
+    UpdatePartnerPaymentCode
 >;
 
 /** Injectable seams — the repositories this action orchestrates. */
-export type UpdateFrontedExpenseDeps = {
+export type UpdatePartnerPaymentDeps = {
     expenseRepo: ExpenseRepository;
     settingsRepo: SettingsRepository;
 };
 
 /**
- * Edit a debt the partner fronted (spec 0007 §6a). Mirrors `addFrontedExpense`,
+ * Edit a debt the partner fronted (spec 0007 §6a). Mirrors `addPartnerPayment`,
  * with the write **scoped by `userId`** (IDOR guard — a mismatch matches zero
  * rows → `not_found`).
  *
- * Only an `isFronted` expense is editable here: refusing an ordinary one stops a
+ * Only an `isPartnerPayment` expense is editable here: refusing an ordinary one stops a
  * normal purchase being retyped into a debt through this action, which would
  * move the couple balance by a row the user never meant to owe. The action is
  * the enforcement seam, not the UI.
  *
  * Category and subcategory are NOT touched — this form does not offer them, and
  * writing them back from a payload that never carried them would silently undo a
- * choice the user made in the expense form. `isFronted` is likewise never
+ * choice the user made in the expense form. `isPartnerPayment` is likewise never
  * written: the repository's update shape has no such field.
  */
-export async function updateFrontedExpense(
+export async function updatePartnerPayment(
     input: unknown,
-    deps: Partial<UpdateFrontedExpenseDeps> = {},
-): Promise<UpdateFrontedExpenseResult> {
+    deps: Partial<UpdatePartnerPaymentDeps> = {},
+): Promise<UpdatePartnerPaymentResult> {
     const expenseRepo = deps.expenseRepo ?? expenseRepository;
     const settingsRepo = deps.settingsRepo ?? settingsRepository;
 
-    const parsed = frontedExpenseInputSchema.safeParse(input);
+    const parsed = partnerPaymentInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
             message: "Invalid debt",
-            fieldErrors: toFieldErrors<FrontedExpenseInput>(parsed.error),
+            fieldErrors: toFieldErrors<PartnerPaymentInput>(parsed.error),
         };
     }
     const idParsed = idSchema.safeParse(input);
@@ -88,7 +88,7 @@ export async function updateFrontedExpense(
     const v = parsed.data;
     try {
         const existing = await expenseRepo.getById(userId, id);
-        if (!existing || !existing.isFronted) {
+        if (!existing || !existing.isPartnerPayment) {
             return { ok: false, code: "not_found", message: "Debt not found." };
         }
 
@@ -98,7 +98,7 @@ export async function updateFrontedExpense(
             subcategoryId: existing.subcategoryId,
             cardId: null,
             date: cdmxCalendarDateToUtc(v.date),
-            description: frontedDescription(
+            description: partnerPaymentDescription(
                 v.note,
                 resolvePartnerName(partnerName),
             ),
@@ -117,7 +117,7 @@ export async function updateFrontedExpense(
         }
         return { ok: true, data: { id } };
     } catch (e) {
-        console.error("updateFrontedExpense: db write failed", e);
+        console.error("updatePartnerPayment: db write failed", e);
         return {
             ok: false,
             code: "db_error",

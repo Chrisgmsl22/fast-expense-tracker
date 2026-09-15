@@ -34,7 +34,7 @@ function exp(over: Partial<ExpenseListItem> & { id: string }): ExpenseListItem {
         amount: over.amount ?? 100,
         actualExpenditure: over.actualExpenditure ?? 100,
         isShared: over.isShared ?? false,
-        isFronted: over.isFronted ?? false,
+        isPartnerPayment: over.isPartnerPayment ?? false,
         category: over.category ?? {
             id: "cat1",
             slug: "health",
@@ -58,7 +58,7 @@ function fakeCategoryRepo(
         getSubcategorySpends: async () => over.subSpends ?? subSpends,
         getExpensesForCategoryMonth: async () =>
             over.expenses ?? [exp({ id: "e1" }), exp({ id: "e2" })],
-        getFrontedDefaults: async () => null,
+        getPartnerPaymentDefaults: async () => null,
     };
 }
 

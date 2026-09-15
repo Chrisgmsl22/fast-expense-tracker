@@ -20,11 +20,17 @@ vi.mock("@/app/_actions/movement/delete", () => ({
 }));
 // PartnerDebtForm (rendered in the edit dialog) imports these; stub them so the
 // test doesn't pull the next-auth server graph in for a pure render.
-vi.mock("@/app/_actions/expense/add-fronted", () => ({
-    addFrontedExpense: vi.fn(),
+vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
+    addPartnerDebt: vi.fn(),
 }));
-vi.mock("@/app/_actions/expense/update-fronted", () => ({
-    updateFrontedExpense: vi.fn(),
+vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
+    updatePartnerDebt: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/add-partner-payment", () => ({
+    addPartnerPayment: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/update-partner-payment", () => ({
+    updatePartnerPayment: vi.fn(),
 }));
 // TransferForm (rendered in the transfer edit dialog) imports these too.
 vi.mock("@/app/_actions/movement/add-transfer", () => ({
@@ -188,6 +194,7 @@ describe("SettlementJournal", () => {
             direction: "gf_received",
             amount: 320,
             note: "rent",
+            source: "movement",
         },
         {
             kind: "partner_debt",
@@ -235,7 +242,7 @@ describe("SettlementJournal", () => {
         expect(screen.queryByLabelText("Edit Groceries")).toBeNull();
     });
 
-    // The debt row is an `Expense{isFronted:true}` now (spec 0007 §6a), so the
+    // The debt row is an `Expense{isPartnerPayment:true}` now (spec 0007 §6a), so the
     // journal deletes it through the expense action. Sending it to
     // `deleteMovement` would match no movement and report "not found" for a row
     // sitting in plain sight.

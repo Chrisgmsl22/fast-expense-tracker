@@ -16,7 +16,7 @@ export type SettlementExpenseRow = {
      * of the balance, where an ordinary expense contributes her share of what
      * YOU paid — opposite signs, so the two can never be read alike.
      */
-    isFronted: boolean;
+    isPartnerPayment: boolean;
     /** Entry time: what cycle membership compares, and the same-`date` tie-break. */
     createdAt: Date;
 };
@@ -119,7 +119,7 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     amount: true,
                     actualExpenditure: true,
                     isShared: true,
-                    isFronted: true,
+                    isPartnerPayment: true,
                     createdAt: true,
                 },
             }),
@@ -175,7 +175,7 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     amount: true,
                     actualExpenditure: true,
                     isShared: true,
-                    isFronted: true,
+                    isPartnerPayment: true,
                     createdAt: true,
                 },
             }),

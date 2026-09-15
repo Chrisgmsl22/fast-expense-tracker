@@ -4,14 +4,10 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-    addTransfer,
-    type AddTransferResult,
-} from "@/app/_actions/movement/add-transfer";
-import {
-    updateTransfer,
-    type UpdateTransferResult,
-} from "@/app/_actions/movement/update-transfer";
+import { addTransfer } from "@/app/_actions/movement/add-transfer";
+import { updateTransfer } from "@/app/_actions/movement/update-transfer";
+import { addPartnerPayment } from "@/app/_actions/expense/add-partner-payment";
+import { updatePartnerPayment } from "@/app/_actions/expense/update-partner-payment";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { TransferInput } from "@/lib/schemas/movement";
 
@@ -38,10 +34,16 @@ type Props = {
 };
 
 /**
- * Log a cash transfer with the partner (ADR-0018 + spec 0004). `direction` picks
- * the side: money you sent her (`gf_paid`) or money she sent you (`gf_received`,
- * settling what she owes). Just the amount you settled (netted in your head); no
- * category, no split — it's cash, not an expense.
+ * Log a settlement transfer with the partner. `direction` picks the side, and
+ * the two sides are no longer symmetric (spec 0007 §6b):
+ *
+ * - **you → her** is an `Expense{isPartnerPayment}` in Combined Expenses. Paying
+ *   her is the moment the money is really spent, so it belongs in the budget.
+ * - **her → you** stays a `Movement{gf_received}`. It is her cash settling what
+ *   she owes you; nothing of yours was consumed.
+ *
+ * Either way the amount is the figure you settled, netted in your head; no split
+ * is applied to it.
  */
 export function TransferForm({
     direction = "gf_paid",
@@ -60,9 +62,11 @@ export function TransferForm({
     const [formError, setFormError] = useState<string | null>(null);
 
     const inbound = direction === "gf_received";
+    // "I paid {partner}" — the half that becomes an expense.
+    const outbound = !inbound;
     const blurb = inbound
         ? `Money ${partnerName} sent you — settles what she owes you. Not an expense.`
-        : `The amount you settled with ${partnerName} — money out of your account, not an expense.`;
+        : `Money you sent ${partnerName} — this IS your expense, counted in your budget under Combined Expenses.`;
     const submitLabel = transfer
         ? "Save changes"
         : inbound
@@ -74,20 +78,36 @@ export function TransferForm({
         const form = e.currentTarget;
         startTransition(async () => {
             try {
-                const res: AddTransferResult | UpdateTransferResult = transfer
-                    ? await updateTransfer({
-                          id: transfer.id,
-                          date,
-                          amount,
-                          direction,
-                          note: note || undefined,
-                      })
-                    : await addTransfer({
-                          date,
-                          amount,
-                          direction,
-                          note: note || undefined,
-                      });
+                // Money you SEND her is an expense (spec 0007 §6b) — the only
+                // half of a settlement that is real spending of yours. Money she
+                // sends you stays a movement: it is her cash, not your purchase.
+                const res = outbound
+                    ? transfer
+                        ? await updatePartnerPayment({
+                              id: transfer.id,
+                              date,
+                              amount,
+                              note: note || undefined,
+                          })
+                        : await addPartnerPayment({
+                              date,
+                              amount,
+                              note: note || undefined,
+                          })
+                    : transfer
+                      ? await updateTransfer({
+                            id: transfer.id,
+                            date,
+                            amount,
+                            direction,
+                            note: note || undefined,
+                        })
+                      : await addTransfer({
+                            date,
+                            amount,
+                            direction,
+                            note: note || undefined,
+                        });
                 if (res.ok) {
                     setErrors({});
                     setFormError(null);

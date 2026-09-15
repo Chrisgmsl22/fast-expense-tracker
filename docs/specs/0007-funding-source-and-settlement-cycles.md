@@ -349,6 +349,32 @@ carwash at **$500**, her outlay, when his share was about **$380**.
 > expenses I made, in this case, paying her my portion (380ish not 500)… when I
 > make a payment, maybe we can turn that into the actual expense."_
 
+### Why a debt cannot be an expense — the argument that settles it
+
+The objection raised against the reversal was netting: some months net to
+nothing, so the consumption a transfer stood in for would vanish. He turned that
+argument around, and his version is the stronger one:
+
+> _"When I log something I owe to Brenda, I do not want this expense to be filled
+> in immediately, remember there could be a case where I also owe her, in this
+> case my amount could be reduced or removed. Instead, do not add an expense when
+> I log that I owe Brenda, lets do this when I actually log a payment I make to
+> her, this is more accurate and real based on how we settled."_
+
+**Netting is precisely why a debt must not be an expense.** A debt is
+_provisional_: something she owes you can reduce or cancel it before any money
+moves, so booking it as spending records a purchase that may never happen. The
+payment is the only part that is certain, because it has already happened.
+
+> _"The tag for the money I owe her is still valid for the settlement tab, but
+> the expenses should only contain what I actually sent her, when I make the
+> log."_
+
+The practical dividend: under §6a a debt-expense and its settling transfer had to
+be kept out of each other's ledger by hand, and that was the most error-prone
+rule in this document. One row now means one figure, and there is no exclusion
+anyone can forget.
+
 What changed, exactly:
 
 | Concern             | §6a (superseded)                   | Current                      |
@@ -364,13 +390,13 @@ he owes**, never her outlay.
 
 ### Slices
 
-| Slice | Scope                                                                                            |
-| ----- | ------------------------------------------------------------------------------------------------ |
-| E     | ~~Debt becomes consumption~~ — **landed, then reversed by E′**                                   |
-| E′    | Invert: payment becomes the expense, debt returns to settlement-only, migrate the converted rows |
-| F     | Feed rework: debts out, `Total` removed, "what I really spent" becomes cash out                  |
-| G     | Funding source on payments (the deferred half of slice C)                                        |
-| H     | Closed-settlement summary footer: total unsplit spend, what each owed, how it ended              |
+| Slice | Scope                                                                                               |
+| ----- | --------------------------------------------------------------------------------------------------- |
+| E     | ~~Debt becomes consumption~~ — **landed, then reversed by E′**                                      |
+| E′    | Invert: payment becomes the expense, debt returns to settlement-only, migrate the rows — **landed** |
+| F     | Feed rework: debts out, `Total` removed, "what I really spent" becomes cash out                     |
+| G     | Funding source on payments (the deferred half of slice C)                                           |
+| H     | Closed-settlement summary footer: total unsplit spend, what each owed, how it ended                 |
 
 E′ before F. G and H are independent.
 

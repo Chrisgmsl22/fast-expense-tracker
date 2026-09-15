@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
-import { frontedDescription } from "@/lib/domain/expense";
+import { partnerPaymentDescription } from "@/lib/domain/expense";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import {
     categoryRepository,
@@ -15,60 +15,62 @@ import type { CategoryRepository } from "@/lib/repositories/category.repository"
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
 import type { SettingsRepository } from "@/lib/repositories/settings.repository";
 import {
-    frontedExpenseInputSchema,
-    type FrontedExpenseInput,
+    partnerPaymentInputSchema,
+    type PartnerPaymentInput,
 } from "@/lib/schemas/expense";
 
 /** Failure modes the caller can branch on. */
-export type AddFrontedExpenseCode =
+export type AddPartnerPaymentCode =
     | "validation"
     | "unauthenticated"
     | "db_error";
 
-export type AddFrontedExpenseResult = ActionResult<
+export type AddPartnerPaymentResult = ActionResult<
     { id: string },
-    FrontedExpenseInput,
-    AddFrontedExpenseCode
+    PartnerPaymentInput,
+    AddPartnerPaymentCode
 >;
 
 /** Injectable seams — the repositories this action orchestrates. */
-export type AddFrontedExpenseDeps = {
+export type AddPartnerPaymentDeps = {
     expenseRepo: ExpenseRepository;
     categoryRepo: CategoryRepository;
     settingsRepo: SettingsRepository;
 };
 
 /**
- * Log a purchase the partner fronted, which you owe her back (spec 0007 §6a).
+ * Log money you sent the partner (spec 0007 §6b).
  *
- * It is stored as an **Expense** carrying `isFronted`, not a movement: it is
- * real consumption from this month's income, so it belongs in the buckets and
- * the category rollups like any other purchase. It reaches the budget on
- * purpose; what it must never reach is spend-by-card (the partner's card moved,
- * not yours — BUG-1) or the cash-out figure (the transfer that settles it is the
- * cash event). Both of those exclude it at their own read.
+ * It is stored as an **Expense** carrying `isPartnerPayment`, not a movement:
+ * paying her is the moment the money is really spent, so it belongs in the
+ * buckets and the category rollups like any other purchase. A debt she fronted
+ * does not — it is provisional until money moves, and can be reduced or
+ * cancelled by something she owes you. That is why this action, and not the debt
+ * form, is the one that reaches the budget.
  *
- * **The amount is your share**, never what she actually paid, so no split is
- * applied: `amount` and `actualExpenditure` are equal and `isShared` is false.
- * Category and subcategory default to `combined-expenses` / "Covered for me";
- * the row is an ordinary expense afterwards, so both are editable from the
- * expense form.
+ * It stays out of spend-by-card: a payment usually leaves a bank account with no
+ * card attached, and a cardless row read as "Cash" is what BUG-1 looked like.
+ *
+ * **No split is applied**: the amount is what you sent, so `amount` and
+ * `actualExpenditure` are equal and `isShared` is false. Category and
+ * subcategory default to `combined-expenses` / "Covered for me"; the row is an
+ * ordinary expense afterwards, so both are editable from the expense form.
  */
-export async function addFrontedExpense(
+export async function addPartnerPayment(
     input: unknown,
-    deps: Partial<AddFrontedExpenseDeps> = {},
-): Promise<AddFrontedExpenseResult> {
+    deps: Partial<AddPartnerPaymentDeps> = {},
+): Promise<AddPartnerPaymentResult> {
     const expenseRepo = deps.expenseRepo ?? expenseRepository;
     const categoryRepo = deps.categoryRepo ?? categoryRepository;
     const settingsRepo = deps.settingsRepo ?? settingsRepository;
 
-    const parsed = frontedExpenseInputSchema.safeParse(input);
+    const parsed = partnerPaymentInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
             message: "Invalid debt",
-            fieldErrors: toFieldErrors<FrontedExpenseInput>(parsed.error),
+            fieldErrors: toFieldErrors<PartnerPaymentInput>(parsed.error),
         };
     }
 
@@ -84,7 +86,7 @@ export async function addFrontedExpense(
 
     const v = parsed.data;
     try {
-        const defaults = await categoryRepo.getFrontedDefaults(userId);
+        const defaults = await categoryRepo.getPartnerPaymentDefaults(userId);
         const categoryId = v.categoryId ?? defaults?.categoryId;
         if (!categoryId) {
             // No category to file it under and none supplied: refuse loudly
@@ -128,7 +130,7 @@ export async function addFrontedExpense(
             // has to exclude the row rather than group it.
             cardId: null,
             date: cdmxCalendarDateToUtc(v.date),
-            description: frontedDescription(
+            description: partnerPaymentDescription(
                 v.note,
                 resolvePartnerName(partnerName),
             ),
@@ -138,11 +140,11 @@ export async function addFrontedExpense(
             actualExpenditure: v.amount,
             paidBy: "you",
             notes: null,
-            isFronted: true,
+            isPartnerPayment: true,
         });
         return { ok: true, data: { id: created.id } };
     } catch (e) {
-        console.error("addFrontedExpense: db write failed", e);
+        console.error("addPartnerPayment: db write failed", e);
         return {
             ok: false,
             code: "db_error",

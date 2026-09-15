@@ -142,20 +142,22 @@ model Expense {
   isShared          Boolean @default(false)
   yourPercentage    Float   @default(1.0) // 1.0 = 100% mine; 0.68 = my 68% share
   actualExpenditure Float // stored, not computed: isShared ? amount * yourPercentage : amount
-  // DEPRECATED (ADR-0020): always "you". Never used to mark a fronted expense —
-  // that is `isFronted` below. Column retained until a later chore drops it; all
-  // reads treat expenses as the user's own.
+  // DEPRECATED (ADR-0020): always "you". Column retained until a later chore
+  // drops it; all reads treat expenses as the user's own.
   paidBy            String  @default("you")
 
-  // The partner fronted this purchase and you owe her the amount (spec 0007
-  // §6a). It is consumption like any other expense — it carries a category and
-  // counts in the buckets — but its cash equivalent is the transfer that settles
-  // it, so two reads exclude it: spend-by-card (BUG-1's phantom Cash row, since
-  // a fronted row has no card) and the cash-out figure. `amount` is already HIS
-  // SHARE, so `isShared` is false and `actualExpenditure` equals `amount`.
-  // The settlement layer reads this flag as the "you owe her" side of the
-  // balance, replacing Movement{type:"gf_fronted"}.
-  isFronted         Boolean @default(false)
+  // Money you SENT the partner (spec 0007 §6b). Paying her is the moment the
+  // money is really spent, so this is an expense like any other: it carries a
+  // category and counts in the buckets. A debt she fronted is NOT — it is
+  // provisional, and stays a Movement{type:"gf_fronted"} until a payment settles
+  // it, because something she owes you can cancel it before any money moves.
+  //
+  // `amount` is what you sent, so `isShared` is false and `actualExpenditure`
+  // equals `amount`. One read excludes it: spend-by-card, because a payment
+  // usually has no card, and a cardless row read as "Cash" is BUG-1's symptom.
+  // The settlement layer reads this flag as the "you paid her" side of the
+  // balance.
+  isPartnerPayment  Boolean @default(false)
 
   // Forward-compat fields (UI ships in later phases — spec §3)
   isRecurring      Boolean @default(false) // Phase 3
@@ -228,7 +230,7 @@ model Movement {
   amount Float // always positive; direction comes from `type`
   // gf_received | gf_paid | card_payment | gf_fronted | income | other.
   // `gf_fronted` is LEGACY (spec 0007 §6a): a thing the partner fronted is now
-  // an `Expense{isFronted:true}`, so nothing writes this type anymore. The
+  // an `Expense{isPartnerPayment:true}`, so nothing writes this type anymore. The
   // migration converts every row that has a `combined-expenses` category to
   // convert into; settlement still sums any leftover, so a row that could not be
   // converted keeps moving the balance instead of vanishing.

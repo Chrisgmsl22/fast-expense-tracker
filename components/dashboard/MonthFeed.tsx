@@ -1,5 +1,5 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
-import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
+import { computeFeedTotals } from "@/lib/domain/movement";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
@@ -49,8 +49,10 @@ export function MonthFeed({
 }) {
     const feed = buildFeed(expenses, movements);
 
-    const paidToPartner = sumByType(movements, "gf_paid");
-    const totals = computeFeedTotals(expenses, paidToPartner);
+    // A payment to the partner is an expense now (spec 0007 §6b), so it is
+    // already among these rows; the helper reports it as a breakdown line rather
+    // than a separate sum.
+    const totals = computeFeedTotals(expenses);
 
     const count = feed.length;
 
@@ -167,12 +169,6 @@ export function MonthFeed({
             )}
         </div>
     );
-}
-
-function sumByType(movements: MovementListItem[], type: MovementType): number {
-    return movements
-        .filter((m) => m.type === type)
-        .reduce((sum, m) => sum + m.amount, 0);
 }
 
 /** One expense line (neutral). */

@@ -22,42 +22,48 @@ const write = (over: Partial<MovementWriteData> = {}): MovementWriteData => ({
 });
 
 describe("PrismaMovementRepository (integration)", () => {
-    it("getForMonth includes gf_fronted, with its note, so a debt shows in the feed", async () => {
+    it("getForMonth EXCLUDES gf_fronted, so a debt never reaches a feed", async () => {
+        // A debt she fronted is settlement-only and provisional (spec 0007
+        // §6b): it may shrink or vanish before money moves, so it must not sit
+        // beside real spending. Filtered here, at the query, rather than hidden
+        // at render — a row that never arrives cannot be forgotten by a view.
         const user = await seedUser();
         await repo.insert(user.id, write({ type: "gf_paid", amount: 50 }));
         await repo.insert(user.id, write({ type: "card_payment", amount: 80 }));
-        await repo.insert(
+        const debt = await repo.insert(
             user.id,
             write({ type: "gf_fronted", amount: 300, note: "she covered" }),
         );
 
         const rows = await repo.getForMonth(user.id, "2026-07");
-        expect(rows).toHaveLength(3);
+        expect(rows).toHaveLength(2);
         expect(rows.map((r) => r.type).sort()).toEqual([
             "card_payment",
-            "gf_fronted",
             "gf_paid",
         ]);
-        // The note carries through — the feed row uses it as the description.
-        expect(rows.find((r) => r.type === "gf_fronted")).toMatchObject({
+        // Filtered from the feed, NOT deleted: the settlement page still reads
+        // it through its own repository.
+        expect(await repo.getById(user.id, debt.id)).toMatchObject({
+            type: "gf_fronted",
             amount: 300,
-            note: "she covered",
         });
     });
 
     it("getForMonth still scopes to the owner and the month", async () => {
+        // Uses `gf_paid`, since `gf_fronted` is filtered out entirely now and
+        // would make this pass for the wrong reason.
         const owner = await seedUser("owner@example.com");
         const other = await seedUser("other@example.com");
-        await repo.insert(owner.id, write({ type: "gf_fronted", amount: 300 }));
+        await repo.insert(owner.id, write({ type: "gf_paid", amount: 300 }));
         await repo.insert(
             owner.id,
             write({
-                type: "gf_fronted",
+                type: "gf_paid",
                 amount: 400,
                 date: new Date("2026-08-02T06:00:00Z"),
             }),
         );
-        await repo.insert(other.id, write({ type: "gf_fronted", amount: 900 }));
+        await repo.insert(other.id, write({ type: "gf_paid", amount: 900 }));
 
         const rows = await repo.getForMonth(owner.id, "2026-07");
         expect(rows.map((r) => r.amount)).toEqual([300]);

@@ -12,11 +12,15 @@ import { SAVINGS_SLUG } from "./dashboard";
 /** All `Movement.type` values in the schema. */
 export type MovementType =
     | "card_payment"
+    // LEGACY (spec 0007 §6b): money you sent her is an
+    // `Expense{isPartnerPayment:true}` now, because a payment is real spending
+    // of yours. Nothing writes this type anymore; the type survives so a row the
+    // migration could not convert still reads.
     | "gf_paid"
     | "gf_received"
-    // LEGACY (spec 0007 §6a): a thing the partner fronted is an
-    // `Expense{isFronted:true}` now. Nothing writes this type anymore; the type
-    // survives so any row the migration could not convert still reads.
+    // A debt she fronted — settlement only, never consumption (spec 0007 §6b).
+    // It is provisional: something she owes you can reduce or cancel it before
+    // any money moves, so it is not yet an expense of yours.
     | "gf_fronted"
     | "income"
     | "other";
@@ -41,12 +45,12 @@ export function partnerShareTotal(expenses: ExpenseShare[]): number {
 export type FeedTotalExpense = {
     amount: number;
     actualExpenditure: number;
-    /** A debt the partner fronted — consumption, but no cash of yours moved. */
-    isFronted: boolean;
+    /** Money you sent the partner — a real expense of yours (spec 0007 §6b). */
+    isPartnerPayment: boolean;
     category: { slug: string };
 };
 
-/** The four figures the feed footer shows (ADR-0018 §1). */
+/** The figures the feed footer shows (ADR-0018 §1). */
 export type FeedTotals = {
     /** Raw card/cash charges — consumption only (excludes savings transfers). */
     charged: number;
@@ -54,9 +58,13 @@ export type FeedTotals = {
     whatIReallySpent: number;
     /** My-share allocated to Savings this month. */
     setAside: number;
-    /** Transfers you sent the partner (`gf_paid`). */
+    /**
+     * The part of `whatIReallySpent` that went to the partner — a BREAKDOWN of
+     * it, never an addend. A payment is an ordinary expense now, so it is
+     * already inside the figure above.
+     */
     paidToPartner: number;
-    /** Money that actually left = spent + set aside + paid to partner. */
+    /** Money that actually left = spent + set aside. */
     total: number;
 };
 
@@ -64,37 +72,36 @@ export type FeedTotals = {
  * Footer totals for a month, splitting consumption from the savings transfer so
  * "What I really spent" matches the dashboard's Spent. Card payments never enter
  * here: their charges were already counted as expenses, so adding them would
- * double-count. `paidToPartner` is the summed `gf_paid` amount — new outflow
- * (your share of things the partner fronted) not otherwise captured.
+ * double-count.
  *
- * **A fronted expense is skipped entirely** (spec 0007 §6a decision 4). These are
- * cash figures, and no card or cash of yours moved when she paid; the cash
- * equivalent is the transfer that settles it, already counted in
- * `paidToPartner`. Counting both would bill the same dinner twice. The budget
- * reads the other ledger and counts the expense — one fronted amount, two
- * ledgers, seen exactly once by each.
+ * **A payment to the partner is an ordinary expense** (spec 0007 §6b): it is his
+ * money leaving for something he consumed, so it is counted once, here, like any
+ * other row. `paidToPartner` re-reads those same rows as a breakdown line — it
+ * is NOT added to the total, or the payment would be billed twice.
+ *
+ * That is the whole gain of the reversal: under the old model a debt-expense and
+ * its settling transfer had to be kept out of each other's ledger by hand. One
+ * row now means one figure.
  */
-export function computeFeedTotals(
-    expenses: FeedTotalExpense[],
-    paidToPartner: number,
-): FeedTotals {
+export function computeFeedTotals(expenses: FeedTotalExpense[]): FeedTotals {
     let charged = 0;
     let whatIReallySpent = 0;
     let setAside = 0;
+    let paidToPartner = 0;
     for (const e of expenses) {
-        if (e.isFronted) continue;
         if (e.category.slug === SAVINGS_SLUG) {
             setAside += e.actualExpenditure;
-        } else {
-            charged += e.amount;
-            whatIReallySpent += e.actualExpenditure;
+            continue;
         }
+        charged += e.amount;
+        whatIReallySpent += e.actualExpenditure;
+        if (e.isPartnerPayment) paidToPartner += e.actualExpenditure;
     }
     return {
         charged,
         whatIReallySpent,
         setAside,
         paidToPartner,
-        total: whatIReallySpent + setAside + paidToPartner,
+        total: whatIReallySpent + setAside,
     };
 }

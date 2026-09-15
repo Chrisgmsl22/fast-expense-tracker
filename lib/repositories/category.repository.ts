@@ -3,8 +3,8 @@ import type { PrismaClient } from "@prisma/client";
 import { getMonthRangeUtc } from "@/lib/dates";
 import type { SubcategorySpendRow } from "@/lib/domain/category";
 import {
-    FRONTED_CATEGORY_SLUG,
-    FRONTED_SUBCATEGORY_NAME,
+    PARTNER_PAYMENT_CATEGORY_SLUG,
+    PARTNER_PAYMENT_SUBCATEGORY_NAME,
 } from "@/lib/domain/expense";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
@@ -58,11 +58,13 @@ export interface CategoryRepository {
      * refuses rather than filing the debt somewhere arbitrary. The subcategory is
      * optional: a user who deleted it still gets the category.
      */
-    getFrontedDefaults(userId: string): Promise<FrontedDefaults | null>;
+    getPartnerPaymentDefaults(
+        userId: string,
+    ): Promise<PartnerPaymentDefaults | null>;
 }
 
 /** The category (and optional subcategory) a fronted expense defaults to. */
-export type FrontedDefaults = {
+export type PartnerPaymentDefaults = {
     categoryId: string;
     subcategoryId: string | null;
 };
@@ -123,15 +125,17 @@ export class PrismaCategoryRepository implements CategoryRepository {
         return rows;
     }
 
-    async getFrontedDefaults(userId: string): Promise<FrontedDefaults | null> {
+    async getPartnerPaymentDefaults(
+        userId: string,
+    ): Promise<PartnerPaymentDefaults | null> {
         const category = await this.db.category.findUnique({
             where: {
-                userId_slug: { userId, slug: FRONTED_CATEGORY_SLUG },
+                userId_slug: { userId, slug: PARTNER_PAYMENT_CATEGORY_SLUG },
             },
             select: {
                 id: true,
                 subcategories: {
-                    where: { name: FRONTED_SUBCATEGORY_NAME },
+                    where: { name: PARTNER_PAYMENT_SUBCATEGORY_NAME },
                     select: { id: true },
                     take: 1,
                 },
@@ -160,7 +164,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
                 amount: true,
                 actualExpenditure: true,
                 isShared: true,
-                isFronted: true,
+                isPartnerPayment: true,
                 category: {
                     select: { id: true, slug: true, name: true, color: true },
                 },

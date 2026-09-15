@@ -1,25 +1,32 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
-vi.mock("@/app/_actions/expense/add-fronted", () => ({
-    addFrontedExpense: vi.fn(),
+vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
+    addPartnerDebt: vi.fn(),
 }));
-vi.mock("@/app/_actions/expense/update-fronted", () => ({
-    updateFrontedExpense: vi.fn(),
+vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
+    updatePartnerDebt: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/add-partner-payment", () => ({
+    addPartnerPayment: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/update-partner-payment", () => ({
+    updatePartnerPayment: vi.fn(),
 }));
 
 import { PartnerDebtForm } from "@/components/movement/PartnerDebtForm";
-import { addFrontedExpense } from "@/app/_actions/expense/add-fronted";
-import { updateFrontedExpense } from "@/app/_actions/expense/update-fronted";
+import { addPartnerDebt } from "@/app/_actions/movement/add-partner-debt";
+import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
 
-const addFrontedExpenseMock = addFrontedExpense as unknown as Mock;
-const updateFrontedExpenseMock = updateFrontedExpense as unknown as Mock;
+// A debt is a MOVEMENT again (spec 0007 §6b) — settlement only.
+const addDebtMock = addPartnerDebt as unknown as Mock;
+const updateDebtMock = updatePartnerDebt as unknown as Mock;
 
 beforeEach(() => {
-    addFrontedExpenseMock.mockReset();
-    addFrontedExpenseMock.mockResolvedValue({ ok: true, data: { id: "mv1" } });
-    updateFrontedExpenseMock.mockReset();
-    updateFrontedExpenseMock.mockResolvedValue({
+    addDebtMock.mockReset();
+    addDebtMock.mockResolvedValue({ ok: true, data: { id: "mv1" } });
+    updateDebtMock.mockReset();
+    updateDebtMock.mockResolvedValue({
         ok: true,
         data: { id: "mv1" },
     });
@@ -39,7 +46,7 @@ describe("PartnerDebtForm", () => {
         fireEvent.click(screen.getByRole("button", { name: "Log debt" }));
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-        expect(addFrontedExpenseMock).toHaveBeenCalledWith({
+        expect(addDebtMock).toHaveBeenCalledWith({
             amount: "500",
             date: "2026-07-10",
             note: undefined,
@@ -50,7 +57,7 @@ describe("PartnerDebtForm", () => {
     });
 
     it("surfaces a validation error without calling onSuccess", async () => {
-        addFrontedExpenseMock.mockResolvedValue({
+        addDebtMock.mockResolvedValue({
             ok: false,
             code: "validation",
             message: "Invalid debt",
@@ -75,7 +82,7 @@ describe("PartnerDebtForm", () => {
         expect(onSuccess).not.toHaveBeenCalled();
     });
 
-    it("edit mode prefills the debt and saves via updateFrontedExpense", async () => {
+    it("edit mode prefills the debt and saves via updatePartnerDebt", async () => {
         const onSuccess = vi.fn();
         render(
             <PartnerDebtForm
@@ -101,12 +108,12 @@ describe("PartnerDebtForm", () => {
         fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-        expect(updateFrontedExpenseMock).toHaveBeenCalledWith({
+        expect(updateDebtMock).toHaveBeenCalledWith({
             id: "mv9",
             amount: "700",
             date: "2026-07-10",
             note: "gas she covered",
         });
-        expect(addFrontedExpenseMock).not.toHaveBeenCalled();
+        expect(addDebtMock).not.toHaveBeenCalled();
     });
 });

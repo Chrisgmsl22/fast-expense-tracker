@@ -138,7 +138,7 @@ export function ExpenseForm({
     // a card, accept the click, and save in silence — the user would believe he
     // changed something. So the controls are disabled here, with the reason
     // visible before anyone clicks; the server stays the guarantee.
-    const isFronted = expense?.isFronted ?? false;
+    const isPartnerPayment = expense?.isPartnerPayment ?? false;
     const selectedSubcategory = availableSubcategories.find(
         (s) => s.id === subcategoryId,
     );
@@ -174,12 +174,13 @@ export function ExpenseForm({
             // Savings is a transfer, and a covered debt was paid on her card —
             // force no card for both, even when editing a legacy row that still
             // carries one (the field is disabled for both).
-            cardId: isSavings || isFronted ? undefined : cardId || undefined,
+            cardId:
+                isSavings || isPartnerPayment ? undefined : cardId || undefined,
             description,
             notes: notes || undefined,
-            isShared: isFronted ? false : isShared,
+            isShared: isPartnerPayment ? false : isShared,
             // A covered debt is never split: the figure entered IS the share.
-            yourPercentage: isFronted ? "1" : String(yourPercentage),
+            yourPercentage: isPartnerPayment ? "1" : String(yourPercentage),
             // Every expense is the user's (ADR-0018); `paidBy` defaults "you"
             // in the schema, so the form no longer sends it.
         };
@@ -350,7 +351,7 @@ export function ExpenseForm({
                                 {" "}
                                 (not needed for savings)
                             </span>
-                        ) : isFronted ? (
+                        ) : isPartnerPayment ? (
                             <span className="font-normal text-muted-foreground">
                                 {" "}
                                 (she paid, so no card of yours)
@@ -360,7 +361,7 @@ export function ExpenseForm({
                     <Select
                         value={cardId}
                         onValueChange={(value) => setCardId(value ?? "")}
-                        disabled={isSavings || isFronted}
+                        disabled={isSavings || isPartnerPayment}
                     >
                         <SelectTrigger
                             id="cardId"
@@ -371,7 +372,7 @@ export function ExpenseForm({
                                 <span className="text-muted-foreground">
                                     Savings — no card
                                 </span>
-                            ) : isFronted ? (
+                            ) : isPartnerPayment ? (
                                 <span className="text-muted-foreground">
                                     Covered by your partner — no card
                                 </span>
@@ -433,19 +434,19 @@ export function ExpenseForm({
                 <div>
                     <label className="flex items-start gap-2.5">
                         <Checkbox
-                            checked={isFronted ? false : isShared}
+                            checked={isPartnerPayment ? false : isShared}
                             onCheckedChange={(checked) => setIsShared(checked)}
                             aria-label="Shared expense"
-                            disabled={isFronted}
+                            disabled={isPartnerPayment}
                             className="mt-0.5 data-checked:border-positive data-checked:bg-positive"
                         />
                         <span className="text-sm">
                             <span
-                                className={`block font-medium ${isFronted ? "text-muted-foreground" : ""}`}
+                                className={`block font-medium ${isPartnerPayment ? "text-muted-foreground" : ""}`}
                             >
                                 {`Shared expense · ${yourPct}/${partnerPct}`}
                             </span>
-                            {isFronted ? (
+                            {isPartnerPayment ? (
                                 // Same voice as the settlement copy: say what
                                 // the amount already means, not just "disabled".
                                 <span className="block text-muted-foreground">

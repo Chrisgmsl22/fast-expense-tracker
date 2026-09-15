@@ -64,6 +64,17 @@ export function splitStatements(sql: string): string[] {
             current += char;
             continue;
         }
+        // A `$$ … $$` block is ONE statement however many semicolons it holds —
+        // a DO block always holds several. Splitting inside it would hand
+        // Postgres half a procedure and report a syntax error in SQL that is
+        // perfectly valid.
+        if (char === "$" && next === "$") {
+            const close = sql.indexOf("$$", i + 2);
+            const end = close === -1 ? sql.length : close + 2;
+            current += sql.slice(i, end);
+            i = end - 1;
+            continue;
+        }
         if (char === ";") {
             statements.push(current);
             current = "";

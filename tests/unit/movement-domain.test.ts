@@ -30,37 +30,47 @@ describe("computeFeedTotals", () => {
     const groceries = {
         amount: 1000,
         actualExpenditure: 680,
-        isFronted: false,
+        isPartnerPayment: false,
         category: { slug: "groceries" },
     };
     const savings = {
         amount: 5000,
         actualExpenditure: 5000,
-        isFronted: false,
+        isPartnerPayment: false,
         category: { slug: "savings" },
     };
 
     it("splits consumption from the savings transfer", () => {
-        const t = computeFeedTotals([groceries, savings], 0);
+        const t = computeFeedTotals([groceries, savings]);
         expect(t.charged).toBe(1000); // savings excluded from charged
         expect(t.whatIReallySpent).toBe(680);
         expect(t.setAside).toBe(5000);
     });
 
-    it("adds transfers to the partner into the total, not into spend", () => {
-        const t = computeFeedTotals([groceries], 100);
-        expect(t.whatIReallySpent).toBe(680); // transfer not counted as spend
+    it("counts a payment to the partner as spend, exactly once", () => {
+        const payment = {
+            amount: 100,
+            actualExpenditure: 100,
+            isPartnerPayment: true,
+            category: { slug: "combined-expenses" },
+        };
+        const t = computeFeedTotals([groceries, payment]);
+
+        // A payment IS spending now (spec 0007 §6b), so it sits inside the
+        // figure; `paidToPartner` reports that same money as a breakdown, never
+        // as an addend, or the payment would be billed twice.
+        expect(t.whatIReallySpent).toBe(780);
         expect(t.paidToPartner).toBe(100);
-        expect(t.total).toBe(780); // 680 spent + 0 saved + 100 paid
+        expect(t.total).toBe(780);
     });
 
-    it("total = spent + set aside + paid to partner", () => {
-        const t = computeFeedTotals([groceries, savings], 100);
-        expect(t.total).toBe(680 + 5000 + 100);
+    it("total = spent + set aside, with nothing added on top", () => {
+        const t = computeFeedTotals([groceries, savings]);
+        expect(t.total).toBe(680 + 5000);
     });
 
     it("is all zeros for an empty month", () => {
-        expect(computeFeedTotals([], 0)).toEqual({
+        expect(computeFeedTotals([])).toEqual({
             charged: 0,
             whatIReallySpent: 0,
             setAside: 0,

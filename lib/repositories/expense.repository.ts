@@ -10,7 +10,7 @@ export type ExpenseListItem = {
     actualExpenditure: number;
     isShared: boolean;
     /** The partner fronted it and you owe her — consumption, but not cash out. */
-    isFronted: boolean;
+    isPartnerPayment: boolean;
     category: { id: string; slug: string; name: string; color: string };
     subcategory: { name: string } | null;
     card: { name: string; color: string } | null;
@@ -30,7 +30,7 @@ export type ExpenseEditable = {
     yourPercentage: number;
     paidBy: string;
     /** Whether this row is a debt the partner fronted (spec 0007 §6a). */
-    isFronted: boolean;
+    isPartnerPayment: boolean;
 };
 
 /**
@@ -39,7 +39,7 @@ export type ExpenseEditable = {
  * and immutable defaults (`isRecurring`, original-currency columns) are set by
  * the adapter, not passed in.
  *
- * `isFronted` is deliberately absent: it is set once, at insert. An update never
+ * `isPartnerPayment` is deliberately absent: it is set once, at insert. An update never
  * writes it, so editing a fronted expense through the ordinary expense form
  * cannot silently turn it into an ordinary one — which would drop it out of the
  * settlement balance without a word.
@@ -59,7 +59,9 @@ export type ExpenseWriteData = {
 };
 
 /** What `insert` takes: the update shape plus the write-once fronted marker. */
-export type ExpenseInsertData = ExpenseWriteData & { isFronted: boolean };
+export type ExpenseInsertData = ExpenseWriteData & {
+    isPartnerPayment: boolean;
+};
 
 /**
  * Data-access contract for expenses — the "port". Callers (actions, pages)
@@ -104,7 +106,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 isShared: true,
                 yourPercentage: true,
                 paidBy: true,
-                isFronted: true,
+                isPartnerPayment: true,
             },
         });
     }
@@ -121,7 +123,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 amount: true,
                 actualExpenditure: true,
                 isShared: true,
-                isFronted: true,
+                isPartnerPayment: true,
                 category: {
                     select: { id: true, slug: true, name: true, color: true },
                 },
