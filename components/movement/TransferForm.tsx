@@ -4,15 +4,9 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-} from "@/components/ui/select";
-import {
-    FUNDING_SOURCE_LABEL,
-    TRANSFER_FUNDING_SOURCES,
+    FUNDING_TOGGLE_LABEL,
     type TransferFundingSource,
 } from "@/lib/domain/funding";
 import {
@@ -221,40 +215,30 @@ export function TransferForm({
                 (§3.3) and a transfer has no category. Outbound only: money she
                 sends you isn't funded by anything of yours. */}
             {inbound ? null : (
-                <div>
-                    <Label htmlFor="tr-fundedFrom">Funded from</Label>
-                    <Select
-                        value={fundedFrom}
-                        onValueChange={(value) =>
+                <label className="flex items-start gap-2.5">
+                    <Checkbox
+                        checked={fundedFrom === "savings"}
+                        onCheckedChange={(checked) =>
                             setFundedFrom(
-                                (value as TransferFundingSource | null) ??
-                                    "income",
+                                checked === true ? "savings" : "income",
                             )
                         }
-                    >
-                        <SelectTrigger
-                            id="tr-fundedFrom"
-                            aria-label="Funded from"
-                            className="mt-1.5 w-full"
-                        >
-                            {FUNDING_SOURCE_LABEL[fundedFrom]}
-                        </SelectTrigger>
-                        <SelectContent>
-                            {TRANSFER_FUNDING_SOURCES.map((option) => (
-                                <SelectItem key={option} value={option}>
-                                    {FUNDING_SOURCE_LABEL[option]}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    {fundedFrom === "income" ? null : (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Doesn&apos;t count toward this month&apos;s budget
-                            or what you really spent. It still settles what you
-                            owe {partnerName}.
-                        </p>
-                    )}
-                </div>
+                        aria-label={FUNDING_TOGGLE_LABEL.savings}
+                        className="mt-0.5"
+                    />
+                    <span className="text-sm">
+                        <span className="block font-medium">
+                            {FUNDING_TOGGLE_LABEL.savings}
+                        </span>
+                        {fundedFrom === "savings" ? (
+                            <span className="block text-muted-foreground">
+                                Doesn&apos;t count toward this month&apos;s
+                                budget or what you really spent. It still
+                                settles what you owe {partnerName}.
+                            </span>
+                        ) : null}
+                    </span>
+                </label>
             )}
 
             {/* Outside the branch above: an inbound transfer hides the control

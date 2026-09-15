@@ -21,9 +21,12 @@ import {
 } from "@/app/_actions/expense/update";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import {
-    FUNDING_SOURCE_LABEL,
+    FUNDING_TOGGLE_HINT,
+    FUNDING_TOGGLE_LABEL,
     allowsReimbursed,
     fundingSourceAfterCategoryChange,
+    fundingSourceFromToggles,
+    togglesFromFundingSource,
     type FundingSource,
 } from "@/lib/domain/funding";
 import { toDateInputValue } from "@/lib/dates";
@@ -154,9 +157,14 @@ export function ExpenseForm({
     const selectedCard = cards.find((c) => c.id === cardId);
     // `reimbursed` is offered only on Health (spec 0007 §3.3).
     const canReimburse = allowsReimbursed(selectedCategory?.slug ?? null);
-    const fundingOptions: FundingSource[] = canReimburse
-        ? ["income", "savings", "reimbursed"]
-        : ["income", "savings"];
+    const toggles = togglesFromFundingSource(fundedFrom);
+    /** Two mutually exclusive booleans in, one stored enum value out. */
+    function setFunding(paidFromSavings: boolean, fullyReimbursed: boolean) {
+        setFundedFrom(
+            fundingSourceFromToggles(paidFromSavings, fullyReimbursed),
+        );
+        setReimbursedClearedBy(null);
+    }
 
     const amountNumber = Number.parseFloat(amount);
     const yourShare = Number.isFinite(amountNumber)
@@ -330,15 +338,7 @@ export function ExpenseForm({
                 </div>
 
                 <div>
-                    <Label htmlFor="subcategoryId">
-                        Subcategory
-                        {selectedCategory ? (
-                            <span className="font-normal text-muted-foreground">
-                                {" "}
-                                (from {selectedCategory.name})
-                            </span>
-                        ) : null}
-                    </Label>
+                    <Label htmlFor="subcategoryId">Subcategory</Label>
                     <Select
                         value={subcategoryId}
                         onValueChange={(value) => setSubcategoryId(value ?? "")}
@@ -365,18 +365,19 @@ export function ExpenseForm({
                             ))}
                         </SelectContent>
                     </Select>
+                    {/* The hint lives BELOW the select, not in the label: a long
+                        category name used to wrap the label onto a second line
+                        and push this select out of line with Category and Card
+                        (R1). Down here it can wrap freely and nothing moves. */}
+                    {selectedCategory ? (
+                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                            from {selectedCategory.name}
+                        </p>
+                    ) : null}
                 </div>
 
                 <div>
-                    <Label htmlFor="cardId">
-                        Card
-                        {isSavings ? (
-                            <span className="font-normal text-muted-foreground">
-                                {" "}
-                                (not needed for savings)
-                            </span>
-                        ) : null}
-                    </Label>
+                    <Label htmlFor="cardId">Card</Label>
                     <Select
                         value={cardId}
                         onValueChange={(value) => setCardId(value ?? "")}
@@ -409,6 +410,11 @@ export function ExpenseForm({
                             ))}
                         </SelectContent>
                     </Select>
+                    {isSavings ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                            not needed for savings
+                        </p>
+                    ) : null}
                 </div>
             </div>
 
@@ -443,43 +449,63 @@ export function ExpenseForm({
                 />
             </div>
 
-            {/* Funding source (spec 0007 §3.1). Default `income` = today's
-                behaviour, so ignoring this control costs nothing. */}
-            <div>
-                <Label htmlFor="fundedFrom">Funded from</Label>
-                <Select
-                    value={fundedFrom}
-                    onValueChange={(value) => {
-                        setFundedFrom(
-                            (value as FundingSource | null) ?? "income",
-                        );
-                        setReimbursedClearedBy(null);
-                    }}
-                >
-                    <SelectTrigger
-                        id="fundedFrom"
-                        aria-label="Funded from"
-                        className="mt-1.5 w-full"
-                    >
-                        {FUNDING_SOURCE_LABEL[fundedFrom]}
-                    </SelectTrigger>
-                    <SelectContent>
-                        {fundingOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                                {FUNDING_SOURCE_LABEL[option]}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                {fundedFrom === "income" ? null : (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Doesn&apos;t count toward this month&apos;s budget. It
-                        still shows in the list and in spend by card.
-                    </p>
-                )}
+            {/* Funding source (spec 0007 §3.1) as two checkboxes, not a
+                dropdown: "this month's income" is what almost every expense is,
+                so the ordinary case needs no control. Both unchecked = income.
+                The two are mutually exclusive — money already had, or money
+                given back, never both. */}
+            <div className="flex flex-col gap-2.5">
+                <label className="flex items-start gap-2.5">
+                    <Checkbox
+                        checked={toggles.paidFromSavings}
+                        onCheckedChange={(checked) =>
+                            setFunding(checked === true, false)
+                        }
+                        aria-label={FUNDING_TOGGLE_LABEL.savings}
+                        className="mt-0.5"
+                    />
+                    <span className="text-sm">
+                        <span className="block font-medium">
+                            {FUNDING_TOGGLE_LABEL.savings}
+                        </span>
+                        {toggles.paidFromSavings ? (
+                            <span className="block text-muted-foreground">
+                                {FUNDING_TOGGLE_HINT}
+                            </span>
+                        ) : null}
+                    </span>
+                </label>
+
+                {/* Health-only (§3.3). Also shown when the row already carries
+                    the value on another category, so an existing `reimbursed`
+                    expense never loses it silently — the user can see it and
+                    untick it deliberately. */}
+                {canReimburse || fundedFrom === "reimbursed" ? (
+                    <label className="flex items-start gap-2.5">
+                        <Checkbox
+                            checked={toggles.fullyReimbursed}
+                            onCheckedChange={(checked) =>
+                                setFunding(false, checked === true)
+                            }
+                            aria-label={FUNDING_TOGGLE_LABEL.reimbursed}
+                            className="mt-0.5"
+                        />
+                        <span className="text-sm">
+                            <span className="block font-medium">
+                                {FUNDING_TOGGLE_LABEL.reimbursed}
+                            </span>
+                            {toggles.fullyReimbursed ? (
+                                <span className="block text-muted-foreground">
+                                    {FUNDING_TOGGLE_HINT}
+                                </span>
+                            ) : null}
+                        </span>
+                    </label>
+                ) : null}
+
                 {reimbursedClearedBy ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                        {`"${FUNDING_SOURCE_LABEL.reimbursed}" isn't available for ${reimbursedClearedBy}, so this is back to ${FUNDING_SOURCE_LABEL.income.toLowerCase()}.`}
+                    <p className="text-xs text-muted-foreground">
+                        {`"${FUNDING_TOGGLE_LABEL.reimbursed}" isn't available for ${reimbursedClearedBy}, so it's unchecked.`}
                     </p>
                 ) : null}
                 {fieldError("fundedFrom")}

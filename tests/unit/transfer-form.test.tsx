@@ -136,22 +136,18 @@ describe("TransferForm", () => {
     });
 
     describe("the funding-source control (spec 0007 §6a decision 5)", () => {
-        it("offers income and savings, and never reimbursed", async () => {
+        it("is a single checkbox — never a reimbursed option, which is Health-only", () => {
             render(<TransferForm partnerName="Brenda" />);
-            const control = screen.getByLabelText("Funded from");
 
-            expect(control.textContent).toContain("This month's income");
-            fireEvent.click(control);
-
-            await waitFor(() =>
-                expect(
-                    screen.getByRole("option", {
-                        name: "Paid with money I already had",
-                    }),
-                ).toBeDefined(),
-            );
+            // A payment reads like a purchase: one box you tick, no picker.
+            expect(screen.queryByLabelText("Funded from")).toBeNull();
             expect(
-                screen.queryByRole("option", { name: "Fully reimbursed" }),
+                screen.getByRole("checkbox", {
+                    name: /paid with money i already had/i,
+                }),
+            ).toBeDefined();
+            expect(
+                screen.queryByRole("checkbox", { name: /fully reimbursed/i }),
             ).toBeNull();
         });
 

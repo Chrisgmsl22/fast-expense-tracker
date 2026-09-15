@@ -49,6 +49,35 @@ export const TRANSFER_FUNDING_SOURCES = [
 export type TransferFundingSource = (typeof TRANSFER_FUNDING_SOURCES)[number];
 
 /**
+ * The form offers two checkboxes, not a three-value dropdown: the ordinary case
+ * (this month's income) is what almost every expense is, so it gets no control
+ * of its own — both boxes unchecked means `income`.
+ *
+ * `reimbursed` wins if both are somehow set. The UI keeps them mutually
+ * exclusive, so that branch is unreachable in practice; it exists so the
+ * mapping is total rather than throwing on an impossible pair.
+ */
+export function fundingSourceFromToggles(
+    paidFromSavings: boolean,
+    fullyReimbursed: boolean,
+): FundingSource {
+    if (fullyReimbursed) return "reimbursed";
+    if (paidFromSavings) return "savings";
+    return BUDGET_FUNDING_SOURCE;
+}
+
+/** The checkbox states a stored value maps back to (the inverse of above). */
+export function togglesFromFundingSource(fundedFrom: FundingSource): {
+    paidFromSavings: boolean;
+    fullyReimbursed: boolean;
+} {
+    return {
+        paidFromSavings: fundedFrom === "savings",
+        fullyReimbursed: fundedFrom === "reimbursed",
+    };
+}
+
+/**
  * The budget's funding filter, as a where-clause fragment every budget read
  * spreads into its query (spec 0007 §2).
  *
@@ -66,6 +95,19 @@ export type TransferFundingSource = (typeof TRANSFER_FUNDING_SOURCES)[number];
 export const BUDGET_FUNDING_FILTER = {
     fundedFrom: BUDGET_FUNDING_SOURCE,
 } as const;
+
+/**
+ * Checkbox wording. The savings phrasing is the user's own words; both read as
+ * something you tick, not as an option you pick from a list.
+ */
+export const FUNDING_TOGGLE_LABEL = {
+    savings: "Paid with money I already had",
+    reimbursed: "Fully reimbursed",
+} as const;
+
+/** Explains what ticking a box does, in the terms the user cares about. */
+export const FUNDING_TOGGLE_HINT =
+    "Doesn't count toward this month's budget or the dashboard.";
 
 /** Form/badge wording. The savings phrasing is the user's own. */
 export const FUNDING_SOURCE_LABEL: Record<FundingSource, string> = {
