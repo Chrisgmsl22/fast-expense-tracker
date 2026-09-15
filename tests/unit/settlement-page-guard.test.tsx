@@ -20,6 +20,9 @@ vi.mock("@/lib/repositories", () => ({
 vi.mock("@/lib/services/settlement/settlement.service", () => ({
     getSettlement: getSettlementMock,
 }));
+vi.mock("@/lib/month-scope.server", () => ({
+    getScopedMonth: async () => "2026-07",
+}));
 
 import SettlementPage from "@/app/(dashboard)/settlement/page";
 
@@ -27,9 +30,12 @@ import SettlementPage from "@/app/(dashboard)/settlement/page";
 const cycleStub = {
     openedAt: null,
     closableMovementId: null,
-    month: { label: "2026-07", journal: [] },
+    month: { label: "2026-07", isCurrent: true, journal: [] },
     history: [],
 };
+
+/** The page now takes `searchParams`; the guard tests never set a month. */
+const noParams = { searchParams: Promise.resolve({}) };
 
 const settledStub = {
     balance: { balance: 0, amount: 0, direction: "settled", breakdown: [] },
@@ -68,7 +74,9 @@ describe("SettlementPage route guard (CHORE-6.b)", () => {
             defaultSharePercentage: 0.68,
         });
 
-        await expect(SettlementPage()).rejects.toThrow("REDIRECT:/dashboard");
+        await expect(SettlementPage(noParams)).rejects.toThrow(
+            "REDIRECT:/dashboard",
+        );
         expect(redirectMock).toHaveBeenCalledWith("/dashboard");
     });
 
@@ -80,7 +88,7 @@ describe("SettlementPage route guard (CHORE-6.b)", () => {
         });
         getSettlementMock.mockResolvedValue(unsettledStub);
 
-        await expect(SettlementPage()).resolves.toBeDefined();
+        await expect(SettlementPage(noParams)).resolves.toBeDefined();
         expect(redirectMock).not.toHaveBeenCalled();
     });
 
@@ -91,7 +99,7 @@ describe("SettlementPage route guard (CHORE-6.b)", () => {
             defaultSharePercentage: 0.68,
         });
 
-        await expect(SettlementPage()).resolves.toBeDefined();
+        await expect(SettlementPage(noParams)).resolves.toBeDefined();
         expect(redirectMock).not.toHaveBeenCalled();
     });
 });

@@ -47,6 +47,18 @@ function transferTitle(
 }
 
 /**
+ * A debt's second line. When the row's title is the thing she fronted (its
+ * note), the generic "I owe {partner}" drops here — exactly what `movementRowText`
+ * does in both feeds, so the same debt reads the same everywhere. When there is
+ * no note the title already says "I owe {partner}", so the date stands alone.
+ */
+function debtSubtitle(row: PartnerDebtRow, partnerName: string): string {
+    const label = defaultDebtDescription(partnerName);
+    const date = formatExpenseDate(row.date);
+    return row.description === label ? date : `${date} · ${label}`;
+}
+
+/**
  * A transfer's second line: its date, its note, and — when the transfer closed a
  * settlement — why it now has no edit or delete control. Without that last part
  * the row just looks inert, and the reason for it is invisible.
@@ -407,7 +419,7 @@ function JournalRow({
                 iconClass="bg-debt-tint text-debt"
                 rowTint="border-debt bg-debt-tint"
                 title={item.description}
-                subtitle={`${formatExpenseDate(item.date)} · un-itemized`}
+                subtitle={debtSubtitle(item, partnerName)}
                 amount={`−${formatMxn(item.amount)}`}
                 amountClass="text-debt"
                 actions={actions}

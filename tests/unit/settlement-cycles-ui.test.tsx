@@ -92,6 +92,7 @@ function renderViews(
             openJournal={[openRow]}
             monthJournal={[monthRow]}
             monthLabel="July"
+            isCurrentMonth
             history={[closedCycle]}
             partnerName="Brenda"
             {...over}
@@ -112,7 +113,7 @@ describe("SettlementViews", () => {
 
     it("switches to the calendar month", () => {
         renderViews();
-        fireEvent.click(screen.getByRole("tab", { name: "This month" }));
+        fireEvent.click(screen.getByRole("tab", { name: "July" }));
         expect(screen.getByText("Month groceries")).toBeDefined();
         expect(screen.queryByText("Open groceries")).toBeNull();
     });
@@ -136,10 +137,48 @@ describe("SettlementViews", () => {
         ).toBeDefined();
     });
 
-    it("an empty history explains what fills it", () => {
+    it("an empty history names the month rather than showing a bare zero", () => {
         renderViews({ history: [] });
         fireEvent.click(screen.getByRole("tab", { name: "History" }));
-        expect(screen.getByText(/No settlements closed yet/i)).toBeDefined();
+        expect(
+            screen.getByText(/No settlement was closed in July/i),
+        ).toBeDefined();
+    });
+
+    it("labels the month tab with the selected month, never 'This month'", () => {
+        renderViews({ monthLabel: "August 2026", isCurrentMonth: false });
+        expect(screen.getByRole("tab", { name: "August 2026" })).toBeDefined();
+        expect(screen.queryByRole("tab", { name: "This month" })).toBeNull();
+    });
+
+    it("drops the open-settlement tab on a past month and lands on the month", () => {
+        // There is exactly one open settlement and it is a "now" concept, so it
+        // is not offered under an August heading.
+        renderViews({ monthLabel: "August 2026", isCurrentMonth: false });
+        expect(
+            screen.queryByRole("tab", { name: "Open settlement" }),
+        ).toBeNull();
+        expect(
+            screen
+                .getByRole("tab", { name: "August 2026" })
+                .getAttribute("aria-selected"),
+        ).toBe("true");
+        expect(screen.getByText(/is a past month/i)).toBeDefined();
+    });
+
+    it("counts what the active view renders, not the whole dataset", () => {
+        renderViews({
+            openJournal: [openRow, openTransfer],
+            monthJournal: [monthRow],
+            history: [closedCycle],
+        });
+        expect(screen.getByText("2 items")).toBeDefined();
+        // One row in the month — a count taken from the open set would say 2.
+        fireEvent.click(screen.getByRole("tab", { name: "July" }));
+        expect(screen.getByText("1 item")).toBeDefined();
+        // History counts settlements, not rows.
+        fireEvent.click(screen.getByRole("tab", { name: "History" }));
+        expect(screen.getByText("1 settlement")).toBeDefined();
     });
 });
 

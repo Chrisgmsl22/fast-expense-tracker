@@ -58,6 +58,8 @@ function run(
     expenses: SettlementExpenseRow[],
     movements: SettlementMovementRow[] = [],
     markers: SettlementCycleMarker[] = [],
+    /** The month the reader is viewing; omitted means "the current one". */
+    month?: string,
 ) {
     const repo = new FakeSettlementRepository();
     repo.setExpenses(expenses);
@@ -65,11 +67,11 @@ function run(
     repo.setMarkers(markers);
     const settingsRepo = new FakeSettingsRepository();
     settingsRepo.seed("u1", { sharesExpenses: true, partnerName: "Brenda" });
-    return getSettlement("u1", {
-        settlementRepo: repo,
-        settingsRepo,
-        now: NOW,
-    });
+    return getSettlement(
+        "u1",
+        { settlementRepo: repo, settingsRepo, now: NOW },
+        { month },
+    );
 }
 
 describe("getSettlement", () => {
@@ -246,7 +248,9 @@ describe("getSettlement — settlement cycles", () => {
     });
 
     it("splits two closed cycles by their own markers, newest first", async () => {
-        const firstClose = new Date("2026-06-10T00:00:00Z");
+        // Both closes happen in the viewed month (July), so History lists both
+        // and the assertion is about partitioning, not month scoping.
+        const firstClose = new Date("2026-07-05T00:00:00Z");
         const s = await run(
             [
                 expense({
@@ -316,6 +320,65 @@ describe("getSettlement — settlement cycles", () => {
     it("has nothing to close when the open cycle holds no transfer", async () => {
         const s = await run([expense()]);
         expect(s.closableMovementId).toBeNull();
+    });
+
+    it("scopes the Month view to the month being viewed", async () => {
+        const s = await run(
+            [
+                expense({ id: "eJun", date: JUNE }),
+                expense({ id: "eJul", date: JULY }),
+            ],
+            [],
+            [],
+            "2026-06",
+        );
+        expect(s.month.label).toBe("2026-06");
+        expect(s.month.isCurrent).toBe(false);
+        expect(s.month.journal.map((j) => j.id)).toEqual(["eJun"]);
+        // The balance is the open cycle whatever month is on screen.
+        expect(s.balance.amount).toBe(640);
+        expect(s.journal.map((j) => j.id)).toEqual(["eJul", "eJun"]);
+    });
+
+    it("lists only the settlements closed in the viewed month", async () => {
+        const juneClose = new Date("2026-06-10T00:00:00Z");
+        const markers: SettlementCycleMarker[] = [
+            { id: "mClose1", date: JUNE, closedAt: juneClose, amount: 320 },
+            marker, // closed 2026-07-12
+        ];
+        const movements = [
+            movement({
+                id: "mClose1",
+                type: "gf_received",
+                amount: 320,
+                date: JUNE,
+                createdAt: new Date("2026-06-09T00:00:00Z"),
+            }),
+            closingTransfer,
+        ];
+
+        const july = await run([], movements, markers, "2026-07");
+        expect(july.history.map((c) => c.id)).toEqual(["mClose"]);
+
+        const june = await run([], movements, markers, "2026-06");
+        expect(june.history.map((c) => c.id)).toEqual(["mClose1"]);
+    });
+
+    it("a month with no close has an empty history, not the last six", async () => {
+        const s = await run([], [closingTransfer], [marker], "2026-05");
+        expect(s.history).toEqual([]);
+    });
+
+    it("files a cycle under the month it was CLOSED in, not the transfer's date", async () => {
+        // The transfer is dated July; the user confirmed the close in August.
+        const augustClose = new Date("2026-08-03T00:00:00Z");
+        const markers: SettlementCycleMarker[] = [
+            { id: "mClose", date: JULY, closedAt: augustClose, amount: 320 },
+        ];
+        const august = await run([], [closingTransfer], markers, "2026-08");
+        expect(august.history.map((c) => c.id)).toEqual(["mClose"]);
+        const july = await run([], [closingTransfer], markers, "2026-07");
+        expect(july.history).toEqual([]);
     });
 
     it("the Month view shows only the calendar month, whatever cycle it is in", async () => {

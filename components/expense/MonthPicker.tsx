@@ -6,14 +6,36 @@ import type { ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { shiftMonth } from "@/lib/dates";
+import { monthCookieString } from "@/lib/month-scope";
 
-export function MonthPicker({ month }: { month: string }) {
+export function MonthPicker({
+    month,
+    remember = false,
+    currentMonth,
+}: {
+    month: string;
+    /**
+     * Also remember the choice, so it survives navigation to another screen
+     * (`lib/month-scope.ts`). Opt-in: Settlement adopts it now, Dashboard and
+     * Expenses in a later slice, so their behaviour is unchanged here.
+     */
+    remember?: boolean;
+    /**
+     * The live month, supplied by the server so the control never disagrees
+     * with the render's clock. When given and different from `month`, a
+     * "This month" button appears — which is also the standing signal that the
+     * screen is showing the past.
+     */
+    currentMonth?: string;
+}) {
     const router = useRouter();
     // Stay on the current route (e.g. /expenses or /income) — only the month
     // query param changes, so the same control drives every month-scoped page.
     const pathname = usePathname();
 
     function go(next: string) {
+        // Write the store and the URL together, so the two can never disagree.
+        if (remember) document.cookie = monthCookieString(next);
         router.push(`${pathname}?month=${next}`);
     }
 
@@ -49,6 +71,15 @@ export function MonthPicker({ month }: { month: string }) {
             >
                 <ChevronRight />
             </Button>
+            {currentMonth && currentMonth !== month && (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => go(currentMonth)}
+                >
+                    This month
+                </Button>
+            )}
         </div>
     );
 }

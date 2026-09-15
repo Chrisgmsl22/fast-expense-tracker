@@ -1,4 +1,8 @@
-import { getCurrentMonthCdmx, getMonthRangeUtc } from "@/lib/dates";
+import {
+    getCurrentMonthCdmx,
+    getMonthRangeUtc,
+    isValidMonth,
+} from "@/lib/dates";
 import {
     canCloseCycle,
     computeCoupleBalance,
@@ -103,9 +107,15 @@ export type Settlement = {
      * re-derived by the close action, so the client never picks the marker.
      */
     closableMovementId: string | null;
-    /** The current calendar month's rows — the Month view, unchanged in look. */
-    month: { label: string; journal: SettlementJournalItem[] };
-    /** Closed cycles, newest first (most recent `HISTORY_LIMIT`). */
+    /** The VIEWED calendar month's rows — the Month view. */
+    month: {
+        /** `YYYY-MM` of the month being viewed. */
+        label: string;
+        /** True when that is the live current month (spec 0007 §3.5). */
+        isCurrent: boolean;
+        journal: SettlementJournalItem[];
+    };
+    /** Cycles closed IN the viewed month, newest first (at most `HISTORY_LIMIT`). */
     history: ClosedSettlementCycle[];
 };
 
@@ -114,6 +124,12 @@ export type SettlementDeps = {
     settlementRepo: SettlementRepository;
     settingsRepo: SettingsRepository;
     now: Date;
+};
+
+/** What the reader is looking at — presentation scope, never balance scope. */
+export type SettlementViewOptions = {
+    /** `YYYY-MM` to scope the Month and History views to. Defaults to now. */
+    month?: string;
 };
 
 /** Net the four balance inputs from a set of window rows (spec 0004 §2.4). */
@@ -170,6 +186,7 @@ const entryTime = (row: { createdAt: Date }): number => row.createdAt.getTime();
 export async function getSettlement(
     userId: string,
     deps: Partial<SettlementDeps> = {},
+    options: SettlementViewOptions = {},
 ): Promise<Settlement> {
     const settlementRepo = deps.settlementRepo ?? settlementRepository;
     const settingsRepo = deps.settingsRepo ?? settingsRepository;
@@ -181,25 +198,43 @@ export async function getSettlement(
     const resolvedPartnerName = resolvePartnerName(partnerName);
 
     const currentMonth = getCurrentMonthCdmx(now);
-    const { start: currentStart, end: currentEnd } =
-        getMonthRangeUtc(currentMonth);
+    // The viewed month scopes the Month and History views ONLY. The balance is
+    // the open cycle whatever month is on screen — a settlement is not a month.
+    const viewedMonth =
+        options.month && isValidMonth(options.month)
+            ? options.month
+            : currentMonth;
+    const { start: currentStart } = getMonthRangeUtc(currentMonth);
+    const viewedRange = getMonthRangeUtc(viewedMonth);
 
     const markers = await settlementRepo.getCycleMarkers(userId);
     const lastMarker = markers.at(-1) ?? null;
     const openedAt = lastMarker?.closedAt ?? null;
-    // Load only the cycles History shows; `null` when there are fewer than the
-    // limit, which means "from the beginning".
-    const historyFloor =
-        markers[markers.length - 1 - HISTORY_LIMIT]?.closedAt ?? null;
+    // History is scoped by WHEN THE CLOSE HAPPENED — a cycle belongs to the month
+    // the user closed it in, not to the date of the transfer that carries the
+    // marker (the two can differ). The cap survives month scoping as a bound on
+    // how much a single query can pull; a month with more than six closes would
+    // show the six most recent.
+    const closedThisMonth = markers.filter(
+        (m) => m.closedAt >= viewedRange.start && m.closedAt < viewedRange.end,
+    );
+    const shownMarkers = closedThisMonth.slice(-HISTORY_LIMIT);
+    const firstShown = shownMarkers[0];
+    const lastShown = shownMarkers.at(-1);
+    // Rows of the oldest shown cycle start after the close BEFORE it, which may
+    // sit in an earlier month; `null` means "from the beginning of time".
+    const historyFloor = firstShown
+        ? (markers[markers.indexOf(firstShown) - 1]?.closedAt ?? null)
+        : null;
 
     const [openRows, monthRows, historyRows] = await Promise.all([
         settlementRepo.getForCreatedRange(userId, openedAt, null),
-        settlementRepo.getForWindow(userId, currentStart, currentEnd),
-        lastMarker
+        settlementRepo.getForWindow(userId, viewedRange.start, viewedRange.end),
+        lastShown
             ? settlementRepo.getForCreatedRange(
                   userId,
                   historyFloor,
-                  lastMarker.closedAt,
+                  lastShown.closedAt,
               )
             : Promise.resolve({ expenses: [], movements: [] }),
     ]);
@@ -239,12 +274,13 @@ export async function getSettlement(
         openedAt,
         closableMovementId: findClosableMovementId(movements),
         month: {
-            label: currentMonth,
+            label: viewedMonth,
+            isCurrent: viewedMonth === currentMonth,
             // Every row in a calendar month is "this month" by definition.
             journal: buildJournal(monthRowsByLine, () => false),
         },
         history: buildHistory(
-            markers.slice(-HISTORY_LIMIT),
+            shownMarkers,
             historyFloor,
             historyRows,
             resolvedPartnerName,

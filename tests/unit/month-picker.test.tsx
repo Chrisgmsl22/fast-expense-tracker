@@ -45,4 +45,36 @@ describe("MonthPicker", () => {
         fireEvent.click(screen.getByRole("button", { name: /next month/i }));
         expect(pushMock).toHaveBeenCalledWith("/income?month=2026-06");
     });
+
+    it("remembers the month in a cookie when asked, alongside the URL", () => {
+        // Both are written by the same click, so the store and the URL cannot
+        // drift apart.
+        render(<MonthPicker month="2026-09" remember />);
+        fireEvent.click(
+            screen.getByRole("button", { name: /previous month/i }),
+        );
+        expect(pushMock).toHaveBeenCalledWith("/expenses?month=2026-08");
+        expect(document.cookie).toContain("fet_scoped_month=2026-08");
+    });
+
+    it("writes no cookie unless the screen opted in", () => {
+        document.cookie = "fet_scoped_month=; path=/; max-age=0";
+        render(<MonthPicker month="2026-09" />);
+        fireEvent.click(
+            screen.getByRole("button", { name: /previous month/i }),
+        );
+        expect(document.cookie).not.toContain("fet_scoped_month=2026-08");
+    });
+
+    it("offers 'This month' only while looking at another month", () => {
+        const { rerender } = render(
+            <MonthPicker month="2026-08" currentMonth="2026-09" />,
+        );
+        const back = screen.getByRole("button", { name: "This month" });
+        fireEvent.click(back);
+        expect(pushMock).toHaveBeenCalledWith("/expenses?month=2026-09");
+
+        rerender(<MonthPicker month="2026-09" currentMonth="2026-09" />);
+        expect(screen.queryByRole("button", { name: "This month" })).toBeNull();
+    });
 });

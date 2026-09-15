@@ -17,33 +17,59 @@ import { SettlementJournal } from "./SettlementJournal";
 
 type View = "open" | "month" | "history";
 
-const VIEW_LABELS: Record<View, string> = {
-    open: "Open settlement",
-    month: "This month",
-    history: "History",
-};
+/** "4 items" / "1 item" — what the corner measures. */
+const itemCount = (n: number): string => `${n} ${n === 1 ? "item" : "items"}`;
 
 /**
  * The three settlement views (spec 0007 §3.5), one visual style: the open cycle
- * (what is being settled now), the calendar month, and the closed cycles. All
- * three render the same `SettlementJournal` rows — a view is a projection of the
- * one derivation in `getSettlement`, never a second row component.
+ * (what is being settled now), the selected calendar month, and the settlements
+ * closed in that month. All three render the same `SettlementJournal` rows — a
+ * view is a projection of the one derivation in `getSettlement`, never a second
+ * row component.
+ *
+ * The Month and History views follow the page's month switcher. The OPEN
+ * settlement does not: there is exactly one, it is a "now" concept, and it is
+ * not scoped to any month — so on a past month that tab is not offered at all
+ * (see `isCurrentMonth`).
  */
 export function SettlementViews({
     openJournal,
     monthJournal,
     monthLabel,
+    isCurrentMonth,
     history,
     partnerName,
 }: {
     openJournal: SettlementJournalItem[];
     monthJournal: SettlementJournalItem[];
-    /** Human month name for the Month view ("September"). */
+    /** Human month name for the Month view and its tab ("September 2026"). */
     monthLabel: string;
+    /** True when the selected month is the live one. */
+    isCurrentMonth: boolean;
     history: ClosedSettlementCycle[];
     partnerName: string;
 }) {
-    const [view, setView] = useState<View>("open");
+    // Past months have no open settlement to show, so the month is the landing
+    // view there and the open tab is absent rather than lying or sitting dead.
+    const tabs: { key: View; label: string }[] = [
+        ...(isCurrentMonth
+            ? [{ key: "open" as const, label: "Open settlement" }]
+            : []),
+        { key: "month", label: monthLabel },
+        { key: "history", label: "History" },
+    ];
+    const [view, setView] = useState<View>(isCurrentMonth ? "open" : "month");
+    // A month change re-renders this with a different tab set; if the open tab
+    // went away, fall back to the month rather than showing an empty panel.
+    const active: View = tabs.some((t) => t.key === view) ? view : "month";
+
+    // The count measures what THIS view renders, not the dataset behind it.
+    const renderedCount =
+        active === "open"
+            ? openJournal.length
+            : active === "month"
+              ? monthJournal.length
+              : history.length;
 
     return (
         <div className="rounded-xl border p-5">
@@ -53,31 +79,41 @@ export function SettlementViews({
                     aria-label="Settlement views"
                     className="flex gap-1 rounded-lg bg-muted p-0.5"
                 >
-                    {(Object.keys(VIEW_LABELS) as View[]).map((key) => (
+                    {tabs.map(({ key, label }) => (
                         <button
                             key={key}
                             type="button"
                             role="tab"
-                            aria-selected={view === key}
+                            aria-selected={active === key}
                             aria-controls="settlement-view-panel"
                             onClick={() => setView(key)}
                             className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                                view === key
+                                active === key
                                     ? "bg-background shadow-sm"
                                     : "text-muted-foreground hover:text-foreground"
                             }`}
                         >
-                            {VIEW_LABELS[key]}
+                            {label}
                         </button>
                     ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                    shared expenses · debts · transfers
+                    <span className="font-medium text-foreground">
+                        {active === "history"
+                            ? `${renderedCount} ${renderedCount === 1 ? "settlement" : "settlements"}`
+                            : itemCount(renderedCount)}
+                    </span>
+                    {/* The descriptor keeps its place while it fits; the count
+                        leads, so a narrow screen truncates the prose, not it. */}
+                    <span className="hidden sm:inline">
+                        {" "}
+                        · shared expenses · debts · transfers
+                    </span>
                 </p>
             </div>
 
             <div id="settlement-view-panel" role="tabpanel" className="mt-3">
-                {view === "open" && (
+                {active === "open" && (
                     <SettlementJournal
                         bare
                         journal={openJournal}
@@ -85,35 +121,51 @@ export function SettlementViews({
                         emptyMessage="This settlement is empty — nothing has been logged since the last close."
                     />
                 )}
-                {view === "month" && (
-                    <SettlementJournal
-                        bare
-                        journal={monthJournal}
-                        partnerName={partnerName}
-                        emptyMessage={`No shared expenses or transfers in ${monthLabel}.`}
-                    />
+                {active === "month" && (
+                    <>
+                        {!isCurrentMonth && (
+                            <p className="mb-3 text-xs text-muted-foreground">
+                                {monthLabel} is a past month. The open
+                                settlement is always the current one — switch
+                                back to this month to see it.
+                            </p>
+                        )}
+                        <SettlementJournal
+                            bare
+                            journal={monthJournal}
+                            partnerName={partnerName}
+                            emptyMessage={`No shared expenses or transfers in ${monthLabel}.`}
+                        />
+                    </>
                 )}
-                {view === "history" && (
-                    <ClosedCycles history={history} partnerName={partnerName} />
+                {active === "history" && (
+                    <ClosedCycles
+                        history={history}
+                        monthLabel={monthLabel}
+                        partnerName={partnerName}
+                    />
                 )}
             </div>
         </div>
     );
 }
 
-/** Closed cycles, newest first, each opening to the rows it contained. */
+/** Cycles closed in the selected month, newest first, each openable. */
 function ClosedCycles({
     history,
+    monthLabel,
     partnerName,
 }: {
     history: ClosedSettlementCycle[];
+    monthLabel: string;
     partnerName: string;
 }) {
     if (history.length === 0) {
         return (
             <p className="text-sm text-muted-foreground">
-                No settlements closed yet. When a balance reaches zero you can
-                close it, and it shows up here.
+                No settlement was closed in {monthLabel}. When a balance reaches
+                zero you can close it, and it is filed under the month you
+                closed it in.
             </p>
         );
     }
