@@ -5,15 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    addPartnerDebt,
-    type AddPartnerDebtResult,
-} from "@/app/_actions/movement/add-partner-debt";
+    addFrontedExpense,
+    type AddFrontedExpenseResult,
+} from "@/app/_actions/expense/add-fronted";
 import {
-    updatePartnerDebt,
-    type UpdatePartnerDebtResult,
-} from "@/app/_actions/movement/update-partner-debt";
+    updateFrontedExpense,
+    type UpdateFrontedExpenseResult,
+} from "@/app/_actions/expense/update-fronted";
 import type { FieldErrors } from "@/lib/actions/result";
-import type { PartnerDebtInput } from "@/lib/schemas/movement";
+import type { FrontedExpenseInput } from "@/lib/schemas/expense";
 
 /** Prefilled fields when the form edits an existing debt (strings for inputs). */
 export type PartnerDebtEditable = {
@@ -33,10 +33,14 @@ type Props = {
 
 /**
  * Log an "I owe {partner}" debt — something she fronted that you owe her back
- * (ADR-0020). It's settlement-only: saved as a `Movement{type:"gf_fronted"}`,
- * never an expense, so it stays out of your spending, categories, and budget. It
- * only adds to what you owe her; a transfer settles it. Logged from the
- * settlement page or the `+ Add` menu, and editable from the expenses feed.
+ * (spec 0007 §6a). It is saved as an `Expense{isFronted:true}`, so it counts in
+ * your categories and buckets: it is real consumption from this month's income.
+ * It stays out of spend-by-card and the cash figure, because no money of yours
+ * moved yet — the transfer that settles it is the cash event.
+ *
+ * The amount is **what you owe**, not what she paid, so there is no split to
+ * enter. It files itself under Combined Expenses → "Covered for me"; change
+ * either from the expense row afterwards.
  */
 export function PartnerDebtForm({
     debt,
@@ -49,7 +53,7 @@ export function PartnerDebtForm({
     const [note, setNote] = useState(debt?.note ?? "");
 
     const [pending, startTransition] = useTransition();
-    const [errors, setErrors] = useState<FieldErrors<PartnerDebtInput>>({});
+    const [errors, setErrors] = useState<FieldErrors<FrontedExpenseInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -57,14 +61,16 @@ export function PartnerDebtForm({
         const form = e.currentTarget;
         startTransition(async () => {
             try {
-                const res: AddPartnerDebtResult | UpdatePartnerDebtResult = debt
-                    ? await updatePartnerDebt({
+                const res:
+                    | AddFrontedExpenseResult
+                    | UpdateFrontedExpenseResult = debt
+                    ? await updateFrontedExpense({
                           id: debt.id,
                           date,
                           amount,
                           note: note || undefined,
                       })
-                    : await addPartnerDebt({
+                    : await addFrontedExpense({
                           date,
                           amount,
                           note: note || undefined,
@@ -87,7 +93,7 @@ export function PartnerDebtForm({
         });
     }
 
-    const fieldError = (name: keyof PartnerDebtInput) => {
+    const fieldError = (name: keyof FrontedExpenseInput) => {
         const msg = errors[name]?.[0];
         return msg ? (
             <p className="mt-1 text-sm text-destructive" role="alert">
@@ -107,7 +113,7 @@ export function PartnerDebtForm({
             }
         >
             <p className="text-sm text-muted-foreground">
-                {`Something ${partnerName} fronted that you owe her back. It only adds to what you owe her — settle it with a transfer. It's not part of your spending.`}
+                {`Something ${partnerName} fronted that you owe her back. Enter what YOU owe, not what she paid. It counts in your budget under Combined Expenses, and it adds to what you owe her until a transfer settles it.`}
             </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

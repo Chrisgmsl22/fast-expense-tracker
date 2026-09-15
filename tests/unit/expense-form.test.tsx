@@ -36,6 +36,7 @@ const editable = {
     description: "Tacos",
     notes: null,
     isShared: true,
+    isFronted: false,
     yourPercentage: 0.68,
     paidBy: "you",
 };
@@ -98,6 +99,44 @@ describe("ExpenseForm", () => {
 
         // 100 × 0.68 = 68 → formatted as MXN.
         expect(screen.getByText("your share $68.00")).toBeDefined();
+    });
+
+    // Spec 0007 §6a: the amount on a covered debt is ALREADY his share, and her
+    // card moved, not one of his. The server refuses to split it either way —
+    // but a form that still offers the controls takes the click, saves, and says
+    // nothing, so the user believes he changed something. The state has to be
+    // legible before anyone clicks.
+    it("offers no split and no card on a debt the partner covered", () => {
+        renderForm({ expense: { ...editable, isFronted: true } });
+
+        const shared = screen.getByRole("checkbox", {
+            name: /shared expense/i,
+        }) as HTMLInputElement;
+        expect(shared.getAttribute("data-disabled")).not.toBeNull();
+        expect(shared.getAttribute("data-checked")).toBeNull();
+
+        const card = screen.getByLabelText("Card") as HTMLButtonElement;
+        expect(card.getAttribute("data-disabled")).not.toBeNull();
+
+        // The reason is on screen, in the settlement copy's voice.
+        expect(
+            screen.getByText(/already your share of something she covered/i),
+        ).toBeDefined();
+        expect(
+            screen.getByText(/she paid, so no card of yours/i),
+        ).toBeDefined();
+    });
+
+    it("leaves the split and card enabled on an ordinary expense", () => {
+        renderForm({ expense: editable });
+
+        const shared = screen.getByRole("checkbox", {
+            name: /shared expense/i,
+        });
+        expect(shared.getAttribute("data-disabled")).toBeNull();
+        expect(
+            screen.getByLabelText("Card").getAttribute("data-disabled"),
+        ).toBe(null);
     });
 
     it("labels the split from the configured percentage", () => {
@@ -168,6 +207,7 @@ describe("ExpenseForm", () => {
         const unsharedRow = {
             ...editable,
             isShared: false,
+            isFronted: false,
             yourPercentage: 1,
         };
         (updateExpense as unknown as Mock).mockResolvedValue({

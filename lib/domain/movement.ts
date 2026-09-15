@@ -14,9 +14,9 @@ export type MovementType =
     | "card_payment"
     | "gf_paid"
     | "gf_received"
-    // A thing the partner fronted that you owe her (ADR-0020). It shows in the
-    // month feed and the settlement journal, but no cash left your account, so
-    // it enters no total and never becomes an expense.
+    // LEGACY (spec 0007 §6a): a thing the partner fronted is an
+    // `Expense{isFronted:true}` now. Nothing writes this type anymore; the type
+    // survives so any row the migration could not convert still reads.
     | "gf_fronted"
     | "income"
     | "other";
@@ -41,6 +41,8 @@ export function partnerShareTotal(expenses: ExpenseShare[]): number {
 export type FeedTotalExpense = {
     amount: number;
     actualExpenditure: number;
+    /** A debt the partner fronted — consumption, but no cash of yours moved. */
+    isFronted: boolean;
     category: { slug: string };
 };
 
@@ -64,6 +66,13 @@ export type FeedTotals = {
  * here: their charges were already counted as expenses, so adding them would
  * double-count. `paidToPartner` is the summed `gf_paid` amount — new outflow
  * (your share of things the partner fronted) not otherwise captured.
+ *
+ * **A fronted expense is skipped entirely** (spec 0007 §6a decision 4). These are
+ * cash figures, and no card or cash of yours moved when she paid; the cash
+ * equivalent is the transfer that settles it, already counted in
+ * `paidToPartner`. Counting both would bill the same dinner twice. The budget
+ * reads the other ledger and counts the expense — one fronted amount, two
+ * ledgers, seen exactly once by each.
  */
 export function computeFeedTotals(
     expenses: FeedTotalExpense[],
@@ -73,6 +82,7 @@ export function computeFeedTotals(
     let whatIReallySpent = 0;
     let setAside = 0;
     for (const e of expenses) {
+        if (e.isFronted) continue;
         if (e.category.slug === SAVINGS_SLUG) {
             setAside += e.actualExpenditure;
         } else {

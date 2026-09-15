@@ -26,6 +26,7 @@ function catRepo(found: CategoryMeta | null = meta): CategoryRepository {
         getBySlug: async () => found,
         getSubcategorySpends: async () => [],
         getExpensesForCategoryMonth: async () => [],
+        getFrontedDefaults: async () => null,
     };
 }
 

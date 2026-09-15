@@ -76,6 +76,7 @@ const expenses = [
         amount: 200,
         actualExpenditure: 136,
         isShared: true,
+        isFronted: false,
         category: { id: "c1", slug: "food", name: "Food", color: "#ef4444" },
         subcategory: { name: "Restaurants" },
         card: { name: "Amex", color: "#ca8a04" },
@@ -87,6 +88,7 @@ const expenses = [
         amount: 1000,
         actualExpenditure: 1000,
         isShared: false,
+        isFronted: false,
         category: {
             id: "c2",
             slug: "transport",
@@ -145,6 +147,30 @@ describe("ExpenseListInteractive", () => {
         ).toBeDefined();
     });
 
+    it("labels a covered debt 'Covered by {partner}', never Cash", () => {
+        // Her card moved, not one of his, so the row has no card. The bare
+        // `?? "Cash"` fallback printed the BUG-1 symptom on this very screen.
+        render(
+            <ExpenseListInteractive
+                expenses={[
+                    {
+                        ...expenses[1]!,
+                        id: "fronted",
+                        description: "Sushi",
+                        card: null,
+                        isFronted: true,
+                    },
+                ]}
+                {...props}
+            />,
+        );
+
+        expect(screen.getAllByText(/Covered by Brenda/).length).toBeGreaterThan(
+            0,
+        );
+        expect(screen.queryByText(/\bCash\b/)).toBeNull();
+    });
+
     it("renders a row with per-row edit + delete actions", () => {
         render(<ExpenseListInteractive expenses={expenses} {...props} />);
         expect(screen.getByText("Tacos")).toBeDefined();
@@ -177,6 +203,7 @@ describe("ExpenseListInteractive", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 isShared: false,
+                isFronted: false,
                 category: {
                     id: "cs",
                     slug: "savings",

@@ -17,12 +17,15 @@ vi.mock("@/app/_actions/settlement/close-cycle", () => ({
 }));
 // The journal's edit dialogs import these; stub them so a pure render doesn't
 // pull the next-auth server graph in.
-vi.mock("@/app/_actions/movement/delete", () => ({ deleteMovement: vi.fn() }));
-vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
-    addPartnerDebt: vi.fn(),
+vi.mock("@/app/_actions/expense/delete", () => ({
+    deleteExpense: vi.fn(),
 }));
-vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
-    updatePartnerDebt: vi.fn(),
+vi.mock("@/app/_actions/movement/delete", () => ({ deleteMovement: vi.fn() }));
+vi.mock("@/app/_actions/expense/add-fronted", () => ({
+    addFrontedExpense: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/update-fronted", () => ({
+    updateFrontedExpense: vi.fn(),
 }));
 vi.mock("@/app/_actions/movement/add-transfer", () => ({
     addTransfer: vi.fn(),

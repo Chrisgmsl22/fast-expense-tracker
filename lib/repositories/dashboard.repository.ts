@@ -113,12 +113,24 @@ export class PrismaDashboardRepository implements DashboardRepository {
         const { start, end } = getMonthRangeUtc(month);
         const grouped = await this.db.expense.groupBy({
             by: ["cardId"],
-            // Savings is a transfer, not card spend — exclude it so it doesn't
-            // show as a phantom "Cash" segment.
+            // Two kinds of row are not card spend and are excluded HERE, in the
+            // query, so the grouping never sees them — never by subtracting
+            // afterwards, which only fixes the total and leaves the segments
+            // wrong:
+            //
+            //  - Savings: a transfer, not a purchase.
+            //  - A fronted expense (spec 0007 §6a): the partner's card moved,
+            //    not one of yours. It has no `cardId`, and this query reads a
+            //    null `cardId` as cash — so including it would show her spending
+            //    as a phantom "Cash" segment. That phantom row IS BUG-1, the
+            //    defect that got ADR-0020 §1 to pull fronted debts out of
+            //    expenses altogether. The debt belongs in the budget; it never
+            //    belonged here.
             where: {
                 userId,
                 date: { gte: start, lt: end },
                 category: { slug: { not: SAVINGS_SLUG } },
+                isFronted: false,
             },
             _sum: { actualExpenditure: true },
         });

@@ -21,6 +21,7 @@ const expenses: ExpenseListItem[] = [
         amount: 1820,
         actualExpenditure: 1237,
         isShared: true,
+        isFronted: false,
         category: {
             id: "c1",
             slug: "groceries",
@@ -37,6 +38,7 @@ const expenses: ExpenseListItem[] = [
         amount: 185,
         actualExpenditure: 185,
         isShared: false,
+        isFronted: false,
         category: {
             id: "c2",
             slug: "transport",
@@ -74,6 +76,35 @@ describe("MonthFeed", () => {
         // Null card falls back to Cash; non-shared shows "solo".
         expect(screen.getByText(/Cash/)).toBeDefined();
         expect(screen.getByText("solo")).toBeDefined();
+    });
+
+    it("labels a covered debt 'Covered by {partner}', never Cash", () => {
+        // The row has no card because HER card moved. Falling back to the word
+        // Cash — as a bare `?? "Cash"` does — puts the BUG-1 symptom back on
+        // screen even though the totals are right.
+        render(
+            <MonthFeed
+                expenses={[
+                    {
+                        ...expenses[0]!,
+                        id: "fronted",
+                        description: "Sushi",
+                        card: null,
+                        isShared: false,
+                        isFronted: true,
+                    },
+                ]}
+                movements={[]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+
+        // The label sits beside a colour dot in the same line, so match the
+        // text node rather than the whole element.
+        expect(screen.getByText(/Covered by Brenda/)).toBeDefined();
+        expect(screen.queryByText(/\bCash\b/)).toBeNull();
     });
 
     it("totals Charged + What I really spent in the footer", () => {
@@ -141,6 +172,7 @@ describe("MonthFeed", () => {
                 amount: 1000,
                 actualExpenditure: 680,
                 isShared: true,
+                isFronted: false,
                 category: {
                     id: "cg",
                     slug: "groceries",
@@ -157,6 +189,7 @@ describe("MonthFeed", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 isShared: false,
+                isFronted: false,
                 category: {
                     id: "cs",
                     slug: "savings",
@@ -376,6 +409,7 @@ describe("MonthFeed", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 isShared: false,
+                isFronted: false,
                 category: {
                     id: "cs",
                     slug: "savings",

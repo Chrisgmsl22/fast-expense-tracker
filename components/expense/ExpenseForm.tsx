@@ -132,6 +132,13 @@ export function ExpenseForm({
     const selectedCategory = categories.find((c) => c.id === categoryId);
     // Savings is a transfer, not a card purchase — no payment method applies.
     const isSavings = selectedCategory?.slug === SAVINGS_SLUG;
+    // A debt the partner covered (spec 0007 §6a): the amount is already the
+    // user's share, and her card moved rather than one of his. The server
+    // clamps both facts, but a clamp alone would let the form OFFER a split and
+    // a card, accept the click, and save in silence — the user would believe he
+    // changed something. So the controls are disabled here, with the reason
+    // visible before anyone clicks; the server stays the guarantee.
+    const isFronted = expense?.isFronted ?? false;
     const selectedSubcategory = availableSubcategories.find(
         (s) => s.id === subcategoryId,
     );
@@ -164,13 +171,15 @@ export function ExpenseForm({
             amount,
             categoryId,
             subcategoryId: subcategoryId || undefined,
-            // Savings is a transfer — force no card, even when editing a legacy
-            // savings row that still carries one (the field is disabled).
-            cardId: isSavings ? undefined : cardId || undefined,
+            // Savings is a transfer, and a covered debt was paid on her card —
+            // force no card for both, even when editing a legacy row that still
+            // carries one (the field is disabled for both).
+            cardId: isSavings || isFronted ? undefined : cardId || undefined,
             description,
             notes: notes || undefined,
-            isShared,
-            yourPercentage: String(yourPercentage),
+            isShared: isFronted ? false : isShared,
+            // A covered debt is never split: the figure entered IS the share.
+            yourPercentage: isFronted ? "1" : String(yourPercentage),
             // Every expense is the user's (ADR-0018); `paidBy` defaults "you"
             // in the schema, so the form no longer sends it.
         };
@@ -341,12 +350,17 @@ export function ExpenseForm({
                                 {" "}
                                 (not needed for savings)
                             </span>
+                        ) : isFronted ? (
+                            <span className="font-normal text-muted-foreground">
+                                {" "}
+                                (she paid, so no card of yours)
+                            </span>
                         ) : null}
                     </Label>
                     <Select
                         value={cardId}
                         onValueChange={(value) => setCardId(value ?? "")}
-                        disabled={isSavings}
+                        disabled={isSavings || isFronted}
                     >
                         <SelectTrigger
                             id="cardId"
@@ -356,6 +370,10 @@ export function ExpenseForm({
                             {isSavings ? (
                                 <span className="text-muted-foreground">
                                     Savings — no card
+                                </span>
+                            ) : isFronted ? (
+                                <span className="text-muted-foreground">
+                                    Covered by your partner — no card
                                 </span>
                             ) : selectedCard ? (
                                 <Dotted color={selectedCard.color}>
@@ -415,16 +433,27 @@ export function ExpenseForm({
                 <div>
                     <label className="flex items-start gap-2.5">
                         <Checkbox
-                            checked={isShared}
+                            checked={isFronted ? false : isShared}
                             onCheckedChange={(checked) => setIsShared(checked)}
                             aria-label="Shared expense"
+                            disabled={isFronted}
                             className="mt-0.5 data-checked:border-positive data-checked:bg-positive"
                         />
                         <span className="text-sm">
-                            <span className="block font-medium">
+                            <span
+                                className={`block font-medium ${isFronted ? "text-muted-foreground" : ""}`}
+                            >
                                 {`Shared expense · ${yourPct}/${partnerPct}`}
                             </span>
-                            {isShared ? (
+                            {isFronted ? (
+                                // Same voice as the settlement copy: say what
+                                // the amount already means, not just "disabled".
+                                <span className="block text-muted-foreground">
+                                    This amount is already your share of
+                                    something she covered — there is nothing
+                                    left to split.
+                                </span>
+                            ) : isShared ? (
                                 <span className="block text-positive">
                                     {`your share ${formatMxn(yourShare)}`}
                                 </span>

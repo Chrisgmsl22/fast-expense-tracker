@@ -131,7 +131,7 @@ export const CATEGORY_SEED: readonly CategorySeed[] = [
         name: "Combined Expenses",
         isRelevant: true,
         subcategories: [
-            "Purchases made by girlfriend",
+            "Covered for me",
             "Purchases made between the two",
             "Cats",
         ],

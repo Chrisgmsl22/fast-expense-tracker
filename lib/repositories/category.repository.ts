@@ -2,6 +2,10 @@ import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
 import type { SubcategorySpendRow } from "@/lib/domain/category";
+import {
+    FRONTED_CATEGORY_SLUG,
+    FRONTED_SUBCATEGORY_NAME,
+} from "@/lib/domain/expense";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /** Category metadata for the detail header + budget math. */
@@ -47,7 +51,21 @@ export interface CategoryRepository {
         categoryId: string,
         month: string,
     ): Promise<ExpenseListItem[]>;
+    /**
+     * Where a fronted expense lands when the user picks nothing (spec 0007 §6a):
+     * the user's `combined-expenses` category and its "Covered for me"
+     * subcategory. Null when the user has no such category — the caller then
+     * refuses rather than filing the debt somewhere arbitrary. The subcategory is
+     * optional: a user who deleted it still gets the category.
+     */
+    getFrontedDefaults(userId: string): Promise<FrontedDefaults | null>;
 }
+
+/** The category (and optional subcategory) a fronted expense defaults to. */
+export type FrontedDefaults = {
+    categoryId: string;
+    subcategoryId: string | null;
+};
 
 export class PrismaCategoryRepository implements CategoryRepository {
     constructor(private readonly db: PrismaClient) {}
@@ -105,6 +123,27 @@ export class PrismaCategoryRepository implements CategoryRepository {
         return rows;
     }
 
+    async getFrontedDefaults(userId: string): Promise<FrontedDefaults | null> {
+        const category = await this.db.category.findUnique({
+            where: {
+                userId_slug: { userId, slug: FRONTED_CATEGORY_SLUG },
+            },
+            select: {
+                id: true,
+                subcategories: {
+                    where: { name: FRONTED_SUBCATEGORY_NAME },
+                    select: { id: true },
+                    take: 1,
+                },
+            },
+        });
+        if (!category) return null;
+        return {
+            categoryId: category.id,
+            subcategoryId: category.subcategories[0]?.id ?? null,
+        };
+    }
+
     getExpensesForCategoryMonth(
         userId: string,
         categoryId: string,
@@ -121,6 +160,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
                 amount: true,
                 actualExpenditure: true,
                 isShared: true,
+                isFronted: true,
                 category: {
                     select: { id: true, slug: true, name: true, color: true },
                 },

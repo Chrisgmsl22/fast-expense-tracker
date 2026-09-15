@@ -31,3 +31,29 @@ export function computeActualExpenditure({
 }: ActualExpenditureInput): number {
     return isShared ? amount * yourPercentage : amount;
 }
+
+/**
+ * Where a fronted expense lands unless the user picks otherwise (spec 0007 §6a).
+ * The category already exists for exactly this and is already `isRelevant`, so
+ * no new category — and no unclassifiable bucket — is invented.
+ */
+export const FRONTED_CATEGORY_SLUG = "combined-expenses";
+
+/**
+ * Its subcategory, renamed from "Purchases made by girlfriend": the row is the
+ * user's own share, not the partner's purchase, and the name says nothing about
+ * who paid — which also makes it work for any account.
+ */
+export const FRONTED_SUBCATEGORY_NAME = "Covered for me";
+
+/**
+ * A fronted expense's description. The amount entered IS the user's share, so
+ * the note is just a label; with none, fall back to the same "I owe {partner}"
+ * wording the settlement journal has always shown for an untitled debt.
+ */
+export function frontedDescription(
+    note: string | null | undefined,
+    partnerName: string,
+): string {
+    return note?.trim() || `I owe ${partnerName}`;
+}

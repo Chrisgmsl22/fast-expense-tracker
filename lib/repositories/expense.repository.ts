@@ -9,6 +9,8 @@ export type ExpenseListItem = {
     amount: number;
     actualExpenditure: number;
     isShared: boolean;
+    /** The partner fronted it and you owe her — consumption, but not cash out. */
+    isFronted: boolean;
     category: { id: string; slug: string; name: string; color: string };
     subcategory: { name: string } | null;
     card: { name: string; color: string } | null;
@@ -27,6 +29,8 @@ export type ExpenseEditable = {
     isShared: boolean;
     yourPercentage: number;
     paidBy: string;
+    /** Whether this row is a debt the partner fronted (spec 0007 §6a). */
+    isFronted: boolean;
 };
 
 /**
@@ -34,6 +38,11 @@ export type ExpenseEditable = {
  * (`actualExpenditure`, the UTC `date`) are resolved by the caller; the owner
  * and immutable defaults (`isRecurring`, original-currency columns) are set by
  * the adapter, not passed in.
+ *
+ * `isFronted` is deliberately absent: it is set once, at insert. An update never
+ * writes it, so editing a fronted expense through the ordinary expense form
+ * cannot silently turn it into an ordinary one — which would drop it out of the
+ * settlement balance without a word.
  */
 export type ExpenseWriteData = {
     categoryId: string;
@@ -49,6 +58,9 @@ export type ExpenseWriteData = {
     notes: string | null;
 };
 
+/** What `insert` takes: the update shape plus the write-once fronted marker. */
+export type ExpenseInsertData = ExpenseWriteData & { isFronted: boolean };
+
 /**
  * Data-access contract for expenses — the "port". Callers (actions, pages)
  * depend on this interface, never on Prisma directly, so any implementation
@@ -61,7 +73,7 @@ export interface ExpenseRepository {
     getById(userId: string, id: string): Promise<ExpenseEditable | null>;
     getForMonth(userId: string, month: string): Promise<ExpenseListItem[]>;
     getSubcategoryCategoryId(subcategoryId: string): Promise<string | null>;
-    insert(userId: string, data: ExpenseWriteData): Promise<{ id: string }>;
+    insert(userId: string, data: ExpenseInsertData): Promise<{ id: string }>;
     updateForUser(
         id: string,
         userId: string,
@@ -92,6 +104,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 isShared: true,
                 yourPercentage: true,
                 paidBy: true,
+                isFronted: true,
             },
         });
     }
@@ -108,6 +121,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 amount: true,
                 actualExpenditure: true,
                 isShared: true,
+                isFronted: true,
                 category: {
                     select: { id: true, slug: true, name: true, color: true },
                 },
@@ -127,7 +141,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
         return sub?.categoryId ?? null;
     }
 
-    insert(userId: string, data: ExpenseWriteData): Promise<{ id: string }> {
+    insert(userId: string, data: ExpenseInsertData): Promise<{ id: string }> {
         return this.db.expense.create({
             data: {
                 userId,

@@ -33,7 +33,7 @@ of subcategories.
 | 6   | Savings           | `savings`           | ✅           | Emergency fund · Open savings · Future purchases                                                          |
 | 7   | Services          | `services`          | ✅           | Electricity · Gas · Water · Trash · Phone plan · Internet                                                 |
 | 8   | Health            | `health`            | ✅           | Medicine · Doctors appt · Dentist · Additional medication · Therapy · Other expenses                      |
-| 9   | Combined Expenses | `combined-expenses` | ✅           | Purchases made by girlfriend · Purchases made between the two · Cats                                      |
+| 9   | Combined Expenses | `combined-expenses` | ✅           | Covered for me · Purchases made between the two · Cats                                                    |
 | 10  | Personal          | `personal`          | ❌           | Courses · Education · Books · Subscriptions · Cash withdrawals · Technology · Accountant · Other          |
 | 11  | Debt              | `debt`              | ✅           | Car loan · Credit card balance · Personal loans · Monthly installments                                    |
 | 12  | Disposable Income | `disposable-income` | ❌           | Entertainment · Hobbies · Dining out · Social events · Tech gadgets · Ecommerce expenses                  |

@@ -1,25 +1,28 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
-vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
-    addPartnerDebt: vi.fn(),
+vi.mock("@/app/_actions/expense/add-fronted", () => ({
+    addFrontedExpense: vi.fn(),
 }));
-vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
-    updatePartnerDebt: vi.fn(),
+vi.mock("@/app/_actions/expense/update-fronted", () => ({
+    updateFrontedExpense: vi.fn(),
 }));
 
 import { PartnerDebtForm } from "@/components/movement/PartnerDebtForm";
-import { addPartnerDebt } from "@/app/_actions/movement/add-partner-debt";
-import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
+import { addFrontedExpense } from "@/app/_actions/expense/add-fronted";
+import { updateFrontedExpense } from "@/app/_actions/expense/update-fronted";
 
-const addPartnerDebtMock = addPartnerDebt as unknown as Mock;
-const updatePartnerDebtMock = updatePartnerDebt as unknown as Mock;
+const addFrontedExpenseMock = addFrontedExpense as unknown as Mock;
+const updateFrontedExpenseMock = updateFrontedExpense as unknown as Mock;
 
 beforeEach(() => {
-    addPartnerDebtMock.mockReset();
-    addPartnerDebtMock.mockResolvedValue({ ok: true, data: { id: "mv1" } });
-    updatePartnerDebtMock.mockReset();
-    updatePartnerDebtMock.mockResolvedValue({ ok: true, data: { id: "mv1" } });
+    addFrontedExpenseMock.mockReset();
+    addFrontedExpenseMock.mockResolvedValue({ ok: true, data: { id: "mv1" } });
+    updateFrontedExpenseMock.mockReset();
+    updateFrontedExpenseMock.mockResolvedValue({
+        ok: true,
+        data: { id: "mv1" },
+    });
 });
 
 describe("PartnerDebtForm", () => {
@@ -36,17 +39,18 @@ describe("PartnerDebtForm", () => {
         fireEvent.click(screen.getByRole("button", { name: "Log debt" }));
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-        expect(addPartnerDebtMock).toHaveBeenCalledWith({
+        expect(addFrontedExpenseMock).toHaveBeenCalledWith({
             amount: "500",
             date: "2026-07-10",
             note: undefined,
         });
-        // A debt is settlement-only — it never carries a category.
+        // The form takes no category: a debt files itself under the
+        // `combined-expenses` default, editable from the expense row after.
         expect(screen.queryByRole("combobox", { name: "Category" })).toBeNull();
     });
 
     it("surfaces a validation error without calling onSuccess", async () => {
-        addPartnerDebtMock.mockResolvedValue({
+        addFrontedExpenseMock.mockResolvedValue({
             ok: false,
             code: "validation",
             message: "Invalid debt",
@@ -71,7 +75,7 @@ describe("PartnerDebtForm", () => {
         expect(onSuccess).not.toHaveBeenCalled();
     });
 
-    it("edit mode prefills the debt and saves via updatePartnerDebt", async () => {
+    it("edit mode prefills the debt and saves via updateFrontedExpense", async () => {
         const onSuccess = vi.fn();
         render(
             <PartnerDebtForm
@@ -97,12 +101,12 @@ describe("PartnerDebtForm", () => {
         fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-        expect(updatePartnerDebtMock).toHaveBeenCalledWith({
+        expect(updateFrontedExpenseMock).toHaveBeenCalledWith({
             id: "mv9",
             amount: "700",
             date: "2026-07-10",
             note: "gas she covered",
         });
-        expect(addPartnerDebtMock).not.toHaveBeenCalled();
+        expect(addFrontedExpenseMock).not.toHaveBeenCalled();
     });
 });

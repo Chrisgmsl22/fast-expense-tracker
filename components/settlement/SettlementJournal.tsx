@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeftRight, BarChart3, Check, Pencil, Trash2 } from "lucide-react";
 
+import { deleteExpense } from "@/app/_actions/expense/delete";
 import { deleteMovement } from "@/app/_actions/movement/delete";
 import {
     PartnerDebtForm,
@@ -35,6 +36,20 @@ type PartnerDebtRow = Extract<SettlementJournalItem, { kind: "partner_debt" }>;
 type TransferRow = Extract<SettlementJournalItem, { kind: "transfer" }>;
 /** Either journal row that can be edited + deleted here (CHORE-1, CHORE-5). */
 type DeletableRow = PartnerDebtRow | TransferRow;
+
+/**
+ * A debt's second line. A legacy movement-backed debt says so, because it is the
+ * one row here with no edit control and the reason would otherwise be invisible.
+ */
+function debtSubtitle(row: PartnerDebtRow): string {
+    return [
+        formatExpenseDate(row.date),
+        "un-itemized",
+        row.source === "movement" ? "older entry · delete to change" : null,
+    ]
+        .filter(Boolean)
+        .join(" · ");
+}
 
 /** The row's human title — reused by the row, its action labels, and the delete copy. */
 function transferTitle(
@@ -141,7 +156,16 @@ export function SettlementJournal({
     function confirmDelete() {
         if (!deleting) return;
         startTransition(async () => {
-            const res = await deleteMovement({ id: deleting.id });
+            // A debt is an expense now (spec 0007 §6a) — except for a legacy
+            // `gf_fronted` movement the migration could not convert, which still
+            // counts in the balance and still renders here. The row carries
+            // which table it came from, so neither kind is deleted through the
+            // other's table and told "not found" for a row in plain sight.
+            const res =
+                deleting.kind === "partner_debt" &&
+                deleting.source === "expense"
+                    ? await deleteExpense({ id: deleting.id })
+                    : await deleteMovement({ id: deleting.id });
             if (res.ok) {
                 setDeleting(null);
                 router.refresh();
@@ -209,7 +233,16 @@ export function SettlementJournal({
                                     <RowActions
                                         label={item.description}
                                         pending={pending}
-                                        onEdit={() => openEdit(item)}
+                                        // A legacy movement-backed debt has no
+                                        // edit form left — the form it used to
+                                        // open now writes expenses. Delete and
+                                        // re-log it; the subtitle says so rather
+                                        // than offering a button that fails.
+                                        onEdit={
+                                            item.source === "expense"
+                                                ? () => openEdit(item)
+                                                : undefined
+                                        }
                                         onDelete={() => {
                                             setActionError(null);
                                             setDeleting(item);
@@ -349,21 +382,24 @@ function RowActions({
 }: {
     label: string;
     pending: boolean;
-    onEdit: () => void;
+    /** Omitted when the row has no edit form — the button is then not rendered. */
+    onEdit?: () => void;
     onDelete: () => void;
 }) {
     return (
         <span className="flex shrink-0 gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Edit ${label}`}
-                onClick={onEdit}
-                disabled={pending}
-            >
-                <Pencil />
-            </Button>
+            {onEdit && (
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Edit ${label}`}
+                    onClick={onEdit}
+                    disabled={pending}
+                >
+                    <Pencil />
+                </Button>
+            )}
             <Button
                 type="button"
                 variant="ghost"
@@ -393,7 +429,10 @@ function JournalRow({
                 icon={<Check className="size-4" />}
                 iconClass="bg-positive-tint text-positive"
                 title={item.description}
-                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32%`}
+                // A locked transfer says why it has no controls, so this row
+                // says it too: it is the only other one without them, and
+                // "inert for no stated reason" is the thing worth avoiding.
+                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32% · edit on the Expenses screen`}
                 amount={`+${formatMxn(item.partnerShare)}`}
                 amountClass="text-positive"
                 actions={actions}
@@ -407,7 +446,7 @@ function JournalRow({
                 iconClass="bg-debt-tint text-debt"
                 rowTint="border-debt bg-debt-tint"
                 title={item.description}
-                subtitle={`${formatExpenseDate(item.date)} · un-itemized`}
+                subtitle={debtSubtitle(item)}
                 amount={`−${formatMxn(item.amount)}`}
                 amountClass="text-debt"
                 actions={actions}
