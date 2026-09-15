@@ -142,11 +142,20 @@ model Expense {
   isShared          Boolean @default(false)
   yourPercentage    Float   @default(1.0) // 1.0 = 100% mine; 0.68 = my 68% share
   actualExpenditure Float // stored, not computed: isShared ? amount * yourPercentage : amount
-  // DEPRECATED (ADR-0020): always "you". "I owe {partner}" debts moved to
-  // Movement{type:"gf_fronted"}; no expense is fronted by the partner anymore.
-  // Column retained until the CHORE-4 prod migration converts existing rows; a
-  // later chore can drop it. All reads treat expenses as the user's own.
+  // DEPRECATED (ADR-0020): always "you". Never used to mark a fronted expense —
+  // that is `isFronted` below. Column retained until a later chore drops it; all
+  // reads treat expenses as the user's own.
   paidBy            String  @default("you")
+
+  // The partner fronted this purchase and you owe her the amount (spec 0007
+  // §6a). It is consumption like any other expense — it carries a category and
+  // counts in the buckets — but its cash equivalent is the transfer that settles
+  // it, so two reads exclude it: spend-by-card (BUG-1's phantom Cash row, since
+  // a fronted row has no card) and the cash-out figure. `amount` is already HIS
+  // SHARE, so `isShared` is false and `actualExpenditure` equals `amount`.
+  // The settlement layer reads this flag as the "you owe her" side of the
+  // balance, replacing Movement{type:"gf_fronted"}.
+  isFronted         Boolean @default(false)
 
   // Forward-compat fields (UI ships in later phases — spec §3)
   isRecurring      Boolean @default(false) // Phase 3
@@ -218,8 +227,11 @@ model Movement {
   date   DateTime
   amount Float // always positive; direction comes from `type`
   // gf_received | gf_paid | card_payment | gf_fronted | income | other.
-  // `gf_fronted` (ADR-0020): a thing the partner fronted that you owe her — a
-  // settlement-only debt, no card, never in the cash feed or budget.
+  // `gf_fronted` is LEGACY (spec 0007 §6a): a thing the partner fronted is now
+  // an `Expense{isFronted:true}`, so nothing writes this type anymore. The
+  // migration converts every row that has a `combined-expenses` category to
+  // convert into; settlement still sums any leftover, so a row that could not be
+  // converted keeps moving the balance instead of vanishing.
   type   String
 
   cardId String? // set when type = "card_payment"

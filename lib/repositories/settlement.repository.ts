@@ -3,7 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { MovementType } from "@/lib/domain/movement";
 import { CYCLE_CLOSING_TYPES } from "@/lib/domain/settlement";
 
-/** An expense the couple-balance math reads (all are the user's own — ADR-0020). */
+/** An expense the couple-balance math reads. */
 export type SettlementExpenseRow = {
     id: string;
     date: Date;
@@ -11,6 +11,12 @@ export type SettlementExpenseRow = {
     amount: number;
     actualExpenditure: number;
     isShared: boolean;
+    /**
+     * A debt the partner fronted (spec 0007 §6a). It is the "you owe her" side
+     * of the balance, where an ordinary expense contributes her share of what
+     * YOU paid — opposite signs, so the two can never be read alike.
+     */
+    isFronted: boolean;
     /** Entry time: what cycle membership compares, and the same-`date` tie-break. */
     createdAt: Date;
 };
@@ -113,6 +119,7 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     amount: true,
                     actualExpenditure: true,
                     isShared: true,
+                    isFronted: true,
                     createdAt: true,
                 },
             }),
@@ -168,6 +175,7 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     amount: true,
                     actualExpenditure: true,
                     isShared: true,
+                    isFronted: true,
                     createdAt: true,
                 },
             }),

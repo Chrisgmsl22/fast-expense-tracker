@@ -6,7 +6,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
 import { buildFeed } from "@/lib/feed";
-import { CASH_COLOR } from "@/lib/palette";
+import { expenseCardLabel } from "@/lib/expense-display";
 import {
     movementDisplay,
     movementRowText,
@@ -328,6 +328,7 @@ export function ExpenseListInteractive({
                         <ExpenseRow
                             key={`e-${item.expense.id}`}
                             expense={item.expense}
+                            partnerName={partnerName}
                             pending={pending}
                             onEdit={() => openEdit(item.expense.id)}
                             onDelete={() => setDeleting(item.expense)}
@@ -657,19 +658,26 @@ export function ExpenseListInteractive({
 /** One expense row — one responsive tree (mobile card, desktop grid). */
 function ExpenseRow({
     expense,
+    partnerName,
     pending,
     onEdit,
     onDelete,
 }: {
     expense: ExpenseListItem;
+    partnerName: string;
     pending: boolean;
     onEdit: () => void;
     onDelete: () => void;
 }) {
     // Savings is a transfer — no card (never "Cash").
     const isSavings = expense.category.slug === SAVINGS_SLUG;
-    const cardColor = expense.card?.color ?? CASH_COLOR;
-    const cardName = expense.card?.name ?? "Cash";
+    // A covered debt has no card because HER card moved; the shared helper says
+    // so rather than falling back to the word Cash (which is what BUG-1 looked
+    // like on this very screen).
+    const { name: cardName, color: cardColor } = expenseCardLabel(
+        expense,
+        partnerName,
+    );
     return (
         <li
             className={`group relative grid grid-cols-[minmax(0,1fr)_auto_4rem] items-center gap-x-3 gap-y-0.5 py-3 pl-4 sm:gap-4 sm:py-2.5 sm:pl-0 ${ROW_GRID} ${isSavings ? "border-l-[3px] border-positive bg-positive-tint sm:pl-4" : ""}`}

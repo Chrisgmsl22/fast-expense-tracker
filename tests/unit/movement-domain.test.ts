@@ -30,11 +30,13 @@ describe("computeFeedTotals", () => {
     const groceries = {
         amount: 1000,
         actualExpenditure: 680,
+        isFronted: false,
         category: { slug: "groceries" },
     };
     const savings = {
         amount: 5000,
         actualExpenditure: 5000,
+        isFronted: false,
         category: { slug: "savings" },
     };
 

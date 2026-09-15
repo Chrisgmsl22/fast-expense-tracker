@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeftRight, BarChart3, Check, Pencil, Trash2 } from "lucide-react";
 
+import { deleteExpense } from "@/app/_actions/expense/delete";
 import { deleteMovement } from "@/app/_actions/movement/delete";
 import {
     PartnerDebtForm,
@@ -51,11 +52,25 @@ function transferTitle(
  * note), the generic "I owe {partner}" drops here — exactly what `movementRowText`
  * does in both feeds, so the same debt reads the same everywhere. When there is
  * no note the title already says "I owe {partner}", so the date stands alone.
+ *
+ * The tail explains a missing control, and `locked` outranks `source` for the
+ * same reason it does for the buttons: a locked row has no delete either, so
+ * telling its reader to "delete to change" would name a way out that is not
+ * there. Locked says locked; only an editable row mentions its source.
  */
 function debtSubtitle(row: PartnerDebtRow, partnerName: string): string {
     const label = defaultDebtDescription(partnerName);
-    const date = formatExpenseDate(row.date);
-    return row.description === label ? date : `${date} · ${label}`;
+    return [
+        formatExpenseDate(row.date),
+        row.description === label ? null : label,
+        row.locked
+            ? "closed a settlement · locked"
+            : row.source === "movement"
+              ? "older entry · delete to change"
+              : null,
+    ]
+        .filter(Boolean)
+        .join(" · ");
 }
 
 /**
@@ -153,7 +168,16 @@ export function SettlementJournal({
     function confirmDelete() {
         if (!deleting) return;
         startTransition(async () => {
-            const res = await deleteMovement({ id: deleting.id });
+            // A debt is an expense now (spec 0007 §6a) — except for a legacy
+            // `gf_fronted` movement the migration could not convert, which still
+            // counts in the balance and still renders here. The row carries
+            // which table it came from, so neither kind is deleted through the
+            // other's table and told "not found" for a row in plain sight.
+            const res =
+                deleting.kind === "partner_debt" &&
+                deleting.source === "expense"
+                    ? await deleteExpense({ id: deleting.id })
+                    : await deleteMovement({ id: deleting.id });
             if (res.ok) {
                 setDeleting(null);
                 router.refresh();
@@ -221,7 +245,16 @@ export function SettlementJournal({
                                     <RowActions
                                         label={item.description}
                                         pending={pending}
-                                        onEdit={() => openEdit(item)}
+                                        // A legacy movement-backed debt has no
+                                        // edit form left — the form it used to
+                                        // open now writes expenses. Delete and
+                                        // re-log it; the subtitle says so rather
+                                        // than offering a button that fails.
+                                        onEdit={
+                                            item.source === "expense"
+                                                ? () => openEdit(item)
+                                                : undefined
+                                        }
                                         onDelete={() => {
                                             setActionError(null);
                                             setDeleting(item);
@@ -361,21 +394,24 @@ function RowActions({
 }: {
     label: string;
     pending: boolean;
-    onEdit: () => void;
+    /** Omitted when the row has no edit form — the button is then not rendered. */
+    onEdit?: () => void;
     onDelete: () => void;
 }) {
     return (
         <span className="flex shrink-0 gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Edit ${label}`}
-                onClick={onEdit}
-                disabled={pending}
-            >
-                <Pencil />
-            </Button>
+            {onEdit && (
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Edit ${label}`}
+                    onClick={onEdit}
+                    disabled={pending}
+                >
+                    <Pencil />
+                </Button>
+            )}
             <Button
                 type="button"
                 variant="ghost"
@@ -405,7 +441,10 @@ function JournalRow({
                 icon={<Check className="size-4" />}
                 iconClass="bg-positive-tint text-positive"
                 title={item.description}
-                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32%`}
+                // A locked transfer says why it has no controls, so this row
+                // says it too: it is the only other one without them, and
+                // "inert for no stated reason" is the thing worth avoiding.
+                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32% · edit on the Expenses screen`}
                 amount={`+${formatMxn(item.partnerShare)}`}
                 amountClass="text-positive"
                 actions={actions}

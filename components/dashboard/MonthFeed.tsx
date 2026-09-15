@@ -5,7 +5,7 @@ import { buildFeed } from "@/lib/feed";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
-import { CASH_COLOR } from "@/lib/palette";
+import { expenseCardLabel } from "@/lib/expense-display";
 import {
     movementDisplay,
     movementRowText,
@@ -77,6 +77,7 @@ export function MonthFeed({
                             <ExpenseRow
                                 key={`e-${item.expense.id}`}
                                 expense={item.expense}
+                                partnerName={partnerName}
                             />
                         ) : (
                             <MovementRow
@@ -175,10 +176,20 @@ function sumByType(movements: MovementListItem[], type: MovementType): number {
 }
 
 /** One expense line (neutral). */
-function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
+function ExpenseRow({
+    expense: e,
+    partnerName,
+}: {
+    expense: ExpenseListItem;
+    partnerName: string;
+}) {
     const isSavings = e.category.slug === SAVINGS_SLUG;
-    const cardColor = e.card?.color ?? CASH_COLOR;
-    const cardName = e.card?.name ?? "Cash";
+    // Same helper the Expenses list uses, so the two screens cannot print
+    // different words for the same row.
+    const { name: cardName, color: cardColor } = expenseCardLabel(
+        e,
+        partnerName,
+    );
     return (
         <li
             className={`flex items-center gap-3 py-2.5 pr-4 pl-4 ${isSavings ? "border-l-[3px] border-positive bg-positive-tint" : "relative"}`}

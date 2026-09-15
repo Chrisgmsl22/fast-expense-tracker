@@ -35,6 +35,7 @@ const EXPENSES: SettlementExpenseRow[] = [
         amount: 1000,
         actualExpenditure: 680,
         isShared: true,
+        isFronted: false,
         createdAt: JULY,
     },
     {
@@ -44,6 +45,7 @@ const EXPENSES: SettlementExpenseRow[] = [
         amount: 450.5,
         actualExpenditure: 306.34,
         isShared: true,
+        isFronted: false,
         createdAt: JUNE,
     },
     {
@@ -53,6 +55,7 @@ const EXPENSES: SettlementExpenseRow[] = [
         amount: 500,
         actualExpenditure: 500,
         isShared: false,
+        isFronted: false,
         createdAt: JULY,
     },
 ];
@@ -166,6 +169,7 @@ describe("getSettlement breakdown items", () => {
                 yourPercentage: 0.68,
             }),
             isShared: true,
+            isFronted: false,
             createdAt: JULY,
         }));
         const s = await run(thirds, []);
@@ -195,6 +199,7 @@ describe("getSettlement breakdown items", () => {
                 yourPercentage: 0.68,
             }),
             isShared: true,
+            isFronted: false,
             createdAt: JULY,
         }));
         const s = await run(thirds, MOVEMENTS);

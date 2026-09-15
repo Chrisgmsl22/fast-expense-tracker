@@ -8,19 +8,23 @@ import {
 } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-const { deleteMock } = vi.hoisted(() => ({
+const { deleteMock, deleteExpenseMock } = vi.hoisted(() => ({
     deleteMock: vi.fn(),
+    deleteExpenseMock: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/delete", () => ({
+    deleteExpense: deleteExpenseMock,
 }));
 vi.mock("@/app/_actions/movement/delete", () => ({
     deleteMovement: deleteMock,
 }));
 // PartnerDebtForm (rendered in the edit dialog) imports these; stub them so the
 // test doesn't pull the next-auth server graph in for a pure render.
-vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
-    addPartnerDebt: vi.fn(),
+vi.mock("@/app/_actions/expense/add-fronted", () => ({
+    addFrontedExpense: vi.fn(),
 }));
-vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
-    updatePartnerDebt: vi.fn(),
+vi.mock("@/app/_actions/expense/update-fronted", () => ({
+    updateFrontedExpense: vi.fn(),
 }));
 // TransferForm (rendered in the transfer edit dialog) imports these too.
 vi.mock("@/app/_actions/movement/add-transfer", () => ({
@@ -193,6 +197,7 @@ describe("SettlementJournal", () => {
             locked: false,
             description: "I owe Brenda",
             amount: 300,
+            source: "expense",
         },
     ];
 
@@ -230,8 +235,12 @@ describe("SettlementJournal", () => {
         expect(screen.queryByLabelText("Edit Groceries")).toBeNull();
     });
 
-    it("opens the delete confirm and calls deleteMovement", async () => {
-        deleteMock.mockResolvedValue({ ok: true, data: { id: "e2" } });
+    // The debt row is an `Expense{isFronted:true}` now (spec 0007 §6a), so the
+    // journal deletes it through the expense action. Sending it to
+    // `deleteMovement` would match no movement and report "not found" for a row
+    // sitting in plain sight.
+    it("opens the delete confirm and deletes the debt as an expense", async () => {
+        deleteExpenseMock.mockResolvedValue({ ok: true, data: { id: "e2" } });
         render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
 
@@ -239,8 +248,58 @@ describe("SettlementJournal", () => {
         expect(within(dialog).getByText("Delete this debt?")).toBeDefined();
         fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
         await waitFor(() =>
-            expect(deleteMock).toHaveBeenCalledWith({ id: "e2" }),
+            expect(deleteExpenseMock).toHaveBeenCalledWith({ id: "e2" }),
         );
+        // A transfer still goes to the movement action — the two never cross.
+        expect(deleteMock).not.toHaveBeenCalled();
+    });
+
+    // I-1: a legacy `gf_fronted` movement the migration could not convert still
+    // counts in the balance and still renders as a `partner_debt` row. It looks
+    // identical to a converted one, so only the row's `source` can route it.
+    it("deletes a legacy movement-backed debt through the movement action", async () => {
+        deleteMock.mockResolvedValue({ ok: true, data: { id: "legacy1" } });
+        const legacy: SettlementJournalItem = {
+            kind: "partner_debt",
+            id: "legacy1",
+            date: june,
+            carriedOver: true,
+            locked: false,
+            description: "I owe Brenda",
+            amount: 150,
+            source: "movement",
+        };
+        render(<SettlementJournal journal={[legacy]} partnerName="Brenda" />);
+        fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
+
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+        await waitFor(() =>
+            expect(deleteMock).toHaveBeenCalledWith({ id: "legacy1" }),
+        );
+        // Sending it to the expense table would report "not found" for a row
+        // sitting in plain sight.
+        expect(deleteExpenseMock).not.toHaveBeenCalledWith({ id: "legacy1" });
+    });
+
+    it("offers no edit button on a legacy movement-backed debt", () => {
+        const legacy: SettlementJournalItem = {
+            kind: "partner_debt",
+            id: "legacy1",
+            date: june,
+            carriedOver: true,
+            locked: false,
+            description: "I owe Brenda",
+            amount: 150,
+            source: "movement",
+        };
+        render(<SettlementJournal journal={[legacy]} partnerName="Brenda" />);
+
+        // The form it used to open now writes expenses, so the button would
+        // always fail. The row says why instead.
+        expect(screen.queryByLabelText("Edit I owe Brenda")).toBeNull();
+        expect(screen.getByLabelText("Delete I owe Brenda")).toBeDefined();
+        expect(screen.getByText(/delete to change/)).toBeDefined();
     });
 
     it("loads the debt into an edit form, prefilled from the row", async () => {

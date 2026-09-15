@@ -1,13 +1,14 @@
 import type {
     ExpenseEditable,
+    ExpenseInsertData,
     ExpenseListItem,
     ExpenseRepository,
     ExpenseWriteData,
 } from "@/lib/repositories/expense.repository";
 
-type StoredExpense = { id: string; userId: string } & ExpenseWriteData;
+type StoredExpense = { id: string; userId: string } & ExpenseInsertData;
 
-const DEFAULT_WRITE: ExpenseWriteData = {
+const DEFAULT_WRITE: ExpenseInsertData = {
     categoryId: "cat1",
     subcategoryId: null,
     cardId: null,
@@ -19,6 +20,7 @@ const DEFAULT_WRITE: ExpenseWriteData = {
     actualExpenditure: 100,
     paidBy: "you",
     notes: null,
+    isFronted: false,
 };
 
 /**
@@ -51,7 +53,7 @@ export class FakeExpenseRepository implements ExpenseRepository {
     seedExpense(
         id: string,
         userId: string,
-        over: Partial<ExpenseWriteData> = {},
+        over: Partial<ExpenseInsertData> = {},
     ): void {
         this.rows.set(id, { id, userId, ...DEFAULT_WRITE, ...over });
     }
@@ -73,6 +75,7 @@ export class FakeExpenseRepository implements ExpenseRepository {
             isShared: row.isShared,
             yourPercentage: row.yourPercentage,
             paidBy: row.paidBy,
+            isFronted: row.isFronted,
         };
     }
 
@@ -90,7 +93,7 @@ export class FakeExpenseRepository implements ExpenseRepository {
 
     async insert(
         userId: string,
-        data: ExpenseWriteData,
+        data: ExpenseInsertData,
     ): Promise<{ id: string }> {
         if (this.failOnWrite) throw new Error("fake: insert failed");
         const row: StoredExpense = { id: `exp_${++this.seq}`, userId, ...data };
@@ -107,7 +110,14 @@ export class FakeExpenseRepository implements ExpenseRepository {
         if (this.failOnWrite) throw new Error("fake: update failed");
         const existing = this.rows.get(id);
         if (!existing || existing.userId !== userId) return 0;
-        this.rows.set(id, { id, userId, ...data });
+        // `isFronted` is write-once: the real adapter's update shape has no such
+        // field, so the fake must not let an update change it either.
+        this.rows.set(id, {
+            id,
+            userId,
+            ...data,
+            isFronted: existing.isFronted,
+        });
         this.updates.push({ id, userId, data });
         return 1;
     }

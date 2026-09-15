@@ -27,16 +27,20 @@ async function seedExpense(opts: {
     amount: number;
     actualExpenditure: number;
     subcategoryId?: string;
+    cardId?: string;
+    isFronted?: boolean;
 }) {
     return db.expense.create({
         data: {
             userId: opts.userId,
             categoryId: opts.categoryId,
             subcategoryId: opts.subcategoryId ?? null,
+            cardId: opts.cardId ?? null,
             date: new Date(opts.date),
             description: "x",
             amount: opts.amount,
             actualExpenditure: opts.actualExpenditure,
+            isFronted: opts.isFronted ?? false,
         },
     });
 }
@@ -483,5 +487,83 @@ describe("a gf_fronted debt never reaches the dashboard (integration)", () => {
             cards: await repo.getCardSpends(user.id, "2026-06"),
             breakdown: await repo.getCategoryBreakdown(user.id, "2026-06"),
         }).toEqual(before);
+    });
+});
+
+describe("a fronted expense and spend-by-card (BUG-1, integration)", () => {
+    /**
+     * BUG-1 by name. ADR-0020 §1 pulled partner-fronted debts out of the expense
+     * table because one surfaced as a phantom "Cash" row on the dashboard: a
+     * fronted row has no card, and `getCardSpends` groups by `cardId` and reads
+     * null as cash.
+     *
+     * Spec 0007 §6a puts the debt back in the expense table on purpose — the
+     * defect was never that it reached the BUDGET. So the exclusion lives in
+     * this query, and this test is what stops the phantom row coming back.
+     */
+    it("shows no phantom Cash row for a fronted expense", async () => {
+        const user = await seedUser("bug1@example.com");
+        const combined = await seedCategory(user.id, "combined-expenses", true);
+        await seedExpense({
+            userId: user.id,
+            categoryId: combined.id,
+            date: "2026-09-10T12:00:00Z",
+            amount: 680,
+            actualExpenditure: 680,
+            isFronted: true,
+        });
+
+        const cards = await repo.getCardSpends(user.id, "2026-09");
+        expect(cards).toEqual([]);
+        expect(cards.find((c) => c.id === "cash")).toBeUndefined();
+    });
+
+    it("keeps real cash spend while excluding the fronted row from the same month", async () => {
+        const user = await seedUser("bug1-mixed@example.com");
+        const combined = await seedCategory(user.id, "combined-expenses", true);
+        const groceries = await seedCategory(user.id, "groceries", true);
+        // A genuine cash purchase — also null `cardId`, so the exclusion has to
+        // discriminate on the marker, not on the missing card.
+        await seedExpense({
+            userId: user.id,
+            categoryId: groceries.id,
+            date: "2026-09-05T12:00:00Z",
+            amount: 200,
+            actualExpenditure: 200,
+        });
+        await seedExpense({
+            userId: user.id,
+            categoryId: combined.id,
+            date: "2026-09-10T12:00:00Z",
+            amount: 680,
+            actualExpenditure: 680,
+            isFronted: true,
+        });
+
+        const cards = await repo.getCardSpends(user.id, "2026-09");
+        expect(cards).toHaveLength(1);
+        expect(cards[0]!.id).toBe("cash");
+        // 200, not 880: the fronted row never entered the grouping.
+        expect(cards[0]!.spent).toBe(200);
+    });
+
+    it("still counts the fronted row in the budget reads — that is the point", async () => {
+        const user = await seedUser("bug1-budget@example.com");
+        const combined = await seedCategory(user.id, "combined-expenses", true);
+        await seedExpense({
+            userId: user.id,
+            categoryId: combined.id,
+            date: "2026-09-10T12:00:00Z",
+            amount: 680,
+            actualExpenditure: 680,
+            isFronted: true,
+        });
+
+        const spends = await repo.getCategorySpends(user.id, "2026-09");
+        expect(spends).toHaveLength(1);
+        expect(spends[0]!.spent).toBe(680);
+
+        const breakdown = await repo.getCategoryBreakdown(user.id, "2026-09");
+        expect(breakdown[0]!.spent).toBe(680);
     });
 });

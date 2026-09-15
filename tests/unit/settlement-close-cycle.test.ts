@@ -26,6 +26,7 @@ const expense = (
     amount: 1000,
     actualExpenditure: 680,
     isShared: true,
+    isFronted: false,
     createdAt: JULY,
     ...over,
 });

@@ -32,6 +32,13 @@ export type UpdateExpenseResult = ActionResult<
  * (validate → recompute server-side → persist), but the write is **scoped by
  * `userId`** in the repository so a mismatch matches zero rows and returns
  * `not_found` instead of mutating another user's data (IDOR guard).
+ *
+ * A **fronted** row's money is clamped here (spec 0007 §6a decision 1). The
+ * amount on such a row is already the user's own share — "whatever I owe her is
+ * what I care about" — so no split may ever be applied to it. Without the clamp,
+ * ticking "shared" at 68% on a $680 debt would store `actualExpenditure` 462.40,
+ * and the settlement balance reads exactly that field as what he owes: the debt
+ * would shrink by a third with nothing on screen saying so.
  */
 export async function updateExpense(
     input: unknown,
@@ -85,16 +92,70 @@ export async function updateExpense(
             }
         }
 
+        // Load the row before writing: whether it is fronted is the server's
+        // fact, never the payload's. A missing row also short-circuits to
+        // `not_found` here instead of after the write attempt.
+        const existing = await repo.getById(userId, id);
+        if (!existing) {
+            return {
+                ok: false,
+                code: "not_found",
+                message: "Expense not found.",
+            };
+        }
+
+        // A payload that asks to split a covered debt, or to charge it to a
+        // card, is REFUSED rather than quietly coerced. The form disables both
+        // controls, so this only fires on a request that went around it — and
+        // answering such a request with "saved" would tell the caller a change
+        // landed when none did. Accept-then-ignore is the shape of the silent
+        // save failure this repo already shipped once.
+        if (existing.isFronted && (v.isShared || v.cardId)) {
+            return {
+                ok: false,
+                code: "validation",
+                message:
+                    "A debt your partner covered can't be split or charged to a card — the amount you enter is already your share.",
+                fieldErrors: {
+                    ...(v.isShared
+                        ? {
+                              yourPercentage: [
+                                  "This amount is already your share",
+                              ],
+                          }
+                        : {}),
+                    ...(v.cardId
+                        ? { cardId: ["She paid, so there is no card"] }
+                        : {}),
+                },
+            };
+        }
+
+        // Belt and braces for what does pass: the figure entered IS the
+        // consumption, so `amount` and `actualExpenditure` stay equal whatever
+        // else rode along (a stray `yourPercentage` on an unshared payload).
+        const money = existing.isFronted
+            ? {
+                  isShared: false,
+                  yourPercentage: 1,
+                  actualExpenditure: v.amount,
+              }
+            : {
+                  isShared: v.isShared,
+                  yourPercentage: v.yourPercentage,
+                  actualExpenditure: computeActualExpenditure(v),
+              };
+
         const count = await repo.updateForUser(id, userId, {
             categoryId: v.categoryId,
             subcategoryId: v.subcategoryId ?? null,
-            cardId: v.cardId ?? null,
+            // Her card moved, not one of his — a fronted row has no card of his
+            // to point at, and leaving one on would put it back in spend-by-card.
+            cardId: existing.isFronted ? null : (v.cardId ?? null),
             date: cdmxCalendarDateToUtc(v.date),
             description: v.description,
             amount: v.amount,
-            isShared: v.isShared,
-            yourPercentage: v.yourPercentage,
-            actualExpenditure: computeActualExpenditure(v),
+            ...money,
             paidBy: v.paidBy,
             notes: v.notes ?? null,
         });
