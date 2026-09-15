@@ -8,7 +8,6 @@ import {
     HandCoins,
     Receipt,
     Send,
-    Undo2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +24,6 @@ import {
     type CardOption,
 } from "./ExpenseForm";
 import { CardPaymentForm } from "@/components/movement/CardPaymentForm";
-import { PartnerDebtForm } from "@/components/movement/PartnerDebtForm";
 import { TransferForm } from "@/components/movement/TransferForm";
 
 type Props = {
@@ -43,13 +41,7 @@ type Props = {
 };
 
 /** Which thing the user is logging; `menu` is the type picker (ADR-0018). */
-type Mode =
-    | "menu"
-    | "expense"
-    | "card_payment"
-    | "transfer"
-    | "receive"
-    | "partner_debt";
+type Mode = "menu" | "expense" | "card_payment" | "transfer" | "receive";
 
 const titlesFor = (partnerName: string): Record<Mode, string> => ({
     menu: "Add",
@@ -57,13 +49,16 @@ const titlesFor = (partnerName: string): Record<Mode, string> => ({
     card_payment: "Add card payment",
     transfer: `I paid ${partnerName}`,
     receive: `${partnerName} paid me`,
-    partner_debt: `I owe ${partnerName}`,
 });
 
 /**
  * The `+ Add` entry point. Opens a type picker (expense / card payment /
- * transfer to the partner / a debt she fronted) that routes to the matching form. Money movements are logged
- * here alongside expenses so there's one place to record everything (ADR-0018).
+ * transfers with the partner) that routes to the matching form. Money movements
+ * are logged here alongside expenses so there's one place to record everything
+ * (ADR-0018).
+ *
+ * An "I owe {partner}" debt is NOT offered here: it is created on the settlement
+ * page, where the balance it moves is in view. It still SHOWS in this feed.
  */
 export function AddExpenseButton({
     categories,
@@ -145,12 +140,6 @@ export function AddExpenseButton({
                                     subtitle={`Money ${partnerName} sent you`}
                                     onClick={() => setMode("receive")}
                                 />
-                                <TypeButton
-                                    icon={<Undo2 className="size-5" />}
-                                    title={`I owe ${partnerName}`}
-                                    subtitle={`Something ${partnerName} fronted that you owe back`}
-                                    onClick={() => setMode("partner_debt")}
-                                />
                             </>
                         ) : null}
                     </div>
@@ -187,14 +176,6 @@ export function AddExpenseButton({
                 {mode === "receive" ? (
                     <TransferForm
                         direction="gf_received"
-                        partnerName={partnerName}
-                        onCancel={close}
-                        onSuccess={onSuccess}
-                    />
-                ) : null}
-
-                {mode === "partner_debt" ? (
-                    <PartnerDebtForm
                         partnerName={partnerName}
                         onCancel={close}
                         onSuccess={onSuccess}
