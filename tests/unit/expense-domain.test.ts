@@ -43,14 +43,28 @@ describe("computeActualExpenditure", () => {
         ).toBe(0);
     });
 
-    it("does not round — returns the raw float product (open decision)", () => {
-        // 33.33 * 0.68 = 22.6644 — documents current no-rounding behavior.
+    it("rounds to the cent — money is never stored sub-cent", () => {
+        // 33.33 × 0.68 = 22.6644, stored as 22.66. A sub-cent remainder cannot
+        // be displayed, so each panel used to round for itself and the same
+        // expense read differently depending on which rows shared its total.
         expect(
             computeActualExpenditure({
                 amount: 33.33,
                 isShared: true,
                 yourPercentage: 0.68,
             }),
-        ).toBeCloseTo(22.6644, 4);
+        ).toBe(22.66);
+    });
+
+    it("leaves no float dust behind", () => {
+        // 1200 × 0.68 is 816.0000000000001 in IEEE 754 — the real "Repair" row,
+        // whose partner share rendered $383.99 in one view and $384.00 in another.
+        expect(
+            computeActualExpenditure({
+                amount: 1200,
+                isShared: true,
+                yourPercentage: 0.68,
+            }),
+        ).toBe(816);
     });
 });

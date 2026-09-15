@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown";
 import { computeCoupleBalance } from "@/lib/domain/settlement";
 import type { SettlementBreakdownKey } from "@/lib/domain/settlement";
+import { computeActualExpenditure } from "@/lib/domain/expense";
 import { formatMxn } from "@/lib/format";
 import type {
     SettlementExpenseRow,
@@ -149,17 +150,21 @@ describe("getSettlement breakdown items", () => {
         }
     });
 
-    it("still adds up when the split leaves sub-cent residue on every row", async () => {
-        // $33.33 at a 68% split stores actualExpenditure 22.6644, so each row's
-        // share is 10.6656 — three rows that each round UP to $10.67 ($32.01)
-        // against a line total of 31.9968 ($32.00). The residual has to land on
-        // one row or the screen contradicts itself.
+    it("adds up with no residual left to place", async () => {
+        // $33.33 at a 68% split now STORES 22.66 (rounded at write time), so
+        // each row's share is exactly 10.67 and the three sum to exactly 32.01.
+        // There is no leftover cent, so no row's value depends on its
+        // neighbours — the defect that made one expense read two amounts.
         const thirds: SettlementExpenseRow[] = [1, 2, 3].map((n) => ({
             id: `t${n}`,
             date: JULY,
             description: `Split ${n}`,
             amount: 33.33,
-            actualExpenditure: 22.6644,
+            actualExpenditure: computeActualExpenditure({
+                amount: 33.33,
+                isShared: true,
+                yourPercentage: 0.68,
+            }),
             isShared: true,
             createdAt: JULY,
         }));
@@ -168,12 +173,12 @@ describe("getSettlement breakdown items", () => {
             (l) => l.key === "partner_share",
         )!;
 
-        expect(formatMxn(line.amount)).toBe("$32.00");
+        expect(formatMxn(line.amount)).toBe("$32.01");
         assertRowsReadUpToTotal(s.breakdownItems.partner_share, line.amount);
-        // Every row is a clean cent figure, and the residual sits on one of them.
+        // Identical rows now read identically, whatever set they sit in.
         expect(
             s.breakdownItems.partner_share.map((r) => formatMxn(r.amount)),
-        ).toEqual(["$10.66", "$10.67", "$10.67"]);
+        ).toEqual(["$10.67", "$10.67", "$10.67"]);
     });
 
     it("quotes the same money in the journal as in the breakdown, row for row", async () => {
@@ -184,7 +189,11 @@ describe("getSettlement breakdown items", () => {
             date: JULY,
             description: `Split ${n}`,
             amount: 33.33,
-            actualExpenditure: 22.6644,
+            actualExpenditure: computeActualExpenditure({
+                amount: 33.33,
+                isShared: true,
+                yourPercentage: 0.68,
+            }),
             isShared: true,
             createdAt: JULY,
         }));
@@ -203,8 +212,8 @@ describe("getSettlement breakdown items", () => {
                 );
             }
         }
-        // Both panels show these three figures, and both add up to $32.00.
-        const asShown = ["$10.66", "$10.67", "$10.67"];
+        // Both panels show these three figures, and both add up to $32.01.
+        const asShown = ["$10.67", "$10.67", "$10.67"];
         expect(
             s.breakdownItems.partner_share.map((r) => formatMxn(r.amount)),
         ).toEqual(asShown);

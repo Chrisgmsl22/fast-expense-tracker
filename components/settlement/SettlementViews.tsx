@@ -103,12 +103,16 @@ export function SettlementViews({
                             ? `${renderedCount} ${renderedCount === 1 ? "settlement" : "settlements"}`
                             : itemCount(renderedCount)}
                     </span>
-                    {/* The descriptor keeps its place while it fits; the count
-                        leads, so a narrow screen truncates the prose, not it. */}
-                    <span className="hidden sm:inline">
-                        {" "}
-                        · shared expenses · debts · transfers
-                    </span>
+                    {/* The descriptor names what a JOURNAL ROW can be, so it
+                        belongs only beside a row count — History counts closed
+                        settlements. The count leads either way, so a narrow
+                        screen truncates the prose and not the number. */}
+                    {active !== "history" && (
+                        <span className="hidden sm:inline">
+                            {" "}
+                            · shared expenses · debts · transfers
+                        </span>
+                    )}
                 </p>
             </div>
 

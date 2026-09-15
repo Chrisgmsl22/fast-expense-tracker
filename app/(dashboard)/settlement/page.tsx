@@ -14,6 +14,7 @@ import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown
 import { SettlementCloseCard } from "@/components/settlement/SettlementCloseCard";
 import { SettlementHelp } from "@/components/settlement/SettlementHelp";
 import { SettlementJournalKey } from "@/components/settlement/SettlementJournalKey";
+import { pastMonthNotice } from "@/components/settlement/past-month-notice";
 import { SettlementViews } from "@/components/settlement/SettlementViews";
 
 // Per-request, DB-backed — never prerender at build (no DB in preview builds).
@@ -105,14 +106,20 @@ export default async function SettlementPage({
                         form — see the hand-back note. */}
                     {!settlement.month.isCurrent && (
                         <p className="text-sm text-muted-foreground">
-                            You are viewing {monthLabel}. Anything you log is
-                            dated today and joins the open settlement.
+                            {pastMonthNotice(monthLabel)}
                         </p>
                     )}
                     <SettlementActions
                         direction={settlement.balance.direction}
                         netAmount={settlement.balance.amount}
                         partnerName={partnerName}
+                        // The same sentence travels into the dialogs, which
+                        // cover this page while a form is open.
+                        pastMonthNotice={
+                            settlement.month.isCurrent
+                                ? undefined
+                                : pastMonthNotice(monthLabel)
+                        }
                     />
                     <SettlementBreakdown
                         balance={settlement.balance}

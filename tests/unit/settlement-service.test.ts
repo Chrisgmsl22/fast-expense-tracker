@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
+import { computeActualExpenditure } from "@/lib/domain/expense";
 import { getSettlement } from "@/lib/services/settlement/settlement.service";
+import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
 import type {
     SettlementCycleMarker,
     SettlementExpenseRow,
@@ -367,6 +369,60 @@ describe("getSettlement — settlement cycles", () => {
     it("a month with no close has an empty history, not the last six", async () => {
         const s = await run([], [closingTransfer], [marker], "2026-05");
         expect(s.history).toEqual([]);
+    });
+
+    it("quotes one expense at ONE amount in every view", async () => {
+        // The real "Repair" row: $1,200 at 68% stored 816.0000000000001, so the
+        // partner's share came out 383.9999999999999 and rendered $383.99 in a
+        // month view holding other rows but $384.00 in a history view holding it
+        // alone — the residual cent landing on a different row per row-set.
+        const repair = expense({
+            id: "eRepair",
+            // Dated after the others so it sorts newest in the month view — the
+            // row the residual used to land on.
+            date: new Date("2026-07-20T06:00:00Z"),
+            createdAt: ENTERED_BEFORE_CLOSE,
+            description: "Repair",
+            amount: 1200,
+            actualExpenditure: computeActualExpenditure({
+                amount: 1200,
+                isShared: true,
+                yourPercentage: 0.68,
+            }),
+        });
+        // Three $33.33 splits, in the month view only (entered after the close),
+        // whose rounded rows read a cent over their own total. That residual is
+        // what used to be subtracted from the newest row — Repair.
+        const thirds = [1, 2, 3].map((n) =>
+            expense({
+                id: `eThird${n}`,
+                date: JULY,
+                createdAt: ENTERED_AFTER_CLOSE,
+                amount: 33.33,
+                actualExpenditure: computeActualExpenditure({
+                    amount: 33.33,
+                    isShared: true,
+                    yourPercentage: 0.68,
+                }),
+            }),
+        );
+
+        const s = await run(
+            [repair, ...thirds],
+            [closingTransfer],
+            [marker],
+            "2026-07",
+        );
+
+        const share = (row?: SettlementJournalItem) =>
+            row?.kind === "your_expense" ? row.partnerShare : null;
+        const inMonth = share(s.month.journal.find((j) => j.id === "eRepair"));
+        const inHistory = share(
+            s.history[0]!.journal.find((j) => j.id === "eRepair"),
+        );
+
+        expect(inMonth).toBe(inHistory);
+        expect(inMonth).toBe(384);
     });
 
     it("files a cycle under the month it was CLOSED in, not the transfer's date", async () => {

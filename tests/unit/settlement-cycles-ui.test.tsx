@@ -166,6 +166,16 @@ describe("SettlementViews", () => {
         expect(screen.getByText(/is a past month/i)).toBeDefined();
     });
 
+    it("drops the row descriptor beside a settlement count", () => {
+        renderViews({ history: [closedCycle] });
+        fireEvent.click(screen.getByRole("tab", { name: "History" }));
+        expect(screen.getByText("1 settlement")).toBeDefined();
+        // The suffix describes journal rows, so it has no business here.
+        expect(
+            screen.queryByText(/shared expenses · debts · transfers/),
+        ).toBeNull();
+    });
+
     it("counts what the active view renders, not the whole dataset", () => {
         renderViews({
             openJournal: [openRow, openTransfer],

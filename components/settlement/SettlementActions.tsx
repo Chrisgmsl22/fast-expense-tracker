@@ -21,6 +21,12 @@ type Props = {
     /** The net balance magnitude, as a string for the amount input. */
     netAmount: number;
     partnerName: string;
+    /**
+     * Shown inside BOTH dialogs while the screen is on a past month. A modal
+     * covers the page, so the page's own copy of this warning is invisible at
+     * exactly the moment it matters.
+     */
+    pastMonthNotice?: string;
 };
 
 /**
@@ -33,6 +39,7 @@ export function SettlementActions({
     direction,
     netAmount,
     partnerName,
+    pastMonthNotice,
 }: Props) {
     const [transferOpen, setTransferOpen] = useState(false);
     const [debtOpen, setDebtOpen] = useState(false);
@@ -61,6 +68,11 @@ export function SettlementActions({
                     <DialogHeader>
                         <DialogTitle>Log a transfer</DialogTitle>
                     </DialogHeader>
+                    {pastMonthNotice && (
+                        <p className="text-sm text-muted-foreground">
+                            {pastMonthNotice}
+                        </p>
+                    )}
                     <TransferForm
                         direction={settleDirection}
                         initialAmount={prefillAmount}
@@ -81,6 +93,11 @@ export function SettlementActions({
                     <DialogHeader>
                         <DialogTitle>{`I owe ${partnerName}`}</DialogTitle>
                     </DialogHeader>
+                    {pastMonthNotice && (
+                        <p className="text-sm text-muted-foreground">
+                            {pastMonthNotice}
+                        </p>
+                    )}
                     <PartnerDebtForm
                         partnerName={partnerName}
                         onCancel={() => setDebtOpen(false)}

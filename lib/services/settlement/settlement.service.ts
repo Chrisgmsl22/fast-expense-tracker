@@ -383,25 +383,21 @@ const roundCents = (n: number): number => Math.round(n * 100) / 100;
 const isZeroCents = (n: number): boolean => Math.abs(n) < 0.005;
 
 /**
- * Make a line's rows add up ON SCREEN. `actualExpenditure` is stored unrounded
- * (`computeActualExpenditure`), so a partner share can carry four decimals: three
- * shares of 10.6656 each render $10.67 and read as $32.01, while their total,
- * 31.9968, renders $32.00. So round every row to cents and hand the leftover
- * cent(s) to the newest row, which keeps Σ rendered rows === the rendered total.
+ * Round each row to the cent, independently of the rows beside it.
+ *
+ * This replaces a reconciliation that handed the leftover cent to the newest
+ * row. That leftover only existed because `actualExpenditure` was stored as the
+ * raw product; it is now rounded at write time (`computeActualExpenditure`) and
+ * the existing rows were migrated, so there is nothing left to redistribute.
+ *
+ * The rounding stays as a guard — a Float column can still carry drift, and a
+ * row that predates the migration must not render four decimals. What must
+ * never come back is the redistribution: it made a row's value depend on which
+ * OTHER rows shared its view, which is how one expense read $383.99 in the
+ * month panel and $384.00 in the history panel.
  */
-function reconcileToCents<T extends { amount: number }>(rows: T[]): T[] {
-    if (rows.length === 0) return rows;
-    const total = roundCents(rows.reduce((sum, r) => sum + r.amount, 0));
-    const rounded = rows.map((r) => ({ ...r, amount: roundCents(r.amount) }));
-    const residual = roundCents(
-        total - rounded.reduce((sum, r) => sum + r.amount, 0),
-    );
-    // Rows are newest first, so the adjustment lands on the most recent row.
-    const [newest, ...rest] = rounded as [T, ...T[]];
-    return [
-        { ...newest, amount: roundCents(newest.amount + residual) },
-        ...rest,
-    ];
+function roundRowsToCents<T extends { amount: number }>(rows: T[]): T[] {
+    return rows.map((r) => ({ ...r, amount: roundCents(r.amount) }));
 }
 
 /**
@@ -499,10 +495,10 @@ function buildSettlementRows(
     }
 
     return {
-        partner_share: reconcileToCents(rows.partner_share),
-        your_debt: reconcileToCents(rows.your_debt),
-        partner_paid: reconcileToCents(rows.partner_paid),
-        you_paid: reconcileToCents(rows.you_paid),
+        partner_share: roundRowsToCents(rows.partner_share),
+        your_debt: roundRowsToCents(rows.your_debt),
+        partner_paid: roundRowsToCents(rows.partner_paid),
+        you_paid: roundRowsToCents(rows.you_paid),
     };
 }
 
