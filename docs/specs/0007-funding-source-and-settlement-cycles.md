@@ -264,18 +264,16 @@ impossible rather than merely discouraged: no `Total` spanning both.
     tell"_ without inventing one, and without a new category whose bucket nobody
     could classify. He can change it per entry.
 
-    **Rename its subcategory "Purchases made by girlfriend" → "Fronted for
-    me".** His objection: _"its not really a purchase she did, Im only paying
-    her a portion, my portion, so i dont want to confuse things."_ He is right —
-    the row is his share, not her purchase, so the old name describes the wrong
-    event.
+    **Rename its subcategory "Purchases made by girlfriend" → "Covered for
+    me".** Chosen by Christian, 2026-09-14. His objection to the old name: _"its
+    not really a purchase she did, Im only paying her a portion, my portion, so
+    i dont want to confuse things."_ He is right — the row is his share, not her
+    purchase, so the old name describes the wrong event.
 
-    "Fronted for me" is short like its siblings (Rent, Cats), uses the word the
-    app already uses for this, says nothing about who paid, and centres his
-    share. It is also **partner-neutral**, where the seeded name says
-    "girlfriend" — wrong for any other account now the partner is configurable
-    (CHORE-6.a). If he prefers: "My share, fronted" or "Covered for me", a
-    one-line change either way.
+    "Covered for me" is short like its siblings (Rent, Cats), says nothing about
+    who paid, and centres his share rather than her transaction. It is also
+    **partner-neutral**, where the seeded name says "girlfriend" — wrong for any
+    other account now the partner is configurable (CHORE-6.a).
 
     **The rename is a trap.** It touches the frozen reference
     (`docs/reference/domain-reference.md` row 9), the starter kit, and existing
