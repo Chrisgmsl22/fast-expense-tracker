@@ -247,8 +247,24 @@ impossible rather than merely discouraged: no `Total` spanning both.
 
 ### Decisions
 
-1. **A debt she fronted is consumption and enters the budget.** It carries a
-   **category** and counts in the buckets and the category rollups.
+1. **A debt she fronted is an Expense, not a Movement.** His framing: _"not
+   treat it as cash, but as a debit transfer or something like that"_ — a real
+   purchase that happens to have moved no card of his. It carries a category and
+   counts in the buckets and the category rollups, _"included in the rest"_.
+
+    **The amount logged is his share, never what she actually paid.** _"I don't
+    need to know how much she fronted. Whatever I owe her is what I care about."_
+    So a $1,000 shared dinner is logged as his $680. There is no 32% split to
+    apply and no partner share to derive — the figure entered **is** the
+    consumption.
+
+    **It defaults to the `combined-expenses` category, which already exists for
+    exactly this.** Its seeded subcategories are "Purchases made by girlfriend ·
+    Purchases made between the two · Cats", it is already marked relevant
+    (essentials), and he has used it. That answers _"maybe through a different
+    category so its easier to tell"_ without inventing one, and without a new
+    category whose bucket nobody could classify. He can change it per entry.
+
 2. **It carries a funding source like any other purchase** (§3.1). Settling it
    from savings tags the **debt**, never the transfer — same reasoning as §3.2,
    since a transfer is a net covering several debts and could never be
@@ -261,6 +277,20 @@ impossible rather than merely discouraged: no `Total` spanning both.
    transfers to her: _"that is also money that left my account."_ The
    `Paid to {partner}` line stays as its breakdown. The `Total` row that summed
    across ledgers is **removed**, not relabelled.
+
+    **A fronted expense is excluded from this figure**, and that exclusion is what
+    keeps the books straight. Its cash equivalent is the transfer, which is
+    already counted. Counting both would bill him twice for one dinner. So each
+    ledger sees that money exactly once, by a different route:
+
+    | Ledger                | Counts the fronted dinner as |
+    | --------------------- | ---------------------------- |
+    | Consumption (buckets) | the **expense**, $680        |
+    | Cash ("really spent") | the **transfer**, $680       |
+
+    Never both in one figure. This is the single rule most likely to be got
+    wrong, because each side looks correct in isolation.
+
 5. **Transfers gain the funding-source control.** §3.1 already says they carry
    it; this makes the UI explicit. A transfer paid from savings leaves both
    ledgers for the month.
