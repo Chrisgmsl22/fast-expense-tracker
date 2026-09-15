@@ -156,6 +156,11 @@ an essential** — the trap in every 50/25/25 calculation here.
 Categories, subcategories, `isRelevant` flags, card colors, and the full split
 math: [`domain-reference.md`](./docs/reference/domain-reference.md).
 
+Before you propose a change to how money is counted, run `pnpm data:snapshot`
+and do the arithmetic on his real rows. It is read-only and refuses any database
+that is not local. Reasoning from the schema alone is how a bucket ends up 60%
+short of what the month actually held.
+
 ## Harness
 
 Rules are enforced where they can be, and written down only where they cannot:
