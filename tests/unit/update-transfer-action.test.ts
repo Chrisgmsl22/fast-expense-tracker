@@ -60,6 +60,91 @@ describe("updateTransfer (unit, injected fake repo)", () => {
         expect(repo.updates[0]!.data.note).toBeNull();
     });
 
+    it("re-asserts the funding source on every save (spec 0007 §3.1)", async () => {
+        const repo = seededRepo();
+        await updateTransfer(
+            {
+                id: "mv1",
+                date: "2026-07-10",
+                amount: "8000",
+                direction: "gf_paid",
+                fundedFrom: "savings",
+            },
+            repo,
+        );
+        expect(repo.updates[0]!.data.fundedFrom).toBe("savings");
+    });
+
+    describe("flipping a savings-funded transfer inbound", () => {
+        // Money she sends you is funded by nothing of yours, so a stale
+        // `savings` must not survive the flip. Two callers reach the same write
+        // by different routes, so both are pinned: the form sends `income`
+        // explicitly; a caller that knows nothing of the field omits it and
+        // gets the schema default.
+        function savingsRepo() {
+            const repo = new FakeMovementRepository();
+            repo.seed("mv1", "u1", {
+                type: "gf_paid",
+                cardId: null,
+                amount: 8000,
+                note: null,
+                fundedFrom: "savings",
+            });
+            return repo;
+        }
+
+        it("clears the tag when the caller sends income with the flip", async () => {
+            const repo = savingsRepo();
+            const res = await updateTransfer(
+                {
+                    id: "mv1",
+                    date: "2026-07-10",
+                    amount: "8000",
+                    direction: "gf_received",
+                    fundedFrom: "income",
+                },
+                repo,
+            );
+
+            expect(res.ok).toBe(true);
+            expect(repo.updates[0]!.data.fundedFrom).toBe("income");
+        });
+
+        it("clears it via the schema default when the caller omits the field", async () => {
+            const repo = savingsRepo();
+            const res = await updateTransfer(
+                {
+                    id: "mv1",
+                    date: "2026-07-10",
+                    amount: "8000",
+                    direction: "gf_received",
+                },
+                repo,
+            );
+
+            expect(res.ok).toBe(true);
+            expect(repo.updates[0]!.data.fundedFrom).toBe("income");
+        });
+    });
+
+    it("refuses savings on an inbound transfer", async () => {
+        const repo = seededRepo();
+        const res = await updateTransfer(
+            {
+                id: "mv1",
+                date: "2026-07-10",
+                amount: "300",
+                direction: "gf_received",
+                fundedFrom: "savings",
+            },
+            repo,
+        );
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(repo.updates).toHaveLength(0);
+    });
+
     it("rejects an invalid edit with a validation code + no write", async () => {
         const repo = seededRepo();
         const res = await updateTransfer(

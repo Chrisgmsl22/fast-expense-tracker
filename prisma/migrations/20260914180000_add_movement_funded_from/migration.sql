@@ -1,0 +1,12 @@
+-- spec 0007 §3.1: a transfer to the partner records which month's money funded
+-- it — income | savings. (`reimbursed` is Health-only per §3.3 and a transfer
+-- has no category, so the transfer form never offers it and validation rejects
+-- it; the column is a plain TEXT, and the Zod enum is the guard.)
+--
+-- Purely additive. NOT NULL with a DEFAULT of 'income' means every existing
+-- movement becomes 'income', which is exactly today's behaviour: only 'income'
+-- transfers count toward the feed's "Paid to {partner}" and cash figures, so no
+-- historical month's totals move. The settlement balance ignores this column
+-- entirely — a savings-funded transfer really did reach her.
+-- No data migration is needed and none is run here.
+ALTER TABLE "Movement" ADD COLUMN     "fundedFrom" TEXT NOT NULL DEFAULT 'income';

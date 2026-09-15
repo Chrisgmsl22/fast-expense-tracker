@@ -105,6 +105,9 @@ export function SettlementJournal({
         date: toDateInputValue(editingTransfer.date),
         amount: String(editingTransfer.amount),
         note: editingTransfer.note ?? "",
+        // Carried from the row so saving an edit here re-asserts the funding
+        // source instead of resetting a savings-funded transfer to income.
+        fundedFrom: editingTransfer.fundedFrom,
     };
 
     function confirmDelete() {

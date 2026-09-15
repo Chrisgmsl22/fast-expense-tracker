@@ -162,6 +162,7 @@ describe("SettlementJournal", () => {
             carriedOver: false,
             direction: "gf_received",
             amount: 320,
+            fundedFrom: "income",
             note: "rent",
         },
         {

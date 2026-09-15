@@ -108,6 +108,7 @@ const movements: MovementListItem[] = [
         type: "card_payment",
         card: { name: "Amex", color: "#ca8a04" },
         note: null,
+        fundedFrom: "income",
     },
     {
         id: "mv2",
@@ -116,6 +117,7 @@ const movements: MovementListItem[] = [
         type: "gf_paid",
         card: null,
         note: "netted",
+        fundedFrom: "income",
     },
 ];
 
@@ -127,6 +129,7 @@ const debt: MovementListItem = {
     type: "gf_fronted",
     card: null,
     note: "she covered the vet",
+    fundedFrom: "income",
 };
 
 const props = {
@@ -324,6 +327,41 @@ describe("ExpenseListInteractive", () => {
         expect(within(totals).getByText("$300.00")).toBeDefined();
     });
 
+    it("badges a savings-funded transfer and drops it from 'Paid to Brenda'", () => {
+        // The same rule as the dashboard feed, on the same helper: out of the
+        // cash figure, still a visible row (spec 0007 §6a decision 5).
+        const fromSavings: MovementListItem[] = [
+            {
+                ...movements[1]!,
+                id: "mv9",
+                amount: 8000,
+                fundedFrom: "savings",
+            },
+        ];
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements: fromSavings }}
+            />,
+        );
+
+        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        expect(screen.getAllByText("from savings").length).toBeGreaterThan(0);
+        const totals = screen.getByTestId("totals-desktop");
+        expect(within(totals).queryByText("Paid to Brenda")).toBeNull();
+        // Its own cash line — the consumption line stays out of it.
+        expect(
+            within(totals).getByText("Paid to Brenda from savings"),
+        ).toBeDefined();
+        expect(within(totals).getByText("$8,000.00")).toBeDefined();
+        expect(
+            within(totals).queryByText("Not from this month's income"),
+        ).toBeNull();
+        // The mobile bar carries the short form of the same line.
+        const mobile = screen.getByTestId("totals-mobile");
+        expect(within(mobile).getByText("Paid from savings")).toBeDefined();
+    });
+
     it("hides movements when a category filter is active (they have no category)", () => {
         render(
             <ExpenseListInteractive
@@ -360,6 +398,7 @@ describe("ExpenseListInteractive", () => {
             type: "card_payment",
             cardId: "card1",
             note: null,
+            fundedFrom: "income",
         });
         render(
             <ExpenseListInteractive
@@ -385,6 +424,7 @@ describe("ExpenseListInteractive", () => {
             type: "gf_paid",
             cardId: null,
             note: "netted",
+            fundedFrom: "income",
         });
         render(
             <ExpenseListInteractive
@@ -523,6 +563,7 @@ describe("ExpenseListInteractive", () => {
             type: "gf_fronted",
             cardId: null,
             note: "she covered the vet",
+            fundedFrom: "income",
         });
         render(
             <ExpenseListInteractive

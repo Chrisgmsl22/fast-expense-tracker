@@ -238,6 +238,15 @@ model Movement {
 
   note String?
 
+  // Which month's money funded a transfer to the partner (spec 0007 §3.1):
+  // income | savings. Meaningful for `gf_paid` only — the one movement type
+  // that is an outflow of the user's own money. A card payment stays
+  // source-agnostic (§3.2, ADR-0020 §6) and a `gf_fronted` debt moved no cash,
+  // so both keep the "income" default and no read consults this for them.
+  // `reimbursed` is deliberately absent: it is Health-only (§3.3) and a
+  // transfer has no category. A String, not a DB enum, to match `type`.
+  fundedFrom String @default("income")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

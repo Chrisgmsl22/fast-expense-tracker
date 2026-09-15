@@ -1,5 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
 
+import {
+    toTransferFundingSource,
+    type TransferFundingSource,
+} from "@/lib/domain/funding";
 import type { MovementType } from "@/lib/domain/movement";
 
 /** An expense the couple-balance math reads (all are the user's own — ADR-0020). */
@@ -20,6 +24,15 @@ export type SettlementMovementRow = {
     type: MovementType;
     /** Free-text label — the "I owe {partner}" debt's description, if any. */
     note: string | null;
+    /**
+     * Which month's money funded a transfer (spec 0007 §3.1). Read so the
+     * journal can badge the row and its edit form can prefill the control —
+     * **never** so the balance can change. Paying her from savings still reached
+     * her and still reduces what you owe, so the netting in `inputsFrom` reads
+     * `amount` alone, whatever this says. Budget and cash figures are the only
+     * ones that skip a savings-funded transfer, and they live in the feed.
+     */
+    fundedFrom: TransferFundingSource;
 };
 
 export type SettlementWindowRows = {
@@ -72,15 +85,18 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     amount: true,
                     type: true,
                     note: true,
+                    fundedFrom: true,
                 },
             }),
         ]);
-        // `type` is a free-form string column; narrow to the domain union here.
+        // `type` and `fundedFrom` are free-form string columns; narrow both to
+        // their domain unions here.
         return {
             expenses,
             movements: movements.map((m) => ({
                 ...m,
                 type: m.type as MovementType,
+                fundedFrom: toTransferFundingSource(m.fundedFrom),
             })),
         };
     }

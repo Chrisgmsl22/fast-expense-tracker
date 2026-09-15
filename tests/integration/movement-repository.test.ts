@@ -102,4 +102,44 @@ describe("PrismaMovementRepository (integration)", () => {
         const updated = await repo.getById(owner.id, id);
         expect(updated).toMatchObject({ amount: 680, note: "fixed" });
     });
+
+    describe("fundedFrom (spec 0007 §3.1)", () => {
+        it("defaults to income when the write omits it — every pre-existing row's behaviour", async () => {
+            const user = await seedUser();
+            const { id } = await repo.insert(user.id, write());
+
+            expect(await repo.getById(user.id, id)).toMatchObject({
+                fundedFrom: "income",
+            });
+            const [row] = await repo.getForMonth(user.id, "2026-07");
+            expect(row!.fundedFrom).toBe("income");
+        });
+
+        it("round-trips savings on a transfer", async () => {
+            const user = await seedUser();
+            const { id } = await repo.insert(
+                user.id,
+                write({ amount: 8000, fundedFrom: "savings" }),
+            );
+
+            expect(await repo.getById(user.id, id)).toMatchObject({
+                fundedFrom: "savings",
+            });
+        });
+
+        it("reads an unrecognised stored value as income, so no money vanishes", async () => {
+            // The column is plain TEXT. A value no read knows must fall back to
+            // the COUNTED default rather than silently leaving the figures.
+            const user = await seedUser();
+            const { id } = await repo.insert(user.id, write());
+            await db.movement.update({
+                where: { id },
+                data: { fundedFrom: "reimbursed" },
+            });
+
+            expect(await repo.getById(user.id, id)).toMatchObject({
+                fundedFrom: "income",
+            });
+        });
+    });
 });

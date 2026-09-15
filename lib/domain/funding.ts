@@ -21,7 +21,7 @@ export type FundingSource = (typeof FUNDING_SOURCES)[number];
  * The only value the budget counts. `income` is also the column default, so
  * every pre-existing row keeps today's behaviour exactly.
  */
-export const BUDGET_FUNDING_SOURCE: FundingSource = "income";
+export const BUDGET_FUNDING_SOURCE = "income" as const satisfies FundingSource;
 
 /**
  * `reimbursed` is restricted to this category (spec 0007 §3.3). Reimbursement
@@ -30,6 +30,23 @@ export const BUDGET_FUNDING_SOURCE: FundingSource = "income";
  * Loosening this later is a one-line change.
  */
 export const REIMBURSABLE_CATEGORY_SLUG = "health";
+
+/**
+ * What a transfer to the partner may be funded from (spec 0007 §3.1 + §3.3).
+ *
+ * `reimbursed` is Health-only and a transfer carries no category, so it is not
+ * offered and validation rejects it. `satisfies` ties the list back to
+ * `FUNDING_SOURCES`, so renaming a value there breaks the build here instead of
+ * letting the two lists drift. Everything else (labels, badge wording, the
+ * `income` default) is shared with an expense, so a transfer and an expense read
+ * identically.
+ */
+export const TRANSFER_FUNDING_SOURCES = [
+    "income",
+    "savings",
+] as const satisfies readonly FundingSource[];
+
+export type TransferFundingSource = (typeof TRANSFER_FUNDING_SOURCES)[number];
 
 /**
  * The budget's funding filter, as a where-clause fragment every budget read
@@ -66,6 +83,22 @@ export const NON_INCOME_FUNDED_LABEL = "Not from this month's income";
 export const NON_INCOME_FUNDED_HINT =
     "savings or reimbursed — outside the budget";
 
+/**
+ * Wording for the CASH half — a transfer the partner received out of savings.
+ *
+ * It gets its own line, and its own words, because spec 0007 §6a forbids any
+ * figure that sums consumption and cash. `NON_INCOME_FUNDED_LABEL` above is the
+ * consumption half; adding a transfer to it would print the same pesos twice
+ * (her fronted dinner, then the transfer settling it). Naming the partner keeps
+ * the two lines impossible to confuse at a glance.
+ */
+export function nonIncomeFundedTransferLabel(partnerName: string): string {
+    return `Paid to ${partnerName} from savings`;
+}
+
+/** Short form of the same line, for the mobile bar where space is tight. */
+export const NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL = "Paid from savings";
+
 /** Short form for a list badge, where the row already gives the context. */
 export const FUNDING_SOURCE_BADGE: Record<
     Exclude<FundingSource, "income">,
@@ -84,6 +117,21 @@ export const FUNDING_SOURCE_BADGE: Record<
 export function toFundingSource(value: string): FundingSource {
     return (FUNDING_SOURCES as readonly string[]).includes(value)
         ? (value as FundingSource)
+        : BUDGET_FUNDING_SOURCE;
+}
+
+/**
+ * Narrow a stored movement string to a `TransferFundingSource`.
+ *
+ * Same fallback rule as `toFundingSource` and the same reason: an unrecognised
+ * value must never make money disappear from a figure silently, so it reads as
+ * `income` — the counted default. `reimbursed` is not a transfer value (§3.3),
+ * so a row somehow carrying it also reads as `income` rather than leaking a
+ * value no transfer screen knows how to render.
+ */
+export function toTransferFundingSource(value: string): TransferFundingSource {
+    return (TRANSFER_FUNDING_SOURCES as readonly string[]).includes(value)
+        ? (value as TransferFundingSource)
         : BUDGET_FUNDING_SOURCE;
 }
 

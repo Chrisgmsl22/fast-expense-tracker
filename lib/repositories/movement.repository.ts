@@ -1,6 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
+import {
+    toTransferFundingSource,
+    type TransferFundingSource,
+} from "@/lib/domain/funding";
 import type { MovementType } from "@/lib/domain/movement";
 
 /** One movement as the feed renders it. */
@@ -11,6 +15,8 @@ export type MovementListItem = {
     type: MovementType;
     card: { name: string; color: string } | null;
     note: string | null;
+    /** Meaningful on `gf_paid` only; every other type keeps the default. */
+    fundedFrom: TransferFundingSource;
 };
 
 /** Server-owned fields written on create/update (the owner is passed separately). */
@@ -20,6 +26,13 @@ export type MovementWriteData = {
     type: MovementType;
     cardId: string | null;
     note: string | null;
+    /**
+     * Optional on purpose: only a transfer sets it. A card payment stays
+     * source-agnostic (spec 0007 §3.2, ADR-0020 §6) and a `gf_fronted` debt
+     * moved no cash, so those writes omit the field and the column default
+     * applies — omission is the signal that the type is not source-tagged.
+     */
+    fundedFrom?: TransferFundingSource;
 };
 
 /** One movement's editable fields — what an edit re-asserts / prefills. */
@@ -30,6 +43,7 @@ export type MovementEditable = {
     type: MovementType;
     cardId: string | null;
     note: string | null;
+    fundedFrom: TransferFundingSource;
 };
 
 /**
@@ -76,12 +90,17 @@ export class PrismaMovementRepository implements MovementRepository {
                 amount: true,
                 type: true,
                 note: true,
+                fundedFrom: true,
                 card: { select: { name: true, color: true } },
             },
         });
-        // `type` is a free-form string column; narrow it to the domain union at
-        // the boundary so callers get the typed shape.
-        return rows.map((r) => ({ ...r, type: r.type as MovementType }));
+        // `type` and `fundedFrom` are free-form string columns; narrow both to
+        // their domain unions at the boundary so callers get the typed shape.
+        return rows.map((r) => ({
+            ...r,
+            type: r.type as MovementType,
+            fundedFrom: toTransferFundingSource(r.fundedFrom),
+        }));
     }
 
     async getById(
@@ -97,9 +116,16 @@ export class PrismaMovementRepository implements MovementRepository {
                 type: true,
                 cardId: true,
                 note: true,
+                fundedFrom: true,
             },
         });
-        return row ? { ...row, type: row.type as MovementType } : null;
+        return row
+            ? {
+                  ...row,
+                  type: row.type as MovementType,
+                  fundedFrom: toTransferFundingSource(row.fundedFrom),
+              }
+            : null;
     }
 
     insert(userId: string, data: MovementWriteData): Promise<{ id: string }> {

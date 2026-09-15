@@ -85,6 +85,12 @@ export async function updateTransfer(
             type: v.direction,
             cardId: null,
             note: v.note?.trim() || null,
+            // Always re-asserted, never left as-is: flipping a savings-funded
+            // `gf_paid` to `gf_received` must clear the tag rather than strand
+            // it. The clearing comes from the caller sending `income` (the form)
+            // or omitting the field (the Zod default). The schema only REJECTS
+            // `savings` on an inbound transfer; it never rewrites one.
+            fundedFrom: v.fundedFrom,
         });
         if (count === 0) {
             return {

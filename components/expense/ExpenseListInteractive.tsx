@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
-import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
+import {
+    NON_INCOME_FUNDED_LABEL,
+    NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL,
+    nonIncomeFundedTransferLabel,
+} from "@/lib/domain/funding";
 import { FundingBadge } from "./FundingBadge";
 import { buildFeed } from "@/lib/feed";
 import { CASH_COLOR } from "@/lib/palette";
@@ -183,14 +187,12 @@ export function ExpenseListInteractive({
         [filtered, movements, showMovements],
     );
 
-    const paidToPartner = showMovements
-        ? movements
-              .filter((m) => m.type === "gf_paid")
-              .reduce((sum, m) => sum + m.amount, 0)
-        : 0;
-    // Same helper the dashboard feed uses, so "What I really spent" is the same
-    // consumption number on both screens — savings excluded (ADR-0018 §1).
-    const totals = computeFeedTotals(filtered, paidToPartner);
+    // Same helper the dashboard feed uses, on the same rows, so "What I really
+    // spent" and "Paid to {partner}" are the same numbers on both screens —
+    // savings category excluded (ADR-0018 §1), savings-FUNDED rows excluded
+    // (spec 0007). A category filter hides the movements, so it zeroes their
+    // totals too.
+    const totals = computeFeedTotals(filtered, showMovements ? movements : []);
 
     function openEdit(id: string) {
         setActionError(null);
@@ -390,6 +392,16 @@ export function ExpenseListInteractive({
                         </span>
                     </span>
                 )}
+                {/* Cash, not consumption — a separate figure, never summed with
+                    the line above (spec 0007 §6a). */}
+                {totals.notFromIncomeTransfers > 0 && (
+                    <span className="text-background/70">
+                        {nonIncomeFundedTransferLabel(partnerName)}{" "}
+                        <span className="font-semibold text-background">
+                            {formatMxn(totals.notFromIncomeTransfers)}
+                        </span>
+                    </span>
+                )}
                 <span className="text-background/70">
                     What I really spent{" "}
                     <span className="rounded-full bg-spent-tint px-2 py-0.5 font-semibold text-spent">
@@ -431,6 +443,14 @@ export function ExpenseListInteractive({
                             Not from income{" "}
                             <span className="font-medium text-background">
                                 {formatMxn(totals.notFromIncome)}
+                            </span>
+                        </span>
+                    )}
+                    {totals.notFromIncomeTransfers > 0 && (
+                        <span>
+                            {NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL}{" "}
+                            <span className="font-medium text-background">
+                                {formatMxn(totals.notFromIncomeTransfers)}
                             </span>
                         </span>
                     )}
@@ -562,6 +582,7 @@ export function ExpenseListInteractive({
                                     ),
                                     amount: String(editingMovement.amount),
                                     note: editingMovement.note ?? "",
+                                    fundedFrom: editingMovement.fundedFrom,
                                 }}
                                 partnerName={partnerName}
                                 onCancel={() => setEditingMovement(null)}
@@ -825,7 +846,12 @@ function MovementRow({
             className={`group flex items-center gap-3 border-l-[3px] py-3 pr-1 pl-4 sm:py-2.5 ${rowTint}`}
         >
             <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{title}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium">{title}</span>
+                    {m.fundedFrom === "income" ? null : (
+                        <FundingBadge fundedFrom={m.fundedFrom} />
+                    )}
+                </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {formatExpenseDate(m.date)}
                     {subline ? ` · ${subline}` : ""}

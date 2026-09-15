@@ -61,6 +61,9 @@ export class FakeMovementRepository implements MovementRepository {
                     type: r.type,
                     card: null,
                     note: r.note,
+                    // Mirror the column default: a write that omits the field
+                    // reads back as income, as Postgres would return it.
+                    fundedFrom: r.fundedFrom ?? "income",
                 }))
         );
     }
@@ -78,6 +81,7 @@ export class FakeMovementRepository implements MovementRepository {
             type: row.type,
             cardId: row.cardId,
             note: row.note,
+            fundedFrom: row.fundedFrom ?? "income",
         };
     }
 
