@@ -22,7 +22,7 @@ const write = (over: Partial<MovementWriteData> = {}): MovementWriteData => ({
 });
 
 describe("PrismaMovementRepository (integration)", () => {
-    it("getForMonth excludes gf_fronted (settlement-only, never in the feed)", async () => {
+    it("getForMonth includes gf_fronted, with its note, so a debt shows in the feed", async () => {
         const user = await seedUser();
         await repo.insert(user.id, write({ type: "gf_paid", amount: 50 }));
         await repo.insert(user.id, write({ type: "card_payment", amount: 80 }));
@@ -32,12 +32,35 @@ describe("PrismaMovementRepository (integration)", () => {
         );
 
         const rows = await repo.getForMonth(user.id, "2026-07");
-        expect(rows).toHaveLength(2);
-        expect(rows.some((r) => r.type === "gf_fronted")).toBe(false);
+        expect(rows).toHaveLength(3);
         expect(rows.map((r) => r.type).sort()).toEqual([
             "card_payment",
+            "gf_fronted",
             "gf_paid",
         ]);
+        // The note carries through — the feed row uses it as the description.
+        expect(rows.find((r) => r.type === "gf_fronted")).toMatchObject({
+            amount: 300,
+            note: "she covered",
+        });
+    });
+
+    it("getForMonth still scopes to the owner and the month", async () => {
+        const owner = await seedUser("owner@example.com");
+        const other = await seedUser("other@example.com");
+        await repo.insert(owner.id, write({ type: "gf_fronted", amount: 300 }));
+        await repo.insert(
+            owner.id,
+            write({
+                type: "gf_fronted",
+                amount: 400,
+                date: new Date("2026-08-02T06:00:00Z"),
+            }),
+        );
+        await repo.insert(other.id, write({ type: "gf_fronted", amount: 900 }));
+
+        const rows = await repo.getForMonth(owner.id, "2026-07");
+        expect(rows.map((r) => r.amount)).toEqual([300]);
     });
 
     it("getById returns the owner's movement and null for another user (IDOR)", async () => {

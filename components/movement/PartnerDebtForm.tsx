@@ -36,7 +36,7 @@ type Props = {
  * (ADR-0020). It's settlement-only: saved as a `Movement{type:"gf_fronted"}`,
  * never an expense, so it stays out of your spending, categories, and budget. It
  * only adds to what you owe her; a transfer settles it. Logged from the
- * settlement page.
+ * settlement page or the `+ Add` menu, and editable from the expenses feed.
  */
 export function PartnerDebtForm({
     debt,

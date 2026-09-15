@@ -47,6 +47,11 @@ vi.mock("@/components/movement/TransferForm", () => ({
         <div data-testid="transfer-form">editing tr {transfer?.id}</div>
     ),
 }));
+vi.mock("@/components/movement/PartnerDebtForm", () => ({
+    PartnerDebtForm: ({ debt }: { debt?: { id: string } }) => (
+        <div data-testid="partner-debt-form">editing debt {debt?.id}</div>
+    ),
+}));
 
 import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteractive";
 import { deleteExpense } from "@/app/_actions/expense/delete";
@@ -111,6 +116,16 @@ const movements: MovementListItem[] = [
         note: "netted",
     },
 ];
+
+/** A thing the partner fronted that he owes back — never a cash outflow. */
+const debt: MovementListItem = {
+    id: "mv3",
+    date: new Date("2026-05-16T06:00:00Z"),
+    amount: 1500,
+    type: "gf_fronted",
+    card: null,
+    note: "she covered the vet",
+};
 
 const props = {
     movements: [],
@@ -425,5 +440,104 @@ describe("ExpenseListInteractive", () => {
             expect(deleteMovement).toHaveBeenCalledWith({ id: "mv2" }),
         );
         await waitFor(() => expect(refreshMock).toHaveBeenCalled());
+    });
+
+    it("shows a debt she fronted, with the note as the row description", () => {
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements: [...movements, debt] }}
+            />,
+        );
+        expect(screen.getByText("she covered the vet")).toBeDefined();
+        // The generic label drops to the subline, so the row still reads as a debt.
+        expect(screen.getByText(/I owe Brenda/)).toBeDefined();
+    });
+
+    it("leaves the totals untouched when a debt is present", () => {
+        const { unmount } = render(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
+        const without = screen.getByTestId("totals-desktop").textContent;
+        unmount();
+
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements: [debt] }}
+            />,
+        );
+        // No cash left the account, so no figure may move (ADR-0020).
+        expect(screen.getByTestId("totals-desktop").textContent).toBe(without);
+    });
+
+    it("names each debt's controls after its own note, not the shared label", () => {
+        const second: MovementListItem = {
+            ...debt,
+            id: "mv4",
+            note: "she covered the flights",
+        };
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements: [debt, second] }}
+            />,
+        );
+        // Two debts, two distinct accessible names — getByRole throws on a tie.
+        expect(
+            screen.getByRole("button", { name: "Edit she covered the vet" }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", {
+                name: "Delete she covered the flights",
+            }),
+        ).toBeDefined();
+    });
+
+    it("warns that the settlement balance moves when deleting a debt", async () => {
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements: [debt] }}
+            />,
+        );
+        fireEvent.click(
+            screen.getByRole("button", { name: "Delete she covered the vet" }),
+        );
+        expect(await screen.findByText("Delete this debt?")).toBeDefined();
+        expect(
+            await screen.findByText(
+                /she covered the vet \(\$1,500\.00\) will be permanently removed\. What you owe Brenda on the settlement page will change\./,
+            ),
+        ).toBeDefined();
+    });
+
+    it("opens the debt form — never the transfer form — for a gf_fronted row", async () => {
+        (getMovementForEdit as unknown as Mock).mockResolvedValue({
+            id: "mv3",
+            date: new Date("2026-05-16T06:00:00Z"),
+            amount: 1500,
+            type: "gf_fronted",
+            cardId: null,
+            note: "she covered the vet",
+        });
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements: [...movements, debt] }}
+            />,
+        );
+
+        // The control is named after the row's own note, not the shared label.
+        fireEvent.click(
+            screen.getByRole("button", { name: "Edit she covered the vet" }),
+        );
+        await waitFor(() =>
+            expect(getMovementForEdit).toHaveBeenCalledWith("mv3"),
+        );
+        // The transfer form saves through updateTransfer, which refuses a
+        // non-transfer row: a dead-end dialog answering "Transfer not found."
+        expect(await screen.findByText(/editing debt mv3/i)).toBeDefined();
+        expect(screen.queryByTestId("transfer-form")).toBeNull();
     });
 });

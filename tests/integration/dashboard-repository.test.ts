@@ -434,3 +434,54 @@ describe("PrismaDashboardRepository per-user isolation (ADR-0022)", () => {
         ]);
     });
 });
+
+describe("a gf_fronted debt never reaches the dashboard (integration)", () => {
+    // The debt is a Movement, never an Expense, so budget / 50-25-25 buckets /
+    // category grid / "where the money went" / spend-by-card must read exactly
+    // the same with one logged. Proven, not asserted in prose (ADR-0020).
+    it("leaves every dashboard query byte-for-byte unchanged", async () => {
+        const user = await seedUser();
+        const cat = await seedCategory(user.id, "groceries", true, 5000);
+        const bbva = await db.card.create({
+            data: {
+                userId: user.id,
+                name: "BBVA",
+                color: "#2563eb",
+                type: "credit",
+            },
+        });
+        await seedExpense({
+            userId: user.id,
+            categoryId: cat.id,
+            date: "2026-06-05T12:00:00Z",
+            amount: 1000,
+            actualExpenditure: 680,
+        });
+        await db.expense.updateMany({
+            where: { userId: user.id },
+            data: { cardId: bbva.id },
+        });
+
+        const before = {
+            categories: await repo.getCategorySpends(user.id, "2026-06"),
+            cards: await repo.getCardSpends(user.id, "2026-06"),
+            breakdown: await repo.getCategoryBreakdown(user.id, "2026-06"),
+        };
+
+        await db.movement.create({
+            data: {
+                userId: user.id,
+                type: "gf_fronted",
+                date: new Date("2026-06-06T12:00:00Z"),
+                amount: 2500,
+                note: "she covered the flights",
+            },
+        });
+
+        expect({
+            categories: await repo.getCategorySpends(user.id, "2026-06"),
+            cards: await repo.getCardSpends(user.id, "2026-06"),
+            breakdown: await repo.getCategoryBreakdown(user.id, "2026-06"),
+        }).toEqual(before);
+    });
+});
