@@ -33,11 +33,19 @@ of subcategories.
 | 6   | Savings           | `savings`           | ✅           | Emergency fund · Open savings · Future purchases                                                          |
 | 7   | Services          | `services`          | ✅           | Electricity · Gas · Water · Trash · Phone plan · Internet                                                 |
 | 8   | Health            | `health`            | ✅           | Medicine · Doctors appt · Dentist · Additional medication · Therapy · Other expenses                      |
-| 9   | Combined Expenses | `combined-expenses` | ✅           | Covered for me · Purchases made between the two · Cats                                                    |
+| 9   | Combined Expenses | `combined-expenses` | ✅           | Purchases made by girlfriend[^1] · Purchases made between the two · Cats                                  |
 | 10  | Personal          | `personal`          | ❌           | Courses · Education · Books · Subscriptions · Cash withdrawals · Technology · Accountant · Other          |
 | 11  | Debt              | `debt`              | ✅           | Car loan · Credit card balance · Personal loans · Monthly installments                                    |
 | 12  | Disposable Income | `disposable-income` | ❌           | Entertainment · Hobbies · Dining out · Social events · Tech gadgets · Ecommerce expenses                  |
 | 13  | Unassigned        | `unassigned`        | ❌           | (no subcategories — sentinel for orphaned expenses)                                                       |
+
+[^1]:
+    **This name is transitional.** Spec 0007 §6b renames it to "Covered for me"
+    — the row is his share of a payment he sent, not a purchase she made. The
+    rename is data, not schema: the seed matches subcategories BY NAME, so
+    renaming before the existing rows are renamed creates a duplicate. Both flip
+    together in CHORE-12, and this table is updated with them. Until then, the
+    name above is what live databases hold.
 
 ### Important nuance for 50/25/25 logic
 

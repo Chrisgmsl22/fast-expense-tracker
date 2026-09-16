@@ -247,7 +247,7 @@ impossible rather than merely discouraged: no `Total` spanning both.
 
 ### Decisions
 
-> **Decision 1 was REVERSED on 2026-09-16, after use.** The debt was the expense;
+> **Decision 1 was REVERSED on 2026-09-15, after use.** The debt was the expense;
 > now the **payment** is. What follows is the current model; the superseded one
 > and the reason are recorded in §6b. Everything else in §6a stands: the two
 > ledgers, the "never summed" rule, the `combined-expenses` home, the "Covered
@@ -293,9 +293,9 @@ impossible rather than merely discouraged: no `Total` spanning both.
     (`docs/reference/domain-reference.md` row 9), the starter kit, and existing
     rows in dev and production. The seed matches subcategories **by name**, so
     renaming without migrating existing rows **creates a duplicate** instead of
-    renaming — the hazard CHORE-10 exists to fix, already visible in the dev
-    database as phantom cards. Migrate by id, never by name, and verify no
-    duplicate appears after a re-provision.
+    renaming — a hazard already visible in the dev database as phantom cards.
+    Migrate by id, never by name, and verify no duplicate appears after a
+    re-provision.
 
 2. **The payment carries a funding source like any other purchase** (§3.1).
    Paying her from savings tags the **payment**, which is now the expense. The
@@ -341,7 +341,7 @@ be read, and only then retire it.
 
 ## 6b. The reversal of decision 1
 
-**2026-09-16.** §6a decision 1 made a debt she fronted an expense in the budget.
+**2026-09-15.** §6a decision 1 made a debt she fronted an expense in the budget.
 One day of real use showed the question it asks is the wrong one: he logged a
 carwash at **$500**, her outlay, when his share was about **$380**.
 

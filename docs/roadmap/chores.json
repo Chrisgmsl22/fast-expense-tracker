@@ -140,6 +140,26 @@
             "spec": "docs/specs/0005-cash-basis-money-model.md",
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "CHORE-11",
+            "title": "Settlement cycles and the payment-is-the-expense inversion (slices E' and F)",
+            "description": "The whole settlement and partner-money story, split across two PRs that must merge in order. Registered late: this work ran for two sessions with no roadmap entry at all, so the SessionStart hooks reported 'no slice' and a cold agent reading the roadmap would have seen nothing in flight. The model: what he owes the partner lives in settlement only — absent from both feeds, every bucket, every category — and the payment he sends her is the Expense that counts in the budget. Settlements became cycles, with membership by entry time in a half-open window (previousMarker, marker]. Funding source (income | savings | reimbursed) marks which month's money paid for a row; only income reaches the 50/25/25 budget, and a savings-funded transfer still counts in the settlement balance.",
+            "plan": "PR #74 (slice E', branch feat/settlement-cycles): the inversion, settlement cycles, the month switcher, and rounding fixed at the cause. PR #73 (branch feat/funding-source-expenses): funding source on expenses and on transfers to the partner. MERGE ORDER IS #74 THEN #73 — #73 builds on the settlement read #74 restructured, and #74 carries spec 0007 to main (it is absent from #73's tree, so ADR-0023 cites a spec not in its own branch). Both PRs are SCHEMA ONLY: vercel.json runs 'prisma migrate deploy' on every production build, so a merge is an unreviewed production data migration — every data statement was pulled out and deferred to CHORE-12. Slice F still owes the removal of the cross-ledger Total figure (spec 0007 §6b assigns it to slice F; it survives in lib/domain/movement.ts until then). Decisions: ADR-0024 (the payment is the expense) and ADR-0023 (funding source), both signed off 2026-09-15. After #74 merges, delete the superseded branch feat/fronted-debt-as-expense — it carries a divergent copy of spec 0007.",
+            "status": "shipped",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/74",
+            "issue": null
+        },
+        {
+            "id": "CHORE-12",
+            "title": "Settlement marker mirror + the deferred production data migration",
+            "description": "The two halves of what CHORE-11 deliberately left undone, which must ship together. HALF 1, a known gap shipped in #74: closedAt lives only on Movement, but after the inversion a payment to the partner is an Expense — so a cycle squared only by paying the partner cannot be closed at all, which is the main flow. #74 contains this by returning a real no_marker error instead of reporting a success it did not achieve. HALF 2: the production data conversion pulled out of #74 and #73. They cannot be separated, because a gf_paid movement carrying closedAt has nowhere to put that marker until half 1 lands.",
+            "plan": "Branch off feat/settlement-cycles, not main. Depends on CHORE-11 merging first. (1) Expense.closedAt mirroring Movement.closedAt, with the same constraint shape, and every marker read becoming a union of both tables — find them all. (2) The data conversion, following spec 0005 §6: pre-flight counts, one transaction, idempotent, and a per-user settlement-balance compare before and after that must match to the cent. It also flips the subcategory rename ('Purchases made by girlfriend' -> 'Covered for me'), which #74 deliberately reverted: rename the ROWS by id first, then PARTNER_PAYMENT_SUBCATEGORY_NAME and prisma/seed.ts together, never separately — the seed matches subcategories by name, so a half-done rename creates a duplicate on the next re-seed. (3) HARD REQUIREMENT: the conversion MUST reuse the movement's id for the expense it creates. Three places already assume it (withoutConvertedTwins in settlement.service.ts, the twin-dedup in lib/domain/movement.ts, and ADR-0024) and nothing enforces it; new ids would double every transfer in paidToPartner, total and moneyYouPaidPartner. (4) Prefer additive — do not delete a converted movement unless you can show a read path double-counts it. (5) A read-only survey in docs/operations/ for the owner to run himself; never connect to production. Rollout: survey production, take a Neon restore point, then merge — merging IS the migration. The deferred SQL and the two preserved integration test files are held outside the repo at ~/.claude/harness/tasks/fet-payment-is-the-expense/.",
+            "status": "open",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
+            "pr": null,
+            "issue": null
         }
     ]
 }
