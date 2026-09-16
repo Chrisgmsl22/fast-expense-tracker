@@ -64,6 +64,7 @@ export default async function CategoryDetailPage({
                     categoryName={detail.meta.name}
                     color={detail.meta.color}
                     spent={detail.spent}
+                    spentNotFromIncome={detail.spentNotFromIncome}
                     limit={detail.limit}
                     defaultBudget={detail.defaultBudget}
                     thisMonthOverride={detail.thisMonthOverride}
@@ -78,6 +79,7 @@ export default async function CategoryDetailPage({
                 <SubcategoryBreakdown
                     bars={detail.breakdown}
                     color={detail.meta.color}
+                    spentNotFromIncome={detail.spentNotFromIncome}
                 />
                 <CategoryExpenses
                     expenses={detail.expenses}

@@ -89,12 +89,57 @@ export function togglesFromFundingSource(fundedFrom: FundingSource): {
  * cannot forget to skip it. Subtracting inside the math would have to be
  * remembered at every new call site; this cannot be bypassed by one.
  *
- * Deliberately NOT applied to card reads: a card sees the full charge whatever
- * money settled it (spec 0007 §3.2, ADR-0020 §6).
+ * WHAT IT REACHES. Three queries spread it, and every figure below inherits the
+ * exclusion without naming it. Read this list before you trust a number on a
+ * screen — audit the whole screen, not the one figure you came for:
+ *
+ * - `dashboardRepository.getCategorySpends` → the three 50/25/25 buckets, the
+ *   hero "Spent", and `topCategories`.
+ * - `dashboardRepository.getCategoryBreakdown` → each category row's `spent`,
+ *   its over/under state, and its "N of M subcategories with spend".
+ * - `categoryRepository.getSubcategorySpends` → the category-detail `spent`,
+ *   and through it `remaining` / `over` / `pctOfLimit`, plus every "Spend by
+ *   subcategory" bar and that section's empty state.
+ *
+ * WHAT IT DOES NOT REACH, on purpose:
+ *
+ * - The expense LISTS (`getForMonth`, `getExpensesForCategoryMonth`) and the
+ *   figures that COUNT their rows — `expenseCount`, `subcatWithSpend`,
+ *   `spentNotFromIncome`. A skipped row still belongs on screen, badged.
+ * - Card reads (`getCardSpends`): a card sees the full charge whatever money
+ *   settled it (spec 0007 §3.2, ADR-0020 §6).
+ * - `getNonIncomeFundedTotal`, which is this filter's complement
+ *   (`fundedFrom: { not: income }`) and so must stay its exact mirror.
+ *
+ * WHAT RE-APPLIES IT IN TYPESCRIPT INSTEAD. The two feeds read an unfiltered
+ * list and total it client-side, so `computeFeedTotals` repeats the exclusion
+ * rather than inheriting it: a non-income row is kept out of `whatIReallySpent`
+ * and `setAside`, and surfaced separately as `notFromIncome`. That is a SECOND
+ * copy of the rule, and the only one that can drift — it tests the NARROWED
+ * `fundedFrom`, so an out-of-band stored value (which SQL drops) counts as
+ * income there. See `isBudgetFunded` below for why that distinction matters.
+ *
+ * The consequence to watch for: one screen showing a filtered figure beside a
+ * list figure must say which is which, or the two silently contradict.
  */
 export const BUDGET_FUNDING_FILTER = {
     fundedFrom: BUDGET_FUNDING_SOURCE,
 } as const;
+
+/**
+ * Whether a STORED `fundedFrom` value is one the budget counted — the same
+ * question `BUDGET_FUNDING_FILTER` asks in SQL, asked in TypeScript.
+ *
+ * It takes the RAW column value, never a narrowed `FundingSource`, and that is
+ * the whole point. `toFundingSource` collapses anything unrecognised to
+ * `income`; the SQL filter has no such fallback. So a predicate written against
+ * the narrowed value is NARROWER than the filter it mirrors: a row holding an
+ * out-of-band string is dropped by the query AND read as income by the mapping,
+ * which leaves it counted in neither half and explained by nothing.
+ */
+export function isBudgetFunded(storedFundedFrom: string): boolean {
+    return storedFundedFrom === BUDGET_FUNDING_SOURCE;
+}
 
 /**
  * Checkbox wording. The savings phrasing is the user's own words; both read as
@@ -109,19 +154,20 @@ export const FUNDING_TOGGLE_LABEL = {
 export const FUNDING_TOGGLE_HINT =
     "Doesn't count toward this month's budget or the dashboard.";
 
-/** Form/badge wording. The savings phrasing is the user's own. */
-export const FUNDING_SOURCE_LABEL: Record<FundingSource, string> = {
-    income: "This month's income",
-    savings: "Paid with money I already had",
-    reimbursed: "Fully reimbursed",
-};
-
 /**
  * The agreed wording for money this month's income didn't fund. One phrasing,
- * reused by the dashboard's summary line and by both feed footers, so the same
- * idea never appears under two names.
+ * reused by the dashboard's summary line, the dashboard feed footer, the
+ * expenses desktop footer and the category-detail header, so the same idea never
+ * appears under two names.
  */
 export const NON_INCOME_FUNDED_LABEL = "Not from this month's income";
+
+/**
+ * Short form of the same line, for the mobile totals bar where the full phrasing
+ * doesn't fit.
+ */
+export const NON_INCOME_FUNDED_SHORT_LABEL = "Not from income";
+
 export const NON_INCOME_FUNDED_HINT =
     "savings or reimbursed — outside the budget";
 
@@ -149,6 +195,18 @@ export const FUNDING_SOURCE_BADGE: Record<
     savings: "from savings",
     reimbursed: "reimbursed",
 };
+
+/**
+ * Badge wording for a row the budget skipped whose stored value narrows to
+ * `income` — i.e. an out-of-band string the SQL filter dropped and
+ * `toFundingSource` read back as the default.
+ *
+ * The row is badged from `countedInBudget` (the filter's own verdict), so the
+ * badge has to render something for a value it cannot name. It says only what is
+ * certainly true — this money did not come from this month's income — instead of
+ * claiming "from savings" about a value nobody recognises.
+ */
+export const UNKNOWN_FUNDING_BADGE = "not from income";
 
 /**
  * Narrow a stored string to a `FundingSource`. The column is a plain String

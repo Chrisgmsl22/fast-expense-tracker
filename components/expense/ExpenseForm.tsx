@@ -48,6 +48,12 @@ export type SubcategoryOption = {
 };
 export type CardOption = { id: string; name: string; color: string };
 
+/** Ids the funding checkboxes name and describe themselves by (one form mounts at a time). */
+const SAVINGS_LABEL_ID = "funding-savings-label";
+const SAVINGS_HINT_ID = "funding-savings-hint";
+const REIMBURSED_LABEL_ID = "funding-reimbursed-label";
+const REIMBURSED_HINT_ID = "funding-reimbursed-hint";
+
 type Props = {
     categories: CategoryOption[];
     subcategories: SubcategoryOption[];
@@ -454,53 +460,82 @@ export function ExpenseForm({
                 so the ordinary case needs no control. Both unchecked = income.
                 The two are mutually exclusive — money already had, or money
                 given back, never both. */}
+            {/* Each box is NAMED by its visible text (`aria-labelledby`) and
+                DESCRIBED by the hint (`aria-describedby`), which sits outside
+                the label. An `aria-label` here would override the visible text
+                with a copy of itself and leave the hint unannounced. The
+                description is pointed at only while the hint is rendered — an
+                id that resolves to nothing is a broken reference, not an empty
+                one. */}
             <div className="flex flex-col gap-2.5">
-                <label className="flex items-start gap-2.5">
-                    <Checkbox
-                        checked={toggles.paidFromSavings}
-                        onCheckedChange={(checked) =>
-                            setFunding(checked === true, false)
-                        }
-                        aria-label={FUNDING_TOGGLE_LABEL.savings}
-                        className="mt-0.5"
-                    />
-                    <span className="text-sm">
-                        <span className="block font-medium">
+                <div>
+                    <label className="flex items-start gap-2.5">
+                        <Checkbox
+                            checked={toggles.paidFromSavings}
+                            onCheckedChange={(checked) =>
+                                setFunding(checked === true, false)
+                            }
+                            aria-labelledby={SAVINGS_LABEL_ID}
+                            aria-describedby={
+                                toggles.paidFromSavings
+                                    ? SAVINGS_HINT_ID
+                                    : undefined
+                            }
+                            className="mt-0.5"
+                        />
+                        <span
+                            id={SAVINGS_LABEL_ID}
+                            className="text-sm font-medium"
+                        >
                             {FUNDING_TOGGLE_LABEL.savings}
                         </span>
-                        {toggles.paidFromSavings ? (
-                            <span className="block text-muted-foreground">
-                                {FUNDING_TOGGLE_HINT}
-                            </span>
-                        ) : null}
-                    </span>
-                </label>
+                    </label>
+                    {toggles.paidFromSavings ? (
+                        <p
+                            id={SAVINGS_HINT_ID}
+                            className="pl-[1.625rem] text-sm text-muted-foreground"
+                        >
+                            {FUNDING_TOGGLE_HINT}
+                        </p>
+                    ) : null}
+                </div>
 
                 {/* Health-only (§3.3). Also shown when the row already carries
                     the value on another category, so an existing `reimbursed`
                     expense never loses it silently — the user can see it and
                     untick it deliberately. */}
                 {canReimburse || fundedFrom === "reimbursed" ? (
-                    <label className="flex items-start gap-2.5">
-                        <Checkbox
-                            checked={toggles.fullyReimbursed}
-                            onCheckedChange={(checked) =>
-                                setFunding(false, checked === true)
-                            }
-                            aria-label={FUNDING_TOGGLE_LABEL.reimbursed}
-                            className="mt-0.5"
-                        />
-                        <span className="text-sm">
-                            <span className="block font-medium">
+                    <div>
+                        <label className="flex items-start gap-2.5">
+                            <Checkbox
+                                checked={toggles.fullyReimbursed}
+                                onCheckedChange={(checked) =>
+                                    setFunding(false, checked === true)
+                                }
+                                aria-labelledby={REIMBURSED_LABEL_ID}
+                                aria-describedby={
+                                    toggles.fullyReimbursed
+                                        ? REIMBURSED_HINT_ID
+                                        : undefined
+                                }
+                                className="mt-0.5"
+                            />
+                            <span
+                                id={REIMBURSED_LABEL_ID}
+                                className="text-sm font-medium"
+                            >
                                 {FUNDING_TOGGLE_LABEL.reimbursed}
                             </span>
-                            {toggles.fullyReimbursed ? (
-                                <span className="block text-muted-foreground">
-                                    {FUNDING_TOGGLE_HINT}
-                                </span>
-                            ) : null}
-                        </span>
-                    </label>
+                        </label>
+                        {toggles.fullyReimbursed ? (
+                            <p
+                                id={REIMBURSED_HINT_ID}
+                                className="pl-[1.625rem] text-sm text-muted-foreground"
+                            >
+                                {FUNDING_TOGGLE_HINT}
+                            </p>
+                        ) : null}
+                    </div>
                 ) : null}
 
                 {reimbursedClearedBy ? (

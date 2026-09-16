@@ -2,7 +2,11 @@ import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
 import type { SubcategorySpendRow } from "@/lib/domain/category";
-import { BUDGET_FUNDING_FILTER, toFundingSource } from "@/lib/domain/funding";
+import {
+    BUDGET_FUNDING_FILTER,
+    isBudgetFunded,
+    toFundingSource,
+} from "@/lib/domain/funding";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /** Category metadata for the detail header + budget math. */
@@ -14,6 +18,28 @@ export type CategoryMeta = {
     isRelevant: boolean;
     /** null = no budget set. */
     monthlyBudget: number | null;
+};
+
+/**
+ * A category-detail expense row, plus the verdict of the budget's own filter on
+ * that row — read from the RAW column, not from the narrowed `fundedFrom`.
+ *
+ * The screen shows one unfiltered list beside several filtered figures, so it
+ * has to know which rows the figures dropped. `fundedFrom` cannot answer that:
+ * `toFundingSource` maps an out-of-band value to `income` while the SQL filter
+ * drops it, so a predicate over `fundedFrom` would miss exactly the rows that
+ * most need explaining. This flag is the filter's exact complement.
+ */
+export type CategoryExpenseListItem = Omit<ExpenseListItem, "subcategory"> & {
+    /**
+     * Carries the `id` the base list item omits. Subcategory names are not
+     * unique — `schema.prisma` has no unique constraint on
+     * `(userId, categoryId, name)` — so the screen's "across M subcategories"
+     * has to count identities, not labels, or two same-named subcategories
+     * collapse into one.
+     */
+    subcategory: { id: string; name: string } | null;
+    countedInBudget: boolean;
 };
 
 /** Null-subcategory expenses roll up under this label ("Other" bucket). */
@@ -47,7 +73,7 @@ export interface CategoryRepository {
         userId: string,
         categoryId: string,
         month: string,
-    ): Promise<ExpenseListItem[]>;
+    ): Promise<CategoryExpenseListItem[]>;
 }
 
 export class PrismaCategoryRepository implements CategoryRepository {
@@ -117,7 +143,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
         userId: string,
         categoryId: string,
         month: string,
-    ): Promise<ExpenseListItem[]> {
+    ): Promise<CategoryExpenseListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
         // No funding filter: this is the LIST, not a total. A savings-funded row
         // still belongs on screen (badged); only the aggregates above skip it.
@@ -135,13 +161,16 @@ export class PrismaCategoryRepository implements CategoryRepository {
                 category: {
                     select: { id: true, slug: true, name: true, color: true },
                 },
-                subcategory: { select: { name: true } },
+                subcategory: { select: { id: true, name: true } },
                 card: { select: { name: true, color: true } },
             },
         });
         return rows.map((r) => ({
             ...r,
             fundedFrom: toFundingSource(r.fundedFrom),
+            // Read before the narrowing above, which would hide an out-of-band
+            // value behind `income` and take the row out of both figures.
+            countedInBudget: isBudgetFunded(r.fundedFrom),
         }));
     }
 }

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { computeBuckets, type CategorySpend } from "@/lib/domain/dashboard";
-import { computeFeedTotals } from "@/lib/domain/movement";
+import {
+    computeFeedTotals,
+    type FeedTotalMovement,
+} from "@/lib/domain/movement";
 import { BUDGET_FUNDING_FILTER } from "@/lib/domain/funding";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
@@ -9,10 +12,29 @@ import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
  * The property Christian asked for: the dashboard and the expenses tab must
  * answer the same question with the same number.
  *
- * Both feeds call `computeFeedTotals` on the same rows, and the dashboard's
- * buckets are built from rows the repository filtered with
- * `BUDGET_FUNDING_FILTER`. This asserts the equality directly — a feed footer
- * that drifts from the buckets above it fails here, whichever side moved.
+ * Both feeds call `computeFeedTotals`, and the dashboard's buckets are built
+ * from rows the repository filtered with `BUDGET_FUNDING_FILTER`. This asserts
+ * the equality directly — a feed footer that drifts from the buckets above it
+ * fails here, whichever side moved.
+ *
+ * The two screens do not pass identical arguments, so each call site is
+ * reproduced below with the rows it really sends: the dashboard sends the whole
+ * month, the expenses tab sends what the category chip left. Where that makes
+ * them differ, the difference is asserted rather than avoided.
+ *
+ * WHAT THIS DOES NOT PIN — read before trusting the word "agreement". Both
+ * sides run through `toFundingSource`. The fixtures are typed `ExpenseListItem`,
+ * so their `fundedFrom` is already narrowed, and `categorySpendsFrom` below
+ * filters that NARROWED value while the real dashboard filters the RAW column in
+ * Postgres. The single input that can make the two disagree is therefore
+ * invisible here: a row holding an out-of-band string, which SQL drops from the
+ * buckets and `toFundingSource` hands to `computeFeedTotals` as `income`. So
+ * what is pinned is that the two screens treat the THREE KNOWN sources alike —
+ * not that the TypeScript exclusion mirrors the SQL one.
+ *
+ * Closing that gap means threading `countedInBudget` (see
+ * `category.repository.ts`) through `expense.repository.ts` and both feeds;
+ * it is a follow-up, not this slice.
  */
 
 function expense(
@@ -70,6 +92,10 @@ const month: ExpenseListItem[] = [
 /**
  * What the dashboard repository hands the bucket math: the same rows, with the
  * budget's funding filter applied at the data boundary, summed per category.
+ *
+ * A SIMULATION of that boundary, not the boundary itself — it filters the
+ * narrowed `fundedFrom` these fixtures carry, where Postgres filters the raw
+ * column. See the file header for what that leaves unpinned.
  */
 function categorySpendsFrom(expenses: ExpenseListItem[]): CategorySpend[] {
     const byCategory = new Map<string, CategorySpend>();
@@ -91,17 +117,96 @@ function categorySpendsFrom(expenses: ExpenseListItem[]): CategorySpend[] {
     return [...byCategory.values()];
 }
 
-describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
-    it("gives both feeds the identical 'what I really spent'", () => {
-        // Both screens call the same helper on the same rows, so the only way
-        // they could differ is if one screen filtered and the other didn't.
-        const dashboardFeed = computeFeedTotals(month, []);
-        const expensesFeed = computeFeedTotals(month, []);
+/**
+ * The two call sites, reproduced with the arguments each screen actually
+ * passes. Calling the helper twice with one set of rows would pass whatever the
+ * implementation did; the risk worth pinning is that the two screens feed it
+ * DIFFERENT rows.
+ */
 
-        expect(dashboardFeed.whatIReallySpent).toBe(
-            expensesFeed.whatIReallySpent,
-        );
-        expect(dashboardFeed).toEqual(expensesFeed);
+/** `MonthFeed.tsx`: the whole month, and every movement in it. */
+function dashboardTotals(
+    expenses: ExpenseListItem[],
+    movements: FeedTotalMovement[],
+) {
+    return computeFeedTotals(expenses, movements);
+}
+
+/**
+ * `ExpenseListInteractive.tsx`: the rows left by the category chip, and
+ * movements only in the unfiltered "All" view — a movement carries no category,
+ * so it can't survive a category filter.
+ */
+function expensesTabTotals(
+    expenses: ExpenseListItem[],
+    movements: FeedTotalMovement[],
+    activeCategoryId: string | null,
+) {
+    const filtered = activeCategoryId
+        ? expenses.filter((e) => e.category.id === activeCategoryId)
+        : expenses;
+    const showMovements = activeCategoryId === null;
+    return computeFeedTotals(filtered, showMovements ? movements : []);
+}
+
+/** A month with all three funding sources, a transfer, and a debt. */
+const movements: FeedTotalMovement[] = [
+    { type: "gf_paid", amount: 700, fundedFrom: "income" },
+    { type: "gf_paid", amount: 250, fundedFrom: "savings" },
+    { type: "gf_fronted", amount: 450, fundedFrom: "income" },
+    { type: "card_payment", amount: 5000, fundedFrom: "income" },
+];
+
+describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
+    it("gives both screens the same figures in the unfiltered view", () => {
+        // No chip active: the expenses tab passes the same rows AND the same
+        // movements the dashboard does, so every figure must match — not just
+        // the headline one.
+        const dashboard = dashboardTotals(month, movements);
+        const expensesTab = expensesTabTotals(month, movements, null);
+
+        expect(expensesTab).toEqual(dashboard);
+        // Pinned against the fixtures, so a silently-broken helper can't make
+        // both sides equally wrong: only e1 is income-funded consumption.
+        expect(dashboard.whatIReallySpent).toBe(680);
+        expect(dashboard.paidToPartner).toBe(700);
+        expect(dashboard.notFromIncome).toBe(3000 + 800);
+        expect(dashboard.notFromIncomeTransfers).toBe(250);
+    });
+
+    it("differs under a category chip, and only in the ways the filter implies", () => {
+        // Shopping holds e1 (income, share 680) and e2 (savings, 3000).
+        const dashboard = dashboardTotals(month, movements);
+        const shoppingOnly = expensesTabTotals(month, movements, "c1");
+
+        // The health row is filtered out of the consumption figures…
+        expect(shoppingOnly.charged).toBe(1000 + 3000);
+        expect(shoppingOnly.whatIReallySpent).toBe(680);
+        expect(shoppingOnly.notFromIncome).toBe(3000);
+        // …and both transfer figures go to zero, because the chip hides the
+        // movements themselves. This is the deliberate difference: the tab is
+        // answering "this category", not "this month".
+        expect(shoppingOnly.paidToPartner).toBe(0);
+        expect(shoppingOnly.notFromIncomeTransfers).toBe(0);
+        expect(shoppingOnly.total).toBe(680);
+
+        expect(shoppingOnly).not.toEqual(dashboard);
+        // The dashboard is untouched by the other screen's filter.
+        expect(dashboard.paidToPartner).toBe(700);
+        expect(dashboard.notFromIncome).toBe(3800);
+    });
+
+    it("keeps the two ledgers apart on both screens", () => {
+        // 700 income transfer + 250 savings transfer must never merge, and
+        // neither may join the consumption exclusion (spec 0007 §6a).
+        for (const totals of [
+            dashboardTotals(month, movements),
+            expensesTabTotals(month, movements, null),
+        ]) {
+            expect(totals.paidToPartner).toBe(700);
+            expect(totals.notFromIncomeTransfers).toBe(250);
+            expect(totals.notFromIncome).toBe(3800);
+        }
     });
 
     it("makes that number equal the sum the buckets are built from", () => {

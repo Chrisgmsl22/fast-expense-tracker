@@ -195,6 +195,60 @@ describe("SettlementJournal", () => {
         expect(screen.getByText("Nothing to settle yet.")).toBeDefined();
     });
 
+    describe("the funding badge on a transfer", () => {
+        const transferRow = (
+            fundedFrom: "income" | "savings",
+            direction: "gf_paid" | "gf_received" = "gf_paid",
+        ): SettlementJournalItem[] => [
+            {
+                kind: "transfer",
+                id: "m2",
+                date: july,
+                carriedOver: false,
+                direction,
+                amount: 700,
+                fundedFrom,
+                note: null,
+            },
+        ];
+
+        it("badges a savings-funded payment, which still counts in the balance", () => {
+            render(
+                <SettlementJournal
+                    journal={transferRow("savings")}
+                    partnerName="Brenda"
+                />,
+            );
+            expect(screen.getByText("from savings")).toBeDefined();
+            // The amount is unreduced: this page is the settlement ledger, and
+            // savings money reached her all the same (spec 0007 §6a).
+            expect(screen.getByText("$700.00")).toBeDefined();
+        });
+
+        it("leaves an income-funded payment unbadged", () => {
+            render(
+                <SettlementJournal
+                    journal={transferRow("income")}
+                    partnerName="Brenda"
+                />,
+            );
+            expect(screen.queryByText("from savings")).toBeNull();
+        });
+
+        it("never badges money she sent you — her funding isn't yours", () => {
+            render(
+                <SettlementJournal
+                    journal={transferRow("savings", "gf_received")}
+                    partnerName="Brenda"
+                />,
+            );
+            expect(
+                screen.getByText(/Transfer — Brenda paid you/),
+            ).toBeDefined();
+            expect(screen.queryByText("from savings")).toBeNull();
+        });
+    });
+
     it("shows edit + delete on the debt and transfer rows, not a shared expense", () => {
         render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         expect(screen.getByLabelText("Edit I owe Brenda")).toBeDefined();

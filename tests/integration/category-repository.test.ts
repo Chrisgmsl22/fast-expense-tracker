@@ -36,6 +36,12 @@ async function seedExpense(opts: {
     amount: number;
     actualExpenditure: number;
     subcategoryId?: string;
+    /**
+     * A plain String column, so a test can store a value outside
+     * `FUNDING_SOURCES` — which is the case the budget filter and the read
+     * mapping have to agree about.
+     */
+    fundedFrom?: string;
 }) {
     return db.expense.create({
         data: {
@@ -46,6 +52,9 @@ async function seedExpense(opts: {
             description: "x",
             amount: opts.amount,
             actualExpenditure: opts.actualExpenditure,
+            ...(opts.fundedFrom === undefined
+                ? {}
+                : { fundedFrom: opts.fundedFrom }),
         },
     });
 }
@@ -274,6 +283,102 @@ describe("PrismaCategoryRepository.getExpensesForCategoryMonth (integration)", (
             "2026-06",
         );
         expect(rows.map((r) => r.amount)).toEqual([200, 100]); // date desc
-        expect(rows[1]!.subcategory).toEqual({ name: "Doctors appt" });
+        // The id comes back too: names are not unique per category, so the
+        // screen's "across M subcategories" has to count identities.
+        expect(rows[1]!.subcategory).toEqual({
+            id: sub.id,
+            name: "Doctors appt",
+        });
+    });
+
+    it("distinguishes two same-named subcategories by id", async () => {
+        // Nothing in `schema.prisma` stops a user holding two "Dentist"
+        // subcategories under one category, and selecting only the name made
+        // them indistinguishable downstream.
+        const user = await seedUser("dupes@example.com");
+        const health = await seedCategory(user.id, "health");
+        const first = await seedSubcategory(user.id, health.id, "Dentist");
+        const second = await seedSubcategory(user.id, health.id, "Dentist");
+
+        await seedExpense({
+            userId: user.id,
+            categoryId: health.id,
+            subcategoryId: first.id,
+            date: "2026-06-05T12:00:00Z",
+            amount: 100,
+            actualExpenditure: 100,
+        });
+        await seedExpense({
+            userId: user.id,
+            categoryId: health.id,
+            subcategoryId: second.id,
+            date: "2026-06-06T12:00:00Z",
+            amount: 200,
+            actualExpenditure: 200,
+        });
+
+        const rows = await repo.getExpensesForCategoryMonth(
+            user.id,
+            health.id,
+            "2026-06",
+        );
+        const ids = new Set(rows.map((r) => r.subcategory!.id));
+        expect(rows.map((r) => r.subcategory!.name)).toEqual([
+            "Dentist",
+            "Dentist",
+        ]);
+        expect(ids.size).toBe(2);
+    });
+
+    it("reports a row the budget filter dropped, whatever the stored value", async () => {
+        const user = await seedUser("oob@example.com");
+        const health = await seedCategory(user.id, "health");
+        await seedExpense({
+            userId: user.id,
+            categoryId: health.id,
+            date: "2026-06-05T12:00:00Z",
+            amount: 100,
+            actualExpenditure: 100,
+        });
+        await seedExpense({
+            userId: user.id,
+            categoryId: health.id,
+            date: "2026-06-06T12:00:00Z",
+            amount: 500,
+            actualExpenditure: 500,
+            fundedFrom: "savings",
+        });
+        // Not one of the three values the app writes. `fundedFrom: "income"`
+        // excludes it from every budget total, so the list has to mark it
+        // uncounted even though the mapping reads it back as `income`.
+        await seedExpense({
+            userId: user.id,
+            categoryId: health.id,
+            date: "2026-06-07T12:00:00Z",
+            amount: 900,
+            actualExpenditure: 900,
+            fundedFrom: "cash-back",
+        });
+
+        const rows = await repo.getExpensesForCategoryMonth(
+            user.id,
+            health.id,
+            "2026-06",
+        );
+        const byAmount = new Map(rows.map((r) => [r.amount, r]));
+        expect(byAmount.get(100)!.countedInBudget).toBe(true);
+        expect(byAmount.get(500)!.countedInBudget).toBe(false);
+        expect(byAmount.get(900)!.countedInBudget).toBe(false);
+        // The narrowing still protects the badge from an unknown value.
+        expect(byAmount.get(900)!.fundedFrom).toBe("income");
+
+        // And the same row is genuinely absent from the filtered aggregate, so
+        // "counted in neither" is what the flag exists to prevent.
+        const spends = await repo.getSubcategorySpends(
+            user.id,
+            health.id,
+            "2026-06",
+        );
+        expect(spends.reduce((sum, r) => sum + r.spent, 0)).toBe(100);
     });
 });

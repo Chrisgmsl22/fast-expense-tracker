@@ -5,6 +5,7 @@ import {
     FUNDING_SOURCES,
     allowsReimbursed,
     fundingSourceAfterCategoryChange,
+    isBudgetFunded,
     toFundingSource,
 } from "@/lib/domain/funding";
 
@@ -46,6 +47,25 @@ describe("funding source (spec 0007 §2/§3.1)", () => {
             // spend vanish from the budget — it reverts to the counted default.
             expect(toFundingSource("gift")).toBe("income");
             expect(toFundingSource("")).toBe("income");
+        });
+    });
+
+    describe("isBudgetFunded", () => {
+        it("answers exactly what the SQL filter asks", () => {
+            expect(isBudgetFunded(BUDGET_FUNDING_FILTER.fundedFrom)).toBe(true);
+            expect(isBudgetFunded("savings")).toBe(false);
+            expect(isBudgetFunded("reimbursed")).toBe(false);
+        });
+
+        it("calls an out-of-band value not-budget-funded, unlike the mapping", () => {
+            // The two deliberately disagree here, and that disagreement is the
+            // point. `fundedFrom: "income"` in SQL drops this row from every
+            // budget figure; `toFundingSource` reads it back as `income` so no
+            // badge is lost. A figure derived from the mapped value would drop
+            // the row a second time and leave the money in nothing at all.
+            expect(isBudgetFunded("gift")).toBe(false);
+            expect(isBudgetFunded("")).toBe(false);
+            expect(toFundingSource("gift")).toBe("income");
         });
     });
     describe("fundingSourceAfterCategoryChange", () => {

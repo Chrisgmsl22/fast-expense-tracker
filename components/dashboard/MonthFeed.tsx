@@ -23,9 +23,11 @@ import { SettlementChip } from "./SettlementChip";
  * pinned footer. Movements are colour-tagged (card payment blue, "I paid
  * {partner}" gold, "I owe {partner}" orange) and never enter the spend total —
  * a debt she fronted is shown for awareness only. The footer splits money into
- * Charged / What I really spent (consumption) / Set aside (savings) / Paid to
- * {partner} / Total. Who-owes-whom lives in the settlement slice, not here
- * (ADR-0018).
+ * Charged / What I really spent (consumption) / Set aside (savings) / Not from
+ * this month's income (the consumption the budget skipped) / Paid to {partner} /
+ * Paid to {partner} from savings (the cash half, never added to the consumption
+ * one — spec 0007 §6a) / Total. Who-owes-whom lives in the settlement slice, not
+ * here (ADR-0018).
  */
 export function MonthFeed({
     expenses,
@@ -217,7 +219,7 @@ function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
                         {e.description}
                     </span>
                     {e.fundedFrom === "income" ? null : (
-                        <FundingBadge fundedFrom={e.fundedFrom} />
+                        <FundingBadge source={e.fundedFrom} />
                     )}
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -282,7 +284,7 @@ function MovementRow({
                         {title}
                     </span>
                     {m.fundedFrom === "income" ? null : (
-                        <FundingBadge fundedFrom={m.fundedFrom} />
+                        <FundingBadge source={m.fundedFrom} />
                     )}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">

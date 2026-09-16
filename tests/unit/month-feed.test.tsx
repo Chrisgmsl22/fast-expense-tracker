@@ -292,6 +292,41 @@ describe("MonthFeed", () => {
         expect(totals.queryByText("Not from this month's income")).toBeNull();
     });
 
+    it("badges no ordinary row — income money is never 'not from income'", () => {
+        // Guards both `FundingBadge` call sites in this file (the expense row
+        // and the movement row). `FundingBadge` cannot represent `income`, so a
+        // dropped guard is a type error first; this is the behavioural half of
+        // that. Without either, every ordinary row grows a gray "not from
+        // income" chip — a false statement about the money.
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[
+                    {
+                        id: "m1",
+                        date: new Date("2026-06-22T06:00:00Z"),
+                        amount: 200,
+                        type: "gf_paid",
+                        card: null,
+                        note: "netted week",
+                        fundedFrom: "income",
+                    },
+                ]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+        // Both rows really are on screen, so this isn't a vacuous pass.
+        expect(screen.getByText("Soriana")).toBeDefined();
+        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        // …and neither carries any of the three badge wordings. `queryAll` so
+        // two bad rows read as two, not as a "multiple elements" crash.
+        expect(screen.queryAllByText("not from income")).toHaveLength(0);
+        expect(screen.queryAllByText("from savings")).toHaveLength(0);
+        expect(screen.queryAllByText("reimbursed")).toHaveLength(0);
+    });
+
     it("prints the consumption and cash exclusions as two lines, never one sum", () => {
         // The §6a flow: a $680 dinner she fronted (consumption, savings-funded)
         // and the $680 transfer settling it (cash, savings-funded). One line

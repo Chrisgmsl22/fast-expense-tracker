@@ -7,6 +7,7 @@ import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
 import {
     NON_INCOME_FUNDED_LABEL,
+    NON_INCOME_FUNDED_SHORT_LABEL,
     NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL,
     nonIncomeFundedTransferLabel,
 } from "@/lib/domain/funding";
@@ -440,7 +441,7 @@ export function ExpenseListInteractive({
                     )}
                     {totals.notFromIncome > 0 && (
                         <span>
-                            Not from income{" "}
+                            {NON_INCOME_FUNDED_SHORT_LABEL}{" "}
                             <span className="font-medium text-background">
                                 {formatMxn(totals.notFromIncome)}
                             </span>
@@ -735,7 +736,7 @@ function ExpenseRow({
                         {expense.description}
                     </span>
                     {expense.fundedFrom === "income" ? null : (
-                        <FundingBadge fundedFrom={expense.fundedFrom} />
+                        <FundingBadge source={expense.fundedFrom} />
                     )}
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground sm:hidden">
@@ -849,7 +850,7 @@ function MovementRow({
                 <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate font-medium">{title}</span>
                     {m.fundedFrom === "income" ? null : (
-                        <FundingBadge fundedFrom={m.fundedFrom} />
+                        <FundingBadge source={m.fundedFrom} />
                     )}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">

@@ -22,6 +22,10 @@ import type { TransferInput } from "@/lib/schemas/movement";
 
 type Direction = "gf_paid" | "gf_received";
 
+/** Ids the savings checkbox names and describes itself by (one form mounts at a time). */
+const SAVINGS_LABEL_ID = "transfer-savings-label";
+const SAVINGS_HINT_ID = "transfer-savings-hint";
+
 /** Prefilled fields when the form edits an existing transfer (strings for inputs). */
 export type TransferEditable = {
     id: string;
@@ -214,31 +218,47 @@ export function TransferForm({
                 an expense's control, minus `reimbursed` — that one is Health-only
                 (§3.3) and a transfer has no category. Outbound only: money she
                 sends you isn't funded by anything of yours. */}
+            {/* Named by its visible text, described by the hint — which sits
+                outside the label so it is announced as a description instead of
+                being swallowed by the checkbox's accessible name. The
+                description is pointed at only while the hint is rendered, so the
+                unticked default never references a missing id. */}
             {inbound ? null : (
-                <label className="flex items-start gap-2.5">
-                    <Checkbox
-                        checked={fundedFrom === "savings"}
-                        onCheckedChange={(checked) =>
-                            setFundedFrom(
-                                checked === true ? "savings" : "income",
-                            )
-                        }
-                        aria-label={FUNDING_TOGGLE_LABEL.savings}
-                        className="mt-0.5"
-                    />
-                    <span className="text-sm">
-                        <span className="block font-medium">
+                <div>
+                    <label className="flex items-start gap-2.5">
+                        <Checkbox
+                            checked={fundedFrom === "savings"}
+                            onCheckedChange={(checked) =>
+                                setFundedFrom(
+                                    checked === true ? "savings" : "income",
+                                )
+                            }
+                            aria-labelledby={SAVINGS_LABEL_ID}
+                            aria-describedby={
+                                fundedFrom === "savings"
+                                    ? SAVINGS_HINT_ID
+                                    : undefined
+                            }
+                            className="mt-0.5"
+                        />
+                        <span
+                            id={SAVINGS_LABEL_ID}
+                            className="text-sm font-medium"
+                        >
                             {FUNDING_TOGGLE_LABEL.savings}
                         </span>
-                        {fundedFrom === "savings" ? (
-                            <span className="block text-muted-foreground">
-                                Doesn&apos;t count toward this month&apos;s
-                                budget or what you really spent. It still
-                                settles what you owe {partnerName}.
-                            </span>
-                        ) : null}
-                    </span>
-                </label>
+                    </label>
+                    {fundedFrom === "savings" ? (
+                        <p
+                            id={SAVINGS_HINT_ID}
+                            className="pl-[1.625rem] text-sm text-muted-foreground"
+                        >
+                            Doesn&apos;t count toward this month&apos;s budget
+                            or what you really spent. It still settles what you
+                            owe {partnerName}.
+                        </p>
+                    ) : null}
+                </div>
             )}
 
             {/* Outside the branch above: an inbound transfer hides the control
