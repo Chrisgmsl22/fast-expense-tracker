@@ -8,11 +8,6 @@ function Collapsible({ ...props }: CollapsiblePrimitive.Root.Props) {
     return <CollapsiblePrimitive.Root data-slot="collapsible" {...props} />;
 }
 
-/**
- * The disclosure button. Base UI renders a real `<button>` and owns
- * `aria-expanded` + `aria-controls`, so the trigger is keyboard reachable and
- * announces its state; its text content is the accessible name.
- */
 function CollapsibleTrigger({
     className,
     ...props

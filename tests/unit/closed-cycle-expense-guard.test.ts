@@ -11,25 +11,9 @@ import { FakeExpenseRepository } from "@/tests/support/fake-expense-repository";
 import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
 
 /**
- * A closed settlement is a filed record, and the close dialog says so: "Closed
- * settlements cannot be reopened."
- *
- * The movement side has always honoured that — `deleteForUser` and
- * `updateForUser` carry `closedAt: null` in their where-clause and the actions
- * answer `cycle_closed`. The EXPENSE side did not, so deleting an old shared
- * expense from the Expenses screen silently restated a settlement the user had
- * filed: her share of it vanished from a cycle that was supposed to be frozen,
- * and nothing on screen said a thing.
- *
- * An expense carries no marker column — cycle membership is its `createdAt`
- * against the sequence of close instants — so the repository resolves the fact
- * once, onto `ExpenseEditable.cycleClosedAt`, and every write path reads it.
- *
- * **The marker alone is not the rule.** A cycle counts a partner share and a
- * payment to her, and nothing else, so those are the only rows it may freeze.
- * The first version of this guard refused on the marker alone and locked the
- * whole expense history — every solo lunch entered before the first close — with
- * a message that told the user it was part of a settlement it was never in.
+ * A closed settlement is a filed record, and the close dialog says so. An expense
+ * carries no marker column, so the repository resolves `cycleClosedAt` and every write
+ * path pairs it with `movesSettlementBalance` — the marker alone is not the rule.
  */
 const CLOSED_AT = new Date("2026-09-12T18:00:00Z");
 
@@ -123,10 +107,8 @@ describe("a row the closed cycle COUNTED is frozen", () => {
     });
 
     it("names the FREEZE, not the split rule, when a frozen payment is edited as shared", async () => {
-        // Both refusals apply to this payload. The split rule is the one the
-        // user could satisfy — and satisfying it still gets a refusal, because
-        // the row is frozen. So the frozen reason has to come first, or the user
-        // acts on the wrong one.
+        // Both refusals apply. The frozen reason must come first, or the user acts on
+        // the split rule — the one they can satisfy and still be refused.
         const repo = repoWith("payment", CLOSED_AT);
 
         const res = await updateExpense({ ...sharedPayload }, repo);
@@ -155,8 +137,7 @@ describe("a row the closed cycle COUNTED is frozen", () => {
 });
 
 describe("a SOLO row inside a closed cycle is not frozen", () => {
-    // This is the regression the first guard shipped: a close today froze every
-    // expense ever entered, because every one of them predates it.
+    // Freezing on the marker alone would refuse every expense entered before the close.
 
     it("still deletes", async () => {
         const repo = repoWith("solo", CLOSED_AT);

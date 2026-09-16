@@ -30,11 +30,8 @@ export function movementDisplay(
                 amountClass: "text-positive",
                 rowTint: "border-positive bg-positive-tint",
             };
-        // No `gf_fronted` case: a debt she fronted never reaches a feed now
-        // (spec 0007 §6b) — the month query excludes it, and the settlement
-        // journal renders its own rows. A case nothing can reach is worse than
-        // no case: it reads as support that does not exist.
-        //
+        // No `gf_fronted` case: a debt she fronted never reaches a feed now (spec 0007
+        // §6b) — the month query excludes it and the journal renders its own rows.
         // gf_paid (money you sent) + any non-card fallback.
         default:
             return {
@@ -53,9 +50,8 @@ type MovementRowSource = {
 };
 
 /**
- * The two text lines of a feed row: a title and an optional subline (the date is
- * prefixed by the caller). Both feeds share this so a movement reads the same on
- * the dashboard and on the expenses list.
+ * The two text lines of a feed row, shared by both feeds so a movement reads the
+ * same on the dashboard and on the expenses list. The caller prefixes the date.
  */
 export function movementRowText(
     m: MovementRowSource,

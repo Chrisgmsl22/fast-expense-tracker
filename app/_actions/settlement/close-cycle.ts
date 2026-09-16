@@ -15,18 +15,15 @@ export type CloseSettlementCycleCode =
     | "unauthenticated"
     | "not_settled"
     /**
-     * Square, but nothing in the open cycle can carry the boundary: `closedAt`
-     * lives on `Movement`, and a cycle settled only by a payment-expense has no
-     * movement to mark (spec 0007 §6b). Reported rather than swallowed — this
-     * used to answer `ok:true`, a success for work not done.
+     * Square, but nothing in the open cycle can carry the boundary: `closedAt` lives
+     * on `Movement`, and a cycle settled only by a payment-expense has no movement
+     * to mark (spec 0007 §6b).
      */
     | "no_marker"
     /**
-     * The transfer the close would have marked is no longer there — deleted
-     * between the read that picked it and the write that would mark it. The
-     * write matches zero rows, exactly as a double submit does, and the two used
-     * to be reported alike: `alreadyClosed`. They are opposite outcomes. One
-     * cycle is filed; the other never closed and the user was told it had.
+     * The transfer the close would have marked was deleted between the read that
+     * picked it and the write that would mark it. It matches zero rows, exactly as a
+     * double submit does — but here nothing was closed.
      */
     | "marker_gone"
     | "db_error";
@@ -35,7 +32,6 @@ export type CloseSettlementCycleResult = ActionResult<
     {
         /** The transfer now carrying the marker; null when it was already closed. */
         markedMovementId: string | null;
-        /** True when this call did nothing because the cycle was already closed. */
         alreadyClosed: boolean;
     },
     Record<string, never>,
@@ -43,12 +39,9 @@ export type CloseSettlementCycleResult = ActionResult<
 >;
 
 /**
- * Close the open settlement cycle (spec 0007 §3.5).
- *
- * The server re-derives which transfer carries the marker instead of trusting an
- * id from the client. The boundary it writes is the close INSTANT, so every row
- * counted in the zero balance the user just confirmed falls inside the cycle
- * being closed — including rows entered after that transfer.
+ * Close the open settlement cycle (spec 0007 §3.5). The server re-derives the
+ * marker instead of trusting a client id, and writes the close INSTANT, so every
+ * row counted in the zero balance falls inside the cycle being closed.
  */
 export async function closeSettlementCycle(
     deps: Partial<SettlementDeps> = {},
@@ -90,9 +83,8 @@ export async function closeSettlementCycle(
                     data: { markedMovementId: null, alreadyClosed: true },
                 };
             }
-            // A cycle with rows but no markable movement is NOT closed. Saying
-            // "ok" for it reports success for work not done — the failure mode
-            // this repo keeps shipping. See the `no_marker` code.
+            // A cycle with rows but no markable movement is NOT closed — answering "ok"
+            // would report success for work not done.
             return {
                 ok: false,
                 code: "no_marker",
@@ -109,15 +101,13 @@ export async function closeSettlementCycle(
         );
 
         if (count === 0) {
-            // `markCycleClose` matches nothing for two very different reasons:
-            // the row is already a marker (a double submit — harmless), or the
-            // row is GONE, deleted between the read above and this write. Ask
-            // which: a marker for it exists only in the first case.
+            // Zero rows affected has two opposite causes: the row is already a marker (a
+            // double submit), or it was deleted since the read. Only the first leaves a
+            // marker behind, so ask which.
             const markers = await settlementRepo.getCycleMarkers(userId);
             if (!markers.some((m) => m.id === movementId)) {
-                // Do the refresh the message asks for: the page is showing a
-                // transfer that is gone, so leaving the reload to the user keeps
-                // a stale journal on screen behind our own "refresh" advice.
+                // The page is showing a transfer that is gone, so refresh here rather than
+                // leave a stale journal behind our own "refresh" advice.
                 revalidatePath("/settlement");
                 return {
                     ok: false,

@@ -32,16 +32,10 @@ type Props = {
 };
 
 /**
- * Log an "I owe {partner}" debt — something she fronted that you owe her back
- * (spec 0007 §6b). It is saved as a `Movement{type:"gf_fronted"}`: **settlement
- * only**. It reaches no bucket, no category rollup and not the expenses list.
- *
- * Why not an expense: a debt is provisional. Something she owes you can reduce
- * or cancel it before any money moves, so booking it as spending would record a
- * purchase he may never make. The **payment** that settles it is the expense.
- *
- * The amount is **what you owe**, never what she paid — the ambiguity that put a
- * $500 carwash in the budget when his share was $380.
+ * Log an "I owe {partner}" debt — something she fronted that you owe her back.
+ * Saved as a `Movement{type:"gf_fronted"}` — settlement only, never in the budget:
+ * a debt is provisional until money moves (spec 0007 §6b). The amount is **what
+ * you owe**, never what she paid.
  */
 export function PartnerDebtForm({
     debt,

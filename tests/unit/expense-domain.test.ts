@@ -51,9 +51,8 @@ describe("computeActualExpenditure", () => {
     });
 
     it("rounds to the cent — money is never stored sub-cent", () => {
-        // 33.33 × 0.68 = 22.6644, stored as 22.66. A sub-cent remainder cannot
-        // be displayed, so each panel used to round for itself and the same
-        // expense read differently depending on which rows shared its total.
+        // 33.33 × 0.68 = 22.6644, stored as 22.66. A sub-cent remainder cannot be
+        // displayed, so each panel used to round for itself.
         expect(
             computeActualExpenditure({
                 amount: 33.33,
@@ -77,10 +76,8 @@ describe("computeActualExpenditure", () => {
 });
 
 /**
- * The predicate the closed-cycle freeze refuses on, and the same one the
- * settlement service uses to decide which rows a cycle contains. If these two
- * ever disagree, the app freezes rows no settlement counted — which is exactly
- * what the first version of the freeze did to the whole expense history.
+ * The predicate the closed-cycle freeze refuses on, and the one the settlement service
+ * counts with. If they disagree, the app freezes rows no cycle counted.
  */
 describe("movesSettlementBalance", () => {
     const solo = {

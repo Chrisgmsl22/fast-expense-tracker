@@ -91,8 +91,7 @@ export async function createExpense(
             actualExpenditure: computeActualExpenditure(v),
             paidBy: v.paidBy,
             notes: v.notes ?? null,
-            // A purchase you made. Money you send the partner goes through
-            // `addPartnerPayment`, the only writer of a payment row.
+            // `addPartnerPayment` is the only writer of a payment row.
             isPartnerPayment: false,
         });
         return { ok: true, data: { id: created.id } };

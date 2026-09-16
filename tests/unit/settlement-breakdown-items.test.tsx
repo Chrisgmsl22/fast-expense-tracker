@@ -114,9 +114,8 @@ const parseMxn = (formatted: string): number =>
     Number(formatted.replace(/[^0-9.-]/g, ""));
 
 /**
- * Criterion 4 the way the screen shows it: format every row, add the formatted
- * figures, and compare against the formatted line total. Summing the raw floats
- * and rounding once would pass for any partition, so it proves nothing.
+ * Criterion 4 as the screen shows it: format every row, add the formatted figures,
+ * compare to the formatted total. Summing raw floats would pass for any partition.
  */
 function assertRowsReadUpToTotal(
     rows: { amount: number }[],
@@ -154,10 +153,8 @@ describe("getSettlement breakdown items", () => {
     });
 
     it("adds up with no residual left to place", async () => {
-        // $33.33 at a 68% split now STORES 22.66 (rounded at write time), so
-        // each row's share is exactly 10.67 and the three sum to exactly 32.01.
-        // There is no leftover cent, so no row's value depends on its
-        // neighbours — the defect that made one expense read two amounts.
+        // $33.33 at 68% now STORES 22.66, so each row's share is exactly 10.67 and the
+        // three sum to 32.01 — no leftover cent to land on a neighbour.
         const thirds: SettlementExpenseRow[] = [1, 2, 3].map((n) => ({
             id: `t${n}`,
             date: JULY,

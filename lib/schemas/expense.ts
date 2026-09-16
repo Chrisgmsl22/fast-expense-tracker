@@ -19,10 +19,8 @@ export const expenseInputSchema = z
         isShared: z.boolean().default(false),
         yourPercentage: z.coerce.number().min(0).max(1).default(1),
         // DEPRECATED (ADR-0020): every expense is the user's own. Locked to
-        // "you" so no request can retype who paid. Money the user SENT the
-        // partner is marked by `isPartnerPayment`, which this form cannot set —
-        // see `partnerPaymentInputSchema`. (A debt she fronted is not an expense
-        // at all, spec 0007 §6b.) Kept until the `paidBy` column is dropped.
+        // "you" so no request can retype who paid. A payment is marked by
+        // `isPartnerPayment`, which this form cannot set. Kept until `paidBy` is dropped.
         paidBy: z.literal("you").default("you"),
     })
     .refine((v) => !v.isShared || v.yourPercentage < 1, {
@@ -33,15 +31,9 @@ export const expenseInputSchema = z
 export type ExpenseInput = z.infer<typeof expenseInputSchema>;
 
 /**
- * Money the user SENT the partner — a payment out of his own account, which is
- * the thing that counts in his budget (spec 0007 §6b). Not a debt she fronted:
- * that is provisional, lives in settlement only, and never reaches this schema.
- *
- * The amount entered is what he transferred, so there is no `isShared` and no
- * `yourPercentage` to submit: the action stores `amount` and `actualExpenditure`
- * equal. Category and subcategory are optional and default to
- * `combined-expenses` and its partner-payment subcategory; sending them lets the
- * user file the payment somewhere else.
+ * Money the user SENT the partner (spec 0007 §6b). The amount is what he transferred,
+ * so there is no `isShared` and no `yourPercentage`: the action stores `amount` and
+ * `actualExpenditure` equal. Category and subcategory are optional and default.
  */
 export const partnerPaymentInputSchema = z.object({
     date: z.coerce.date(),

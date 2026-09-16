@@ -19,7 +19,6 @@ import {
     type PartnerPaymentInput,
 } from "@/lib/schemas/expense";
 
-/** The edit payload carries the row id alongside the payment fields. */
 const idSchema = z.object({ id: z.string().min(1) });
 
 /** Failure modes the caller can branch on. `not_found` also covers "not yours". */
@@ -37,26 +36,15 @@ export type UpdatePartnerPaymentResult = ActionResult<
     UpdatePartnerPaymentCode
 >;
 
-/** Injectable seams — the repositories this action orchestrates. */
 export type UpdatePartnerPaymentDeps = {
     expenseRepo: ExpenseRepository;
     settingsRepo: SettingsRepository;
 };
 
 /**
- * Edit money you sent the partner (spec 0007 §6b). Mirrors `addPartnerPayment`,
- * with the write **scoped by `userId`** (IDOR guard — a mismatch matches zero
- * rows → `not_found`).
- *
- * Only an `isPartnerPayment` expense is editable here: refusing an ordinary one
- * stops a normal purchase being retyped into a settlement payment through this
- * action, which would move the couple balance by a row the user never meant to
- * settle. The action is the enforcement seam, not the UI.
- *
- * Category and subcategory are NOT touched — this form does not offer them, and
- * writing them back from a payload that never carried them would silently undo a
- * choice the user made in the expense form. `isPartnerPayment` is likewise never
- * written: the repository's update shape has no such field.
+ * Edit money sent to the partner (spec 0007 §6b). Only an `isPartnerPayment` row
+ * is editable here, so an ordinary purchase cannot be retyped into a settlement
+ * payment. Category, subcategory and the flag are never written.
  */
 export async function updatePartnerPayment(
     input: unknown,
@@ -100,15 +88,8 @@ export async function updatePartnerPayment(
                 message: "Payment not found.",
             };
         }
-        // A payment is usually the very row that squared a cycle, so this is the
-        // likeliest expense to sit inside a closed one. Editing it would rewrite
-        // what a filed settlement says it settled.
-        //
-        // `movesSettlementBalance` is true for every row that reaches here — a
-        // payment always counts — so this reads as "the marker alone". It is
-        // asked through the shared predicate anyway, so all three write paths
-        // freeze on ONE definition of "the cycle counted this row" rather than
-        // three that drift apart.
+        // Asked through the shared predicate even though a payment always counts, so
+        // all three write paths freeze on one definition of "the cycle counted this".
         if (existing.cycleClosedAt && movesSettlementBalance(existing)) {
             return {
                 ok: false,

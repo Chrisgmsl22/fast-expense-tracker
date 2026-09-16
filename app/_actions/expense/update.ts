@@ -37,18 +37,9 @@ export type UpdateExpenseResult = ActionResult<
  * (validate → recompute server-side → persist), but the write is **scoped by
  * `userId`** in the repository so a mismatch matches zero rows and returns
  * `not_found` instead of mutating another user's data (IDOR guard).
- *
- * A **partner payment**'s money is clamped here (spec 0007 §6b). The amount on
- * such a row is what he transferred to her, so no split may ever be applied to
- * it. Without the clamp, ticking "shared" at 68% on a $680 payment would store
- * `actualExpenditure` 462.40, and the settlement balance reads exactly that
- * field as what he has paid her: the payment would shrink by a third with
- * nothing on screen saying so.
- *
- * A row a **closed settlement cycle counted** is refused: the cycle is a filed
- * record, and editing a row it counted restates a settlement the user was told
- * could not be reopened. So is an edit that would ADD a partner share to such a
- * cycle. An unshared row inside one counts for nothing there and stays editable.
+ * A **partner payment** is never split: `actualExpenditure` is what the balance
+ * reads as "what he paid her", so a 68% split would shrink the payment by a third.
+ * A row a closed settlement cycle counted is refused (spec 0007 §3.5).
  */
 export async function updateExpense(
     input: unknown,
@@ -102,10 +93,8 @@ export async function updateExpense(
             }
         }
 
-        // Load the row before writing: whether it is a partner payment, and
-        // whether its cycle is closed, are the server's facts, never the
-        // payload's. A missing row also short-circuits to `not_found` here
-        // instead of after the write attempt.
+        // The row's payment flag and its cycle are the server's facts, never the
+        // payload's; a missing row short-circuits here instead of after the write.
         const existing = await repo.getById(userId, id);
         if (!existing) {
             return {
@@ -115,9 +104,7 @@ export async function updateExpense(
             };
         }
 
-        // Belt and braces on a payment row: the figure entered IS the
-        // consumption, so `amount` and `actualExpenditure` stay equal whatever
-        // else rode along (a stray `yourPercentage` on an unshared payload).
+        // A stray `yourPercentage` on a payment payload must not reach the row.
         const money = existing.isPartnerPayment
             ? {
                   isShared: false,
@@ -130,19 +117,9 @@ export async function updateExpense(
                   actualExpenditure: computeActualExpenditure(v),
               };
 
-        // A filed settlement is frozen on BOTH sides. The movement repository
-        // freezes the cycle marker at the data boundary; an expense has no such
-        // column, so the refusal is here.
-        //
-        // What it refuses is narrower than "any old row": a closed cycle counted
-        // only the rows that MOVED its balance, so those are the rows it may
-        // freeze. Refusing on the marker alone locked every expense ever entered
-        // before any close — a solo lunch included — and told the user it was
-        // part of a settlement it never entered.
-        //
-        // Both the row as stored and the row as it WOULD be are checked. Ticking
-        // "shared" on a solo row inside a closed cycle adds a partner share to a
-        // filed balance, which is the same restatement from the other direction.
+        // An expense has no marker column, so the refusal is here, not in the repository.
+        // Both the row as stored and the row as it WOULD be are checked: ticking "shared"
+        // inside a closed cycle adds a partner share to a filed balance.
         if (existing.cycleClosedAt) {
             const after = {
                 amount: v.amount,
@@ -173,17 +150,9 @@ export async function updateExpense(
             }
         }
 
-        // A payload that asks to split a payment to the partner, or to charge it
-        // to a card, is REFUSED rather than quietly coerced. The form disables
-        // both controls, so this only fires on a request that went around it —
-        // and answering such a request with "saved" would tell the caller a
-        // change landed when none did. Accept-then-ignore is the shape of the
-        // silent save failure this repo already shipped once.
-        //
-        // It runs AFTER the closed-cycle check on purpose. A frozen payment
-        // cannot be saved in any shape, so naming the split rule first would
-        // hand the user a rule they could satisfy and still be refused — the
-        // wrong reason told first is the one they act on.
+        // Refused, not coerced: answering "saved" to a change that was dropped is a
+        // silent save failure. It runs AFTER the closed-cycle check, so a frozen row is
+        // not handed a rule it could satisfy and still be refused.
         if (existing.isPartnerPayment && (v.isShared || v.cardId)) {
             return {
                 ok: false,

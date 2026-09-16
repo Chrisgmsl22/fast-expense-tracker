@@ -24,16 +24,9 @@ type View = "open" | "month" | "history";
 const itemCount = (n: number): string => `${n} ${n === 1 ? "item" : "items"}`;
 
 /**
- * The three settlement views (spec 0007 §3.5), one visual style: the open cycle
- * (what is being settled now), the selected calendar month, and the settlements
- * closed in that month. All three render the same `SettlementJournal` rows — a
- * view is a projection of the one derivation in `getSettlement`, never a second
- * row component.
- *
- * The Month and History views follow the page's month switcher. The OPEN
- * settlement does not: there is exactly one, it is a "now" concept, and it is
- * not scoped to any month — so on a past month that tab is not offered at all
- * (see `isCurrentMonth`).
+ * The three settlement views (spec 0007 §3.5), all rendering the same
+ * `SettlementJournal` rows. Month and History follow the page's month switcher;
+ * the OPEN cycle does not — there is one, and it belongs to no month.
  */
 export function SettlementViews({
     openJournal,
@@ -47,13 +40,11 @@ export function SettlementViews({
     monthJournal: SettlementJournalItem[];
     /** Human month name for the Month view and its tab ("September 2026"). */
     monthLabel: string;
-    /** True when the selected month is the live one. */
     isCurrentMonth: boolean;
     history: ClosedSettlementCycle[];
     partnerName: string;
 }) {
-    // Past months have no open settlement to show, so the month is the landing
-    // view there and the open tab is absent rather than lying or sitting dead.
+    // A past month has no open settlement, so the month is the landing view there.
     const tabs: { key: View; label: string }[] = [
         ...(isCurrentMonth
             ? [{ key: "open" as const, label: "Open settlement" }]
@@ -157,10 +148,7 @@ export function SettlementViews({
     );
 }
 
-/**
- * How the cycle ended, in words. A signed number would make the reader work out
- * the direction; the whole point of this line is that they should not have to.
- */
+/** How the cycle ended, in words rather than a signed number. */
 function outcomeText(outcome: CycleOutcome, partnerName: string): string {
     if (outcome.kind === "even") return "Came out even";
     return outcome.kind === "you_paid"
@@ -169,9 +157,8 @@ function outcomeText(outcome: CycleOutcome, partnerName: string): string {
 }
 
 /**
- * The closed cycle's four figures, in the expenses list's totals-bar language.
- * Every figure comes from `cycle.summary`, which the service derives from the
- * same rows rendered above it — so the footer cannot quote money the rows do not.
+ * The closed cycle's four figures. Every one comes from `cycle.summary`, derived
+ * from the same rows rendered above — so the footer cannot quote money the rows do not.
  */
 function CycleSummaryFooter({
     summary,

@@ -113,19 +113,9 @@ export class PrismaDashboardRepository implements DashboardRepository {
         const { start, end } = getMonthRangeUtc(month);
         const grouped = await this.db.expense.groupBy({
             by: ["cardId"],
-            // Two kinds of row are not card spend and are excluded HERE, in the
-            // query, so the grouping never sees them — never by subtracting
-            // afterwards, which only fixes the total and leaves the segments
-            // wrong:
-            //
-            //  - Savings: a transfer, not a purchase.
-            //  - A payment to the partner (spec 0007 §6b): money you sent her,
-            //    usually straight from a bank account with no card attached. It
-            //    has no `cardId`, and this query reads a null `cardId` as cash —
-            //    so including it would show a settlement payment as a phantom
-            //    "Cash" segment. That phantom row IS BUG-1. The payment belongs
-            //    in the budget, which it reaches as an ordinary expense; it
-            //    never belonged in spend-by-CARD.
+            // Savings and partner payments are excluded HERE, in the query, so the
+            // grouping never sees them. Both have a null `cardId`, which this query
+            // reads as cash — that phantom "Cash" segment is BUG-1.
             where: {
                 userId,
                 date: { gte: start, lt: end },

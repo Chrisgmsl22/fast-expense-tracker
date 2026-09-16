@@ -156,9 +156,7 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("labels a partner payment, never Cash", () => {
-        // The row is money he sent her — a transfer leaves a bank account, not a
-        // card, so it has no card. The bare `?? "Cash"` fallback printed the
-        // BUG-1 symptom on this very screen.
+        // A payment has no card, and the bare `?? "Cash"` fallback printed BUG-1's symptom here.
         render(
             <ExpenseListInteractive
                 expenses={[
@@ -190,10 +188,8 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("drops edit + delete on a row a closed settlement counted", () => {
-        // The server refuses this write. Rendering the buttons anyway offers a
-        // way out that is not there and only reports the refusal after the
-        // submit — `SettlementJournal` already hides the controls on a locked
-        // row, and this list must read the same.
+        // The server refuses this write, so rendering the buttons offers a way out that
+        // is not there — `SettlementJournal` already hides them on a locked row.
         const frozen = [
             {
                 ...expenses[0]!,
@@ -211,9 +207,8 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("keeps edit + delete on a SOLO row of the same age", () => {
-        // A closed cycle counted nothing of a solo row, so nothing freezes it.
-        // Hiding its controls would lock the whole history behind the first
-        // close, which is the regression this pair of tests pins.
+        // A closed cycle counted nothing of a solo row, so nothing freezes it. Hiding
+        // its controls would lock the whole history behind the first close.
         const solo = [
             {
                 ...expenses[1]!,
@@ -229,11 +224,8 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("drops edit + delete on the TRANSFER that closed a cycle, keeping them on an open movement beside it", () => {
-        // The cycle marker is a `gf_paid` transfer and `buildFeed` only drops
-        // `gf_fronted`, so the marker renders on this screen. Its writes are
-        // refused server-side, so rendering Edit opened a fully prefilled form
-        // that could only fail on submit — the same "control that exists only to
-        // fail" the expense side already fixed.
+        // The cycle marker is a `gf_paid` transfer and `buildFeed` keeps it, so it
+        // renders here — with writes the server refuses.
         const closedAt = new Date("2026-05-20T00:00:00Z");
         const marked: MovementListItem[] = [
             movements[0]!,
@@ -266,10 +258,8 @@ describe("ExpenseListInteractive", () => {
         ).toBeDefined();
     });
 
-    // I-1 round 4: freezing on the marker column alone froze exactly ONE row per
-    // cycle. A cycle counts every transfer in it, so the others were still
-    // offered Edit and Delete — and the server, once it freezes them too,
-    // refuses. Membership is the predicate, `closedAt` only names the marker.
+    // A cycle counts every transfer in it, so membership is the predicate; `closedAt`
+    // only names the marker.
     it("drops the controls on a NON-marker transfer inside a closed cycle, not on a card payment of the same cycle", () => {
         const cycleClosedAt = new Date("2026-05-21T00:00:00Z");
         const inClosedCycle: MovementListItem[] = [
@@ -455,12 +445,9 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("interleaves movements and counts BOTH payment shapes in the footer", () => {
-        // Money sent to the partner is an EXPENSE now (spec 0007 §6b). But no
-        // migration has converted the old rows, so `movements` still holds a
-        // legacy `gf_paid` of $300 ("mv2") beside this $300 payment-expense —
-        // two real transfers, and the footer has to show both. Reading expenses
-        // alone left the gold movement row on screen above a footer that had
-        // silently dropped its money.
+        // Money sent to the partner is an EXPENSE now (spec 0007 §6b), but the old rows
+        // are unconverted, so a legacy `gf_paid` of $300 sits beside this $300
+        // payment-expense — two real transfers, and the footer must show both.
         const payment = {
             ...expenses[0]!,
             id: "ePay",
@@ -611,9 +598,8 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("never shows a debt she fronted, even when handed one", () => {
-        // Settlement-only (spec 0007 §6b). The month query excludes it and
-        // `buildFeed` drops it again, so no caller can put the orange "I owe"
-        // row back beside real spending.
+        // Settlement-only (spec 0007 §6b). The month query excludes it and `buildFeed`
+        // drops it again, so no caller can put the orange row back.
         render(
             <ExpenseListInteractive
                 expenses={expenses}

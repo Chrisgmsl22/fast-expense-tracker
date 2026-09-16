@@ -82,11 +82,8 @@ export async function updateTransfer(
             };
         }
 
-        // A transfer a closed cycle COUNTED is frozen, not just the one carrying
-        // its marker: editing either rewrites what a filed settlement settled.
-        // A transfer always moves the balance, so membership alone decides it
-        // here — the predicate stays for the same reason the expense actions
-        // keep theirs, so every write path asks one question.
+        // A transfer a closed cycle COUNTED is frozen, not only the one carrying its
+        // marker: editing either rewrites what a filed settlement settled.
         if (
             existing.cycleClosedAt &&
             movementMovesSettlementBalance(existing.type)

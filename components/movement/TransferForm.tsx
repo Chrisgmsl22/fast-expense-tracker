@@ -29,12 +29,9 @@ type Props = {
     /** When present, the form edits this transfer instead of creating one. */
     transfer?: TransferEditable;
     /**
-     * Which table the row being edited lives in. A payment you sent is an
-     * Expense (spec 0007 §6b), but a LEGACY `gf_paid` row is still a movement —
-     * the conversion is deferred (CHORE-12), so on production every one of them
-     * is. Routing an edit by direction alone sends it to the expense action,
-     * which answers "not found" for a row in plain sight. New rows are always
-     * expenses, hence the default.
+     * Which table the row being edited lives in. A LEGACY `gf_paid` row is still a
+     * movement (conversion deferred), so routing an edit by direction alone answers
+     * "not found" for a row in plain sight. New rows are always expenses.
      */
     source?: "expense" | "movement";
     partnerName: string;
@@ -43,16 +40,9 @@ type Props = {
 };
 
 /**
- * Log a settlement transfer with the partner. `direction` picks the side, and
- * the two sides are no longer symmetric (spec 0007 §6b):
- *
- * - **you → her** is an `Expense{isPartnerPayment}` in Combined Expenses. Paying
- *   her is the moment the money is really spent, so it belongs in the budget.
- * - **her → you** stays a `Movement{gf_received}`. It is her cash settling what
- *   she owes you; nothing of yours was consumed.
- *
- * Either way the amount is the figure you settled, netted in your head; no split
- * is applied to it.
+ * Log a settlement transfer. The two sides are not symmetric (spec 0007 §6b): you →
+ * her is an `Expense{isPartnerPayment}` in Combined Expenses; her → you stays a
+ * `Movement{gf_received}`. No split is applied to either.
  */
 export function TransferForm({
     direction = "gf_paid",
@@ -72,7 +62,6 @@ export function TransferForm({
     const [formError, setFormError] = useState<string | null>(null);
 
     const inbound = direction === "gf_received";
-    // "I paid {partner}" — the half that becomes an expense.
     const outbound = !inbound;
     const blurb = inbound
         ? `Money ${partnerName} sent you — settles what she owes you. Not an expense.`
@@ -88,9 +77,6 @@ export function TransferForm({
         const form = e.currentTarget;
         startTransition(async () => {
             try {
-                // Money you SEND her is an expense (spec 0007 §6b) — the only
-                // half of a settlement that is real spending of yours. Money she
-                // sends you stays a movement: it is her cash, not your purchase.
                 const res =
                     outbound && source === "expense"
                         ? transfer

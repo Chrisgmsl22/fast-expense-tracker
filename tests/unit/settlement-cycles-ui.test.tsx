@@ -246,9 +246,8 @@ describe("SettlementViews", () => {
 });
 
 describe("a locked row", () => {
-    // The Month view passes no `readOnly`, so this is the exact case the round-2
-    // fix missed: the same closing transfer showed Edit and Delete there, and
-    // the refusal only arrived after the user confirmed the delete.
+    // The Month view passes no `readOnly`, so a locked row must carry its own lock —
+    // otherwise the refusal only arrives after the user confirms the delete.
     it("offers no edit or delete control in a view that never passes readOnly", () => {
         render(
             <SettlementJournal
@@ -257,9 +256,8 @@ describe("a locked row", () => {
             />,
         );
 
-        // Two transfer rows, one locked: exactly one Edit and one Delete
-        // survive. Counting proves the lock, not a component that happens to
-        // render no controls at all.
+        // Two transfer rows, one locked: exactly one Edit and one Delete survive.
+        // Counting proves the lock, not a component that renders no controls at all.
         expect(screen.getAllByRole("button", { name: /^Edit / })).toHaveLength(
             1,
         );
@@ -283,12 +281,9 @@ describe("a locked row", () => {
         ).toBeDefined();
     });
 
-    // Round 4, the third surface of the same defect. The Month TAB passes no
-    // `readOnly`, and an expense-backed row's `locked` was a hardcoded `false` —
-    // so a payment inside a filed settlement rendered Edit and Delete there.
-    // Delete hit `cycle_closed`; Edit opened a prefilled dialog that failed on
-    // save. Asserted through `SettlementViews`, the composed view, because the
-    // journal on its own never showed the bug.
+    // The Month TAB passes no `readOnly`, so an expense-backed row's own `locked` is the
+    // only thing that hides its controls. Asserted through `SettlementViews`, the
+    // composed view — the journal alone never shows this.
     it("drops the controls on a locked PAYMENT in the Month tab, which passes no readOnly", () => {
         const lockedPayment: SettlementJournalItem = {
             kind: "transfer",
@@ -312,9 +307,8 @@ describe("a locked row", () => {
         renderViews({ monthJournal: [lockedPayment, openPayment] });
         fireEvent.click(screen.getByRole("tab", { name: "July" }));
 
-        // Two identical-looking payment rows, one locked: exactly one Edit and
-        // one Delete survive. Counting proves the lock rather than a panel that
-        // renders no controls at all.
+        // Two identical-looking payment rows, one locked: exactly one Edit and one
+        // Delete survive. Counting proves the lock.
         expect(screen.getAllByRole("button", { name: /^Edit / })).toHaveLength(
             1,
         );

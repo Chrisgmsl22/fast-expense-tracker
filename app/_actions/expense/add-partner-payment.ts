@@ -19,7 +19,6 @@ import {
     type PartnerPaymentInput,
 } from "@/lib/schemas/expense";
 
-/** Failure modes the caller can branch on. */
 export type AddPartnerPaymentCode =
     | "validation"
     | "unauthenticated"
@@ -31,7 +30,6 @@ export type AddPartnerPaymentResult = ActionResult<
     AddPartnerPaymentCode
 >;
 
-/** Injectable seams — the repositories this action orchestrates. */
 export type AddPartnerPaymentDeps = {
     expenseRepo: ExpenseRepository;
     categoryRepo: CategoryRepository;
@@ -39,23 +37,9 @@ export type AddPartnerPaymentDeps = {
 };
 
 /**
- * Log money you sent the partner (spec 0007 §6b).
- *
- * It is stored as an **Expense** carrying `isPartnerPayment`, not a movement:
- * paying her is the moment the money is really spent, so it belongs in the
- * buckets and the category rollups like any other purchase. A debt she fronted
- * does not — it is provisional until money moves, and can be reduced or
- * cancelled by something she owes you. That is why this action, and not the debt
- * form, is the one that reaches the budget.
- *
- * It stays out of spend-by-card: a payment usually leaves a bank account with no
- * card attached, and a cardless row read as "Cash" is what BUG-1 looked like.
- *
- * **No split is applied**: the amount is what you sent, so `amount` and
- * `actualExpenditure` are equal and `isShared` is false. Category and
- * subcategory default to `combined-expenses` and its partner-payment
- * subcategory; the row is an ordinary expense afterwards, so both are editable
- * from the expense form.
+ * Log money sent to the partner as an `Expense{isPartnerPayment}` — paying her
+ * is when the money is really spent, so it reaches the buckets (spec 0007 §6b).
+ * No split is applied: `amount` and `actualExpenditure` are equal.
  */
 export async function addPartnerPayment(
     input: unknown,
@@ -127,9 +111,7 @@ export async function addPartnerPayment(
         const created = await expenseRepo.insert(userId, {
             categoryId,
             subcategoryId,
-            // A transfer leaves a bank account, not a card, so there is no card
-            // to attach. The null is why spend-by-card has to exclude the row
-            // rather than group it — a cardless row reads as "Cash" (BUG-1).
+            // A transfer leaves a bank account, so there is no card to attach.
             cardId: null,
             date: cdmxCalendarDateToUtc(v.date),
             description: partnerPaymentDescription(

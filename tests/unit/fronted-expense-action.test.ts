@@ -65,9 +65,8 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
         expect(res.ok).toBe(true);
         expect(repo.inserts).toHaveLength(1);
         const row = repo.inserts[0]!;
-        // The marker is its own column. It is NOT `paidBy`, which stays "you":
-        // that column is deprecated and every read has dropped it, so hanging
-        // this meaning back on it would revive exactly what ADR-0020 removed.
+        // The marker is its own column, NOT `paidBy`: that column is deprecated, and
+        // reusing it would revive what ADR-0020 removed.
         expect(row.isPartnerPayment).toBe(true);
         expect(row.paidBy).toBe("you");
     });
@@ -81,9 +80,8 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
         );
 
         const row = repo.inserts[0]!;
-        // "I don't need to know how much she fronted. Whatever I owe her is what
-        // I care about." A $1,000 dinner is logged as his $680, so there is no
-        // 32% to derive: the figure entered IS the consumption.
+        // A $1,000 dinner is logged as his $680: the figure entered IS the consumption,
+        // so there is no 32% to derive.
         expect(row.amount).toBe(680);
         expect(row.actualExpenditure).toBe(680);
         expect(row.isShared).toBe(false);
@@ -149,11 +147,8 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
             deps({ expenseRepo: repo }),
         );
 
-        // This string is the `Expense.description`: it renders on Expenses, the
-        // dashboard feed, the category rollup and the settlement breakdown. "I
-        // owe Brenda" described the debt — the opposite event to the one this
-        // row records — and it is also the wording the settlement journal uses
-        // to title the very same row.
+        // This string is the `Expense.description`, rendered on four surfaces. "I owe
+        // Brenda" described the debt — the opposite event to the one this row records.
         expect(repo.inserts[0]!.description).toBe("Transfer — you paid Brenda");
         expect(repo.inserts[1]!.description).toBe("Sushi");
     });

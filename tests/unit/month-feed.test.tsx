@@ -105,9 +105,7 @@ describe("MonthFeed", () => {
     });
 
     it("labels a partner payment, never Cash", () => {
-        // The row has no card because a transfer leaves a bank account, not a
-        // card. Falling back to the word Cash — as a bare `?? "Cash"` does —
-        // puts the BUG-1 symptom back on screen even though the totals are right.
+        // A payment has no card; the bare `?? "Cash"` fallback is BUG-1's symptom.
         render(
             <MonthFeed
                 expenses={[
@@ -350,10 +348,8 @@ describe("MonthFeed", () => {
     });
 
     it("never shows a debt she fronted, even when handed one", () => {
-        // Settlement-only (spec 0007 §6b): a debt is provisional and may shrink
-        // or vanish before money moves, so it must not sit beside real
-        // spending. The month query excludes it and `buildFeed` drops it again,
-        // so a caller assembling its own list cannot put the orange row back.
+        // Settlement-only (spec 0007 §6b): the month query excludes it and `buildFeed`
+        // drops it again.
         render(
             <MonthFeed
                 expenses={expenses}
@@ -368,9 +364,8 @@ describe("MonthFeed", () => {
     });
 
     it("changes no footer total when a debt is present (no cash moved)", () => {
-        // A debt reaches NO ledger (spec 0007 §6b), so adding one must not move
-        // a single figure. Both renders carry the same expenses; only the debt
-        // differs.
+        // A debt reaches NO ledger (spec 0007 §6b), so adding one must not move a
+        // figure. Both renders carry the same expenses; only the debt differs.
         const movements: MovementListItem[] = [];
         const { unmount } = render(
             <MonthFeed

@@ -48,42 +48,27 @@ function transferTitle(
 }
 
 /**
- * Why a locked row has no edit or delete control. Without it the row just looks
- * inert, and the reason for it is invisible.
- *
- * It says "in a closed settlement", not "closed a settlement": a cycle freezes
- * every row it COUNTED, and most of those did not close anything. Only a
- * transfer can carry the marker, so the narrower wording was already false on
- * the debt beside it — and on the payment-expense two rows down.
+ * Why a locked row has no controls. It says "in a closed settlement", not "closed a
+ * settlement": a cycle freezes every row it counted, not just the marker.
  */
 const LOCKED_REASON = "in a closed settlement · locked";
 
 /**
- * A debt's second line. When the row's title is the thing she fronted (its
- * note), the generic "I owe {partner}" drops here — exactly what `movementRowText`
- * does in both feeds, so the same debt reads the same everywhere. When there is
- * no note the title already says "I owe {partner}", so the date stands alone.
- *
- * The tail explains a missing control. Only `locked` does that now: a locked row
- * has no delete either, so telling its reader to "delete to change" would name a
- * way out that is not there.
+ * A debt's second line. The generic "I owe {partner}" drops here when the note is
+ * the title, matching `movementRowText`. Only `locked` explains a missing control:
+ * a locked row has no delete either, so "delete to change" names a way out that is not there.
  */
 function debtSubtitle(row: PartnerDebtRow, partnerName: string): string {
     const label = defaultDebtDescription(partnerName);
     return [
         formatExpenseDate(row.date),
         row.description === label ? null : label,
-        // Only a locked row explains a missing control now: a movement-backed
-        // debt is the ordinary, editable case (spec 0007 §6b), so the old
-        // "older entry · delete to change" tail was telling every debt it
-        // could not be edited while the edit button sat beside it.
         row.locked ? LOCKED_REASON : null,
     ]
         .filter(Boolean)
         .join(" · ");
 }
 
-/** A transfer's second line: its date, its note, and any lock reason. */
 function transferSubtitle(row: TransferRow): string {
     return [
         formatExpenseDate(row.date),
@@ -125,9 +110,8 @@ export function SettlementJournal({
     /** Drop the card chrome when the caller already provides it (History). */
     bare?: boolean;
     /**
-     * Hide the edit/delete controls. A closed cycle is a filed record: its rows
-     * are frozen server-side, so offering the buttons would only lead to a
-     * refusal.
+     * Hide the edit/delete controls. A closed cycle's rows are frozen server-side, so
+     * offering the buttons would only lead to a refusal.
      */
     readOnly?: boolean;
 }) {
@@ -174,13 +158,8 @@ export function SettlementJournal({
     function confirmDelete() {
         if (!deleting) return;
         startTransition(async () => {
-            // Route on the ROW's own table, never on its kind. After the
-            // inversion (spec 0007 §6b) a payment is an expense and a debt is a
-            // movement, so a kind-based branch sent every payment to
-            // `deleteMovement` — which either matched nothing or matched the
-            // leftover movement sharing its id, and reported success while the
-            // row survived on screen. That is this repo's documented failure
-            // mode: an action that says "done" and changes nothing.
+            // Route on the ROW's own table, never on its kind: after the inversion a
+            // payment is an expense and a debt is a movement (spec 0007 §6b).
             const res =
                 deleting.source === "expense"
                     ? await deleteExpense({ id: deleting.id })
@@ -242,29 +221,17 @@ export function SettlementJournal({
                             item={item}
                             partnerName={partnerName}
                             actions={
-                                // A locked row drops its controls wherever it
-                                // renders. The row carries the fact, so a view
-                                // cannot reintroduce the buttons by forgetting
-                                // `readOnly` — learning a row is frozen only
-                                // after confirming a delete is not acceptable.
-                                //
-                                // That holds only while every PRODUCER of a row
-                                // derives `locked`. It did not: the service
-                                // hardcoded `false` on both expense branches,
-                                // so this gate passed a frozen payment through
-                                // on the Month tab, which passes no `readOnly`.
-                                // See `buildSettlementRows`.
+                                // The row carries `locked`, so a view cannot reintroduce
+                                // the buttons by forgetting `readOnly`. Every producer of
+                                // a row must derive it.
                                 readOnly || item.locked ? null : item.kind ===
                                   "partner_debt" ? (
                                     <RowActions
                                         label={item.description}
                                         pending={pending}
-                                        // A debt is a movement by design now
-                                        // (spec 0007 §6b) and `PartnerDebtForm`
-                                        // writes `updatePartnerDebt`, so the
-                                        // movement-backed row is the EDITABLE
-                                        // one. The old gate said the opposite
-                                        // and left every debt uneditable.
+                                        // A movement-backed debt is the editable
+                                        // case — `PartnerDebtForm` writes
+                                        // `updatePartnerDebt`.
                                         onEdit={
                                             item.source === "movement"
                                                 ? () => openEdit(item)
@@ -457,12 +424,9 @@ function JournalRow({
                 icon={<Check className="size-4" />}
                 iconClass="bg-positive-tint text-positive"
                 title={item.description}
-                // A locked transfer says why it has no controls, so this row
-                // says it too: it is the only other one without them, and
-                // "inert for no stated reason" is the thing worth avoiding.
-                // A frozen row does NOT point at the Expenses screen — the same
-                // close froze it there, so that would name a way out that is
-                // not there.
+                // Say why this row has no controls; inert for no stated reason is the
+                // thing to avoid. It must not point at the Expenses screen — the same
+                // close froze it there.
                 subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32% · ${
                     item.locked ? LOCKED_REASON : "edit on the Expenses screen"
                 }`}

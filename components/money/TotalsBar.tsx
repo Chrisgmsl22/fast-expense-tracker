@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
 
 /**
- * One figure in a totals bar. `tone` picks the treatment the expenses footer
- * already established: plain for context figures, `highlight` for the one the
- * eye should land on, `strong` for a closing total behind a divider.
+ * One figure in a totals bar. `highlight` is the figure the eye should land on,
+ * `strong` a closing total behind a divider.
  */
 export type TotalsItem = {
     label: ReactNode;
@@ -12,9 +11,8 @@ export type TotalsItem = {
 };
 
 /**
- * The dark pill-shaped totals bar — extracted from the expenses list so the
- * settlement's closed-cycle footer reads in the same visual language instead of
- * forking a second one. Layout only: every figure is computed by the caller.
+ * The dark pill-shaped totals bar, shared by the expenses list and the settlement's
+ * closed-cycle footer. Layout only: the caller computes every figure.
  */
 export function TotalsBar({
     items,

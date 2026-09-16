@@ -11,14 +11,9 @@ import { FakeSettlementRepository } from "@/tests/support/fake-settlement-reposi
 import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
 
 /**
- * The ordinary expense form must not be able to shrink a payment.
- *
- * A payment row is an ordinary `Expense` once saved, so it opens in the ordinary
- * edit form — which offers the shared-expense split. The amount on a payment row
- * is what he TRANSFERRED (spec 0007 §6b), so applying a 68% split to it would
- * store `actualExpenditure` 462.40 on a $680 payment. The settlement balance
- * reads that exact field as what he has paid her, so the payment would quietly
- * drop by a third with nothing on screen saying so. `updateExpense` clamps it.
+ * The ordinary expense form must not shrink a payment. A payment row opens in that
+ * form, which offers the split — and `actualExpenditure` is what the balance reads as
+ * "what he paid her", so a 68% split would quietly drop it by a third.
  */
 const PAYMENT = 680;
 const DAY = new Date("2026-09-10T06:00:00Z");
@@ -71,8 +66,7 @@ describe("editing a partner payment through the ordinary expense form", () => {
         const repo = seededRepo();
         const res = await updateExpense(splitAttack, repo);
 
-        // Refused, not quietly coerced. A "saved" answer to a change that was
-        // ignored is the silent save failure this repo shipped once already.
+        // Refused, not quietly coerced: a "saved" answer to an ignored change is a silent save failure.
         expect(res.ok).toBe(false);
         if (res.ok) return;
         expect(res.code).toBe("validation");

@@ -5,14 +5,10 @@ import { PrismaExpenseRepository } from "@/lib/repositories/expense.repository";
 import { PrismaMovementRepository } from "@/lib/repositories/movement.repository";
 
 /**
- * Which cycle owns an expense, against a real database.
- *
- * An expense has no marker column: its cycle is its `createdAt` measured against
- * the close instants filed on `Movement.closedAt`. The choice itself is pure
- * (`cycleCloseAtOrAfter`, unit-tested with plain Dates); what only a database
- * can confirm is the part around it — that the marker query reads this user's
- * closes and nobody else's, that `createdAt` comes back as the real insert time,
- * and that both read paths (`getById`, `getForMonth`) answer the same.
+ * Which cycle owns a row, against a real database. The choice itself is pure
+ * (`cycleCloseAtOrAfter`); what only a database confirms is that the marker query
+ * reads this user's closes, that `createdAt` is the real insert time, and that both
+ * read paths agree.
  */
 const repo = new PrismaExpenseRepository(db);
 const movementRepo = new PrismaMovementRepository(db);
@@ -210,13 +206,8 @@ describe("closed-cycle derivation (integration)", () => {
 });
 
 /**
- * The same derivation for a MOVEMENT — the half that was missing.
- *
- * `Movement.closedAt` is the cycle's MARKER, and the DB CHECK allows it only on
- * a transfer. So a `gf_fronted` debt can never carry one, and the write scope
- * `closedAt: null` never blocked a debt: closing a cycle and then deleting a
- * debt inside it succeeded, and restated that filed cycle's figure. A movement
- * needs the same `createdAt`-against-the-closes derivation an expense uses.
+ * The same derivation for a MOVEMENT. The DB CHECK allows `closedAt` only on a
+ * transfer, so a debt needs the `createdAt`-against-the-closes derivation too.
  */
 describe("closed-cycle derivation for movements (integration)", () => {
     async function seedDebt(userId: string, createdAt: Date) {

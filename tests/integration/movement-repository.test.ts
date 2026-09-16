@@ -23,10 +23,8 @@ const write = (over: Partial<MovementWriteData> = {}): MovementWriteData => ({
 
 describe("PrismaMovementRepository (integration)", () => {
     it("getForMonth EXCLUDES gf_fronted, so a debt never reaches a feed", async () => {
-        // A debt she fronted is settlement-only and provisional (spec 0007
-        // §6b): it may shrink or vanish before money moves, so it must not sit
-        // beside real spending. Filtered here, at the query, rather than hidden
-        // at render — a row that never arrives cannot be forgotten by a view.
+        // A debt she fronted is settlement-only and provisional (spec 0007 §6b).
+        // Filtered at the query, so a view written later cannot forget it.
         const user = await seedUser();
         await repo.insert(user.id, write({ type: "gf_paid", amount: 50 }));
         await repo.insert(user.id, write({ type: "card_payment", amount: 80 }));

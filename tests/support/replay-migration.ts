@@ -4,13 +4,9 @@ import { join } from "node:path";
 import { db } from "@/lib/db";
 
 /**
- * Replay a migration file against the test database, statement by statement, the
- * way `prisma migrate deploy` does.
- *
- * The file is READ FROM DISK on purpose. A test that re-types the SQL into a
- * constant proves only that the copy behaves — it cannot notice the deployed
- * statement changing underneath it, which is the one thing worth pinning about a
- * migration.
+ * Replay a migration file against the test database, statement by statement, the way
+ * `prisma migrate deploy` does. The file is READ FROM DISK: a re-typed copy could not
+ * notice the deployed statement changing underneath it.
  */
 export async function replayMigration(name: string): Promise<void> {
     const sql = readFileSync(
@@ -23,10 +19,8 @@ export async function replayMigration(name: string): Promise<void> {
 }
 
 /**
- * Split SQL on statement-terminating semicolons, ignoring any inside a quoted
- * literal or identifier. A plain `split(";")` would cut a statement in half the
- * first time a default value or a `COALESCE` fallback contains a semicolon, and
- * the failure would look like a syntax error in code that is actually fine.
+ * Split SQL on statement-terminating semicolons, ignoring any inside a quoted literal
+ * or identifier — a plain `split(";")` would cut a statement in half.
  */
 export function splitStatements(sql: string): string[] {
     const statements: string[] = [];
@@ -64,10 +58,8 @@ export function splitStatements(sql: string): string[] {
             current += char;
             continue;
         }
-        // A `$$ … $$` block is ONE statement however many semicolons it holds —
-        // a DO block always holds several. Splitting inside it would hand
-        // Postgres half a procedure and report a syntax error in SQL that is
-        // perfectly valid.
+        // A `$$ … $$` block is ONE statement however many semicolons it holds. Splitting
+        // inside it hands Postgres half a procedure and reports a bogus syntax error.
         if (char === "$" && next === "$") {
             const close = sql.indexOf("$$", i + 2);
             const end = close === -1 ? sql.length : close + 2;

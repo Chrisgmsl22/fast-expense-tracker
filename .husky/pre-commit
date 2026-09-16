@@ -1,4 +1,5 @@
 bash scripts/check-doc-size.sh
+bash scripts/check-comment-size.sh
 bash scripts/check-agent-frontmatter.sh
 pnpm lint-staged
 pnpm typecheck

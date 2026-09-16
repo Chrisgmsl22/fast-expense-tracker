@@ -30,9 +30,7 @@ export type DeleteMovementResult = ActionResult<
  * row that isn't the user's matches nothing and returns `not_found` rather than
  * deleting another user's data (IDOR guard).
  *
- * A row that a **closed settlement cycle counted** is refused, the same way
- * `deleteExpense` refuses one: deleting it restates a settlement the close
- * dialog promised could not be reopened.
+ * A row a **closed settlement cycle counted** is refused (spec 0007 §3.5).
  */
 export async function deleteMovement(
     input: unknown,
@@ -59,9 +57,7 @@ export async function deleteMovement(
     }
 
     try {
-        // Read before deleting, exactly as `deleteExpense` does: whether the row
-        // is frozen is the server's fact, and a missing row short-circuits here
-        // rather than after the attempt.
+        // A missing row short-circuits here rather than after the delete attempt.
         const existing = await repo.getById(userId, id);
         if (!existing) {
             return {
@@ -70,12 +66,8 @@ export async function deleteMovement(
                 message: "Movement not found.",
             };
         }
-        // Frozen means TWO things: the row's cycle is closed AND that cycle
-        // counted the row. Asking only "is this the marker?" (`closedAt`) froze
-        // one row per cycle: a debt can never hold the marker — the DB CHECK
-        // allows it only on a transfer — so deleting a debt out of a filed
-        // settlement succeeded and restated its "You owed {partner}" figure.
-        // A card payment moves no balance and stays deletable at any age.
+        // Frozen = cycle closed AND that cycle counted the row. The DB CHECK allows
+        // `closedAt` only on a transfer, so the marker can never freeze a debt.
         if (
             existing.cycleClosedAt &&
             movementMovesSettlementBalance(existing.type)

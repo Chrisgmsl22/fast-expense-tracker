@@ -3,10 +3,7 @@ import { CASH_COLOR } from "@/lib/palette";
 
 /**
  * The gold the app already uses for money sent to the partner (`--transfer` in
- * globals.css). The highlight follows the payment into its new life as an
- * expense row (spec 0007 §6b), so the same money keeps the same colour wherever
- * it appears. Repeated as a hex because the row dots take an inline colour, the
- * same way `CASH_COLOR` is.
+ * globals.css), repeated as a hex because the row dots take an inline colour.
  */
 export const PARTNER_PAYMENT_COLOR = "#ca8a04";
 
@@ -17,25 +14,9 @@ export type ExpenseCardLabel = { name: string; color: string };
 const NEUTRAL_PARTNER_LABEL = "I owed my partner";
 
 /**
- * The subcategory name a row DISPLAYS.
- *
- * Presentation only — nothing is renamed in the database. The seeded
- * "Purchases made by girlfriend" reads as `I owed {partner}`, which says what
- * the payment settled rather than what she bought. It resolves from the
- * configured partner name (CHORE-6.a), so it follows a change in Settings
- * instead of going stale, and stays partner-neutral when nobody is configured: a
- * solo user has no one to owe.
- *
- * This render-time label is why the stored rename could be deferred safely: the
- * screens already say the right thing while the rows still carry the old name.
- *
- * Keyed on the SEEDED name rather than on `isPartnerPayment`, so a user who
- * renames this subcategory keeps their own name — an explicit choice outranks a
- * computed default, which is the precedence per-user category management
- * (CHORE-8.c) will need.
- *
- * Any further computed subcategory label belongs here, not at a render site:
- * this is the one place every surface reads.
+ * The subcategory name a row DISPLAYS — presentation only, nothing is renamed in the
+ * database. Keyed on the SEEDED name, not `isPartnerPayment`, so a user who renames
+ * this subcategory keeps their own name.
  */
 export function subcategoryLabel(
     storedName: string,
@@ -48,16 +29,9 @@ export function subcategoryLabel(
 }
 
 /**
- * The card label for one expense row — the single answer both the Expenses list
- * and the dashboard feed read, so the two can never print different words for
- * the same row.
- *
- * A **payment to the partner** usually has no `cardId` — the money left a bank
- * account, not a card. Falling back to "Cash" for it, as a plain `?? "Cash"`
- * does, puts the word Cash on screen next to a settlement payment, which is
- * precisely what BUG-1 looked like. The totals stay right, but anyone reading
- * the list would reasonably conclude the bug is back. So say what actually
- * happened instead.
+ * The card label for one expense row — the single answer both the Expenses list and
+ * the dashboard feed read. A payment has no `cardId`, and a plain `?? "Cash"` would
+ * put the word Cash next to a settlement payment, which is BUG-1's symptom.
  */
 export function expenseCardLabel(
     expense: {

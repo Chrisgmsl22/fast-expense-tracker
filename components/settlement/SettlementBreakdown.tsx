@@ -43,8 +43,7 @@ const isZeroCents = (n: number): boolean => Math.abs(n) < 0.005;
 
 /**
  * "How this balance is made" — the four signed lines + the net (spec 0004 §3.1).
- * Each line opens to the individual rows that sum to it; collapsed by default, so
- * the screen still reads as four totals at a glance.
+ * Each line opens to the rows behind it; collapsed by default.
  */
 export function SettlementBreakdown({
     balance,
@@ -98,10 +97,8 @@ export function SettlementBreakdown({
                     return (
                         <li key={line.key}>
                             {items.length === 0 ? (
-                                // Nothing to open — say so inline rather than
-                                // offer an empty expandable region. A line with
-                                // no rows but a non-zero total is a real
-                                // inconsistency, so it says that instead.
+                                // Nothing to open — say so inline rather than offer an empty region. A line with
+                                // no rows but a non-zero total is a real inconsistency, so it says that instead.
                                 <div className="flex items-center justify-between gap-3 py-1 pl-5">
                                     <span>
                                         {label}
@@ -167,9 +164,8 @@ export function SettlementBreakdown({
 }
 
 /**
- * One revealed row: date, description, and its own contribution. A partner-share
- * row also names the full expense it came out of, labelled so the two figures
- * can't be read as one.
+ * One revealed row. A partner-share row also names the full expense it came out of,
+ * labelled so the two figures can't be read as one.
  */
 function BreakdownItemRow({
     item,

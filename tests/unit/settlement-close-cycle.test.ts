@@ -131,11 +131,9 @@ describe("closeSettlementCycle", () => {
     });
 
     it("files every row the zero balance counted, including ones entered after the transfer", async () => {
-        // Christian's normal flow: +320 partner share at t0, she sends 100 at
-        // t1 (balance +220), he logs a 220 debt she fronted at t2 (balance 0),
-        // then closes at t3. The debt was entered AFTER the transfer, so a
-        // boundary taken from the transfer's entry time would leave it out and
-        // file a +220 cycle as settled, opening the next one at −220.
+        // The debt was entered AFTER the transfer, so a boundary taken from the
+        // transfer's entry time would leave it out — filing a +220 cycle as settled and
+        // opening the next one at −220.
         const t0 = new Date("2026-07-10T10:00:00Z");
         const t1 = new Date("2026-07-11T10:00:00Z");
         const t2 = new Date("2026-07-12T10:00:00Z");
@@ -199,13 +197,8 @@ describe("closeSettlementCycle — the direction the tests never covered", () =>
     });
 
     it("refuses, loudly, when the cycle was squared without a transfer", async () => {
-        // The ordinary flow after the inversion: she fronted $300, he paid her
-        // $300 — and the payment is an EXPENSE now, so the open cycle holds no
-        // markable movement. `closedAt` lives on `Movement`, so there is
-        // nothing here to carry the boundary.
-        //
-        // This used to answer ok:true/alreadyClosed:true — a success report for
-        // work not done, on a cycle with rows still in it.
+        // She fronted $300, he paid her $300 — and the payment is an EXPENSE now, so the
+        // open cycle holds no movement to carry the boundary.
         const { settlementRepo, deps } = setup(
             [
                 expense({
@@ -239,11 +232,9 @@ describe("closeSettlementCycle — the direction the tests never covered", () =>
 });
 
 /**
- * `markCycleClose` returns 0 for two opposite reasons: the row is already a
- * marker (a double submit — the cycle IS closed), or the row was deleted between
- * the read that picked it and the write that would mark it (the cycle did NOT
- * close). Mapping both to `alreadyClosed: true` told the user a settlement was
- * filed when nothing was written.
+ * `markCycleClose` returns 0 for two opposite reasons: the row is already a marker (the
+ * cycle IS closed), or it was deleted since the read (the cycle did NOT close). Mapping
+ * both to `alreadyClosed` reports a filing that never happened.
  */
 describe("closeSettlementCycle — a zero-count write", () => {
     beforeEach(() => {

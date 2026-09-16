@@ -12,10 +12,8 @@ const card = { name: "BBVA", color: "#2563eb" };
 
 describe("expenseCardLabel", () => {
     it("never prints Cash for a payment you sent the partner", () => {
-        // A payment row has no `cardId`: a transfer leaves a bank account. A
-        // plain `?? "Cash"` fallback puts the word Cash on screen next to a
-        // settlement payment — exactly what BUG-1 looked like, so a reader would
-        // reasonably conclude the bug is back even though the totals are right.
+        // A payment has no `cardId`: a transfer leaves a bank account. A plain
+        // `?? "Cash"` fallback puts BUG-1's symptom back on screen.
         const label = expenseCardLabel(
             { isPartnerPayment: true, card: null },
             "Brenda",
@@ -57,10 +55,8 @@ describe("expenseCardLabel", () => {
 });
 
 describe("subcategoryLabel", () => {
-    // Keyed on the constant, not on a literal: the STORED name is still the
-    // original seeded one until the deferred data migration renames the rows,
-    // and this label is the reason that could be deferred safely — the screens
-    // already read correctly while the database has not moved.
+    // Keyed on the constant: the STORED name is the original seeded one until the
+    // deferred data migration renames the rows.
     const STORED = PARTNER_PAYMENT_SUBCATEGORY_NAME;
 
     it("reads the seeded payment subcategory as 'I owed {partner}'", () => {

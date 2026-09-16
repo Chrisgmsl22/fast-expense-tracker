@@ -33,11 +33,7 @@ export type DeleteExpenseResult = ActionResult<
  * Delete an expense for the signed-in user. The delete is **scoped
  * by `userId`**: a row that isn't the user's matches nothing and returns
  * `not_found` rather than deleting another user's data (IDOR guard).
- *
- * A row that a **closed settlement cycle counted** is refused. The movement side
- * has always frozen a closed cycle; the expense side did not, so deleting an old
- * shared expense from the Expenses screen silently restated a filed settlement —
- * while the close dialog promised closed settlements cannot be reopened. A solo
+ * A row a **closed settlement cycle counted** is refused (spec 0007 §3.5). A solo
  * expense of the same age moves no balance and stays deletable.
  */
 export async function deleteExpense(
@@ -71,12 +67,8 @@ export async function deleteExpense(
                 message: "Expense not found.",
             };
         }
-        // Frozen means TWO things: the row's cycle is closed AND that cycle
-        // counted the row. A cycle counts a partner share or a payment to her
-        // and nothing else, so an unshared expense inside a closed cycle stays
-        // fully editable — freezing on the marker alone locked the entire
-        // expense history behind a refusal that named a settlement the row was
-        // never in.
+        // Frozen = the row's cycle is closed AND that cycle counted the row. An
+        // unshared expense inside a closed cycle counts for nothing and stays editable.
         if (existing.cycleClosedAt && movesSettlementBalance(existing)) {
             return {
                 ok: false,

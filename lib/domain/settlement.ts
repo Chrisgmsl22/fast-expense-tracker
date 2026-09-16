@@ -93,9 +93,8 @@ export function isBalanceSettled(balance: CoupleBalance): boolean {
 }
 
 /**
- * The only movement types that may carry the cycle marker (spec 0007 §3.5). A
- * cycle closes when real money squares the balance, so only a transfer can be
- * the closing event — never a card payment, never an "I owe {partner}" debt.
+ * The only movement types that may carry the cycle marker (spec 0007 §3.5): a cycle
+ * closes when real money squares the balance, so only a transfer can.
  */
 export const CYCLE_CLOSING_TYPES = ["gf_paid", "gf_received"] as const;
 
@@ -107,15 +106,9 @@ export function canCloseCycle(type: string): type is CycleClosingType {
 }
 
 /**
- * The movement types a settlement cycle COUNTS — the three `inputsFrom` nets:
- * a debt she fronted, money she sent, money you sent (the legacy `gf_paid`).
- * A card payment, an income row or an "other" never touch the balance.
- *
- * This is the movement twin of `movesSettlementBalance`, and it exists for the
- * same reason: a cycle freezes every row it counted, so "counted" must have one
- * definition. Note it is WIDER than `CYCLE_CLOSING_TYPES` — only a transfer can
- * carry the marker, but a debt is just as much inside the cycle, and freezing on
- * the marker column alone left every debt in a filed settlement deletable.
+ * The movement types a settlement cycle COUNTS — the twin of `movesSettlementBalance`.
+ * WIDER than `CYCLE_CLOSING_TYPES`: a debt never carries the marker, but it is just
+ * as much inside the cycle, so it freezes with it.
  */
 export const SETTLEMENT_MOVEMENT_TYPES = [
     "gf_fronted",
@@ -132,18 +125,9 @@ export function movementMovesSettlementBalance(
 }
 
 /**
- * The close instant of the cycle a row entered at `enteredAt` belongs to, or
- * null when that cycle is still open (spec 0007 §3.5).
- *
- * Cycles are derived from the sequence of close instants, and each one runs up
- * to and INCLUDING its own close — so the row belongs to the FIRST close at or
- * after it entered. A row entered after the last close has no such marker, which
- * is precisely "still open".
- *
- * It takes the close instants as plain values rather than querying for the
- * nearest one: the boundary (`>=`, not `>`) and the "earliest of those" choice
- * are the whole risk of the closed-cycle freeze, and here they are testable with
- * three Dates instead of a database. `closes` may arrive in any order.
+ * The close instant of the cycle a row entered at `enteredAt` belongs to, or null
+ * while that cycle is open. A cycle runs up to and INCLUDING its own close, so the
+ * row belongs to the FIRST close at or after it. `closes` may arrive unordered.
  */
 export function cycleCloseAtOrAfter(
     closes: readonly Date[],

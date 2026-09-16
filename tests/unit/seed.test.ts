@@ -127,11 +127,9 @@ describe("CATEGORY_SEED data", () => {
     });
 
     /**
-     * The seed, `getPartnerPaymentDefaults` and `subcategoryLabel` all match
-     * this subcategory BY NAME. One string, three readers: if the seed drifts
-     * from the constant, a payment files with `subcategoryId: null` and nothing
-     * says so. Spec 0007 renames it to "Covered for me", but that rename is
-     * DATA — it ships with the deferred data migration, not here.
+     * The seed, `getPartnerPaymentDefaults` and `subcategoryLabel` all match this
+     * subcategory BY NAME. If the seed drifts from the constant, a payment files with
+     * `subcategoryId: null` and nothing says so.
      */
     it("seeds the partner-payment subcategory under the name the code looks up", () => {
         const combined = CATEGORY_SEED.find(
@@ -245,11 +243,9 @@ describe("runSeed", () => {
     });
 
     /**
-     * The trap spec 0007 §6b names: re-seeding an UNMIGRATED database. The rows
-     * still carry "Purchases made by girlfriend" because the rename is deferred
-     * to the data PR. The seed matches by name, so a seed carrying the new name
-     * would not rename anything — it would create a SECOND subcategory beside
-     * the old one, which is how phantom cards appeared in the dev database.
+     * Re-seeding an UNMIGRATED database: the rows still carry "Purchases made by
+     * girlfriend" and the seed matches by name, so a seed carrying the new name would
+     * create a SECOND subcategory beside the old one.
      */
     it("creates no duplicate partner-payment subcategory on an unmigrated database", async () => {
         const { db, subcategory } = makeDb({

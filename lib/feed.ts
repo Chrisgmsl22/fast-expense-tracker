@@ -11,13 +11,9 @@ export type FeedItem =
     | { kind: "movement"; date: Date; movement: MovementListItem };
 
 /**
- * Merge expenses + movements into one list, newest first.
- *
- * A `gf_fronted` debt is dropped: it is settlement-only and provisional (spec
- * 0007 §6b). The month query already excludes it, so this is the second of two
- * guards — one at the data boundary, one at the render boundary — because a
- * caller assembling its own movement list would otherwise put an orange "I owe"
- * row back beside real spending with nobody noticing.
+ * Merge expenses + movements into one list, newest first. A `gf_fronted` debt is
+ * dropped: it is settlement-only (spec 0007 §6b). The month query already excludes
+ * it; this second guard covers a caller assembling its own movement list.
  */
 export function buildFeed(
     expenses: ExpenseListItem[],

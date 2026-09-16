@@ -83,11 +83,7 @@ function CategoryPill({ name, color }: { name: string; color: string }) {
 
 const ROW_GRID = "sm:grid-cols-[5.5rem_minmax(0,1fr)_10rem_9rem_8rem_4rem]";
 
-/**
- * Body of the movement delete confirmation. Same phrasing as the settlement
- * journal's own delete (`SettlementJournal.tsx`) — row title, amount in
- * parentheses — so one action reads the same on both screens.
- */
+/** Same phrasing as `SettlementJournal`'s delete, so one action reads alike on both screens. */
 function movementDeleteMessage(
     m: MovementListItem,
     partnerName: string,
@@ -96,7 +92,6 @@ function movementDeleteMessage(
     return `${title} (${formatMxn(m.amount)}) will be permanently removed.`;
 }
 
-/** Heading of the movement edit dialog — one per form it can open. */
 function movementEditTitle(type: MovementType | undefined): string {
     if (type === "card_payment") return "Edit card payment";
     return "Edit transfer";
@@ -108,9 +103,8 @@ function movementEditTitle(type: MovementType | undefined): string {
  * edit/delete. Money movements (card payment blue, "{partner} paid me" green)
  * interleave by date in the unfiltered ("All") view — they have no category, so
  * a category filter hides them — and are editable + deletable (CHORE-5).
- *
- * A debt she fronted does NOT appear here: it is settlement-only and
- * provisional (spec 0007 §6b). Money you SENT her does, as an ordinary expense.
+ * A debt she fronted does NOT appear here — it is settlement-only (spec 0007
+ * §6b). Money you SENT her does, as an ordinary expense.
  */
 export function ExpenseListInteractive({
     expenses,
@@ -177,15 +171,10 @@ export function ExpenseListInteractive({
     );
 
     // Same helper the dashboard feed uses, so "What I really spent" is the same
-    // consumption number on both screens — savings excluded (ADR-0018 §1). A
-    // payment to the partner is an expense now (spec 0007 §6b), so it is already
-    // among these rows: the helper returns `paidToPartner` as a breakdown of the
-    // total rather than a separate sum to add on.
-    //
-    // Movements ride along only when they are on screen: a legacy `gf_paid`
-    // transfer still holds real money the footer must show, but under a category
-    // filter the list hides every movement, so counting them would total rows
-    // nobody can see.
+    // consumption number on both screens — savings excluded (ADR-0018 §1).
+    // `paidToPartner` is a breakdown of the total, not a sum to add on. Movements
+    // ride along only when they are on screen: under a category filter the list
+    // hides every movement, so counting them would total rows nobody can see.
     const totals = computeFeedTotals(filtered, showMovements ? movements : []);
 
     function openEdit(id: string) {
@@ -639,31 +628,21 @@ function ExpenseRow({
 }) {
     // Savings is a transfer — no card (never "Cash").
     const isSavings = expense.category.slug === SAVINGS_SLUG;
-    // A payment to the partner has no card because a transfer leaves a bank
-    // account; the shared helper says so rather than falling back to the word
-    // Cash (which is what BUG-1 looked like on this very screen).
+    // A payment has no card; the shared helper says so instead of "Cash" (BUG-1).
     const { name: cardName, color: cardColor } = expenseCardLabel(
         expense,
         partnerName,
     );
-    // A row a CLOSED settlement cycle counted is frozen server-side, so it shows
-    // no edit or delete — the same thing `SettlementJournal` does with a locked
-    // row. Rendering the controls and refusing after the submit offers a way out
-    // that is not there. The predicate is the settlement's own, so exactly the
-    // rows the cycle counted lose their controls: a solo expense of the same age
-    // stays editable.
+    // A row a closed cycle counted is frozen server-side, so it shows no controls.
+    // The predicate is the settlement's own: a solo expense of the same age stays editable.
     const frozen =
         expense.cycleClosedAt !== null && movesSettlementBalance(expense);
-    // Spec 0007 §6a decision 3: the gold that marked a transfer follows the
-    // payment into its new life as an expense row, so the same money keeps the
-    // same colour on every screen. The card-column dot alone was not the
-    // highlight the spec asked for.
+    // The gold that marked a transfer follows the payment into its expense row (spec 0007 §6a).
     const highlight = isSavings
         ? "border-l-[3px] border-positive bg-positive-tint sm:pl-4"
         : expense.isPartnerPayment
           ? "border-l-[3px] border-transfer bg-transfer-tint sm:pl-4"
           : "";
-    // A full-height coloured border replaces the short category bar.
     const hasRowTint = isSavings || expense.isPartnerPayment;
     return (
         <li
@@ -778,15 +757,9 @@ function ExpenseRow({
 }
 
 /**
- * What a frozen row shows where its edit + delete controls would be.
- *
- * One component for both row kinds, so an expense and a movement frozen by the
- * same closed cycle cannot drift into two different lock treatments.
- *
- * The reason has to reach a keyboard user too. A `title` attribute only appears
- * on hover, so the lock itself takes focus and the sentence becomes visible
- * while it holds focus; a screen reader gets the same sentence as the lock's
- * accessible name.
+ * What a frozen row shows where its edit + delete controls would be. The lock takes
+ * focus and carries the reason as its accessible name — a `title` appears on hover
+ * only, so a keyboard user would never get it.
  */
 function LockedRowActions({ reason }: { reason: string }) {
     return (
@@ -836,14 +809,7 @@ function MovementRow({
     // one shared accessible name on their edit/delete controls.
     const { title, subline } = movementRowText(m, partnerName);
     // A movement a CLOSED cycle counted is frozen server-side, so it shows no
-    // controls — exactly as `ExpenseRow` does with a row the same close froze.
-    // Rendering Edit on one opened a prefilled form that could only fail on
-    // submit.
-    //
-    // The predicate is membership + "did the cycle count it", not the marker
-    // column: `closedAt` marks ONE transfer per cycle, so asking for it alone
-    // left every other counted transfer in the cycle editable. A card payment
-    // moves no balance and stays editable at any age.
+    // controls. `closedAt` marks one transfer per cycle and cannot be the predicate.
     const frozen =
         m.cycleClosedAt !== null && movementMovesSettlementBalance(m.type);
 

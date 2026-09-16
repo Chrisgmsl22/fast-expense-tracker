@@ -158,10 +158,8 @@ describe("isBalanceSettled", () => {
 });
 
 /**
- * The choice this makes IS the closed-cycle freeze. An expense has no marker
- * column, so which cycle owns a row is decided here, from its entry time and the
- * close instants. It used to live inside a Prisma query (`closedAt: { gte }` +
- * `orderBy: asc` + `findFirst`), where none of it could be tested.
+ * The choice this makes IS the closed-cycle freeze. It used to live inside a Prisma
+ * query, where none of it could be tested.
  */
 describe("cycleCloseAtOrAfter", () => {
     const early = new Date("2026-07-01T00:00:00Z");

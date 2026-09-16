@@ -14,19 +14,13 @@ export type MovementListItem = {
     card: { name: string; color: string } | null;
     note: string | null;
     /**
-     * Set when this transfer closed a settlement cycle — the row is the cycle's
-     * marker (see `MovementEditable.closedAt`). It travels with the LIST row,
-     * not just the editable one, so a feed can hide the controls the server will
-     * refuse instead of offering a way out that is not there.
+     * Set when this transfer closed a settlement cycle. It travels with the LIST row,
+     * so a feed can hide the controls the server will refuse.
      */
     closedAt: Date | null;
     /**
-     * Same fact, same meaning as `ExpenseEditable.cycleClosedAt`: the close
-     * instant of the cycle this row belongs to, null while that cycle is open.
-     *
-     * This — not `closedAt` — is what freezes a row. A cycle counts debts and
-     * transfers alike, but only a transfer may carry the marker, so `closedAt`
-     * identifies one row per cycle and says nothing about the rest of it.
+     * The close instant of the cycle this row belongs to, null while it is open. This —
+     * not `closedAt` — freezes a row: `closedAt` names one transfer per cycle.
      */
     cycleClosedAt: Date | null;
 };
@@ -49,25 +43,14 @@ export type MovementEditable = {
     cardId: string | null;
     note: string | null;
     /**
-     * Set when this transfer closed a settlement cycle (spec 0007 §3.5) — it is
-     * that cycle's marker. Editing its amount would rewrite what a closed cycle
-     * settled, and deleting it would dissolve the boundary and merge that cycle
-     * back into the open one.
+     * Set when this transfer closed a settlement cycle (spec 0007 §3.5). Editing it
+     * rewrites what that cycle settled; deleting it dissolves the boundary.
      */
     closedAt: Date | null;
     /**
-     * The close instant of the cycle this row BELONGS to, null while that cycle
-     * is open — mirrors `ExpenseEditable.cycleClosedAt`, derived the same way
-     * (this row's `createdAt` against the sequence of close instants).
-     *
-     * The marker column could never carry this fact. The DB CHECK allows
-     * `closedAt` only on a transfer, so a `gf_fronted` debt never has one — and
-     * scoping the writes on `closedAt: null` therefore froze the marker and
-     * nothing else. A closed cycle counted the debts too, so deleting one
-     * restated a settlement the user was told could not be reopened. Pair this
-     * with `movementMovesSettlementBalance`, exactly as the expense side pairs
-     * its own field with `movesSettlementBalance`: a card payment inside a
-     * closed cycle moves no balance and stays fully editable.
+     * The close instant of the cycle this row BELONGS to — mirrors
+     * `ExpenseEditable.cycleClosedAt`. The DB CHECK allows `closedAt` only on a transfer,
+     * so a debt never has one; pair this with `movementMovesSettlementBalance`.
      */
     cycleClosedAt: Date | null;
 };
@@ -103,16 +86,9 @@ export class PrismaMovementRepository implements MovementRepository {
         const { start, end } = getMonthRangeUtc(month);
         const [rows, closes] = await Promise.all([
             this.db.movement.findMany({
-                // `gf_fronted` is EXCLUDED: a debt she fronted is
-                // settlement-only (spec 0007 §6b). It is provisional — something
-                // she owes you can shrink or cancel it before any money moves —
-                // so showing it beside real spending invites reading it as money
-                // already gone. The settlement page reads its own window
-                // repository and still shows it, still counts it, and still
-                // edits it there.
-                //
-                // Filtered at the QUERY, not hidden at render: a row that never
-                // arrives cannot be forgotten by a view written later.
+                // `gf_fronted` is EXCLUDED: a debt she fronted is settlement-only and
+                // provisional (spec 0007 §6b). Filtered at the QUERY, not at render —
+                // a row that never arrives cannot be forgotten by a view written later.
                 where: {
                     userId,
                     date: { gte: start, lt: end },
@@ -184,15 +160,9 @@ export class PrismaMovementRepository implements MovementRepository {
      * the caller reports not-found instead of mutating another user's row (IDOR
      * guard) — mirrors the expense repository.
      *
-     * `closedAt: null` freezes a cycle MARKER here, at the data boundary: its
-     * amount and direction are what a closed settlement says it settled, so no
-     * edit path can rewrite them.
-     *
-     * It is a backstop for one row, not the freeze. Every OTHER row a closed
-     * cycle counted is frozen by the actions, on `cycleClosedAt` +
-     * `movementMovesSettlementBalance` — the same pair the expense actions use.
-     * A where-clause cannot express it: cycle membership is a `createdAt`
-     * comparison against a list of close instants, not a column.
+     * `closedAt: null` freezes a cycle MARKER here, at the data boundary. It is a
+     * backstop for one row: every OTHER row a closed cycle counted is frozen by the
+     * actions, since membership is a `createdAt` comparison, not a column.
      */
     async updateForUser(
         id: string,
@@ -212,9 +182,8 @@ export class PrismaMovementRepository implements MovementRepository {
      * so the caller reports not-found instead of deleting another user's row
      * (IDOR guard).
      *
-     * `closedAt: null` also protects a cycle marker: deleting it would dissolve
-     * the boundary and silently merge a closed settlement into the open one.
-     * The rest of a closed cycle is frozen by the action — see `updateForUser`.
+     * `closedAt: null` also protects a cycle marker: deleting it would dissolve the
+     * boundary and merge a closed settlement into the open one.
      */
     async deleteForUser(userId: string, id: string): Promise<number> {
         const result = await this.db.movement.deleteMany({

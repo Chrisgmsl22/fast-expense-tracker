@@ -8,15 +8,9 @@ import {
 } from "@/lib/domain/movement";
 
 /**
- * Spec 0007 §6b — the reversal. The PAYMENT is the expense; the debt is
- * settlement only.
- *
- * A payment is real money leaving for something he consumed, so it is counted
- * once, as an ordinary expense, in both the budget and the cash figure. A debt
- * is provisional — she may end up owing him instead — so it reaches neither.
- *
- * The property these tests hold down: **one payment, one figure per ledger,
- * never two rows to reconcile.**
+ * Spec 0007 §6b — the reversal. A payment is real money leaving, so it is counted
+ * once, as an ordinary expense, in both ledgers; a debt is provisional and reaches
+ * neither. One payment, one figure per ledger, never two rows to reconcile.
  */
 const PAYMENT = 680;
 
@@ -55,9 +49,8 @@ describe("a payment to the partner is an ordinary expense", () => {
     it("appears once: a breakdown of the total, never added on top of it", () => {
         const totals = computeFeedTotals([paymentExpense]);
 
-        // `paidToPartner` re-reads the same row. Adding it to the total would
-        // bill the payment twice — the reconciliation the old model needed by
-        // hand, and which this model removes.
+        // `paidToPartner` re-reads the same row, so adding it to the total would bill
+        // the payment twice.
         expect(totals.paidToPartner).toBe(PAYMENT);
         expect(totals.total).toBe(PAYMENT);
     });
@@ -81,11 +74,9 @@ describe("a payment to the partner is an ordinary expense", () => {
 });
 
 /**
- * Production data is UNCONVERTED: no migration in this PR turns a `gf_paid`
- * movement into a payment-expense, so on deploy every transfer is still a
- * movement. The footer has to keep counting them, or the gold "you paid her"
- * rows go on rendering above a Total that has silently dropped their money —
- * about $8,011.20 for September — while the settlement page still counts them.
+ * Production data is UNCONVERTED: no migration here turns a `gf_paid` movement into a
+ * payment-expense, so the footer must keep counting them — or the gold rows render
+ * above a Total that silently dropped their money.
  */
 describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
     const legacyTransfer: FeedTotalMovement = {
@@ -120,11 +111,8 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
     });
 
     it("is dropped once its converted twin exists — never counted twice", () => {
-        // The conversion reuses the movement's id for the expense it creates,
-        // so a twin is recognisable without a join table. A half-applied
-        // conversion, or a replay against a restored copy, would otherwise
-        // double the transfer — and a silently doubled figure is the kind
-        // nobody spots until they pay it.
+        // The conversion reuses the movement's id, so a twin is recognisable without a
+        // join table. A half-applied conversion would otherwise double the transfer.
         const converted: FeedTotalExpense = {
             id: "mv1",
             amount: 8011.2,
@@ -158,9 +146,8 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
 
 describe("a debt she fronted reaches no ledger", () => {
     it("is not an expense, so no bucket can see it", () => {
-        // A debt is a Movement{gf_fronted}. Nothing in the expense-shaped input
-        // represents it, which is exactly the point: there is no row to include
-        // or exclude, so there is no exclusion anyone can forget.
+        // A debt is a Movement{gf_fronted}: nothing in the expense-shaped input
+        // represents it, so there is no exclusion anyone can forget.
         const [essentials] = computeBuckets([], 0);
         expect(essentials!.spent).toBe(0);
     });

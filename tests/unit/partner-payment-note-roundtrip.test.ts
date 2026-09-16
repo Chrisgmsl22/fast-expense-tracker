@@ -13,17 +13,9 @@ import { FakeSettlementRepository } from "@/tests/support/fake-settlement-reposi
 import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
 
 /**
- * Editing a payment from the settlement journal must not eat its description.
- *
- * The bug, end to end: he logs a payment noted "carwash"; the journal row was
- * built with `note: null` hardcoded; the edit dialog prefills from that field,
- * so it renders EMPTY although the row holds text; the form sends
- * `note: undefined` for an empty field; and the action rebuilds the description
- * from the note, writing the generic fallback over "carwash" — then reports
- * success.
- *
- * These tests walk the same three seams in order: what the journal carries, what
- * the form would send, and what the action then stores.
+ * Editing a payment from the settlement journal must not eat its description. The
+ * journal row carried `note: null`, the dialog prefilled empty, and the action rebuilt
+ * the description from that — writing the fallback over the user's text.
  */
 const NOW = new Date("2026-09-15T12:00:00Z");
 const DAY = new Date("2026-09-10T06:00:00Z");
@@ -124,11 +116,8 @@ describe("a payment's description survives an edit from the settlement journal",
     });
 
     it("still reports no note after the partner is renamed", async () => {
-        // The row was auto-labelled when she was "Brenda"; Settings now says
-        // "Ana". Comparing against the label built from the CURRENT name would
-        // make the old label look like the user's own text — the journal would
-        // prefill it, and the next save would freeze "Brenda" onto the row as a
-        // real note.
+        // The row was auto-labelled as "Brenda"; Settings now says "Ana". Comparing
+        // against the CURRENT name would make the old label look like the user's text.
         const auto = partnerPaymentDescription(null, "Brenda");
         const deps = settlementDeps([paymentRow(auto)]);
         deps.settingsRepo.seed("u1", {
@@ -160,9 +149,7 @@ describe("a payment's description survives an edit from the settlement journal",
     });
 
     it("names the payment as money SENT, never as a debt owed", async () => {
-        // The old fallback said "I owe {partner}" — the opposite event, on the
-        // row that records money leaving. It renders on Expenses, the feed, the
-        // category rollup and the settlement breakdown.
+        // The old fallback said "I owe {partner}" — the opposite event to this row.
         const label = partnerPaymentDescription(null, PARTNER);
 
         expect(label).not.toMatch(/I owe/i);

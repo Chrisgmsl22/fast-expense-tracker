@@ -15,7 +15,6 @@ export function CategoryExpenses({
 }: {
     expenses: ExpenseListItem[];
     color: string;
-    /** Resolves the computed subcategory label; null when no partner is set. */
     partnerName?: string | null;
 }) {
     return (

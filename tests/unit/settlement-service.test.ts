@@ -88,11 +88,8 @@ describe("getSettlement", () => {
         if (row.kind === "your_expense") expect(row.partnerShare).toBe(320);
     });
 
-    // Spec 0007 §6b: the money he SENT her is an `Expense{isPartnerPayment:true}`
-    // now, so the "you paid her" side of the balance is read off an expense
-    // rather than a movement. The money is identical — same $300, same line,
-    // same journal row — which is why this reads exactly like the legacy
-    // `gf_paid` case below it.
+    // Spec 0007 §6b: the "you paid her" side is read off an expense now. Same money,
+    // same line — which is why this reads like the legacy `gf_paid` case below it.
     it("reads a payment EXPENSE as the money-you-paid side (spec 0007 §6b)", async () => {
         const s = await run([
             expense(),
@@ -173,11 +170,8 @@ describe("getSettlement", () => {
     });
 
     it("counts a converted payment once, even if its old movement survives", async () => {
-        // The conversion migration reuses the movement's id for the expense and
-        // deletes the movement with it, so a twin should never exist. A partial
-        // restore or a replay against a half-migrated copy could still produce
-        // one, and a silently doubled settlement figure is the kind of error
-        // nobody catches until they pay it.
+        // The conversion reuses the movement's id and deletes the movement with it, so a
+        // twin should never exist — but a partial restore could still produce one.
         const s = await run(
             [
                 expense({
@@ -545,10 +539,9 @@ describe("getSettlement — settlement cycles", () => {
     });
 
     it("quotes one expense at ONE amount in every view", async () => {
-        // The real "Repair" row: $1,200 at 68% stored 816.0000000000001, so the
-        // partner's share came out 383.9999999999999 and rendered $383.99 in a
-        // month view holding other rows but $384.00 in a history view holding it
-        // alone — the residual cent landing on a different row per row-set.
+        // The real "Repair" row: $1,200 at 68% stored 816.0000000000001, so the share
+        // came out 383.9999999999999 and rendered $383.99 beside other rows but $384.00
+        // alone — the residual cent landing on a different row per set.
         const repair = expense({
             id: "eRepair",
             // Dated after the others so it sorts newest in the month view — the
@@ -623,15 +616,9 @@ describe("getSettlement — settlement cycles", () => {
 });
 
 /**
- * The Month journal is a DATE window, so it always spans closed cycles — and it
- * is the one view that passes no `readOnly`. Both expense branches of
- * `buildSettlementRows` hardcoded `locked: false`, so a payment inside a filed
- * settlement rendered Edit and Delete there: Delete hit `cycle_closed`, and Edit
- * opened a prefilled dialog that could only fail on save.
- *
- * `locked` is now the same pair the write paths refuse on — the row's cycle is
- * closed AND that cycle counted the row — so the locked set and the frozen set
- * come from one predicate and cannot drift.
+ * The Month journal is a DATE window, so it always spans closed cycles — and it is the
+ * one view that passes no `readOnly`. `locked` is the same pair the write paths refuse
+ * on, so the locked set and the frozen set cannot drift.
  */
 describe("getSettlement — a row carries its own locked fact", () => {
     const locked = (journal: SettlementJournalItem[], id: string) =>
@@ -669,9 +656,8 @@ describe("getSettlement — a row carries its own locked fact", () => {
         );
 
         expect(locked(s.month.journal, "ePay")).toBe(true);
-        // The solo row is not a settlement row at all — the same
-        // `movesSettlementBalance` that locks the payment keeps it out of the
-        // journal, so the cycle cannot freeze it here or on the Expenses screen.
+        // The same `movesSettlementBalance` that locks the payment keeps the solo row
+        // out of the journal entirely.
         expect(s.month.journal.map((j) => j.id)).not.toContain("eSolo");
     });
 
@@ -698,10 +684,8 @@ describe("getSettlement — a row carries its own locked fact", () => {
         expect(locked(s.journal, "eLate")).toBe(false);
     });
 
-    // I-1: the movement side froze only the marker. A debt can never carry one —
-    // the DB CHECK allows `closedAt` on a transfer alone — so a debt a closed
-    // cycle counted was offered Edit and Delete, and deleting it restated that
-    // filed cycle's "You owed Brenda" figure.
+    // A debt can never carry the marker — the DB CHECK allows `closedAt` on a transfer
+    // alone — so membership is what must freeze it.
     it("locks a debt a closed cycle counted, though it carries no marker", async () => {
         const debt = movement({
             id: "mDebt",

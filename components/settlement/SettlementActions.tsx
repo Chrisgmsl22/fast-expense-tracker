@@ -22,9 +22,8 @@ type Props = {
     netAmount: number;
     partnerName: string;
     /**
-     * Shown inside BOTH dialogs while the screen is on a past month. A modal
-     * covers the page, so the page's own copy of this warning is invisible at
-     * exactly the moment it matters.
+     * Shown inside BOTH dialogs while the screen is on a past month: a modal covers
+     * the page, so the page's own warning is invisible when it matters most.
      */
     pastMonthNotice?: string;
 };

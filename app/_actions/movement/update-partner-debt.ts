@@ -39,8 +39,7 @@ export type UpdatePartnerDebtResult = ActionResult<
  * any other type stops a card payment or transfer being retyped into a debt via
  * this action (the action is the enforcement seam, not just the UI).
  *
- * A debt a **closed settlement cycle counted** is refused, exactly as the
- * expense actions refuse a row of theirs.
+ * A debt a **closed settlement cycle counted** is refused (spec 0007 §3.5).
  */
 export async function updatePartnerDebt(
     input: unknown,
@@ -82,10 +81,8 @@ export async function updatePartnerDebt(
             };
         }
 
-        // A debt a closed cycle counted is frozen. It carries no marker column —
-        // the DB CHECK allows `closedAt` only on a transfer — so the repository
-        // where-clause never blocked it, and editing the amount silently
-        // restated a filed settlement's "You owed {partner}" figure.
+        // A debt carries no marker column — the DB CHECK allows `closedAt` only on a
+        // transfer — so the repository where-clause never blocked it.
         if (
             existing.cycleClosedAt &&
             movementMovesSettlementBalance(existing.type)

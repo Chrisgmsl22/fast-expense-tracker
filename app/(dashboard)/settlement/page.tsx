@@ -25,10 +25,8 @@ export default async function SettlementPage({
 }: {
     searchParams: Promise<{ month?: string }>;
 }) {
-    // URL parameter → remembered month → current month (`lib/month-scope.ts`),
-    // so a link stays linkable and the choice survives leaving the screen. It
-    // scopes the Month and History views only — the balance is the open cycle,
-    // which belongs to no month.
+    // The month scopes the Month and History views only — the balance is the
+    // open cycle, which belongs to no month.
     const { month: monthParam } = await searchParams;
     const month = await getScopedMonth(monthParam);
     const currentMonth = getCurrentMonthCdmx();
@@ -53,14 +51,11 @@ export default async function SettlementPage({
         redirect("/dashboard");
     }
     const partnerName = resolvePartnerName(settings.partnerName);
-    // The offer to close only stands when the settlement is square AND there is
-    // a transfer in the open cycle to carry the marker (spec 0007 §3.5).
+    // `closedAt` lives on Movement, so a cycle with no transfer cannot be marked.
     const canClose =
         isBalanceSettled(settlement.balance) &&
         settlement.closableMovementId !== null;
-    // "2026-09" → "September 2026". The year is carried because this screen can
-    // now sit on any month, so a bare month name would be ambiguous. UTC: the
-    // value is a calendar month, not a timestamp to shift.
+    // UTC: the value is a calendar month, not a timestamp to shift.
     const monthLabel = new Intl.DateTimeFormat("en-US", {
         month: "long",
         year: "numeric",
@@ -113,8 +108,6 @@ export default async function SettlementPage({
                         direction={settlement.balance.direction}
                         netAmount={settlement.balance.amount}
                         partnerName={partnerName}
-                        // The same sentence travels into the dialogs, which
-                        // cover this page while a form is open.
                         pastMonthNotice={
                             settlement.month.isCurrent
                                 ? undefined

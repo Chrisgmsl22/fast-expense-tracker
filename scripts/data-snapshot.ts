@@ -1,35 +1,18 @@
-// Read-only snapshot of the LOCAL development database, so a session can do
-// arithmetic on real rows instead of inferring behaviour from the schema.
-//
-// Run with `pnpm data:snapshot` (loads .env.local, like `db:seed`). Two safety
-// properties, both enforced at runtime rather than intended:
-//
-//   1. It refuses to run unless the database host is localhost / 127.0.0.1.
-//   2. Every Prisma call passes through an extension that throws on any
-//      non-read operation, so a future edit cannot turn this into a writer.
-//
-// It prints no connection string, no credential, and nothing else read from an
-// env file — a failure says only that the host is not local.
-//
-// Imports only published packages and relative `.ts` paths (no `@/` aliases,
-// which Node cannot resolve), matching `prisma/seed.ts`.
+// Read-only snapshot of the LOCAL development database. Two guards, both enforced at
+// runtime: the host must be loopback, and a Prisma extension throws on any write.
+// Imports only packages and relative `.ts` paths (no `@/` aliases), like the seed.
 
 import { PrismaClient, Prisma } from "@prisma/client";
 import { fileURLToPath } from "node:url";
 
 import { getCurrentMonthCdmx, shiftMonth } from "../lib/dates.ts";
 
-// ---------------------------------------------------------------------------
-// Safety: the local-host guard and the read-only guard (the testable core).
-// ---------------------------------------------------------------------------
-
 /** Loopback names only. A hostname anywhere else is someone's real data. */
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 /**
- * Message shown when the guard trips. It deliberately names no host, user or
- * database: everything in the connection string came from an env file, and this
- * script never echoes those.
+ * Message shown when the guard trips. It names no host, user or database: those came
+ * from an env file, and this script never echoes them.
  */
 export const NON_LOCAL_MESSAGE =
     "data:snapshot refuses to run: the configured database host is not local " +
@@ -41,9 +24,8 @@ export const MISSING_URL_MESSAGE =
     "`pnpm data:snapshot`, which loads .env.local.";
 
 /**
- * Throw unless `url` addresses a database on this machine. Exported so the
- * guard is tested directly — it is the property that keeps production data out
- * of reach, so it must not depend on `main()` being reached.
+ * Throw unless `url` addresses a database on this machine. Exported so the guard is
+ * tested directly, not only through `main()`.
  */
 export function assertLocalDatabase(url: string | undefined): void {
     if (!url) throw new Error(MISSING_URL_MESSAGE);
@@ -58,9 +40,8 @@ export function assertLocalDatabase(url: string | undefined): void {
 }
 
 /**
- * Every Prisma operation that can change data or run arbitrary SQL. `queryRaw`
- * is in the list too: it reads, but `queryRawUnsafe` next to it does not have to,
- * and this script has no need for either.
+ * Every Prisma operation that can change data or run arbitrary SQL. `queryRaw` is
+ * listed too: this script needs neither it nor `queryRawUnsafe`.
  */
 const WRITE_OPERATIONS = new Set([
     "create",
@@ -103,9 +84,8 @@ export function readOnlyClient(client: PrismaClient) {
 }
 
 /**
- * True when the schema this build was generated from has the column. The funding
- * -source work (spec 0007 §3.1) lands on a later branch; here the section is
- * skipped rather than crashing.
+ * True when the schema this build was generated from has the column. Skip the section
+ * rather than crash when it does not.
  */
 export function modelHasField(model: string, field: string): boolean {
     return (
@@ -114,10 +94,6 @@ export function modelHasField(model: string, field: string): boolean {
             ?.fields.some((f) => f.name === field) ?? false
     );
 }
-
-// ---------------------------------------------------------------------------
-// Formatting helpers.
-// ---------------------------------------------------------------------------
 
 const mxn = (n: number): string =>
     n.toLocaleString("en-US", {
@@ -172,10 +148,6 @@ function groupSum<T>(
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
-
-// ---------------------------------------------------------------------------
-// The snapshot itself.
-// ---------------------------------------------------------------------------
 
 type Db = ReturnType<typeof readOnlyClient>;
 

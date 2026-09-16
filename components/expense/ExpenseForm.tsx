@@ -132,13 +132,8 @@ export function ExpenseForm({
     const selectedCategory = categories.find((c) => c.id === categoryId);
     // Savings is a transfer, not a card purchase — no payment method applies.
     const isSavings = selectedCategory?.slug === SAVINGS_SLUG;
-    // Money the user SENT the partner (spec 0007 §6b): the amount is the whole
-    // transfer, never a split of one, and it left a bank account rather than a
-    // card. The server clamps both facts, but a clamp alone would let the form
-    // OFFER a split and a card, accept the click, and save in silence — the user
-    // would believe he changed something. So the controls are disabled here,
-    // with the reason visible before anyone clicks; the server stays the
-    // guarantee.
+    // A payment is never split and leaves a bank account, not a card. The server
+    // clamps both; disabling the controls stops the form taking a click it drops.
     const isPartnerPayment = expense?.isPartnerPayment ?? false;
     const selectedSubcategory = availableSubcategories.find(
         (s) => s.id === subcategoryId,
@@ -172,10 +167,8 @@ export function ExpenseForm({
             amount,
             categoryId,
             subcategoryId: subcategoryId || undefined,
-            // Savings is a transfer, and so is a payment to the partner: both
-            // leave a bank account, not a card. Force no card for both, even
-            // when editing a legacy row that still carries one (the field is
-            // disabled for both).
+            // Savings and a partner payment both leave a bank account, so force no card —
+            // including on a legacy row that still carries one.
             cardId:
                 isSavings || isPartnerPayment ? undefined : cardId || undefined,
             description,
@@ -449,8 +442,6 @@ export function ExpenseForm({
                                 {`Shared expense · ${yourPct}/${partnerPct}`}
                             </span>
                             {isPartnerPayment ? (
-                                // Same voice as the settlement copy: say what
-                                // the amount already means, not just "disabled".
                                 <span className="block text-muted-foreground">
                                     This amount is the payment you sent your
                                     partner — there is nothing left to split.

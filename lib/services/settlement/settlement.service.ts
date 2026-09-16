@@ -41,16 +41,8 @@ export type SettlementJournalItem = {
     /** True when the row falls in the previous month ("Earlier months" divider). */
     carriedOver: boolean;
     /**
-     * A CLOSED settlement cycle counted this row, so it is frozen server-side —
-     * the same two-part fact the write paths refuse on: the row's cycle is
-     * closed AND that cycle counted the row.
-     *
-     * The flag rides ON THE ROW rather than on a view's props: a locked row must
-     * lose its edit/delete controls in every view, including one written later
-     * that never heard of cycles. That only holds because EVERY producer of a
-     * row derives the fact — an expense-backed row derived it as a hardcoded
-     * `false` for two rounds, and the Month view, which passes no `readOnly`,
-     * offered Edit and Delete on a payment inside a filed settlement.
+     * A CLOSED cycle counted this row, so it is frozen server-side. The flag rides ON
+     * THE ROW, so every view drops the controls, including one written later.
      */
     locked: boolean;
 } & (
@@ -68,12 +60,8 @@ export type SettlementJournalItem = {
           /** What you owe her for this row — the `-` it adds to the balance. */
           amount: number;
           /**
-           * Which table the row lives in. A debt is a `Movement{gf_fronted}`
-           * again (spec 0007 §6b) — settlement only. The field stays because
-           * rows of one kind can still come from either table during a
-           * conversion, and the two are edited through different actions: a view
-           * that guessed would send half of them to the wrong table and report
-           * "not found" for a row in plain sight.
+           * Which table the row lives in. A debt and a payment are edited through
+           * different actions, so a view that guessed would 404 on a visible row.
            */
           source: RowSource;
       }
@@ -84,18 +72,16 @@ export type SettlementJournalItem = {
           /** Free-text label ("what it was toward"); null when none. */
           note: string | null;
           /**
-           * Which table this row lives in. A payment you SENT is an
-           * `Expense{isPartnerPayment:true}` now (spec 0007 §6b); money she sent
-           * you, and any legacy `gf_paid`, are still movements.
+           * Which table this row lives in. A payment you SENT is an `Expense` now (spec
+           * 0007 §6b); money she sent you, and any legacy `gf_paid`, are still movements.
            */
           source: RowSource;
       }
 );
 
 /**
- * One contributing row behind a breakdown line — what the expandable "How this
- * balance is made" line reveals. `amount` is the positive magnitude the row adds
- * to its line, so a line's rows sum to exactly that line's total.
+ * One contributing row behind a breakdown line. `amount` is the positive magnitude it
+ * adds, so a line's rows sum to exactly that line's total.
  */
 export type SettlementBreakdownItem = {
     id: string;
@@ -113,10 +99,7 @@ export type SettlementBreakdownItems = Record<
     SettlementBreakdownItem[]
 >;
 
-/**
- * How a closed cycle ended, in words rather than a signed number: one of you
- * paid, or nobody had to.
- */
+/** How a closed cycle ended, in words rather than a signed number. */
 export type CycleOutcome =
     | { kind: "you_paid"; amount: number }
     | { kind: "partner_paid"; amount: number }
@@ -125,9 +108,8 @@ export type CycleOutcome =
 /** The four figures the closed-cycle footer shows (spec 0007 §6b, slice H). */
 export type ClosedCycleSummary = {
     /**
-     * Everything the cycle bought, at full price — NO split applied. A shared
-     * expense contributes its gross; a debt contributes what it recorded, which
-     * is already his share and carries no gross to recover.
+     * Everything the cycle bought at full price — NO split applied. A debt contributes
+     * what it recorded, which is already his share.
      */
     spentUnsplit: number;
     /** What you owed her across the cycle. */
@@ -162,9 +144,8 @@ export type Settlement = {
     /** Entry time the open cycle began; null when nothing has ever been closed. */
     openedAt: Date | null;
     /**
-     * The transfer a close would mark, or null when there is nothing to close
-     * (an empty cycle, or one with no transfer in it). Derived server-side and
-     * re-derived by the close action, so the client never picks the marker.
+     * The transfer a close would mark, or null when there is nothing to close. The close
+     * action re-derives it, so the client never picks the marker.
      */
     closableMovementId: string | null;
     /** The VIEWED calendar month's rows — the Month view. */
@@ -193,22 +174,9 @@ export type SettlementViewOptions = {
 };
 
 /**
- * Drop any legacy `gf_paid` movement that has already become a payment-expense.
- *
- * The conversion migration must reuse the movement's id for the expense it
- * creates — a REQUIREMENT on the deferred data PR, recorded in ADR-0024, and the
- * only thing that makes a converted pair recognisable without a join table. The
- * migration inserts and deletes together, so a twin should never exist. This
- * says "should never" out loud instead of trusting it: a partial restore, or a
- * data PR that assigns fresh ids, would otherwise count one payment twice, and a
- * silently doubled settlement figure is the kind of error nobody spots until
- * they pay it.
- *
- * The movement fallback is **transitional, not permanent**. Until CHORE-12 runs
- * the conversion, EVERY legacy `gf_paid` movement is still a movement; after it,
- * only an account whose payments it could not file (no `combined-expenses`
- * category) keeps any. Either way they count in the balance. Nothing writes
- * `gf_paid` anymore, so the set only shrinks.
+ * Drop any legacy `gf_paid` movement that has already become a payment-expense. The
+ * conversion migration MUST reuse the movement's id (ADR-0024) — that is the only
+ * thing that makes a twin recognisable, and a missed one doubles the figure.
  */
 function withoutConvertedTwins(
     movements: SettlementMovementRow[],
@@ -224,30 +192,14 @@ function withoutConvertedTwins(
 }
 
 /**
- * Net the four balance inputs from a set of window rows (spec 0004 §2.4).
- *
- * Which table each side reads was REVERSED in spec 0007 §6b:
- *
- * | Side         | Source                                            |
- * | ------------ | ------------------------------------------------- |
- * | she owes you | your ordinary expenses, her share of each         |
- * | you owe her  | `gf_fronted` movements — settlement only          |
- * | you paid her | `Expense{isPartnerPayment}` (+ legacy `gf_paid`)  |
- * | she paid you | `gf_received` movements                           |
- *
- * The balance is **unchanged** by the reversal: the same money nets the same
- * way. Only the table each thing lives in moved.
+ * Net the four balance inputs from a set of window rows (spec 0004 §2.4). Spec 0007
+ * §6b reversed which table each side reads; the balance itself is unchanged.
  */
 function inputsFrom(
     expenses: SettlementExpenseRow[],
     movements: SettlementMovementRow[],
 ): SettlementInputs {
-    // Expenses split two ways: ordinary purchases of yours, where she owes you
-    // her share, and payments you sent her, which draw the balance down. Each is
-    // read once and only once — the sort happens before any summing, so no row
-    // can land on both sides. `partnerShareTotal` sums
-    // (amount − actualExpenditure), 0 for a solo expense, so summing the rest is
-    // safe.
+    // Sorted before any summing, so no row can land on both sides.
     const yourExpenses = expenses.filter((e) => !e.isPartnerPayment);
     const paymentExpenses = expenses.filter((e) => e.isPartnerPayment);
     const partnerShareOfYourExpenses = partnerShareTotal(yourExpenses);
@@ -261,15 +213,11 @@ function inputsFrom(
     let moneyPartnerPaidYou = 0;
     let yourDebtToPartner = 0;
     for (const m of withoutConvertedTwins(movements, expenses)) {
-        // A debt she fronted: settlement only, and provisional — something she
-        // owes you can cancel it before any money moves, which is exactly why it
-        // is not an expense (spec 0007 §6b).
+        // A debt she fronted: settlement only (spec 0007 §6b).
         if (m.type === "gf_fronted") yourDebtToPartner += m.amount;
         else if (m.type === "gf_received") moneyPartnerPaidYou += m.amount;
-        // LEGACY `gf_paid` (spec 0007 §6b): nothing writes this type anymore,
-        // and the conversion to payment-expenses is deferred to CHORE-12, so
-        // every existing one is still here. Counted, so no balance silently
-        // loses a row before or after that conversion runs.
+        // LEGACY `gf_paid`: the conversion is deferred, so existing rows are still
+        // counted here and no balance loses one before or after it runs.
         else if (m.type === "gf_paid") moneyYouPaidPartner += m.amount;
     }
 
@@ -289,20 +237,8 @@ const entryTime = (row: { createdAt: Date }): number => row.createdAt.getTime();
 
 /**
  * Assemble the settlement view over the **open settlement cycle** — everything
- * entered since the last confirmed close, with no upper age limit (spec 0007
- * §3.5). This replaces the old rolling current+previous-month window, which
- * silently dropped anything unsettled older than last month out of the balance.
- *
- * Cycle membership is by ENTRY TIME against the marker's `closedAt` — the
- * instant the user confirmed the close, not the closing transfer's own entry
- * time. Everything the zero balance counted is therefore inside the cycle that
- * was closed, and a row entered afterwards is in the open one even if its date
- * falls inside a closed cycle. That is what makes "a late shared expense joins
- * the open cycle" true. Rows still display their own date, so the journal reads
- * chronologically as before.
- *
- * Returns all three views (spec 0007 §3.5): the open cycle (the balance itself),
- * the calendar month, and the closed cycles.
+ * entered since the last close, with no age limit (spec 0007 §3.5). Membership is by
+ * ENTRY time against the close instant, so a late row joins the open cycle.
  */
 export async function getSettlement(
     userId: string,
@@ -331,11 +267,8 @@ export async function getSettlement(
     const markers = await settlementRepo.getCycleMarkers(userId);
     const lastMarker = markers.at(-1) ?? null;
     const openedAt = lastMarker?.closedAt ?? null;
-    // History is scoped by WHEN THE CLOSE HAPPENED — a cycle belongs to the month
-    // the user closed it in, not to the date of the transfer that carries the
-    // marker (the two can differ). The cap survives month scoping as a bound on
-    // how much a single query can pull; a month with more than six closes would
-    // show the six most recent.
+    // History is scoped by WHEN THE CLOSE HAPPENED, not by the date of the transfer
+    // that carries the marker — the two can differ.
     const closedThisMonth = markers.filter(
         (m) => m.closedAt >= viewedRange.start && m.closedAt < viewedRange.end,
     );
@@ -374,9 +307,8 @@ export async function getSettlement(
     );
     const hasPrevRows = prevExpenses.length > 0 || prevMovements.length > 0;
 
-    // Every close instant the user has filed — what makes a row's `locked` a
-    // derivation instead of a column lookup. The Month view especially needs it:
-    // it is a DATE window, so it always spans closed cycles.
+    // Every close instant the user has filed — what makes `locked` a derivation. The
+    // Month view is a DATE window, so it always spans closed cycles.
     const closes = markers.map((m) => m.closedAt);
 
     // One derivation of the rows behind the balance; the breakdown and the
@@ -422,10 +354,8 @@ export async function getSettlement(
 }
 
 /**
- * The transfer a close would mark: the most recently ENTERED `gf_paid` /
- * `gf_received` in the open cycle. That is the movement that squared the
- * balance, so it is the honest marker for when the cycle ended. Null when the
- * open cycle holds no transfer — there is then nothing to close.
+ * The transfer a close would mark: the most recently ENTERED transfer in the open
+ * cycle — the movement that squared the balance. Null when the cycle holds none.
  */
 function findClosableMovementId(
     movements: SettlementMovementRow[],
@@ -437,9 +367,8 @@ function findClosableMovementId(
 }
 
 /**
- * Split the loaded history rows into their cycles and render each one. Cycle
- * `i` holds the rows entered in `(previous close instant, this close instant]` —
- * the same rule the open cycle uses. Newest cycle first.
+ * Split the loaded history rows into cycles: cycle `i` holds the rows entered in
+ * `(previous close, this close]`, the same rule the open cycle uses. Newest first.
  */
 function buildHistory(
     markers: SettlementCycleMarker[],
@@ -481,17 +410,15 @@ function buildHistory(
 }
 
 /**
- * The closed cycle's four figures, read off THE SAME rows the journal renders —
- * never a second query and never a re-derivation, so the footer cannot disagree
- * with the rows above it.
+ * The closed cycle's four figures, read off THE SAME rows the journal renders, so the
+ * footer cannot disagree with the rows above it.
  */
 function summarizeCycle(rows: SettlementRowsByLine): ClosedCycleSummary {
     const sum = (list: { amount: number }[]): number =>
         roundCents(list.reduce((total, r) => total + r.amount, 0));
 
-    // "No split applied": a shared expense contributes the full amount you paid,
-    // not her share of it. A debt has no gross — what was recorded is already
-    // your share — so it contributes that.
+    // "No split applied": a shared expense contributes the full amount you paid. A
+    // debt has no gross — what was recorded is already your share.
     const spentUnsplit = roundCents(
         rows.partner_share.reduce((total, r) => total + (r.gross ?? 0), 0) +
             rows.your_debt.reduce((total, r) => total + r.amount, 0),
@@ -518,10 +445,8 @@ const debtDescription = (note: string | null, partnerName: string): string =>
     note?.trim() || `I owe ${partnerName}`;
 
 /**
- * The transfer row's label when it was logged without a note. The outbound side
- * defers to `partnerPaymentDescription`, the same helper that names a
- * payment-EXPENSE, so a legacy `gf_paid` movement and its converted twin read
- * identically and no panel can invent a second wording.
+ * The transfer row's label when logged without a note. The outbound side defers to
+ * `partnerPaymentDescription`, so a legacy movement and its twin read identically.
  */
 const transferDescription = (
     note: string | null,
@@ -533,30 +458,17 @@ const transferDescription = (
         : partnerPaymentDescription(note, partnerName);
 
 /**
- * The note behind a payment-expense's description, or null when it has none.
- *
- * A payment stores its note AS its description (`partnerPaymentDescription`),
- * so recovering the note means undoing that: the auto-generated fallback is
- * "no note", anything else is the user's own text. Carrying it is not cosmetic —
- * the journal's edit form prefills from this field and saves what it holds, so
- * a null here **overwrites the stored description with the fallback label** the
- * next time anyone edits the amount. The debt row has always done the same
- * thing with `debtDescription`; the payment row did not, and silently ate the
- * text.
- *
- * The test is the label's PREFIX, not the label built from the current partner
- * name: renaming the partner in Settings would otherwise leave every older
- * auto-label unmatched, and the journal would prefill the edit form with the
- * pre-rename label as if the user had typed it.
+ * The note behind a payment-expense's description, or null when it has none. The
+ * journal's edit form prefills from this and saves what it finds, so a null here
+ * OVERWRITES the stored text. Matched on the label's PREFIX, not the current name.
  */
 function paymentNote(description: string): string | null {
     return isPartnerPaymentAutoLabel(description) ? null : description;
 }
 
 /**
- * Newest first, matching the journal. Same-date rows fall back to `createdAt`
- * descending; when a row has none (an in-memory fake), the comparator returns 0
- * and JS's stable sort keeps the repository's own newest-first order.
+ * Newest first, `createdAt` breaking a same-date tie. A row without one (an in-memory
+ * fake) compares 0, and the stable sort keeps the repository's order.
  */
 function byNewest(
     a: { date: Date; createdAt?: Date },
@@ -574,32 +486,17 @@ function byNewest(
 const roundCents = (n: number): number => Math.round(n * 100) / 100;
 
 /**
- * Round each row to the cent, independently of the rows beside it.
- *
- * This replaces a reconciliation that handed the leftover cent to the newest
- * row. That leftover only existed because `actualExpenditure` was stored as the
- * raw product; new rows are now rounded at write time
- * (`computeActualExpenditure`), so there is nothing left to redistribute.
- *
- * Legacy rows still hold the raw unrounded product: the backfill is DEFERRED to
- * the data-migration PR (CHORE-12), and no migration in this branch touches
- * `actualExpenditure`. It does not matter here. The drift a Float carries is
- * about 1e-13, so rounding each row independently at read time lands on the same
- * cent as a stored rounded value would. That is why this guard stays: it is what
- * keeps an unmigrated row from rendering four decimals.
- *
- * What must never come back is the redistribution: it made a row's value depend
- * on which OTHER rows shared its view, which is how one expense read $383.99 in
- * the month panel and $384.00 in the history panel.
+ * Round each row to the cent INDEPENDENTLY of the rows beside it. Never redistribute
+ * a leftover: that made a row's value depend on which other rows shared its view, so
+ * one expense read $383.99 in one panel and $384.00 in another.
  */
 function roundRowsToCents<T extends { amount: number }>(rows: T[]): T[] {
     return rows.map((r) => ({ ...r, amount: roundCents(r.amount) }));
 }
 
 /**
- * One balance-affecting row, derived ONCE and read by both settlement panels.
- * `amount` is the cent-exact figure they each display, so the breakdown and the
- * journal can never quote different money for the same row.
+ * One balance-affecting row, derived ONCE and read by both panels, so the breakdown
+ * and the journal can never quote different money for the same row.
  */
 type SettlementRow = SettlementBreakdownItem & {
     line: SettlementBreakdownKey;
@@ -614,14 +511,9 @@ type SettlementRow = SettlementBreakdownItem & {
 type SettlementRowsByLine = Record<SettlementBreakdownKey, SettlementRow[]>;
 
 /**
- * Every row behind the balance, grouped by the breakdown line it belongs to,
- * newest first, each amount already reconciled to cents. This is the one source
- * both `buildBreakdownItems` and `buildJournal` read.
- *
- * `closes` is every cycle-close instant the user has filed. It is what makes
- * `locked` a DERIVED fact on every row rather than a column lookup: only a
- * transfer carries the marker column, but a cycle freezes every row it counted,
- * whichever table that row lives in.
+ * Every row behind the balance, grouped by breakdown line, newest first — the one
+ * source `buildBreakdownItems` and `buildJournal` both read. `closes` is what makes
+ * `locked` a derived fact rather than a column lookup.
  */
 function buildSettlementRows(
     expenses: SettlementExpenseRow[],
@@ -630,11 +522,8 @@ function buildSettlementRows(
     closes: readonly Date[],
 ): SettlementRowsByLine {
     /**
-     * Frozen means TWO things — the row's cycle is closed AND that cycle counted
-     * the row. This is the SAME pair the three write paths refuse on
-     * (`expense/update`, `expense/delete`, `expense/update-partner-payment`),
-     * built from the same two helpers, so the locked set and the frozen set
-     * cannot drift into disagreement.
+     * Frozen means TWO things — the cycle is closed AND it counted the row. Built from
+     * the same helpers the write paths refuse on, so the two sets cannot drift.
      */
     const expenseLocked = (e: SettlementExpenseRow): boolean =>
         cycleCloseAtOrAfter(closes, e.createdAt) !== null &&
@@ -649,11 +538,8 @@ function buildSettlementRows(
     // Sort the source rows, not the built ones: only the source carries
     // `createdAt`, the same-date tie-break.
     for (const e of [...expenses].sort(byNewest)) {
-        // A payment you sent her draws the balance DOWN, so it lands on
-        // `you_paid` and is never read for a partner share. The `continue` is
-        // what keeps one payment on exactly one line — an edit that made
-        // `amount` and `actualExpenditure` differ would otherwise leak a phantom
-        // partner share out of the same row.
+        // A payment lands on `you_paid` and is never read for a partner share; the
+        // `continue` is what keeps one payment on exactly one line.
         if (e.isPartnerPayment) {
             rows.you_paid.push({
                 line: "you_paid",
@@ -663,18 +549,15 @@ function buildSettlementRows(
                 description: e.description,
                 amount: e.actualExpenditure,
                 gross: null,
-                // The row's REAL note, recovered from its description. The edit
-                // form prefills from here and writes back what it finds, so a
-                // hardcoded null was erasing the user's text on every edit.
+                // The row's real note, recovered from its description — the edit form writes back what it finds.
                 note: paymentNote(e.description),
                 locked: expenseLocked(e),
             });
             continue;
         }
 
-        // `partnerShareOf` + `isZeroCents` ARE `movesSettlementBalance`, the
-        // predicate the closed-cycle freeze refuses on. One definition, so a
-        // frozen row and a counted row can never be different sets.
+        // `partnerShareOf` + `isZeroCents` ARE `movesSettlementBalance` — one
+        // definition, so a frozen row and a counted row can never be different sets.
         const partnerShare = partnerShareOf(e);
         if (isZeroCents(partnerShare)) continue;
         rows.partner_share.push({
@@ -698,19 +581,14 @@ function buildSettlementRows(
             date: m.date,
             amount: m.amount,
             gross: null,
-            // Derived exactly like the expense side, and for the same reason: a
-            // cycle freezes every row it COUNTED, not just the transfer that
-            // carries its marker. Reading `m.closedAt` alone left a debt — which
-            // can never hold the marker, the DB CHECK sees to that — editable
-            // and deletable inside a filed settlement.
+            // Derived like the expense side: a cycle freezes every row it COUNTED, not
+            // just the transfer carrying its marker (a debt can never hold one).
             locked:
                 cycleCloseAtOrAfter(closes, m.createdAt) !== null &&
                 movementMovesSettlementBalance(m.type),
         };
         if (m.type === "gf_fronted") {
-            // A thing she fronted that you owe her — the "you owe" side, and
-            // settlement's alone (spec 0007 §6b). The note is the label; blank
-            // falls back.
+            // A thing she fronted that you owe her — settlement's alone (spec 0007 §6b).
             rows.your_debt.push({
                 ...base,
                 line: "your_debt",
@@ -743,9 +621,8 @@ function buildSettlementRows(
 }
 
 /**
- * The rows behind each of the four breakdown lines, so a line's total can be
- * opened up and read item by item. Each line's rows sum to that line's total, to
- * the cent (spec 0004 §3.1).
+ * The rows behind each of the four breakdown lines. Each line's rows sum to that
+ * line's total, to the cent (spec 0004 §3.1).
  */
 function buildBreakdownItems(
     rows: SettlementRowsByLine,
@@ -772,10 +649,8 @@ function buildBreakdownItems(
 }
 
 /**
- * The same rows the breakdown groups by line, laid out chronologically across
- * kinds instead — shared expenses you paid, partner-fronted debts, transfers.
- * Amounts come straight off the shared row, so a row reads identically in both
- * panels.
+ * The same rows the breakdown groups by line, laid out chronologically instead.
+ * Amounts come straight off the shared row, so both panels read identically.
  */
 function buildJournal(
     rows: SettlementRowsByLine,
@@ -823,10 +698,8 @@ function buildJournal(
                 direction: line === "partner_paid" ? "gf_received" : "gf_paid",
                 amount: row.amount,
                 note: row.note,
-                // A payment you sent is an expense now, so the journal's edit
-                // and delete controls must reach the expense actions, not the
-                // movement ones. `gf_received` and any legacy `gf_paid` are
-                // still movements.
+                // A payment you sent is an expense now, so the journal's controls must
+                // reach the expense actions. `gf_received` and legacy `gf_paid` do not.
                 source: row.source ?? "movement",
             });
         }

@@ -4,22 +4,9 @@ import { db } from "@/lib/db";
 import { replayMigration } from "@/tests/support/replay-migration";
 
 /**
- * The partner-money marker column — schema shape only.
- *
- * The migration (and this file) are named for spec 0007 §6a decision 1, which
- * §6b REVERSED: a debt is settlement-only, and the payment you send the partner
- * is the expense. The column survived the reversal, only its meaning changed, so
- * what this file pins is unaffected. Prisma's checksum freezes both names.
- *
- * This migration used to also rename the "Purchases made by girlfriend"
- * subcategory in place and convert existing `gf_fronted` movements into
- * expenses; both are deferred to a second, deliberate PR (CHORE-12), so that a
- * production data rewrite is reviewed and released on its own. The
- * duplicate-subcategory trap the rename would have sprung is covered instead
- * by the seed test in `tests/unit/seed.test.ts`, which pins that the seeded
- * name still matches what live rows hold. All this file pins now is the
- * marker column the deployed code reads: it exists, defaults to false, and
- * a replay is idempotent.
+ * The partner-money marker column — schema shape only. The in-place subcategory
+ * rename and the data conversion this migration once carried are deferred to their
+ * own PR; `tests/unit/seed.test.ts` covers the duplicate-subcategory trap instead.
  */
 const MIGRATION = "20260914210000_fronted_debt_as_expense";
 

@@ -59,9 +59,8 @@ describe("computeFeedTotals", () => {
         };
         const t = computeFeedTotals([groceries, payment]);
 
-        // A payment IS spending now (spec 0007 §6b), so it sits inside the
-        // figure; `paidToPartner` reports that same money as a breakdown, never
-        // as an addend, or the payment would be billed twice.
+        // A payment IS spending now (spec 0007 §6b), so `paidToPartner` reports it as a
+        // breakdown, never an addend — or it is billed twice.
         expect(t.whatIReallySpent).toBe(780);
         expect(t.paidToPartner).toBe(100);
         expect(t.total).toBe(780);

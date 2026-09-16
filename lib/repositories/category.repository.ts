@@ -54,16 +54,9 @@ export interface CategoryRepository {
         month: string,
     ): Promise<ExpenseListItem[]>;
     /**
-     * Where a payment to the partner lands when the user picks nothing (spec
-     * 0007 §6a): the user's `combined-expenses` category and the subcategory
-     * `PARTNER_PAYMENT_SUBCATEGORY_NAME` names. Null when the user has no such
-     * category — the caller then refuses rather than filing the payment
-     * somewhere arbitrary. The subcategory is optional: a user who deleted it
-     * still gets the category.
-     *
-     * The lookup is BY NAME, so it must use the name live rows actually hold —
-     * see the constant. A mismatch here is silent: every payment would file with
-     * `subcategoryId: null`.
+     * Where a payment to the partner lands when the user picks nothing (spec 0007 §6a);
+     * null when the user has no `combined-expenses` category. The lookup is BY NAME, so
+     * a drifted constant silently files every payment with a null subcategory.
      */
     getPartnerPaymentDefaults(
         userId: string,
@@ -157,10 +150,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
 
     /**
      * `cycleClosedAt` is resolved here too, through the same helpers the expense
-     * repository uses. This screen shows no edit or delete control today, so
-     * nothing reads it — but a row is either in a closed cycle or it is not, and
-     * hardcoding `null` would put a false fact on the row for the first caller
-     * that trusts it.
+     * repository uses: hardcoding null would put a false fact on the row.
      */
     async getExpensesForCategoryMonth(
         userId: string,

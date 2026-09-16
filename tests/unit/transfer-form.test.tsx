@@ -40,9 +40,8 @@ beforeEach(() => {
 
 describe("TransferForm", () => {
     it("saves money you SENT her as an expense, not a movement", async () => {
-        // Spec 0007 §6b: paying her is the moment the money is really spent, so
-        // the outbound half writes an Expense{isPartnerPayment} and reaches the
-        // budget. Nothing should touch the movement action.
+        // Paying her is the moment the money is really spent (spec 0007 §6b), so the
+        // outbound half writes an Expense and nothing touches the movement action.
         const onSuccess = vi.fn();
         render(<TransferForm partnerName="Brenda" onSuccess={onSuccess} />);
         expect(

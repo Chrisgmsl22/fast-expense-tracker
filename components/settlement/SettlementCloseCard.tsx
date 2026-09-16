@@ -16,9 +16,8 @@ import {
 } from "@/components/ui/dialog";
 
 /**
- * The offer to close a squared settlement (spec 0007 §3.5). The page decides
- * whether to show it; the action re-derives the marker server-side, so this
- * component sends no id.
+ * The offer to close a squared settlement (spec 0007 §3.5). The action re-derives
+ * the marker server-side, so this component sends no id.
  */
 export function SettlementCloseCard({ partnerName }: { partnerName: string }) {
     const router = useRouter();

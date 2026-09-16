@@ -12,11 +12,8 @@ export type SettlementExpenseRow = {
     actualExpenditure: number;
     isShared: boolean;
     /**
-     * Money you SENT the partner (spec 0007 §6b) — the "you paid her" side of
-     * the balance, which draws it DOWN. An ordinary expense does the opposite:
-     * it contributes her share of what you paid, which pushes the balance up.
-     * Opposite signs, so the two must never be read alike. A debt she fronted is
-     * neither — it is a `Movement{gf_fronted}` and never an expense.
+     * Money you SENT the partner — the "you paid her" side, which draws the balance
+     * DOWN. An ordinary expense contributes her share and pushes it up: opposite signs.
      */
     isPartnerPayment: boolean;
     /** Entry time: what cycle membership compares, and the same-`date` tie-break. */
@@ -33,10 +30,7 @@ export type SettlementMovementRow = {
     note: string | null;
     /** Entry time: what cycle membership compares, and the same-`date` tie-break. */
     createdAt: Date;
-    /**
-     * Set when this transfer closed a settlement cycle. It travels WITH the row
-     * so every view knows the row is frozen without being told (spec 0007 §3.5).
-     */
+    /** Set when this transfer closed a settlement cycle, so the row is frozen (spec 0007 §3.5). */
     closedAt: Date | null;
 };
 
@@ -51,9 +45,8 @@ export type SettlementCycleMarker = {
     /** The transfer's own date, for display ("closed on"). */
     date: Date;
     /**
-     * The boundary itself — the instant the user confirmed the close, NOT the
-     * transfer's entry time. Rows entered up to here were counted in the balance
-     * the user saw as zero, so they belong to the cycle being closed.
+     * The boundary itself — the instant the user confirmed the close, NOT the transfer's
+     * entry time. Rows entered up to here belong to the cycle being closed.
      */
     closedAt: Date;
     amount: number;
@@ -74,10 +67,9 @@ export interface SettlementRepository {
     ): Promise<SettlementWindowRows>;
 
     /**
-     * Rows by ENTRY time — `createdAt` in `(after, through]` — newest first by
-     * date. This is cycle membership (spec 0007 §3.5): a row entered today but
-     * dated last week belongs to the cycle open today, not to the closed one its
-     * date falls inside. `null` leaves that end unbounded.
+     * Rows by ENTRY time — `createdAt` in `(after, through]` — newest first by date. A
+     * row entered today but dated last week belongs to the cycle open today. `null`
+     * leaves that end unbounded.
      */
     getForCreatedRange(
         userId: string,
@@ -89,9 +81,8 @@ export interface SettlementRepository {
     getCycleMarkers(userId: string): Promise<SettlementCycleMarker[]>;
 
     /**
-     * Record `closedAt` — the close instant — on one transfer. Returns rows
-     * affected: 0 when the row isn't the user's, is already a marker (a double
-     * submit), or isn't a transfer.
+     * Record `closedAt` on one transfer. Returns rows affected: 0 when the row isn't the
+     * user's, is already a marker (a double submit), or isn't a transfer.
      */
     markCycleClose(
         userId: string,
@@ -111,8 +102,6 @@ export class PrismaSettlementRepository implements SettlementRepository {
         const [expenses, movements] = await Promise.all([
             this.db.expense.findMany({
                 where: { userId, date: { gte: start, lt: end } },
-                // Newest first, `createdAt` breaking a same-date tie — the order
-                // both the journal and the breakdown rows keep.
                 orderBy: [{ date: "desc" }, { createdAt: "desc" }],
                 select: {
                     id: true,
@@ -127,8 +116,6 @@ export class PrismaSettlementRepository implements SettlementRepository {
             }),
             this.db.movement.findMany({
                 where: { userId, date: { gte: start, lt: end } },
-                // Newest first, `createdAt` breaking a same-date tie — the order
-                // both the journal and the breakdown rows keep.
                 orderBy: [{ date: "desc" }, { createdAt: "desc" }],
                 select: {
                     id: true,
@@ -216,10 +203,8 @@ export class PrismaSettlementRepository implements SettlementRepository {
     }
 
     /**
-     * `updateMany` (not `update`) so the where-clause carries `userId` and the
-     * preconditions: a row that isn't the user's, is already a marker, or isn't
-     * a transfer matches nothing and the count stays 0. That makes a double
-     * submit a no-op instead of a second marker, and backs the DB CHECK.
+     * `updateMany`, so the where-clause can carry `userId` and the preconditions; a
+     * double submit then matches nothing instead of writing a second marker.
      */
     async markCycleClose(
         userId: string,

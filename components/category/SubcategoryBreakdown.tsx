@@ -16,7 +16,6 @@ export function SubcategoryBreakdown({
 }: {
     bars: SubcategoryBar[];
     color: string;
-    /** Resolves the computed subcategory label; null when no partner is set. */
     partnerName?: string | null;
 }) {
     const withSpend = bars.filter((b) => b.spent > 0);

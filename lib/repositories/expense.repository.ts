@@ -14,13 +14,8 @@ export type ExpenseListItem = {
     /** Money you SENT the partner — both consumption and cash out, one row. */
     isPartnerPayment: boolean;
     /**
-     * Same fact, same meaning as `ExpenseEditable.cycleClosedAt`: the close
-     * instant of this row's cycle, null while that cycle is open.
-     *
-     * The LIST carries it so the screen can drop the edit/delete controls on a
-     * frozen row, the way the settlement journal does. Without it the buttons
-     * render, the user fills in a dialog, and the refusal arrives after the
-     * submit — a control that exists only to fail.
+     * The close instant of this row's cycle, null while it is open. The LIST carries it
+     * so a frozen row can drop its controls instead of failing after the submit.
      */
     cycleClosedAt: Date | null;
     category: { id: string; slug: string; name: string; color: string };
@@ -41,30 +36,17 @@ export type ExpenseEditable = {
     isShared: boolean;
     yourPercentage: number;
     /**
-     * The row's STORED share, not a recomputation of it. The closed-cycle guard
-     * asks `movesSettlementBalance` about this row, and the settlement read sums
-     * this very column — recomputing it from `amount × yourPercentage` would let
-     * the guard and the balance disagree about a legacy row that carries drift.
+     * The row's STORED share, never a recomputation: the closed-cycle guard and the
+     * settlement balance both read this column and must not disagree on a legacy row.
      */
     actualExpenditure: number;
     paidBy: string;
     /** Whether this row is money you sent the partner (spec 0007 §6b). */
     isPartnerPayment: boolean;
     /**
-     * Set when this row belongs to a settlement cycle that has been CLOSED —
-     * the instant of that close (spec 0007 §3.5). Null while the row is in the
-     * open cycle.
-     *
-     * It rides on the row, the way `MovementEditable.closedAt` does, so every
-     * caller learns the row is frozen without asking a second question. An
-     * expense carries no marker column of its own: cycle membership is its
-     * `createdAt` against the sequence of close instants, so the repository
-     * resolves it here rather than leaving each action to re-derive it.
-     *
-     * A marker alone does NOT freeze the row: a cycle counts only the rows that
-     * move the couple balance, so the caller pairs this with
-     * `movesSettlementBalance`. Freezing on the marker alone locks every expense
-     * ever entered before any close — see that helper.
+     * The close instant of the cycle this row belongs to, null while it is open (spec
+     * 0007 §3.5). An expense has no marker column, so the repository derives it. A
+     * marker alone does not freeze a row — pair it with `movesSettlementBalance`.
      */
     cycleClosedAt: Date | null;
 };
@@ -75,10 +57,8 @@ export type ExpenseEditable = {
  * and immutable defaults (`isRecurring`, original-currency columns) are set by
  * the adapter, not passed in.
  *
- * `isPartnerPayment` is deliberately absent: it is set once, at insert. An
- * update never writes it, so editing a payment through the ordinary expense form
- * cannot silently turn it into an ordinary purchase — which would drop it out of
- * the settlement balance without a word.
+ * `isPartnerPayment` is deliberately absent: it is set once, at insert, so an edit
+ * cannot silently turn a payment into an ordinary purchase.
  */
 export type ExpenseWriteData = {
     categoryId: string;
@@ -241,15 +221,9 @@ export class PrismaExpenseRepository implements ExpenseRepository {
     }
 
     /**
-     * `deleteMany` (not `delete`) for the same reason `updateForUser` uses
-     * `updateMany`: the where-clause carries `userId`, so a row that isn't the
-     * signed-in user's matches nothing and the count stays 0 (IDOR guard).
-     *
-     * The closed-cycle refusal is NOT here. An expense has no marker column, so
-     * freezing it needs the close instant AND the question of whether the row
-     * moved that cycle's balance at all — the caller already holds both, on
-     * `ExpenseEditable`, and refuses with a `cycle_closed` message the user can
-     * act on, which a silent zero count could not give them.
+     * `deleteMany`, so the where-clause can carry `userId` and a row that isn't the
+     * user's matches nothing (IDOR guard). The closed-cycle refusal is NOT here: it
+     * needs facts the caller holds, and a silent zero count gives no message.
      */
     async deleteForUser(userId: string, id: string): Promise<number> {
         const result = await this.db.expense.deleteMany({

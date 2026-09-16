@@ -52,10 +52,8 @@ const titlesFor = (partnerName: string): Record<Mode, string> => ({
 });
 
 /**
- * The `+ Add` entry point. Opens a type picker (expense / card payment /
- * transfers with the partner) that routes to the matching form. Money movements
- * are logged here alongside expenses so there's one place to record everything
- * (ADR-0018).
+ * Money movements are logged here alongside expenses, so there is one place to
+ * record everything (ADR-0018).
  *
  * An "I owe {partner}" debt is NOT offered here: it is created on the settlement
  * page, where the balance it moves is in view. It still SHOWS in this feed.

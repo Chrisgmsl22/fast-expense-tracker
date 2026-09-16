@@ -218,14 +218,9 @@ describe("movement actions (unit, injected fake repo)", () => {
     });
 
     /**
-     * I-1 (round 4). The expense side freezes every row a closed cycle counted;
-     * the movement side froze only the cycle's MARKER. Both movement writes are
-     * scoped `closedAt: null`, and the DB CHECK allows `closedAt` on a transfer
-     * alone — so a `gf_fronted` debt never matched that scope, and deleting one
-     * out of a filed cycle succeeded and restated its "You owed Brenda" figure.
-     *
-     * The guard is now the same pair the expense actions use: the row's cycle is
-     * closed AND that cycle counted the row.
+     * Both movement writes are scoped `closedAt: null`, and the DB CHECK allows
+     * `closedAt` on a transfer alone — so a `gf_fronted` debt never matched that scope.
+     * The guard is now the same pair the expense actions use.
      */
     describe("a closed cycle freezes every row it counted", () => {
         const CLOSED_AT = new Date("2026-07-12T00:00:00Z");
@@ -300,9 +295,8 @@ describe("movement actions (unit, injected fake repo)", () => {
         });
 
         it("still deletes a CARD PAYMENT inside a closed cycle — it moves no balance", async () => {
-            // The mirror of the expense side's solo lunch: freezing on
-            // membership alone would refuse a row the cycle never counted, and
-            // name a settlement the user was never in.
+            // Freezing on membership alone would refuse a row the cycle never counted,
+            // and name a settlement the user was never in.
             const repo = new FakeMovementRepository();
             repo.seed("mv1", "u1", {
                 type: "card_payment",

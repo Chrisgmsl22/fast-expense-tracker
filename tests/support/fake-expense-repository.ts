@@ -10,10 +10,8 @@ type StoredExpense = {
     id: string;
     userId: string;
     /**
-     * Mirrors `ExpenseEditable.cycleClosedAt`: the close instant of the cycle
-     * this row belongs to, null while that cycle is open. The Prisma adapter
-     * derives it from the marker movements; the fake takes it as arranged state,
-     * so an action's closed-cycle refusal is testable without a database.
+     * Mirrors `ExpenseEditable.cycleClosedAt`, taken as arranged state — so an action's
+     * closed-cycle refusal is testable without a database.
      */
     cycleClosedAt: Date | null;
 } & ExpenseInsertData;
@@ -93,9 +91,7 @@ export class FakeExpenseRepository implements ExpenseRepository {
             notes: row.notes,
             isShared: row.isShared,
             yourPercentage: row.yourPercentage,
-            // The STORED share, exactly as the Prisma adapter returns it — the
-            // closed-cycle guard asks whether this row moved the couple balance,
-            // and that question reads this column, never a recomputation.
+            // The STORED share, as the Prisma adapter returns it — never a recomputation.
             actualExpenditure: row.actualExpenditure,
             paidBy: row.paidBy,
             isPartnerPayment: row.isPartnerPayment,

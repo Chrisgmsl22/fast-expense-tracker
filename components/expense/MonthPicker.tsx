@@ -14,17 +14,11 @@ export function MonthPicker({
     currentMonth,
 }: {
     month: string;
-    /**
-     * Also remember the choice, so it survives navigation to another screen
-     * (`lib/month-scope.ts`). Opt-in: Settlement adopts it now, Dashboard and
-     * Expenses in a later slice, so their behaviour is unchanged here.
-     */
+    /** Also remember the choice (`lib/month-scope.ts`), so it survives navigation. */
     remember?: boolean;
     /**
-     * The live month, supplied by the server so the control never disagrees
-     * with the render's clock. When given and different from `month`, a
-     * "This month" button appears — which is also the standing signal that the
-     * screen is showing the past.
+     * The live month, supplied by the server so the control never disagrees with the
+     * render's clock. When it differs from `month`, a "This month" button appears.
      */
     currentMonth?: string;
 }) {

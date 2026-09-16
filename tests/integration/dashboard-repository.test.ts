@@ -440,9 +440,8 @@ describe("PrismaDashboardRepository per-user isolation (ADR-0022)", () => {
 });
 
 describe("a gf_fronted debt never reaches the dashboard (integration)", () => {
-    // The debt is a Movement, never an Expense, so budget / 50-25-25 buckets /
-    // category grid / "where the money went" / spend-by-card must read exactly
-    // the same with one logged. Proven, not asserted in prose (ADR-0020).
+    // The debt is a Movement, never an Expense, so every dashboard figure must read
+    // the same with one logged (ADR-0020).
     it("leaves every dashboard query byte-for-byte unchanged", async () => {
         const user = await seedUser();
         const cat = await seedCategory(user.id, "groceries", true, 5000);
@@ -492,15 +491,9 @@ describe("a gf_fronted debt never reaches the dashboard (integration)", () => {
 
 describe("a partner-payment expense and spend-by-card (BUG-1, integration)", () => {
     /**
-     * BUG-1 by name. ADR-0020 §1 pulled partner debts out of the expense table
-     * because one surfaced as a phantom "Cash" row on the dashboard: the row had
-     * no card, and `getCardSpends` groups by `cardId` and reads null as cash.
-     *
-     * Spec 0007 §6b puts a DIFFERENT row in the expense table — the payment he
-     * sends her, not the debt — and it has the same shape: a transfer leaves a
-     * bank account, so there is no card. The defect was never that it reached
-     * the BUDGET. So the exclusion lives in this query, and this test is what
-     * stops the phantom row coming back.
+     * BUG-1: a row with no card surfaced as a phantom "Cash" segment, because
+     * `getCardSpends` groups by `cardId` and reads null as cash. A partner payment has
+     * the same shape, so the exclusion lives in this query.
      */
     it("shows no phantom Cash row for a partner payment", async () => {
         const user = await seedUser("bug1@example.com");

@@ -259,10 +259,8 @@ describe("SettlementJournal", () => {
         expect(deleteExpenseMock).not.toHaveBeenCalled();
     });
 
-    // I-1: a debt is a `gf_fronted` MOVEMENT and stays one (spec 0007 §6b), so
-    // its journal row carries `source: "movement"`. Nothing in the rendered row
-    // says which table it came from, so `source` is the only thing that can send
-    // the delete to the movement action instead of the expense one.
+    // Nothing in the rendered row says which table it came from, so `source` is the only
+    // thing that can send the delete to the movement action.
     it("deletes a movement-backed debt through the movement action", async () => {
         deleteMock.mockResolvedValue({ ok: true, data: { id: "debt1" } });
         const debtRow: SettlementJournalItem = {
@@ -301,10 +299,8 @@ describe("SettlementJournal", () => {
         };
         render(<SettlementJournal journal={[debtRow]} partnerName="Brenda" />);
 
-        // A debt is a movement by design now (spec 0007 §6b) and
-        // `PartnerDebtForm` writes `updatePartnerDebt`, so it is editable. The
-        // old gate had this backwards and left EVERY debt uneditable, with a
-        // "delete to change" subtitle that was simply untrue.
+        // A debt is a movement by design now (spec 0007 §6b) and `PartnerDebtForm` writes
+        // `updatePartnerDebt`, so it is editable.
         expect(screen.getByLabelText("Edit I owe Brenda")).toBeDefined();
         expect(screen.getByLabelText("Delete I owe Brenda")).toBeDefined();
         expect(screen.queryByText(/delete to change/)).toBeNull();
@@ -388,9 +384,8 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
     });
 
     it("deletes a payment through the EXPENSE action, not the movement one", async () => {
-        // The reported defect: the dialog closed, no error appeared, and the
-        // $150 row survived — `deleteMovement` matched nothing (or matched the
-        // leftover movement of the same id) and answered as though it worked.
+        // The reported defect: the dialog closed, no error appeared, and the $150 row
+        // survived — `deleteMovement` answered as though it worked.
         deleteExpenseMock.mockResolvedValue({ ok: true, data: { id: "ePay" } });
         render(<SettlementJournal journal={[payment]} partnerName="Brenda" />);
         fireEvent.click(

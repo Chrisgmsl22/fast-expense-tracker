@@ -32,13 +32,9 @@ export const transferInputSchema = z.object({
 export type TransferInput = z.infer<typeof transferInputSchema>;
 
 /**
- * An "I owe {partner}" debt — something she fronted that you owe her back.
- * Stored as a `Movement{type:"gf_fronted"}`: **settlement only**, no category,
- * no card, never consumption and never in the budget (spec 0007 §6b).
- *
- * A debt is provisional: it can be reduced or cancelled by something she owes
- * you before any money moves, so it is not yet an expense of his. The payment
- * that settles it is — that is the whole reason for the reversal.
+ * An "I owe {partner}" debt — something she fronted. Stored as a
+ * `Movement{type:"gf_fronted"}`: settlement only, never consumption (spec 0007 §6b).
+ * It is provisional; the payment that settles it is the expense.
  */
 export const partnerDebtInputSchema = z.object({
     date: z.coerce.date(),

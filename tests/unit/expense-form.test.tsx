@@ -103,11 +103,8 @@ describe("ExpenseForm", () => {
         expect(screen.getByText("your share $68.00")).toBeDefined();
     });
 
-    // Spec 0007 §6b: the amount on a partner payment IS what he transferred,
-    // and a transfer leaves a bank account, not a card. The server refuses to
-    // split it either way — but a form that still offers the controls takes the
-    // click, saves, and says nothing, so the user believes he changed something.
-    // The state has to be legible before anyone clicks.
+    // A payment is never split and leaves no card (spec 0007 §6b). A form that still
+    // offers the controls takes the click, saves, and says nothing.
     it("offers no split and no card on a payment to the partner", () => {
         renderForm({ expense: { ...editable, isPartnerPayment: true } });
 

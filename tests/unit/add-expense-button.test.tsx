@@ -41,9 +41,8 @@ describe("AddExpenseButton", () => {
     });
 
     it("never offers 'I owe {partner}', even in Shared mode", () => {
-        // A debt is created on the settlement page, where the balance it moves
-        // is in view. This assertion is what stops the item coming back to the
-        // Add menu; the row itself still SHOWS in the expenses feed.
+        // A debt is created on the settlement page, where the balance it moves is in
+        // view. The row itself still SHOWS in the expenses feed.
         render(<AddExpenseButton {...props} sharesExpenses />);
         openMenu();
         expect(screen.queryByText("I owe Brenda")).toBeNull();
