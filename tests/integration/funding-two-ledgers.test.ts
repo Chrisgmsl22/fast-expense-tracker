@@ -7,19 +7,9 @@ import { PrismaDashboardRepository } from "@/lib/repositories/dashboard.reposito
 import { PrismaSettlementRepository } from "@/lib/repositories/settlement.repository";
 
 /**
- * The two-ledger property, in the user's own words:
- *
- * > "theres a chance I paid for it with my savings money and its a shared
- * > expense, so I would also check it and in the end I would have this not
- * > count for me BUT it would be counted for Brenda to pay me."
- *
- * Budget and Settlement are different ledgers and must never be crossed
- * (ADR-0020). A savings-funded shared expense leaves HIS buckets entirely,
- * because this month's income didn't fund it — while HER share is still owed,
- * because she genuinely owes it whatever money he used to front it.
- *
- * Asserted against both real queries, not a fake: the budget reads filter on
- * `fundedFrom`, and `getForWindow` deliberately does not.
+ * Budget and Settlement are different ledgers (ADR-0020): a savings-funded
+ * shared expense leaves his buckets entirely, while her share is still owed —
+ * whatever money he used to front it. Both real queries, not a fake.
  */
 
 const dashboardRepo = new PrismaDashboardRepository(db);

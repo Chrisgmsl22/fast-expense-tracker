@@ -6,14 +6,13 @@ import type { CategoryExpenseListItem } from "@/lib/repositories/category.reposi
 
 /**
  * A row as the repository returns it. `countedInBudget` defaults to the verdict
- * the SQL filter would give a row with this `fundedFrom`; a test sets it
- * explicitly only to build the case where the two disagree.
+ * the DB filter would give; a test sets it explicitly only to build the case
+ * where the two disagree.
  */
 function exp(
     over: Partial<CategoryExpenseListItem> & { id: string },
 ): CategoryExpenseListItem {
-    // Honour the override: hardcoding this dropped the field silently and no
-    // test could reach a non-income row (that's how the missing badge shipped).
+    // Honour the override: hardcoding it makes a non-income row unreachable.
     const fundedFrom = over.fundedFrom ?? "income";
     return {
         id: over.id,
@@ -138,11 +137,8 @@ describe("CategoryExpenses", () => {
     });
 
     it("badges a row the budget dropped even when it narrows to income", () => {
-        // The stored column held something out-of-band (say "cash-back"): the
-        // SQL filter dropped it, so it sits in the header's "Not from this
-        // month's income" figure — but `toFundingSource` read it back as
-        // `income`. Badging on `fundedFrom` left this exact row bare, so the
-        // header pointed at a list showing nothing.
+        // An out-of-band stored value: the SQL filter dropped it, so it sits in
+        // the header's figure, but `toFundingSource` reads it back as `income`.
         render(
             <CategoryExpenses
                 expenses={[

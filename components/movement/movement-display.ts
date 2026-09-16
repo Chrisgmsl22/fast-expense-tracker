@@ -48,7 +48,6 @@ export function movementDisplay(
     }
 }
 
-/** The minimum a feed row needs to write its two lines. */
 type MovementRowSource = {
     type: MovementType;
     note: string | null;
@@ -56,11 +55,8 @@ type MovementRowSource = {
 };
 
 /**
- * The two text lines of a feed row: a title and an optional subline (the date is
- * prefixed by the caller). Both feeds share this so a debt reads the same on the
- * dashboard and on the expenses list. A debt's note *names the thing she
- * fronted*, so it becomes the title and the generic label drops to the subline;
- * with no note the label is the title, matching the settlement journal.
+ * A debt's note names the thing she fronted, so it becomes the title and the
+ * generic label drops to the subline; with no note the label is the title.
  */
 export function movementRowText(
     m: MovementRowSource,

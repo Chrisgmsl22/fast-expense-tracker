@@ -440,9 +440,8 @@ describe("PrismaDashboardRepository per-user isolation (ADR-0022)", () => {
 });
 
 describe("a gf_fronted debt never reaches the dashboard (integration)", () => {
-    // The debt is a Movement, never an Expense, so budget / 50-25-25 buckets /
-    // category grid / "where the money went" / spend-by-card must read exactly
-    // the same with one logged. Proven, not asserted in prose (ADR-0020).
+    // The debt is a Movement, never an Expense, so every dashboard figure must
+    // read identically with one logged (ADR-0020).
     it("leaves every dashboard query byte-for-byte unchanged", async () => {
         const user = await seedUser();
         const cat = await seedCategory(user.id, "groceries", true, 5000);

@@ -124,14 +124,13 @@ describe("CategoryStats", () => {
         );
         const line = screen.getByTestId("category-non-income").textContent!;
         expect(line).toContain("Not from this month's income: $3,000.00");
-        // It must point at the LIST. The subcategory bars sit between the two
-        // and are funding-filtered as well, so "shown below" used to be false.
+        // It must point at the LIST: the subcategory bars between the two are funding-filtered as well.
         expect(line).toContain("in the list below, outside the budget");
     });
 
     it("keeps the count sentence on the rows the user can see", () => {
-        // The other half of the same contradiction: one savings-funded row used
-        // to read "1 expense across 0 subcategories".
+        // The other half of the same contradiction: one savings-funded row must
+        // not read "across 0 subcategories".
         render(
             <CategoryStats
                 {...base}

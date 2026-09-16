@@ -293,11 +293,9 @@ describe("MonthFeed", () => {
     });
 
     it("badges no ordinary row — income money is never 'not from income'", () => {
-        // Guards both `FundingBadge` call sites in this file (the expense row
-        // and the movement row). `FundingBadge` cannot represent `income`, so a
-        // dropped guard is a type error first; this is the behavioural half of
-        // that. Without either, every ordinary row grows a gray "not from
-        // income" chip — a false statement about the money.
+        // `FundingBadge` cannot represent `income`, so a dropped guard is a type
+        // error first; this is the behavioural half. Without either, every
+        // ordinary row grows a false "not from income" chip.
         render(
             <MonthFeed
                 expenses={expenses}

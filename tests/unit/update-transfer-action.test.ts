@@ -76,11 +76,8 @@ describe("updateTransfer (unit, injected fake repo)", () => {
     });
 
     describe("flipping a savings-funded transfer inbound", () => {
-        // Money she sends you is funded by nothing of yours, so a stale
-        // `savings` must not survive the flip. Two callers reach the same write
-        // by different routes, so both are pinned: the form sends `income`
-        // explicitly; a caller that knows nothing of the field omits it and
-        // gets the schema default.
+        // A stale `savings` must not survive the flip to inbound. Both routes are
+        // pinned: the form sends `income`; a caller that omits the field gets the default.
         function savingsRepo() {
             const repo = new FakeMovementRepository();
             repo.seed("mv1", "u1", {

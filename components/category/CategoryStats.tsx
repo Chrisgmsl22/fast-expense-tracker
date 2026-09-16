@@ -13,12 +13,9 @@ const DANGER = "#dc2626";
  * (per `category-detail-mobile.png`). A pencil on the limit (both layouts) opens
  * the per-month limit editor. A null effective limit reads "No limit".
  *
- * When the month holds savings-funded or reimbursed rows, one shared line below
- * both layouts names the money `spent` left out (spec 0007 §2). Without it the
- * screen shows "$0 spent" above a $3,000 row and never says why; the per-row
- * badge explains the row, this explains the header. It points at the LIST, not
- * at the subcategory bars in between — those are funding-filtered too, so that
- * money is not in them either.
+ * When the filter held money back, one shared line names what `spent` left out
+ * (spec 0007 §2). It points at the LIST, not at the subcategory bars between
+ * them — those are funding-filtered too.
  */
 export function CategoryStats({
     slug,
@@ -167,8 +164,6 @@ export function CategoryStats({
                 <div className="mt-3">{bar}</div>
             </div>
 
-            {/* One line for both layouts — centred on mobile like the hero it
-                follows, left-aligned on desktop like the progress line. */}
             {spentNotFromIncome > 0 && (
                 <p
                     data-testid="category-non-income"

@@ -3,33 +3,9 @@ import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
 import { formatMxn } from "@/lib/format";
 
 /**
- * "Spend by subcategory" — the screen's headline. One bar per subcategory with
- * spend, high→low, each labelled with its amount and its share of the total the
- * bars themselves add up to. Bars are scaled to the top subcategory (so the
- * leader fills the track). Zero-spend subcategories (which exist but weren't
- * used this month) collapse into a single faint footer line rather than a row of
- * empty bars.
- *
- * EVERY FIGURE HERE IS FUNDING-FILTERED (spec 0007 §2) — amounts, percents, and
- * which subcategories count as zero. `spentNotFromIncome > 0` means the filter
- * held money back, and then all three of those need scoping or they state
- * something false about the category:
- *
- * - The percent's base is the filtered total, not the category's. With $238 of
- *   income-funded spend beside $3,700 from savings, the leader reads "100%" of
- *   $238. Recomputing it against $3,938 would be worse: the bars would sum to 6%
- *   and no row would account for the rest. So the base stays, and the section
- *   says what the base is.
- * - A subcategory the filter emptied is NOT a $0 subcategory. Printing
- *   "Entertainment — $0" directly above a $3,700 Entertainment row is the lie
- *   this guards; the names still list (they have no income-funded spend, which
- *   is true) but the bare amount goes.
- * - When the filter took every row, the empty state has to say WHICH spend is
- *   missing — "no spend this month" would contradict the header above it and
- *   the list below it.
- *
- * The empty state and the zero footer are mutually exclusive: with no bars, the
- * footer would only repeat the empty state's point with a list of names.
+ * Every figure here is funding-filtered (spec 0007 §2) — amounts, percents, and
+ * which subcategories read as zero. When the filter held money back, all three
+ * need scoping, or the section states something false about the category.
  */
 export function SubcategoryBreakdown({
     bars,
@@ -45,8 +21,7 @@ export function SubcategoryBreakdown({
     const zero = bars.filter((b) => b.spent === 0);
     // Bars are sorted high→low, so the first is the max used for scaling.
     const max = withSpend[0]?.spent ?? 0;
-    // The filter held money back, so nothing in this section speaks for the
-    // whole category and every label below has to say so.
+    // The filter held money back, so every label below has to say so.
     const filtered = spentNotFromIncome > 0;
 
     return (
@@ -64,11 +39,9 @@ export function SubcategoryBreakdown({
                 </div>
                 {withSpend.length > 0 && filtered && (
                     // Not desktop-only: it scopes the amounts and percents
-                    // beside it, so hiding it on mobile would leave the numbers
-                    // reading as the category's own. Gated on the bars for the
-                    // same reason the zero footer is: with none, there are no
-                    // amounts and no percents to scope, and the empty state
-                    // below already says which spend is missing.
+                    // beside it. Gated on the bars — with none there is
+                    // nothing to scope, and the empty state below says which
+                    // spend is missing.
                     <p
                         data-testid="breakdown-scope"
                         className="mt-0.5 text-xs text-muted-foreground"

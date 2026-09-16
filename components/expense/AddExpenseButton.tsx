@@ -62,8 +62,9 @@ const titlesFor = (partnerName: string): Record<Mode, string> => ({
 
 /**
  * The `+ Add` entry point. Opens a type picker (expense / card payment /
- * transfer to the partner / a debt she fronted) that routes to the matching form. Money movements are logged
- * here alongside expenses so there's one place to record everything (ADR-0018).
+ * transfer to the partner / a debt she fronted) that routes to the matching
+ * form. Money movements are logged here alongside expenses so there's one place
+ * to record everything (ADR-0018).
  */
 export function AddExpenseButton({
     categories,

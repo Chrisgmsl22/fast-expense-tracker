@@ -66,11 +66,7 @@ export interface ExpenseRepository {
     getById(userId: string, id: string): Promise<ExpenseEditable | null>;
     getForMonth(userId: string, month: string): Promise<ExpenseListItem[]>;
     getSubcategoryCategoryId(subcategoryId: string): Promise<string | null>;
-    /**
-     * The category's slug, for the `reimbursed`-is-Health-only rule (spec 0007
-     * §3.3). Scoped by user: a category id the user doesn't own resolves to
-     * null, which is not Health, so the rule fails closed.
-     */
+    /** Scoped by user: a category the user doesn't own resolves to null, which is not Health, so the rule fails closed. */
     getCategorySlug(userId: string, categoryId: string): Promise<string | null>;
     insert(userId: string, data: ExpenseWriteData): Promise<{ id: string }>;
     updateForUser(

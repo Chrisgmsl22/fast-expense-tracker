@@ -43,10 +43,8 @@ export type SettlementJournalItem = {
           /** Free-text label ("what it was toward"); null when none. */
           note: string | null;
           /**
-           * Which month's money funded it (spec 0007 §3.1) — carried so the
-           * row's edit form prefills the control instead of resetting it to
-           * `income` on save. It changes no figure on this page: the balance
-           * counts every transfer at full value whatever funded it.
+           * Carried for the edit-form prefill only. It changes no figure here:
+           * the balance counts every transfer at full value (spec 0007 §3.1).
            */
           fundedFrom: TransferFundingSource;
       }

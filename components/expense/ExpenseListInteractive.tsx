@@ -88,12 +88,7 @@ function CategoryPill({ name, color }: { name: string; color: string }) {
 
 const ROW_GRID = "sm:grid-cols-[5.5rem_minmax(0,1fr)_10rem_9rem_8rem_4rem]";
 
-/**
- * Body of the movement delete confirmation. Same phrasing as the settlement
- * journal's own delete (`SettlementJournal.tsx`) — row title, amount in
- * parentheses — so one action reads the same on both screens. A debt also warns
- * that the couple balance moves, which is invisible from this screen.
- */
+/** Same phrasing as the settlement journal's delete, so one action reads the same on both screens. */
 function movementDeleteMessage(
     m: MovementListItem,
     partnerName: string,
@@ -105,7 +100,6 @@ function movementDeleteMessage(
         : removed;
 }
 
-/** Heading of the movement edit dialog — one per form it can open. */
 function movementEditTitle(
     type: MovementType | undefined,
     partnerName: string,
@@ -117,12 +111,9 @@ function movementEditTitle(
 
 /**
  * Client list, re-skinned to Confirmed designs V1 + money movements
- * (ADR-0018). Expenses keep category filter chips, pills, and
- * edit/delete. Money movements (card payment blue, "I paid {partner}" gold, "I
- * owe {partner}" orange) interleave by date in the unfiltered ("All") view —
- * they have no category, so a category filter hides them — and are editable +
- * deletable (CHORE-5). A debt she fronted is shown for awareness only: no cash
- * left the account, so it enters no total.
+ * (ADR-0018). Expenses keep category filter chips, pills, and edit/delete.
+ * Movements interleave by date only in the unfiltered ("All") view — they have
+ * no category, so a filter hides them. A debt she fronted enters no total.
  */
 export function ExpenseListInteractive({
     expenses,
@@ -188,11 +179,8 @@ export function ExpenseListInteractive({
         [filtered, movements, showMovements],
     );
 
-    // Same helper the dashboard feed uses, on the same rows, so "What I really
-    // spent" and "Paid to {partner}" are the same numbers on both screens —
-    // savings category excluded (ADR-0018 §1), savings-FUNDED rows excluded
-    // (spec 0007). A category filter hides the movements, so it zeroes their
-    // totals too.
+    // Same helper the dashboard feed uses, so both screens print the same
+    // numbers. A category filter hides the movements, so it zeroes their totals too.
     const totals = computeFeedTotals(filtered, showMovements ? movements : []);
 
     function openEdit(id: string) {
@@ -528,10 +516,9 @@ export function ExpenseListInteractive({
                     </DialogHeader>
                     {editingMovement &&
                         (editingMovement.type === "gf_fronted" ? (
-                            // A debt needs its own form. The transfer form saves
-                            // through updateTransfer, which refuses any row that
-                            // isn't gf_paid/gf_received — so it would open, save
-                            // nothing, and answer "Transfer not found."
+                            // A debt needs its own form: `updateTransfer` refuses
+                            // any row that isn't gf_paid/gf_received, so this
+                            // would save nothing and answer "Transfer not found."
                             <PartnerDebtForm
                                 key={editingMovement.id}
                                 debt={{

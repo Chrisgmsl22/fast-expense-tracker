@@ -3,28 +3,9 @@ import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { CategoryExpenseListItem } from "@/lib/repositories/category.repository";
 
 /**
- * Read-only list of the category's expenses this month. Each row shows the
- * description, its subcategory (in the category color), the charged amount, and
- * — on shared rows — the my-share subtext. The date · card meta is desktop-only
- * to keep mobile rows compact (matches the design). Editing lives on /expenses.
- *
- * A row the budget skipped carries the same `FundingBadge` the two feeds use
- * (spec 0007 §3.2): the list shows every row whatever funded it, while `Spent`
- * above counts only income-funded ones, so without the badge the header would
- * read $0 over a visible $3,000 row and explain nothing.
- *
- * The badge condition is `countedInBudget` — the SQL filter's verdict on the raw
- * column — and NOT `fundedFrom !== "income"`. The prop type is
- * `CategoryExpenseListItem` for that reason alone: narrowing to
- * `ExpenseListItem` here would discard the flag at the boundary and leave the
- * one row that most needs a badge (an out-of-band value, dropped by the query
- * and read back as `income`) unbadged under a header pointing straight at it.
- *
- * Because the two disagree, this is the ONE caller that can reach the badge with
- * a `fundedFrom` of `income`, and it maps that to `"unknown"` here: past the
- * `countedInBudget` check, a narrowed `income` is exactly the out-of-band case
- * and nothing else. The badge itself does not accept `income`, so this mapping is
- * the compiler's business rather than a convention to remember.
+ * Badges on `countedInBudget` (the SQL filter's verdict on the raw column), not
+ * on `fundedFrom` — which reads an out-of-band value back as `income` and would
+ * leave the one row that most needs a badge bare. Hence the `"unknown"` mapping.
  */
 export function CategoryExpenses({
     expenses,

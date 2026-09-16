@@ -28,9 +28,8 @@ const subSpends: SubcategorySpendRow[] = [
 
 /**
  * A row as the repository returns it. `countedInBudget` defaults to the verdict
- * the DB filter would give this row, so a test only sets it explicitly to build
- * the case the two can disagree on: an out-of-band stored value, which the query
- * drops but `toFundingSource` reads back as `income`.
+ * the DB filter would give; a test sets it explicitly only to build the case
+ * where the two disagree.
  */
 function exp(
     over: Partial<CategoryExpenseListItem> & { id: string },
@@ -259,10 +258,8 @@ describe("getCategoryDetail", () => {
         });
 
         it("tells one story for a month of nothing but one savings row", async () => {
-            // The screen that was contradicting itself: $3,000 of shoes bought
-            // from savings, and nothing else all month. The filtered read
-            // returns no subcategory spend at all, so every figure the header
-            // sentence uses has to come from the list instead.
+            // $3,000 of shoes bought from savings and nothing else: the filtered
+            // read returns no subcategory spend, so the header must come from the list.
             const detail = await getCategoryDetail("u1", "health", "2026-06", {
                 categoryRepo: fakeCategoryRepo({
                     subSpends: [{ id: "s1", name: "Shoes", spent: 0 }],
@@ -291,10 +288,8 @@ describe("getCategoryDetail", () => {
         });
 
         it("counts a row the filter dropped for an unrecognised stored value", async () => {
-            // `fundedFrom: "cash-back"` is excluded by the SQL filter, then read
-            // back as `income` by `toFundingSource`. Only the filter's own
-            // verdict keeps the money in a figure; a predicate over `fundedFrom`
-            // would leave this row in neither total.
+            // `fundedFrom: "cash-back"` is dropped by the SQL filter, then read
+            // back as `income`. Only the filter's own verdict keeps the money in a figure.
             const detail = await getCategoryDetail("u1", "health", "2026-06", {
                 categoryRepo: fakeCategoryRepo({
                     subSpends: [{ id: "s1", name: "Doctors appt", spent: 0 }],

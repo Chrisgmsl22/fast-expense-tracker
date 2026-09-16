@@ -58,11 +58,9 @@ describe("funding source (spec 0007 §2/§3.1)", () => {
         });
 
         it("calls an out-of-band value not-budget-funded, unlike the mapping", () => {
-            // The two deliberately disagree here, and that disagreement is the
-            // point. `fundedFrom: "income"` in SQL drops this row from every
-            // budget figure; `toFundingSource` reads it back as `income` so no
-            // badge is lost. A figure derived from the mapped value would drop
-            // the row a second time and leave the money in nothing at all.
+            // The two deliberately disagree: SQL drops this row from every budget
+            // figure while `toFundingSource` reads it back as `income`, so no
+            // badge is lost.
             expect(isBudgetFunded("gift")).toBe(false);
             expect(isBudgetFunded("")).toBe(false);
             expect(toFundingSource("gift")).toBe("income");

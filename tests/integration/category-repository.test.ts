@@ -36,11 +36,7 @@ async function seedExpense(opts: {
     amount: number;
     actualExpenditure: number;
     subcategoryId?: string;
-    /**
-     * A plain String column, so a test can store a value outside
-     * `FUNDING_SOURCES` — which is the case the budget filter and the read
-     * mapping have to agree about.
-     */
+    /** A plain String column, so a test can store a value outside `FUNDING_SOURCES`. */
     fundedFrom?: string;
 }) {
     return db.expense.create({

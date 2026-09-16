@@ -48,24 +48,19 @@ export class FakeMovementRepository implements MovementRepository {
     }
 
     async getForMonth(userId: string): Promise<MovementListItem[]> {
-        return (
-            [...this.rows.values()]
-                .filter((r) => r.userId === userId)
-                // Mirror the Prisma adapter: `gf_fronted` is settlement-only and
-                // never appears in the month feed (ADR-0020).
-                .filter((r) => r.type !== "gf_fronted")
-                .map((r) => ({
-                    id: r.id,
-                    date: r.date,
-                    amount: r.amount,
-                    type: r.type,
-                    card: null,
-                    note: r.note,
-                    // Mirror the column default: a write that omits the field
-                    // reads back as income, as Postgres would return it.
-                    fundedFrom: r.fundedFrom ?? "income",
-                }))
-        );
+        return [...this.rows.values()]
+            .filter((r) => r.userId === userId)
+            .map((r) => ({
+                id: r.id,
+                date: r.date,
+                amount: r.amount,
+                type: r.type,
+                card: null,
+                note: r.note,
+                // Mirror the column default: a write that omits the field
+                // reads back as income, as Postgres would return it.
+                fundedFrom: r.fundedFrom ?? "income",
+            }));
     }
 
     async getById(

@@ -43,12 +43,7 @@ export type DashboardSummary = {
     topCategories: TopCategory[];
     /** Per-category budget status, high→low (categories grid). */
     categoryBudgets: CategoryBudgetItem[];
-    /**
-     * My-share spend this month that did NOT come from this month's income
-     * (savings-funded or reimbursed). Excluded from every figure above by the
-     * repository's funding filter; reported here so the dashboard can still
-     * show it on one line rather than letting it vanish (spec 0007 §3.1).
-     */
+    /** My-share spend the repository's funding filter excluded from every figure above; reported so it doesn't vanish (spec 0007 §3.1). */
     nonIncomeFundedTotal: number;
 };
 

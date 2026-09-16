@@ -80,9 +80,8 @@ describe("SubcategoryBreakdown", () => {
     });
 
     it("says WHY it is empty when the filter took the month's only row", () => {
-        // One $3,000 savings-funded row and nothing else: the bars are empty
-        // because of the funding filter, not because the month was. Saying
-        // "no spend this month" here would contradict the header line above it
+        // The bars are empty because of the funding filter, not because the
+        // month was; "no spend this month" would contradict the header above it
         // and the list below it.
         render(
             <SubcategoryBreakdown
@@ -104,12 +103,7 @@ describe("SubcategoryBreakdown", () => {
         expect(screen.queryByTestId("breakdown-scope")).toBeNull();
     });
 
-    /**
-     * The shape that broke: SOME income-funded spend plus savings-funded spend
-     * in a subcategory the filter then emptied. `withSpend.length > 0`, so the
-     * empty state never renders and nothing else on the section could scope the
-     * numbers. These assert on the footer and the percent, not on the paragraph.
-     */
+    /** SOME income-funded spend plus savings-funded spend in a subcategory the filter emptied: `withSpend.length > 0`, so the empty state never renders. */
     describe("a month mixing income-funded and savings-funded spend", () => {
         // Dining out holds $238 of income-funded my-share; Entertainment holds
         // a $3,700 savings-funded row the filter zeroed out.
@@ -131,7 +125,7 @@ describe("SubcategoryBreakdown", () => {
 
         it("never prints a bare $0 for a subcategory holding the money", () => {
             renderMixed();
-            // "Entertainment — $0" sat directly above a $3,700 Entertainment row.
+            // "Entertainment — $0" would sit directly above a $3,700 Entertainment row.
             expect(screen.queryByText(/Entertainment — \$0/)).toBeNull();
             expect(screen.queryByText(/— \$0/)).toBeNull();
         });

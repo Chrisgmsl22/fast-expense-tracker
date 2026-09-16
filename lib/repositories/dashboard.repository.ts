@@ -65,11 +65,7 @@ export interface DashboardRepository {
         userId: string,
         month: string,
     ): Promise<CategoryBudgetItem[]>;
-    /**
-     * My-share total for the month that did NOT come from this month's income —
-     * the rows the budget filter excludes. Surfaced as one dashboard line so
-     * the spend stays visible instead of vanishing (spec 0007 §3.1).
-     */
+    /** My-share total the budget filter excludes — surfaced so the spend stays visible (spec 0007 §3.1). */
     getNonIncomeFundedTotal(userId: string, month: string): Promise<number>;
 }
 
@@ -81,11 +77,9 @@ export class PrismaDashboardRepository implements DashboardRepository {
         month: string,
     ): Promise<CategorySpend[]> {
         const { start, end } = getMonthRangeUtc(month);
-        // Marking an expense reimbursed changes THIS expense's month, not the
-        // month the refund arrived (spec 0007 §6, confirmed by the user). So a
-        // closed month's totals are not immutable: reimbursing a March expense
-        // in April lowers March's spend after the fact. That is intended —
-        // March's income funded nothing here, so March should say so.
+        // Reimbursing an expense changes ITS month, not the month the refund
+        // arrived (spec 0007 §6): a closed month's spend can drop after the
+        // fact. Intended — that month's income funded nothing here.
         const grouped = await this.db.expense.groupBy({
             by: ["categoryId"],
             where: {
@@ -135,11 +129,8 @@ export class PrismaDashboardRepository implements DashboardRepository {
             // Savings is a transfer, not card spend — exclude it so it doesn't
             // show as a phantom "Cash" segment.
             //
-            // NO funding filter here, on purpose (spec 0007 §3.2): the card saw
-            // the full charge whatever money settled it, and one payment can
-            // cover many purchases, so tagging the payment could never be
-            // honest. Shoes bought from savings still show at full value in
-            // spend-by-card; only the budget skips them.
+            // NO funding filter (spec 0007 §3.2): the card saw the full charge
+            // whatever money settled it, and one payment can cover many purchases.
             where: {
                 userId,
                 date: { gte: start, lt: end },

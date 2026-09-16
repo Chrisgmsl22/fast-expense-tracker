@@ -102,10 +102,8 @@ describe("getSettlement", () => {
     });
 
     describe("the funding source never moves the balance (spec 0007 §6a)", () => {
-        // The two ledgers are separate. Paying her from savings really did
-        // reach her, so it reduces what you owe by the full amount — only the
-        // budget and cash figures (the feed) skip it. Filtering here too would
-        // be the easy mistake: each side looks correct in isolation.
+        // The two ledgers are separate: paying her from savings really did reach
+        // her, so it reduces what you owe in full. Filtering here too is the easy mistake.
         const transfer = (fundedFrom: "income" | "savings") =>
             movement({ id: "mt", type: "gf_paid", amount: 300, fundedFrom });
 

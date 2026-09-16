@@ -22,12 +22,10 @@ import { SettlementChip } from "./SettlementChip";
  * movements** (card payments, transfers to the partner), newest first, with a
  * pinned footer. Movements are colour-tagged (card payment blue, "I paid
  * {partner}" gold, "I owe {partner}" orange) and never enter the spend total —
- * a debt she fronted is shown for awareness only. The footer splits money into
- * Charged / What I really spent (consumption) / Set aside (savings) / Not from
- * this month's income (the consumption the budget skipped) / Paid to {partner} /
- * Paid to {partner} from savings (the cash half, never added to the consumption
- * one — spec 0007 §6a) / Total. Who-owes-whom lives in the settlement slice, not
- * here (ADR-0018).
+ * a debt she fronted is shown for awareness only.
+ * The footer splits money into consumption, savings and cash lines; the cash
+ * half is never added to the consumption one (spec 0007 §6a).
+ * Who-owes-whom lives in the settlement slice, not here (ADR-0018).
  */
 export function MonthFeed({
     expenses,
@@ -158,9 +156,7 @@ export function MonthFeed({
                             </span>
                         </div>
                     )}
-                    {/* The cash half of "not from income" — its own line, right
-                        under the figure it left. Never added to the consumption
-                        line above it (spec 0007 §6a). */}
+                    {/* The cash half — never added to the consumption line above (spec 0007 §6a). */}
                     {totals.notFromIncomeTransfers > 0 && (
                         <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">
@@ -270,8 +266,6 @@ function MovementRow({
     partnerName: string;
 }) {
     const { amountClass, rowTint } = movementDisplay(m.type, partnerName);
-    // Card payments carry their card name; transfers carry their note; a debt
-    // leads with its note (what she fronted).
     const { title, subline } = movementRowText(m, partnerName);
 
     return (

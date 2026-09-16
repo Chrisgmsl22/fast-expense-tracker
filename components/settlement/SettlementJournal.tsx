@@ -379,10 +379,8 @@ function JournalRow({
     const inbound = item.direction === "gf_received";
     return (
         <Row
-            // Outbound only, and only when savings funded it: the badge says
-            // where the money came from, not that the row was skipped. This
-            // page counts every transfer at full value whatever funded it —
-            // only the budget and cash figures exclude it (spec 0007 §6a).
+            // This page counts every transfer at full value; the badge says
+            // where the money came from, not that the row was skipped (spec 0007 §6a).
             badge={
                 inbound || item.fundedFrom === BUDGET_FUNDING_SOURCE ? null : (
                     <FundingBadge source={item.fundedFrom} />
@@ -432,7 +430,6 @@ function Row({
     /** Colour-coded left border + tint, bled to the card edges. Omit for a plain row. */
     rowTint?: string;
     title: string;
-    /** Optional chip beside the title (the funding badge). */
     badge?: ReactNode;
     subtitle: string;
     amount: string;

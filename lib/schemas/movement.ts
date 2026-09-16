@@ -31,18 +31,14 @@ export const transferInputSchema = z
         direction: z.enum(["gf_paid", "gf_received"]).default("gf_paid"),
         note: z.string().max(1000).optional(),
         /**
-         * Which month's money funded the transfer (spec 0007 §3.1). Two values
-         * only: `reimbursed` is Health-only (§3.3) and a transfer has no
-         * category, so it is rejected here whatever route it arrives by — the
-         * form never offers it, and neither does anything else. Defaulted, so a
-         * caller that omits the field keeps today's behaviour.
+         * Two values only: `reimbursed` is Health-only (§3.3) and a transfer has
+         * no category. Defaulted for a caller that omits the field.
          */
         fundedFrom: z.enum(TRANSFER_FUNDING_SOURCES).default("income"),
     })
     .refine((v) => v.direction === "gf_paid" || v.fundedFrom === "income", {
-        // Money coming IN from the partner is funded by nothing of yours, so a
-        // funding source would be meaningless on it. Rejected rather than
-        // silently rewritten: a stored value nobody meant is worse than an error.
+        // Inbound money is funded by nothing of yours. Rejected, not rewritten:
+        // a stored value nobody meant is worse than an error.
         message: "Only money you send can be funded from savings",
         path: ["fundedFrom"],
     });

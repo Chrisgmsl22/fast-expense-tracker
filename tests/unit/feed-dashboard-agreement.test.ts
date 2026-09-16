@@ -9,32 +9,9 @@ import { BUDGET_FUNDING_FILTER } from "@/lib/domain/funding";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /**
- * The property Christian asked for: the dashboard and the expenses tab must
- * answer the same question with the same number.
- *
- * Both feeds call `computeFeedTotals`, and the dashboard's buckets are built
- * from rows the repository filtered with `BUDGET_FUNDING_FILTER`. This asserts
- * the equality directly — a feed footer that drifts from the buckets above it
- * fails here, whichever side moved.
- *
- * The two screens do not pass identical arguments, so each call site is
- * reproduced below with the rows it really sends: the dashboard sends the whole
- * month, the expenses tab sends what the category chip left. Where that makes
- * them differ, the difference is asserted rather than avoided.
- *
- * WHAT THIS DOES NOT PIN — read before trusting the word "agreement". Both
- * sides run through `toFundingSource`. The fixtures are typed `ExpenseListItem`,
- * so their `fundedFrom` is already narrowed, and `categorySpendsFrom` below
- * filters that NARROWED value while the real dashboard filters the RAW column in
- * Postgres. The single input that can make the two disagree is therefore
- * invisible here: a row holding an out-of-band string, which SQL drops from the
- * buckets and `toFundingSource` hands to `computeFeedTotals` as `income`. So
- * what is pinned is that the two screens treat the THREE KNOWN sources alike —
- * not that the TypeScript exclusion mirrors the SQL one.
- *
- * Closing that gap means threading `countedInBudget` (see
- * `category.repository.ts`) through `expense.repository.ts` and both feeds;
- * it is a follow-up, not this slice.
+ * The dashboard and the expenses tab must answer the same question with the
+ * same number. NOT pinned: the fixtures are already narrowed, so the one input
+ * that can make the two disagree — an out-of-band stored value — is invisible.
  */
 
 function expense(
@@ -89,14 +66,7 @@ const month: ExpenseListItem[] = [
     }),
 ];
 
-/**
- * What the dashboard repository hands the bucket math: the same rows, with the
- * budget's funding filter applied at the data boundary, summed per category.
- *
- * A SIMULATION of that boundary, not the boundary itself — it filters the
- * narrowed `fundedFrom` these fixtures carry, where Postgres filters the raw
- * column. See the file header for what that leaves unpinned.
- */
+/** Simulates the repository boundary: it filters the NARROWED value where Postgres filters the raw column. */
 function categorySpendsFrom(expenses: ExpenseListItem[]): CategorySpend[] {
     const byCategory = new Map<string, CategorySpend>();
     for (const e of expenses) {
@@ -117,12 +87,7 @@ function categorySpendsFrom(expenses: ExpenseListItem[]): CategorySpend[] {
     return [...byCategory.values()];
 }
 
-/**
- * The two call sites, reproduced with the arguments each screen actually
- * passes. Calling the helper twice with one set of rows would pass whatever the
- * implementation did; the risk worth pinning is that the two screens feed it
- * DIFFERENT rows.
- */
+/** Each call site with the arguments its screen really passes — the risk worth pinning is that the two feed it DIFFERENT rows. */
 
 /** `MonthFeed.tsx`: the whole month, and every movement in it. */
 function dashboardTotals(
@@ -132,11 +97,7 @@ function dashboardTotals(
     return computeFeedTotals(expenses, movements);
 }
 
-/**
- * `ExpenseListInteractive.tsx`: the rows left by the category chip, and
- * movements only in the unfiltered "All" view — a movement carries no category,
- * so it can't survive a category filter.
- */
+/** `ExpenseListInteractive.tsx`: rows left by the category chip, movements only in the "All" view. */
 function expensesTabTotals(
     expenses: ExpenseListItem[],
     movements: FeedTotalMovement[],
@@ -159,9 +120,7 @@ const movements: FeedTotalMovement[] = [
 
 describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
     it("gives both screens the same figures in the unfiltered view", () => {
-        // No chip active: the expenses tab passes the same rows AND the same
-        // movements the dashboard does, so every figure must match — not just
-        // the headline one.
+        // No chip active: both screens get the same rows, so every figure must match.
         const dashboard = dashboardTotals(month, movements);
         const expensesTab = expensesTabTotals(month, movements, null);
 
@@ -210,8 +169,6 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
     });
 
     it("makes that number equal the sum the buckets are built from", () => {
-        // This is the contradiction the slice had to remove: the footer used to
-        // count 4480 while the buckets above it counted 680.
         const totals = computeFeedTotals(month, []);
         const spends = categorySpendsFrom(month);
         const bucketSum = computeBuckets(spends, 0).reduce(
@@ -288,10 +245,8 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
     });
 
     it("drops a savings-funded transfer from the cash figures, not the row", () => {
-        // Same rule as an expense, applied to the other outflow: it used no
-        // part of this month's income, so it leaves the budget and cash
-        // figures — but it stays visible, and the settlement balance (a
-        // different ledger) still counts it in full.
+        // It used no part of this month's income, so it leaves the budget and
+        // cash figures — but the settlement balance still counts it in full.
         const totals = computeFeedTotals(month, [
             { type: "gf_paid", amount: 700, fundedFrom: "savings" },
         ]);
@@ -304,11 +259,9 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
     });
 
     describe("the two ledgers are never summed (spec 0007 §6a)", () => {
-        // The flow the spec describes: she fronts a $680 dinner, he settles it
-        // later with a $680 transfer, and both are paid from savings. The same
-        // pesos appear in each ledger once, at different moments. Any single
-        // figure showing $1,360 is the double count §6a decision 4 names as the
-        // rule most likely to be got wrong.
+        // The §6a flow: she fronts a $680 dinner, he settles it later with a
+        // $680 transfer, both from savings. Any single figure showing $1,360
+        // double-counts.
         const fronted = expense({
             id: "f1",
             description: "Dinner she fronted",

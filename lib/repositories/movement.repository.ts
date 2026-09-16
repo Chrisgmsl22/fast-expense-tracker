@@ -26,12 +26,7 @@ export type MovementWriteData = {
     type: MovementType;
     cardId: string | null;
     note: string | null;
-    /**
-     * Optional on purpose: only a transfer sets it. A card payment stays
-     * source-agnostic (spec 0007 §3.2, ADR-0020 §6) and a `gf_fronted` debt
-     * moved no cash, so those writes omit the field and the column default
-     * applies — omission is the signal that the type is not source-tagged.
-     */
+    /** Only a transfer sets it; other types omit it and take the column default (spec 0007 §3.2). */
     fundedFrom?: TransferFundingSource;
 };
 
@@ -76,12 +71,9 @@ export class PrismaMovementRepository implements MovementRepository {
     ): Promise<MovementListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
         const rows = await this.db.movement.findMany({
-            // Every movement of the month, `gf_fronted` included: a debt she
-            // fronted is information the feed shows, so it's visible where the
-            // user looks. It is still not a cash event — the feed totals sum
-            // expenses plus `gf_paid` only, so a debt changes no figure, and it
-            // never becomes an Expense, so budget/categories/cards are untouched
-            // (ADR-0020). The settlement page keeps its own window repository.
+            // `gf_fronted` included: the feed shows a debt she fronted, but the
+            // totals sum expenses plus `gf_paid` only, so it changes no figure
+            // (ADR-0020).
             where: { userId, date: { gte: start, lt: end } },
             orderBy: { date: "desc" },
             select: {

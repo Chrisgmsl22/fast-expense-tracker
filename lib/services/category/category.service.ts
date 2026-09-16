@@ -24,12 +24,9 @@ export type CategoryDetail = {
     /** Total my-share spend for the category this month. */
     spent: number;
     /**
-     * My-share of every row this category's `spent` left out — the exact
-     * complement of the budget's funding filter (spec 0007 §2), so the
-     * savings-funded and reimbursed rows and any row holding a value the filter
-     * doesn't recognise. Surfaced so the header can say why it shows less money
-     * than the list below it; 0 when every row is income-funded, which is every
-     * pre-existing row.
+     * My-share of every row `spent` left out — the exact complement of the
+     * budget's funding filter (spec 0007 §2), so the header can say why it shows
+     * less money than the list below it.
      */
     spentNotFromIncome: number;
     /** Effective limit for this month: the month override, else the default. */
@@ -95,14 +92,9 @@ export async function getCategoryDetail(
     ]);
 
     const spent = subSpends.reduce((sum, r) => sum + r.spent, 0);
-    // Derived from the LIST, which carries every row, because `subSpends` is
-    // already funding-filtered at the data boundary and so cannot see these
-    // rows at all. Same my-share basis as `spent`, so the two are comparable.
-    //
-    // The test is `countedInBudget`, the filter's own verdict, and NOT
-    // `fundedFrom !== "income"`: the mapped value reads `income` for an
-    // out-of-band stored string that the query dropped, so the narrower
-    // predicate would leave that row out of `spent` and out of this figure too.
+    // Derived from the LIST: `subSpends` is already funding-filtered and cannot
+    // see these rows. The test is `countedInBudget`, not `fundedFrom !== "income"` —
+    // the latter misses an out-of-band stored value.
     const spentNotFromIncome = expenses.reduce(
         (sum, e) => (e.countedInBudget ? sum : sum + e.actualExpenditure),
         0,
@@ -127,10 +119,7 @@ export async function getCategoryDetail(
         pctOfLimit: hasLimit ? (spent / limit!) * 100 : 0,
         daysLeft,
         // "N expenses across M subcategories" labels the LIST, so both halves
-        // count what the user can see — every row, savings-funded and
-        // reimbursed included — unlike `spent`, which is a budget figure and
-        // counts only income-funded rows (spec 0007 §2). Keyed on subcategory
-        // id, not name: names are not unique per category.
+        // count every visible row — unlike `spent`. Keyed on id: names are not unique.
         expenseCount: expenses.length,
         subcatWithSpend: new Set(
             expenses.flatMap((e) => (e.subcategory ? [e.subcategory.id] : [])),

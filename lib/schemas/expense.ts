@@ -29,8 +29,7 @@ export const expenseInputSchema = z
         // thing the partner fronted is a `gf_fronted` movement now, never an
         // expense. Kept on the schema until the `paidBy` column is dropped.
         paidBy: z.literal("you").default("you"),
-        // Which month's money funded this (spec 0007 §3.1). Defaulted, so a
-        // form that never sends the field keeps today's behaviour.
+        // Defaulted, so a form that never sends the field keeps today's behaviour.
         fundedFrom: z.enum(FUNDING_SOURCES).default("income"),
     })
     .refine((v) => !v.isShared || v.yourPercentage < 1, {
@@ -41,15 +40,9 @@ export const expenseInputSchema = z
 export type ExpenseInput = z.infer<typeof expenseInputSchema>;
 
 /**
- * The Health restriction on `reimbursed` (spec 0007 §3.3), enforced on create
- * **and** on update.
- *
- * It lives in its own schema rather than on `expenseInputSchema` because the
- * rule reads the category's *slug*, and the form only sends a `categoryId`. The
- * action resolves the slug from the database and parses it here, so the check
- * never trusts a client-supplied slug. Both actions run it, which is what stops
- * an edit that moves a reimbursed expense out of Health from silently stranding
- * the value: the update fails with this message instead.
+ * The Health restriction on `reimbursed` (spec 0007 §3.3). Its own schema
+ * because the rule reads the category's *slug*, which the action resolves from
+ * the database — the client never supplies it. Create and update both run it.
  */
 export const expenseFundingSchema = z
     .object({

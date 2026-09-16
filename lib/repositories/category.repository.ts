@@ -21,22 +21,14 @@ export type CategoryMeta = {
 };
 
 /**
- * A category-detail expense row, plus the verdict of the budget's own filter on
- * that row — read from the RAW column, not from the narrowed `fundedFrom`.
- *
- * The screen shows one unfiltered list beside several filtered figures, so it
- * has to know which rows the figures dropped. `fundedFrom` cannot answer that:
- * `toFundingSource` maps an out-of-band value to `income` while the SQL filter
- * drops it, so a predicate over `fundedFrom` would miss exactly the rows that
- * most need explaining. This flag is the filter's exact complement.
+ * The row plus the budget filter's verdict, read from the RAW column:
+ * `fundedFrom` maps an out-of-band value to `income` while SQL drops it, so a
+ * predicate over it would miss the rows that most need explaining.
  */
 export type CategoryExpenseListItem = Omit<ExpenseListItem, "subcategory"> & {
     /**
-     * Carries the `id` the base list item omits. Subcategory names are not
-     * unique — `schema.prisma` has no unique constraint on
-     * `(userId, categoryId, name)` — so the screen's "across M subcategories"
-     * has to count identities, not labels, or two same-named subcategories
-     * collapse into one.
+     * Subcategory names are not unique — `schema.prisma` has no constraint on
+     * `(userId, categoryId, name)` — so "across M subcategories" must count ids.
      */
     subcategory: { id: string; name: string } | null;
     countedInBudget: boolean;

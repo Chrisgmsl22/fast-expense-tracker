@@ -25,12 +25,9 @@ export type SettlementMovementRow = {
     /** Free-text label — the "I owe {partner}" debt's description, if any. */
     note: string | null;
     /**
-     * Which month's money funded a transfer (spec 0007 §3.1). Read so the
-     * journal can badge the row and its edit form can prefill the control —
-     * **never** so the balance can change. Paying her from savings still reached
-     * her and still reduces what you owe, so the netting in `inputsFrom` reads
-     * `amount` alone, whatever this says. Budget and cash figures are the only
-     * ones that skip a savings-funded transfer, and they live in the feed.
+     * Read for the badge and the edit prefill, **never** for the balance: paying
+     * her from savings still reached her, so `inputsFrom` nets on `amount` alone
+     * (spec 0007 §3.1).
      */
     fundedFrom: TransferFundingSource;
 };
@@ -89,8 +86,6 @@ export class PrismaSettlementRepository implements SettlementRepository {
                 },
             }),
         ]);
-        // `type` and `fundedFrom` are free-form string columns; narrow both to
-        // their domain unions here.
         return {
             expenses,
             movements: movements.map((m) => ({

@@ -22,7 +22,7 @@ import type { TransferInput } from "@/lib/schemas/movement";
 
 type Direction = "gf_paid" | "gf_received";
 
-/** Ids the savings checkbox names and describes itself by (one form mounts at a time). */
+/** Static ids: one transfer form is mounted at a time. */
 const SAVINGS_LABEL_ID = "transfer-savings-label";
 const SAVINGS_HINT_ID = "transfer-savings-hint";
 
@@ -64,8 +64,6 @@ export function TransferForm({
     const [date, setDate] = useState(transfer?.date ?? "");
     const [amount, setAmount] = useState(transfer?.amount ?? initialAmount);
     const [note, setNote] = useState(transfer?.note ?? "");
-    // Which month's money funded it (spec 0007 §3.1). `income` is the default
-    // and the path of least effort: ignore the control and nothing changes.
     const [fundedFrom, setFundedFrom] = useState<TransferFundingSource>(
         transfer?.fundedFrom ?? "income",
     );
@@ -84,10 +82,9 @@ export function TransferForm({
           ? `Log ${partnerName}'s payment`
           : `Log payment to ${partnerName}`;
 
-    // Money coming IN from her is funded by nothing of yours, so the control is
-    // hidden for that direction and the value sent is always the neutral
-    // default — which also clears the tag if an outbound transfer is flipped
-    // inbound, rather than stranding it.
+    // Inbound money is funded by nothing of yours, so the control is hidden and
+    // `income` is sent — which also clears the tag when an outbound transfer is
+    // flipped inbound.
     const outboundFundedFrom: TransferFundingSource = inbound
         ? "income"
         : fundedFrom;
@@ -120,9 +117,8 @@ export function TransferForm({
                     setDate("");
                     setAmount("");
                     setNote("");
-                    // Only when creating. An edit form that stayed mounted
-                    // would otherwise show `income` over a row it just saved
-                    // as savings-funded.
+                    // Only when creating: an edit form that stayed mounted would
+                    // show `income` over a row it just saved as savings-funded.
                     if (!transfer) setFundedFrom("income");
                     onSuccess?.();
                 } else {
@@ -214,15 +210,10 @@ export function TransferForm({
                 />
             </div>
 
-            {/* Funding source (spec 0007 §3.1 + §6a decision 5). Same wording as
-                an expense's control, minus `reimbursed` — that one is Health-only
-                (§3.3) and a transfer has no category. Outbound only: money she
-                sends you isn't funded by anything of yours. */}
-            {/* Named by its visible text, described by the hint — which sits
-                outside the label so it is announced as a description instead of
-                being swallowed by the checkbox's accessible name. The
-                description is pointed at only while the hint is rendered, so the
-                unticked default never references a missing id. */}
+            {/* Outbound only, and no `reimbursed`: that is Health-only and a
+                transfer has no category (spec 0007 §3.1, §3.3). */}
+            {/* Named by the visible text, described by the hint outside the
+                label; the description is pointed at only while the hint renders. */}
             {inbound ? null : (
                 <div>
                     <label className="flex items-start gap-2.5">

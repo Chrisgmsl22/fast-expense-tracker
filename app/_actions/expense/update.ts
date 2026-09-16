@@ -71,10 +71,7 @@ export async function updateExpense(
     const v = parsed.data;
 
     try {
-        // The reimbursed-is-Health-only rule (spec 0007 §3.3). The slug is
-        // resolved from the DB, never taken from the client, and the same check
-        // runs on update — so moving a reimbursed expense out of Health fails
-        // here instead of stranding the value on a non-health row.
+        // The slug is resolved from the DB, never taken from the client (spec 0007 §3.3).
         const categorySlug = await repo.getCategorySlug(userId, v.categoryId);
         const funding = expenseFundingSchema.safeParse({
             fundedFrom: v.fundedFrom,

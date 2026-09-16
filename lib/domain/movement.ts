@@ -54,9 +54,8 @@ export type FeedTotalExpense = {
 /** The figures the feed footer shows (ADR-0018 §1, extended by spec 0007). */
 export type FeedTotals = {
     /**
-     * Raw card/cash charges — consumption only (excludes savings transfers).
-     * Counts EVERY funding source at full value: you really did charge it, and
-     * this is the cash-reconciliation figure (spec 0007 §3.2).
+     * Raw card/cash charges — every funding source at full value: you really
+     * did charge it (spec 0007 §3.2).
      */
     charged: number;
     /**
@@ -71,35 +70,22 @@ export type FeedTotals = {
      */
     setAside: number;
     /**
-     * Transfers you sent the partner (`gf_paid`), funded by THIS month's income
-     * only. A transfer paid out of savings is excluded for the same reason a
-     * savings-funded expense is: that money was counted as savings in the month
-     * it was set aside (spec 0007 §6a decision 5). It still counts in full
-     * toward the settlement balance — that is a different ledger.
+     * `gf_paid` transfers funded by THIS month's income only. A savings-funded
+     * transfer still counts in full toward the settlement balance — a different
+     * ledger (spec 0007 §6a decision 5).
      */
     paidToPartner: number;
     /**
-     * CONSUMPTION ledger: my share of savings-funded or reimbursed expenses.
-     * Surfaced so the excluded spend stays visible instead of vanishing.
-     *
-     * Transfers are deliberately NOT in here. They are the CASH ledger, and
-     * spec 0007 §6a forbids any figure that sums across the two: she fronts a
-     * $680 dinner (consumption) and he transfers $680 later (cash), so one
-     * combined line would print $1,360 for one dinner. The two excluded figures
-     * stay apart for the same reason `whatIReallySpent` and `paidToPartner` do.
+     * CONSUMPTION ledger. Transfers stay out: one line summing both ledgers
+     * prints $1,360 for a $680 dinner she fronted and he later settled
+     * (spec 0007 §6a).
      */
     notFromIncome: number;
-    /**
-     * CASH ledger: savings-funded transfers to the partner — the money that
-     * left `paidToPartner`. Its own field, never folded into `notFromIncome`
-     * (see above) and never into `total`.
-     */
+    /** CASH ledger: savings-funded transfers. Never folded into `notFromIncome` or `total`. */
     notFromIncomeTransfers: number;
     /**
-     * This month's income that left = spent + set aside + paid to partner.
-     * Neither excluded figure is added: that money came from another month, so
-     * folding it in would re-create the contradiction with the buckets that
-     * spec 0007 exists to remove.
+     * This month's income that left. Neither excluded figure is added — that
+     * money came from another month.
      */
     total: number;
 };
@@ -112,17 +98,9 @@ export type FeedTotalMovement = {
 };
 
 /**
- * Footer totals for a month, splitting consumption from the savings transfer so
- * "What I really spent" matches the dashboard's Spent — including its funding
- * filter, so the footer can never contradict the buckets above it. Card payments never enter
- * here: their charges were already counted as expenses, so adding them would
- * double-count. `paidToPartner` sums the `gf_paid` movements — new outflow
- * (your share of things the partner fronted) not otherwise captured.
- *
- * It takes the movement ROWS, not a pre-summed number, on purpose: that keeps
- * the funding filter at the one boundary where the figure is derived, so neither
- * feed can sum `gf_paid` its own way and neither can forget to skip a
- * savings-funded transfer (spec 0007 §6a decision 5).
+ * Footer totals for a month. "What I really spent" carries the dashboard's
+ * funding filter, so the footer cannot contradict the buckets above it. Card
+ * payments never enter — their charges were already counted as expenses.
  */
 export function computeFeedTotals(
     expenses: FeedTotalExpense[],
@@ -132,10 +110,8 @@ export function computeFeedTotals(
     let notFromIncomeTransfers = 0;
     for (const m of movements) {
         if (m.type !== "gf_paid") continue;
-        // The boundary: a savings-funded transfer never reaches the cash
-        // figures. It moves to its own field instead of being subtracted
-        // somewhere downstream, so no later arithmetic has to remember it
-        // exists — and it stays out of `notFromIncome`, which is the other
+        // A savings-funded transfer moves to its own field instead of being
+        // subtracted downstream, and stays out of `notFromIncome` — the other
         // ledger (spec 0007 §6a).
         if (m.fundedFrom === BUDGET_FUNDING_SOURCE) paidToPartner += m.amount;
         else notFromIncomeTransfers += m.amount;

@@ -22,10 +22,7 @@ export function StatStrip({
     net: number;
     dailyAvg: number;
     daysLeft: number;
-    /**
-     * My-share spend the budget skipped because this month's income didn't fund
-     * it (spec 0007 §3.1). One line, shown only when there is something to say.
-     */
+    /** My-share spend the budget skipped (spec 0007 §3.1); 0 when none. */
     nonIncomeFunded: number;
 }) {
     return (

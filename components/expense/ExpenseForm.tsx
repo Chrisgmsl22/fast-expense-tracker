@@ -48,7 +48,7 @@ export type SubcategoryOption = {
 };
 export type CardOption = { id: string; name: string; color: string };
 
-/** Ids the funding checkboxes name and describe themselves by (one form mounts at a time). */
+/** Static ids: one expense form is mounted at a time. */
 const SAVINGS_LABEL_ID = "funding-savings-label";
 const SAVINGS_HINT_ID = "funding-savings-hint";
 const REIMBURSED_LABEL_ID = "funding-reimbursed-label";
@@ -120,8 +120,6 @@ export function ExpenseForm({
     const [description, setDescription] = useState(expense?.description ?? "");
     const [notes, setNotes] = useState(expense?.notes ?? "");
     const [isShared, setIsShared] = useState(expense?.isShared ?? false);
-    // Which month's money funded this (spec 0007 §3.1). `income` is the default
-    // and the path of least effort: ignore the control and nothing changes.
     const [fundedFrom, setFundedFrom] = useState<FundingSource>(
         expense?.fundedFrom ?? "income",
     );
@@ -164,7 +162,6 @@ export function ExpenseForm({
     // `reimbursed` is offered only on Health (spec 0007 §3.3).
     const canReimburse = allowsReimbursed(selectedCategory?.slug ?? null);
     const toggles = togglesFromFundingSource(fundedFrom);
-    /** Two mutually exclusive booleans in, one stored enum value out. */
     function setFunding(paidFromSavings: boolean, fullyReimbursed: boolean) {
         setFundedFrom(
             fundingSourceFromToggles(paidFromSavings, fullyReimbursed),
@@ -181,9 +178,7 @@ export function ExpenseForm({
 
     function handleCategoryChange(value: string) {
         setCategoryId(value);
-        // `reimbursed` is Health-only (spec 0007 §3.3). Leaving it selected on
-        // another category would fail server-side validation, so drop back to
-        // the default rather than let the user submit a doomed form.
+        // Carrying `reimbursed` onto another category would only fail server-side (spec 0007 §3.3).
         const next = categories.find((c) => c.id === value);
         const nextFunding = fundingSourceAfterCategoryChange(
             fundedFrom,
@@ -371,10 +366,9 @@ export function ExpenseForm({
                             ))}
                         </SelectContent>
                     </Select>
-                    {/* The hint lives BELOW the select, not in the label: a long
-                        category name used to wrap the label onto a second line
-                        and push this select out of line with Category and Card
-                        (R1). Down here it can wrap freely and nothing moves. */}
+                    {/* Below the select, not in the label: a long category name
+                        wraps the label onto a second line and pushes this
+                        select out of line with Category and Card. */}
                     {selectedCategory ? (
                         <p className="mt-1 truncate text-xs text-muted-foreground">
                             from {selectedCategory.name}
@@ -455,18 +449,13 @@ export function ExpenseForm({
                 />
             </div>
 
-            {/* Funding source (spec 0007 §3.1) as two checkboxes, not a
-                dropdown: "this month's income" is what almost every expense is,
-                so the ordinary case needs no control. Both unchecked = income.
-                The two are mutually exclusive — money already had, or money
-                given back, never both. */}
-            {/* Each box is NAMED by its visible text (`aria-labelledby`) and
-                DESCRIBED by the hint (`aria-describedby`), which sits outside
-                the label. An `aria-label` here would override the visible text
-                with a copy of itself and leave the hint unannounced. The
-                description is pointed at only while the hint is rendered — an
-                id that resolves to nothing is a broken reference, not an empty
-                one. */}
+            {/* Two checkboxes, not a dropdown: this month's income is what
+                almost every expense is, so the ordinary case needs no control.
+                Both unchecked = income. */}
+            {/* Named by the visible text, described by the hint outside the
+                label: an `aria-label` would override the visible text and leave
+                the hint unannounced. The description is pointed at only while
+                the hint renders. */}
             <div className="flex flex-col gap-2.5">
                 <div>
                     <label className="flex items-start gap-2.5">
@@ -500,10 +489,9 @@ export function ExpenseForm({
                     ) : null}
                 </div>
 
-                {/* Health-only (§3.3). Also shown when the row already carries
-                    the value on another category, so an existing `reimbursed`
-                    expense never loses it silently — the user can see it and
-                    untick it deliberately. */}
+                {/* Also shown when the row already carries the value on another
+                    category, so an existing `reimbursed` expense never loses it
+                    silently. */}
                 {canReimburse || fundedFrom === "reimbursed" ? (
                     <div>
                         <label className="flex items-start gap-2.5">
