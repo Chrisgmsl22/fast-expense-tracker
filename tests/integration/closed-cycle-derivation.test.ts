@@ -5,10 +5,9 @@ import { PrismaExpenseRepository } from "@/lib/repositories/expense.repository";
 import { PrismaMovementRepository } from "@/lib/repositories/movement.repository";
 
 /**
- * Which cycle owns a row, against a real database. The choice itself is pure
- * (`cycleCloseAtOrAfter`); what only a database confirms is that the marker query
- * reads this user's closes, that `createdAt` is the real insert time, and that both
- * read paths agree.
+ * Which cycle owns a row, against a real database. The choice is pure
+ * (`cycleCloseAtOrAfter`); only a database confirms the marker query is
+ * user-scoped, `createdAt` is the real insert time, and both read paths agree.
  */
 const repo = new PrismaExpenseRepository(db);
 const movementRepo = new PrismaMovementRepository(db);

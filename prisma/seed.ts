@@ -130,11 +130,9 @@ export const CATEGORY_SEED: readonly CategorySeed[] = [
         slug: "combined-expenses",
         name: "Combined Expenses",
         isRelevant: true,
-        // "Purchases made by girlfriend" is the name live databases hold. Spec
-        // 0007 §6b renames it to "Covered for me", but the rename is data, and
-        // this seed matches subcategories BY NAME (see `runSeed` below): seeding
-        // the new name before the rows are renamed creates a duplicate instead
-        // of renaming. Flip both together in the deferred data migration.
+        // "Purchases made by girlfriend" is the name live databases hold, and this seed
+        // matches BY NAME — seeding the new name before the rows are renamed creates a
+        // duplicate. Flip both together in the data migration.
         subcategories: [
             "Purchases made by girlfriend",
             "Purchases made between the two",

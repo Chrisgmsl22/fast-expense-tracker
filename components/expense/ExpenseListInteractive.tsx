@@ -170,11 +170,9 @@ export function ExpenseListInteractive({
         [filtered, movements, showMovements],
     );
 
-    // Same helper the dashboard feed uses, so "What I really spent" is the same
-    // consumption number on both screens — savings excluded (ADR-0018 §1).
-    // `paidToPartner` is a breakdown of the total, not a sum to add on. Movements
-    // ride along only when they are on screen: under a category filter the list
-    // hides every movement, so counting them would total rows nobody can see.
+    // Same helper as the dashboard feed, so both screens print one number.
+    // Movements ride along only when on screen: under a category filter the list
+    // hides them, so counting them would total rows nobody can see.
     const totals = computeFeedTotals(filtered, showMovements ? movements : []);
 
     function openEdit(id: string) {

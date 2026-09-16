@@ -32,10 +32,9 @@ type Props = {
 };
 
 /**
- * Log an "I owe {partner}" debt — something she fronted that you owe her back.
- * Saved as a `Movement{type:"gf_fronted"}` — settlement only, never in the budget:
- * a debt is provisional until money moves (spec 0007 §6b). The amount is **what
- * you owe**, never what she paid.
+ * Log an "I owe {partner}" debt as a `Movement{type:"gf_fronted"}` — settlement
+ * only, never in the budget, because a debt is provisional until money moves
+ * (spec 0007 §6b). The amount is **what you owe**, not what she paid.
  */
 export function PartnerDebtForm({
     debt,
