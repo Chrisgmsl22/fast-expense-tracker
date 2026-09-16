@@ -11,26 +11,29 @@ import { FakeSettlementRepository } from "@/tests/support/fake-settlement-reposi
 import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
 
 /**
- * The ordinary expense form must not be able to shrink a debt.
+ * The ordinary expense form must not be able to shrink a payment.
  *
- * A fronted row is an ordinary `Expense` once saved, so it opens in the ordinary
- * edit form — which offers the shared-expense split. The amount on a fronted row
- * is ALREADY his share (spec 0007 §6a decision 1), so applying a 68% split to it
- * would store `actualExpenditure` 462.40 on a $680 debt. The settlement balance
- * reads that exact field as what he owes, so the debt would quietly drop by a
- * third with nothing on screen saying so. `updateExpense` clamps it.
+ * A payment row is an ordinary `Expense` once saved, so it opens in the ordinary
+ * edit form — which offers the shared-expense split. The amount on a payment row
+ * is what he TRANSFERRED (spec 0007 §6b), so applying a 68% split to it would
+ * store `actualExpenditure` 462.40 on a $680 payment. The settlement balance
+ * reads that exact field as what he has paid her, so the payment would quietly
+ * drop by a third with nothing on screen saying so. `updateExpense` clamps it.
  */
-const DEBT = 680;
+const PAYMENT = 680;
 const DAY = new Date("2026-09-10T06:00:00Z");
 const NOW = new Date("2026-09-15T12:00:00Z");
 
-/** The attack: open the debt, tick "shared" at the usual 68%, save. */
+/** The payment's own description — what it SENT, not what is owed. */
+const PAID_LABEL = "Transfer — you paid Brenda";
+
+/** The attack: open the payment, tick "shared" at the usual 68%, save. */
 const splitAttack = {
-    id: "debt1",
+    id: "pay1",
     date: "2026-09-10",
-    amount: DEBT,
+    amount: PAYMENT,
     categoryId: "combined",
-    description: "I owe Brenda",
+    description: PAID_LABEL,
     isShared: true,
     yourPercentage: 0.68,
     paidBy: "you",
@@ -38,12 +41,12 @@ const splitAttack = {
 
 function seededRepo() {
     const repo = new FakeExpenseRepository();
-    repo.seedExpense("debt1", "u1", {
+    repo.seedExpense("pay1", "u1", {
         isPartnerPayment: true,
         categoryId: "combined",
-        amount: DEBT,
-        actualExpenditure: DEBT,
-        description: "I owe Brenda",
+        amount: PAYMENT,
+        actualExpenditure: PAYMENT,
+        description: PAID_LABEL,
         date: DAY,
     });
     return repo;
@@ -73,25 +76,26 @@ describe("editing a partner payment through the ordinary expense form", () => {
         expect(res.ok).toBe(false);
         if (res.ok) return;
         expect(res.code).toBe("validation");
-        expect(res.message).toMatch(/already your share/i);
+        expect(res.message).toMatch(/whole transfer/i);
         expect(res.fieldErrors?.yourPercentage).toBeDefined();
         expect(repo.updates).toHaveLength(0);
 
-        // The stored row is untouched, so the balance still reads the full debt.
+        // The stored row is untouched, so the balance still reads the full
+        // payment.
         const settlement = await settlementFrom({
-            id: "debt1",
+            id: "pay1",
             date: DAY,
-            description: "Paid Brenda",
-            amount: DEBT,
-            actualExpenditure: DEBT,
+            description: PAID_LABEL,
+            amount: PAYMENT,
+            actualExpenditure: PAYMENT,
             isShared: false,
             isPartnerPayment: true,
             createdAt: DAY,
         });
         // A payment draws the balance the other way now (spec 0007 §6b).
         expect(settlement.balance.direction).toBe("she_owes");
-        expect(settlement.balance.amount).toBe(DEBT);
-        expect(settlement.breakdownItems.you_paid[0]!.amount).toBe(DEBT);
+        expect(settlement.balance.amount).toBe(PAYMENT);
+        expect(settlement.breakdownItems.you_paid[0]!.amount).toBe(PAYMENT);
         expect(settlement.breakdownItems.partner_share).toHaveLength(0);
     });
 
@@ -119,7 +123,7 @@ describe("editing a partner payment through the ordinary expense form", () => {
 
         expect(res.ok).toBe(true);
         const saved = repo.updates[0]!.data;
-        expect(saved.actualExpenditure).toBe(DEBT);
+        expect(saved.actualExpenditure).toBe(PAYMENT);
         expect(saved.yourPercentage).toBe(1);
         expect(saved.isShared).toBe(false);
     });
@@ -142,7 +146,7 @@ describe("editing a partner payment through the ordinary expense form", () => {
         repo.seedExpense("e9", "u1", { isPartnerPayment: false });
         await updateExpense({ ...splitAttack, id: "e9", amount: 1000 }, repo);
 
-        // The clamp is for fronted rows only — normal sharing is untouched.
+        // The clamp is for payment rows only — normal sharing is untouched.
         expect(repo.updates[0]!.data.isShared).toBe(true);
         expect(repo.updates[0]!.data.actualExpenditure).toBe(680);
     });

@@ -4,6 +4,7 @@ import { computeBuckets, type CategorySpend } from "@/lib/domain/dashboard";
 import {
     computeFeedTotals,
     type FeedTotalExpense,
+    type FeedTotalMovement,
 } from "@/lib/domain/movement";
 
 /**
@@ -20,6 +21,7 @@ import {
 const PAYMENT = 680;
 
 const paymentExpense: FeedTotalExpense = {
+    id: "pay1",
     amount: PAYMENT,
     actualExpenditure: PAYMENT,
     isPartnerPayment: true,
@@ -62,6 +64,7 @@ describe("a payment to the partner is an ordinary expense", () => {
 
     it("leaves an ordinary expense untouched beside it", () => {
         const groceries: FeedTotalExpense = {
+            id: "e1",
             amount: 1000,
             actualExpenditure: 680,
             isPartnerPayment: false,
@@ -74,6 +77,82 @@ describe("a payment to the partner is an ordinary expense", () => {
         // Only the payment is attributed to her.
         expect(totals.paidToPartner).toBe(PAYMENT);
         expect(totals.total).toBe(680 + PAYMENT);
+    });
+});
+
+/**
+ * Production data is UNCONVERTED: no migration in this PR turns a `gf_paid`
+ * movement into a payment-expense, so on deploy every transfer is still a
+ * movement. The footer has to keep counting them, or the gold "you paid her"
+ * rows go on rendering above a Total that has silently dropped their money —
+ * about $8,011.20 for September — while the settlement page still counts them.
+ */
+describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
+    const legacyTransfer: FeedTotalMovement = {
+        id: "mv1",
+        amount: 8011.2,
+        type: "gf_paid",
+    };
+    const groceries: FeedTotalExpense = {
+        id: "e1",
+        amount: 1000,
+        actualExpenditure: 680,
+        isPartnerPayment: false,
+        category: { slug: "groceries" },
+    };
+
+    it("still reaches the footer when nothing has been converted", () => {
+        const totals = computeFeedTotals([groceries], [legacyTransfer]);
+
+        expect(totals.paidToPartner).toBe(8011.2);
+        expect(totals.legacyPaidToPartner).toBe(8011.2);
+        // Cash that left, added to the cash figure.
+        expect(totals.total).toBe(680 + 8011.2);
+    });
+
+    it("never enters a consumption figure — the two ledgers stay apart", () => {
+        const totals = computeFeedTotals([groceries], [legacyTransfer]);
+
+        // Its consumption was never recorded anywhere, so adding it here would
+        // invent spending; `charged` and `whatIReallySpent` see expenses only.
+        expect(totals.charged).toBe(1000);
+        expect(totals.whatIReallySpent).toBe(680);
+    });
+
+    it("is dropped once its converted twin exists — never counted twice", () => {
+        // The conversion reuses the movement's id for the expense it creates,
+        // so a twin is recognisable without a join table. A half-applied
+        // conversion, or a replay against a restored copy, would otherwise
+        // double the transfer — and a silently doubled figure is the kind
+        // nobody spots until they pay it.
+        const converted: FeedTotalExpense = {
+            id: "mv1",
+            amount: 8011.2,
+            actualExpenditure: 8011.2,
+            isPartnerPayment: true,
+            category: { slug: "combined-expenses" },
+        };
+        const totals = computeFeedTotals([converted], [legacyTransfer]);
+
+        expect(totals.paidToPartner).toBe(8011.2);
+        expect(totals.legacyPaidToPartner).toBe(0);
+        // Counted once, by the expense — the movement adds nothing on top.
+        expect(totals.whatIReallySpent).toBe(8011.2);
+        expect(totals.total).toBe(8011.2);
+    });
+
+    it("ignores every other movement type", () => {
+        const totals = computeFeedTotals(
+            [groceries],
+            [
+                { id: "m2", amount: 5000, type: "card_payment" },
+                { id: "m3", amount: 300, type: "gf_received" },
+                { id: "m4", amount: 900, type: "gf_fronted" },
+            ],
+        );
+
+        expect(totals.paidToPartner).toBe(0);
+        expect(totals.total).toBe(680);
     });
 });
 

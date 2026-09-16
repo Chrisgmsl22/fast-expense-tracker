@@ -48,6 +48,17 @@ function transferTitle(
 }
 
 /**
+ * Why a locked row has no edit or delete control. Without it the row just looks
+ * inert, and the reason for it is invisible.
+ *
+ * It says "in a closed settlement", not "closed a settlement": a cycle freezes
+ * every row it COUNTED, and most of those did not close anything. Only a
+ * transfer can carry the marker, so the narrower wording was already false on
+ * the debt beside it — and on the payment-expense two rows down.
+ */
+const LOCKED_REASON = "in a closed settlement · locked";
+
+/**
  * A debt's second line. When the row's title is the thing she fronted (its
  * note), the generic "I owe {partner}" drops here — exactly what `movementRowText`
  * does in both feeds, so the same debt reads the same everywhere. When there is
@@ -66,22 +77,18 @@ function debtSubtitle(row: PartnerDebtRow, partnerName: string): string {
         // debt is the ordinary, editable case (spec 0007 §6b), so the old
         // "older entry · delete to change" tail was telling every debt it
         // could not be edited while the edit button sat beside it.
-        row.locked ? "closed a settlement · locked" : null,
+        row.locked ? LOCKED_REASON : null,
     ]
         .filter(Boolean)
         .join(" · ");
 }
 
-/**
- * A transfer's second line: its date, its note, and — when the transfer closed a
- * settlement — why it now has no edit or delete control. Without that last part
- * the row just looks inert, and the reason for it is invisible.
- */
+/** A transfer's second line: its date, its note, and any lock reason. */
 function transferSubtitle(row: TransferRow): string {
     return [
         formatExpenseDate(row.date),
         row.note,
-        row.locked ? "closed a settlement · locked" : null,
+        row.locked ? LOCKED_REASON : null,
     ]
         .filter(Boolean)
         .join(" · ");
@@ -240,6 +247,13 @@ export function SettlementJournal({
                                 // cannot reintroduce the buttons by forgetting
                                 // `readOnly` — learning a row is frozen only
                                 // after confirming a delete is not acceptable.
+                                //
+                                // That holds only while every PRODUCER of a row
+                                // derives `locked`. It did not: the service
+                                // hardcoded `false` on both expense branches,
+                                // so this gate passed a frozen payment through
+                                // on the Month tab, which passes no `readOnly`.
+                                // See `buildSettlementRows`.
                                 readOnly || item.locked ? null : item.kind ===
                                   "partner_debt" ? (
                                     <RowActions
@@ -446,7 +460,12 @@ function JournalRow({
                 // A locked transfer says why it has no controls, so this row
                 // says it too: it is the only other one without them, and
                 // "inert for no stated reason" is the thing worth avoiding.
-                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32% · edit on the Expenses screen`}
+                // A frozen row does NOT point at the Expenses screen — the same
+                // close froze it there, so that would name a way out that is
+                // not there.
+                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32% · ${
+                    item.locked ? LOCKED_REASON : "edit on the Expenses screen"
+                }`}
                 amount={`+${formatMxn(item.partnerShare)}`}
                 amountClass="text-positive"
                 actions={actions}

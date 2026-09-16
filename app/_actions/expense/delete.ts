@@ -3,8 +3,10 @@
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
 import type { ActionResult } from "@/lib/actions/result";
+import { movesSettlementBalance } from "@/lib/domain/expense";
+import { expenseRepository } from "@/lib/repositories";
+import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
 
 const idSchema = z.object({ id: z.string().min(1) });
 
@@ -13,6 +15,8 @@ export type DeleteExpenseCode =
     | "validation"
     | "unauthenticated"
     | "not_found"
+    /** The row sits in a closed settlement cycle, so it is frozen (spec 0007 §3.5). */
+    | "cycle_closed"
     | "db_error";
 
 // ActionResult<TData, TInput, TCode>: TData is the success payload, TInput only
@@ -29,9 +33,16 @@ export type DeleteExpenseResult = ActionResult<
  * Delete an expense for the signed-in user. The delete is **scoped
  * by `userId`**: a row that isn't the user's matches nothing and returns
  * `not_found` rather than deleting another user's data (IDOR guard).
+ *
+ * A row that a **closed settlement cycle counted** is refused. The movement side
+ * has always frozen a closed cycle; the expense side did not, so deleting an old
+ * shared expense from the Expenses screen silently restated a filed settlement —
+ * while the close dialog promised closed settlements cannot be reopened. A solo
+ * expense of the same age moves no balance and stays deletable.
  */
 export async function deleteExpense(
     input: unknown,
+    repo: ExpenseRepository = expenseRepository,
 ): Promise<DeleteExpenseResult> {
     const parsed = idSchema.safeParse(input);
     if (!parsed.success) {
@@ -50,8 +61,34 @@ export async function deleteExpense(
     }
 
     try {
-        const result = await db.expense.deleteMany({ where: { id, userId } });
-        if (result.count === 0) {
+        // Read before deleting: whether the row is frozen is the server's fact,
+        // and a missing row short-circuits here rather than after the attempt.
+        const existing = await repo.getById(userId, id);
+        if (!existing) {
+            return {
+                ok: false,
+                code: "not_found",
+                message: "Expense not found.",
+            };
+        }
+        // Frozen means TWO things: the row's cycle is closed AND that cycle
+        // counted the row. A cycle counts a partner share or a payment to her
+        // and nothing else, so an unshared expense inside a closed cycle stays
+        // fully editable — freezing on the marker alone locked the entire
+        // expense history behind a refusal that named a settlement the row was
+        // never in.
+        if (existing.cycleClosedAt && movesSettlementBalance(existing)) {
+            return {
+                ok: false,
+                code: "cycle_closed",
+                message: existing.isPartnerPayment
+                    ? "This payment counts in a settlement you already closed, so it can't be deleted."
+                    : "Your partner's share of this expense counts in a settlement you already closed, so it can't be deleted.",
+            };
+        }
+
+        const count = await repo.deleteForUser(userId, id);
+        if (count === 0) {
             return {
                 ok: false,
                 code: "not_found",

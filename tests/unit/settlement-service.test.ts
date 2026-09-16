@@ -88,10 +88,11 @@ describe("getSettlement", () => {
         if (row.kind === "your_expense") expect(row.partnerShare).toBe(320);
     });
 
-    // Spec 0007 §6a: a debt she fronted is an `Expense{isPartnerPayment:true}` now, so
-    // the debt side of the balance is read off an expense rather than a
-    // movement. The money is identical — same $300, same line, same journal row
-    // — which is why this reads exactly like the legacy case below it.
+    // Spec 0007 §6b: the money he SENT her is an `Expense{isPartnerPayment:true}`
+    // now, so the "you paid her" side of the balance is read off an expense
+    // rather than a movement. The money is identical — same $300, same line,
+    // same journal row — which is why this reads exactly like the legacy
+    // `gf_paid` case below it.
     it("reads a payment EXPENSE as the money-you-paid side (spec 0007 §6b)", async () => {
         const s = await run([
             expense(),
@@ -618,5 +619,115 @@ describe("getSettlement — settlement cycles", () => {
         expect(s.month.journal.map((j) => j.id)).toEqual(["eJul"]);
         // A month row is never "carried over" — it is the month by definition.
         expect(s.month.journal.every((j) => !j.carriedOver)).toBe(true);
+    });
+});
+
+/**
+ * The Month journal is a DATE window, so it always spans closed cycles — and it
+ * is the one view that passes no `readOnly`. Both expense branches of
+ * `buildSettlementRows` hardcoded `locked: false`, so a payment inside a filed
+ * settlement rendered Edit and Delete there: Delete hit `cycle_closed`, and Edit
+ * opened a prefilled dialog that could only fail on save.
+ *
+ * `locked` is now the same pair the write paths refuse on — the row's cycle is
+ * closed AND that cycle counted the row — so the locked set and the frozen set
+ * come from one predicate and cannot drift.
+ */
+describe("getSettlement — a row carries its own locked fact", () => {
+    const locked = (journal: SettlementJournalItem[], id: string) =>
+        journal.find((j) => j.id === id)?.locked;
+
+    it("locks a payment inside a closed cycle in the Month journal, and not a solo expense of the same age", async () => {
+        const payment = expense({
+            id: "ePay",
+            date: JULY,
+            createdAt: ENTERED_BEFORE_CLOSE,
+            description: "Transfer — you paid Brenda",
+            amount: 320,
+            actualExpenditure: 320,
+            isShared: false,
+            isPartnerPayment: true,
+        });
+        // Same age, same cycle, but no partner share and no payment flag: the
+        // cycle never counted it, so freezing it would refuse a row the user was
+        // never told was part of a settlement.
+        const solo = expense({
+            id: "eSolo",
+            date: JULY,
+            createdAt: ENTERED_BEFORE_CLOSE,
+            description: "Lunch",
+            amount: 150,
+            actualExpenditure: 150,
+            isShared: false,
+        });
+
+        const s = await run(
+            [payment, solo],
+            [closingTransfer],
+            [marker],
+            "2026-07",
+        );
+
+        expect(locked(s.month.journal, "ePay")).toBe(true);
+        // The solo row is not a settlement row at all — the same
+        // `movesSettlementBalance` that locks the payment keeps it out of the
+        // journal, so the cycle cannot freeze it here or on the Expenses screen.
+        expect(s.month.journal.map((j) => j.id)).not.toContain("eSolo");
+    });
+
+    it("locks the partner-share side of a shared expense a closed cycle counted", async () => {
+        const shared = expense({
+            id: "eShared",
+            date: JULY,
+            createdAt: ENTERED_BEFORE_CLOSE,
+        });
+        const s = await run([shared], [closingTransfer], [marker], "2026-07");
+        expect(locked(s.month.journal, "eShared")).toBe(true);
+    });
+
+    it("leaves a row of the OPEN cycle unlocked, however old its date", async () => {
+        // Dated inside the closed cycle's calendar span but entered after the
+        // close, so it belongs to the open cycle and stays editable.
+        const late = expense({
+            id: "eLate",
+            date: JULY,
+            createdAt: ENTERED_AFTER_CLOSE,
+        });
+        const s = await run([late], [closingTransfer], [marker], "2026-07");
+        expect(locked(s.month.journal, "eLate")).toBe(false);
+        expect(locked(s.journal, "eLate")).toBe(false);
+    });
+
+    // I-1: the movement side froze only the marker. A debt can never carry one —
+    // the DB CHECK allows `closedAt` on a transfer alone — so a debt a closed
+    // cycle counted was offered Edit and Delete, and deleting it restated that
+    // filed cycle's "You owed Brenda" figure.
+    it("locks a debt a closed cycle counted, though it carries no marker", async () => {
+        const debt = movement({
+            id: "mDebt",
+            type: "gf_fronted",
+            amount: 220,
+            date: JULY,
+            createdAt: ENTERED_BEFORE_CLOSE,
+        });
+        // A card payment of the same age moves no balance, so no cycle counted
+        // it and it stays editable.
+        const cardPayment = movement({
+            id: "mCard",
+            type: "card_payment",
+            date: JULY,
+            createdAt: ENTERED_BEFORE_CLOSE,
+        });
+
+        const s = await run(
+            [],
+            [debt, cardPayment, closingTransfer],
+            [marker],
+            "2026-07",
+        );
+
+        expect(locked(s.month.journal, "mDebt")).toBe(true);
+        // A card payment never reaches the settlement journal at all.
+        expect(s.month.journal.map((j) => j.id)).not.toContain("mCard");
     });
 });

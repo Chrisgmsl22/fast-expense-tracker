@@ -490,18 +490,19 @@ describe("a gf_fronted debt never reaches the dashboard (integration)", () => {
     });
 });
 
-describe("a fronted expense and spend-by-card (BUG-1, integration)", () => {
+describe("a partner-payment expense and spend-by-card (BUG-1, integration)", () => {
     /**
-     * BUG-1 by name. ADR-0020 §1 pulled partner-fronted debts out of the expense
-     * table because one surfaced as a phantom "Cash" row on the dashboard: a
-     * fronted row has no card, and `getCardSpends` groups by `cardId` and reads
-     * null as cash.
+     * BUG-1 by name. ADR-0020 §1 pulled partner debts out of the expense table
+     * because one surfaced as a phantom "Cash" row on the dashboard: the row had
+     * no card, and `getCardSpends` groups by `cardId` and reads null as cash.
      *
-     * Spec 0007 §6a puts the debt back in the expense table on purpose — the
-     * defect was never that it reached the BUDGET. So the exclusion lives in
-     * this query, and this test is what stops the phantom row coming back.
+     * Spec 0007 §6b puts a DIFFERENT row in the expense table — the payment he
+     * sends her, not the debt — and it has the same shape: a transfer leaves a
+     * bank account, so there is no card. The defect was never that it reached
+     * the BUDGET. So the exclusion lives in this query, and this test is what
+     * stops the phantom row coming back.
      */
-    it("shows no phantom Cash row for a fronted expense", async () => {
+    it("shows no phantom Cash row for a partner payment", async () => {
         const user = await seedUser("bug1@example.com");
         const combined = await seedCategory(user.id, "combined-expenses", true);
         await seedExpense({
@@ -518,7 +519,7 @@ describe("a fronted expense and spend-by-card (BUG-1, integration)", () => {
         expect(cards.find((c) => c.id === "cash")).toBeUndefined();
     });
 
-    it("keeps real cash spend while excluding the fronted row from the same month", async () => {
+    it("keeps real cash spend while excluding the payment row from the same month", async () => {
         const user = await seedUser("bug1-mixed@example.com");
         const combined = await seedCategory(user.id, "combined-expenses", true);
         const groceries = await seedCategory(user.id, "groceries", true);
@@ -543,11 +544,11 @@ describe("a fronted expense and spend-by-card (BUG-1, integration)", () => {
         const cards = await repo.getCardSpends(user.id, "2026-09");
         expect(cards).toHaveLength(1);
         expect(cards[0]!.id).toBe("cash");
-        // 200, not 880: the fronted row never entered the grouping.
+        // 200, not 880: the payment row never entered the grouping.
         expect(cards[0]!.spent).toBe(200);
     });
 
-    it("still counts the fronted row in the budget reads — that is the point", async () => {
+    it("still counts the payment row in the budget reads — that is the point", async () => {
         const user = await seedUser("bug1-budget@example.com");
         const combined = await seedCategory(user.id, "combined-expenses", true);
         await seedExpense({

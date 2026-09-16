@@ -6,7 +6,17 @@ import type {
     ExpenseWriteData,
 } from "@/lib/repositories/expense.repository";
 
-type StoredExpense = { id: string; userId: string } & ExpenseInsertData;
+type StoredExpense = {
+    id: string;
+    userId: string;
+    /**
+     * Mirrors `ExpenseEditable.cycleClosedAt`: the close instant of the cycle
+     * this row belongs to, null while that cycle is open. The Prisma adapter
+     * derives it from the marker movements; the fake takes it as arranged state,
+     * so an action's closed-cycle refusal is testable without a database.
+     */
+    cycleClosedAt: Date | null;
+} & ExpenseInsertData;
 
 const DEFAULT_WRITE: ExpenseInsertData = {
     categoryId: "cat1",
@@ -44,6 +54,9 @@ export class FakeExpenseRepository implements ExpenseRepository {
     readonly updates: { id: string; userId: string; data: ExpenseWriteData }[] =
         [];
 
+    /** Every `deleteForUser` call that matched a row, in order — for assertions. */
+    readonly deletes: { id: string; userId: string }[] = [];
+
     // --- arrange helpers ---
 
     setSubcategory(subcategoryId: string, categoryId: string): void {
@@ -53,9 +66,15 @@ export class FakeExpenseRepository implements ExpenseRepository {
     seedExpense(
         id: string,
         userId: string,
-        over: Partial<ExpenseInsertData> = {},
+        over: Partial<ExpenseInsertData & { cycleClosedAt: Date | null }> = {},
     ): void {
-        this.rows.set(id, { id, userId, ...DEFAULT_WRITE, ...over });
+        this.rows.set(id, {
+            id,
+            userId,
+            cycleClosedAt: null,
+            ...DEFAULT_WRITE,
+            ...over,
+        });
     }
 
     // --- ExpenseRepository contract ---
@@ -74,8 +93,13 @@ export class FakeExpenseRepository implements ExpenseRepository {
             notes: row.notes,
             isShared: row.isShared,
             yourPercentage: row.yourPercentage,
+            // The STORED share, exactly as the Prisma adapter returns it — the
+            // closed-cycle guard asks whether this row moved the couple balance,
+            // and that question reads this column, never a recomputation.
+            actualExpenditure: row.actualExpenditure,
             paidBy: row.paidBy,
             isPartnerPayment: row.isPartnerPayment,
+            cycleClosedAt: row.cycleClosedAt,
         };
     }
 
@@ -96,7 +120,12 @@ export class FakeExpenseRepository implements ExpenseRepository {
         data: ExpenseInsertData,
     ): Promise<{ id: string }> {
         if (this.failOnWrite) throw new Error("fake: insert failed");
-        const row: StoredExpense = { id: `exp_${++this.seq}`, userId, ...data };
+        const row: StoredExpense = {
+            id: `exp_${++this.seq}`,
+            userId,
+            cycleClosedAt: null,
+            ...data,
+        };
         this.rows.set(row.id, row);
         this.inserts.push(row);
         return { id: row.id };
@@ -117,8 +146,17 @@ export class FakeExpenseRepository implements ExpenseRepository {
             userId,
             ...data,
             isPartnerPayment: existing.isPartnerPayment,
+            cycleClosedAt: existing.cycleClosedAt,
         });
         this.updates.push({ id, userId, data });
+        return 1;
+    }
+
+    async deleteForUser(userId: string, id: string): Promise<number> {
+        const existing = this.rows.get(id);
+        if (!existing || existing.userId !== userId) return 0;
+        this.rows.delete(id);
+        this.deletes.push({ id, userId });
         return 1;
     }
 }

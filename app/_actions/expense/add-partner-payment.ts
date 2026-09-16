@@ -53,8 +53,9 @@ export type AddPartnerPaymentDeps = {
  *
  * **No split is applied**: the amount is what you sent, so `amount` and
  * `actualExpenditure` are equal and `isShared` is false. Category and
- * subcategory default to `combined-expenses` / "Covered for me"; the row is an
- * ordinary expense afterwards, so both are editable from the expense form.
+ * subcategory default to `combined-expenses` and its partner-payment
+ * subcategory; the row is an ordinary expense afterwards, so both are editable
+ * from the expense form.
  */
 export async function addPartnerPayment(
     input: unknown,
@@ -126,8 +127,9 @@ export async function addPartnerPayment(
         const created = await expenseRepo.insert(userId, {
             categoryId,
             subcategoryId,
-            // No card of yours moved — hers did. The null is why spend-by-card
-            // has to exclude the row rather than group it.
+            // A transfer leaves a bank account, not a card, so there is no card
+            // to attach. The null is why spend-by-card has to exclude the row
+            // rather than group it — a cardless row reads as "Cash" (BUG-1).
             cardId: null,
             date: cdmxCalendarDateToUtc(v.date),
             description: partnerPaymentDescription(

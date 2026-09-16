@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { PARTNER_PAYMENT_SUBCATEGORY_NAME } from "@/lib/domain/expense";
 import {
     expenseCardLabel,
     subcategoryLabel,
@@ -11,10 +12,10 @@ const card = { name: "BBVA", color: "#2563eb" };
 
 describe("expenseCardLabel", () => {
     it("never prints Cash for a payment you sent the partner", () => {
-        // A fronted row has no `cardId` because HER card moved. A plain
-        // `?? "Cash"` fallback puts the word Cash on screen next to a debt —
-        // which is exactly what BUG-1 looked like, so a reader would reasonably
-        // conclude the bug is back even though the totals are right.
+        // A payment row has no `cardId`: a transfer leaves a bank account. A
+        // plain `?? "Cash"` fallback puts the word Cash on screen next to a
+        // settlement payment — exactly what BUG-1 looked like, so a reader would
+        // reasonably conclude the bug is back even though the totals are right.
         const label = expenseCardLabel(
             { isPartnerPayment: true, card: null },
             "Brenda",
@@ -56,26 +57,26 @@ describe("expenseCardLabel", () => {
 });
 
 describe("subcategoryLabel", () => {
+    // Keyed on the constant, not on a literal: the STORED name is still the
+    // original seeded one until the deferred data migration renames the rows,
+    // and this label is the reason that could be deferred safely — the screens
+    // already read correctly while the database has not moved.
+    const STORED = PARTNER_PAYMENT_SUBCATEGORY_NAME;
+
     it("reads the seeded payment subcategory as 'I owed {partner}'", () => {
         // Presentation only — nothing is renamed in the database, so there is
         // no duplicate-on-reseed hazard to guard against.
-        expect(subcategoryLabel("Covered for me", "Brenda")).toBe(
-            "I owed Brenda",
-        );
+        expect(subcategoryLabel(STORED, "Brenda")).toBe("I owed Brenda");
     });
 
     it("follows the configured partner name instead of going stale", () => {
-        expect(subcategoryLabel("Covered for me", "Ana")).toBe("I owed Ana");
+        expect(subcategoryLabel(STORED, "Ana")).toBe("I owed Ana");
     });
 
     it("stays partner-neutral when nobody is configured", () => {
         // A solo user has no one to owe.
-        expect(subcategoryLabel("Covered for me", null)).toBe(
-            "I owed my partner",
-        );
-        expect(subcategoryLabel("Covered for me", "   ")).toBe(
-            "I owed my partner",
-        );
+        expect(subcategoryLabel(STORED, null)).toBe("I owed my partner");
+        expect(subcategoryLabel(STORED, "   ")).toBe("I owed my partner");
     });
 
     it("leaves every other subcategory exactly as stored", () => {

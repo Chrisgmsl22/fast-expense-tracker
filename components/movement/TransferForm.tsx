@@ -30,10 +30,11 @@ type Props = {
     transfer?: TransferEditable;
     /**
      * Which table the row being edited lives in. A payment you sent is an
-     * Expense (spec 0007 §6b), but a LEGACY `gf_paid` movement the migration
-     * could not convert is still a movement — and routing an edit by direction
-     * alone sends it to the expense action, which answers "not found" for a row
-     * in plain sight. New rows are always expenses, hence the default.
+     * Expense (spec 0007 §6b), but a LEGACY `gf_paid` row is still a movement —
+     * the conversion is deferred (CHORE-12), so on production every one of them
+     * is. Routing an edit by direction alone sends it to the expense action,
+     * which answers "not found" for a row in plain sight. New rows are always
+     * expenses, hence the default.
      */
     source?: "expense" | "movement";
     partnerName: string;

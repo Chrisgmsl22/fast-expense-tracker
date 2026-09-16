@@ -132,12 +132,13 @@ export function ExpenseForm({
     const selectedCategory = categories.find((c) => c.id === categoryId);
     // Savings is a transfer, not a card purchase — no payment method applies.
     const isSavings = selectedCategory?.slug === SAVINGS_SLUG;
-    // A debt the partner covered (spec 0007 §6a): the amount is already the
-    // user's share, and her card moved rather than one of his. The server
-    // clamps both facts, but a clamp alone would let the form OFFER a split and
-    // a card, accept the click, and save in silence — the user would believe he
-    // changed something. So the controls are disabled here, with the reason
-    // visible before anyone clicks; the server stays the guarantee.
+    // Money the user SENT the partner (spec 0007 §6b): the amount is the whole
+    // transfer, never a split of one, and it left a bank account rather than a
+    // card. The server clamps both facts, but a clamp alone would let the form
+    // OFFER a split and a card, accept the click, and save in silence — the user
+    // would believe he changed something. So the controls are disabled here,
+    // with the reason visible before anyone clicks; the server stays the
+    // guarantee.
     const isPartnerPayment = expense?.isPartnerPayment ?? false;
     const selectedSubcategory = availableSubcategories.find(
         (s) => s.id === subcategoryId,
@@ -171,15 +172,16 @@ export function ExpenseForm({
             amount,
             categoryId,
             subcategoryId: subcategoryId || undefined,
-            // Savings is a transfer, and a covered debt was paid on her card —
-            // force no card for both, even when editing a legacy row that still
-            // carries one (the field is disabled for both).
+            // Savings is a transfer, and so is a payment to the partner: both
+            // leave a bank account, not a card. Force no card for both, even
+            // when editing a legacy row that still carries one (the field is
+            // disabled for both).
             cardId:
                 isSavings || isPartnerPayment ? undefined : cardId || undefined,
             description,
             notes: notes || undefined,
             isShared: isPartnerPayment ? false : isShared,
-            // A covered debt is never split: the figure entered IS the share.
+            // A payment is never split: the figure entered IS what you sent.
             yourPercentage: isPartnerPayment ? "1" : String(yourPercentage),
             // Every expense is the user's (ADR-0018); `paidBy` defaults "you"
             // in the schema, so the form no longer sends it.
@@ -354,7 +356,7 @@ export function ExpenseForm({
                         ) : isPartnerPayment ? (
                             <span className="font-normal text-muted-foreground">
                                 {" "}
-                                (she paid, so no card of yours)
+                                (a transfer, so no card)
                             </span>
                         ) : null}
                     </Label>
@@ -450,9 +452,8 @@ export function ExpenseForm({
                                 // Same voice as the settlement copy: say what
                                 // the amount already means, not just "disabled".
                                 <span className="block text-muted-foreground">
-                                    This amount is already your share of
-                                    something she covered — there is nothing
-                                    left to split.
+                                    This amount is the payment you sent your
+                                    partner — there is nothing left to split.
                                 </span>
                             ) : isShared ? (
                                 <span className="block text-positive">

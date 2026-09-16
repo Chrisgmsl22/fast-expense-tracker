@@ -8,9 +8,10 @@
 --
 -- The data conversion that used to live here — reversing `isFronted`
 -- expenses back into `gf_fronted` movements, and turning `gf_paid` movements
--- into payment-expenses — is deferred to a second, deliberate PR. See
--- fet-payment-is-the-expense/deferred-data-migration.sql in the harness task
--- log for the exact statements and the reasoning for holding them back.
+-- into payment-expenses — is deferred to a second, deliberate PR, so that a
+-- production data rewrite is reviewed and released on its own. Until it runs,
+-- every read that counts payments counts the unconverted `gf_paid` movements
+-- too (the settlement balance and the feed footer both do).
 DO $$
 BEGIN
     -- Guarded so a replay against a schema that already has BOTH columns

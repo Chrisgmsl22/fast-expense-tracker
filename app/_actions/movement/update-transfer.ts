@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
+import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
 import {
@@ -81,14 +82,21 @@ export async function updateTransfer(
             };
         }
 
-        // A marker's amount and direction are what a closed settlement says it
-        // settled. Editing them would rewrite history, so refuse before writing.
-        if (existing.closedAt) {
+        // A transfer a closed cycle COUNTED is frozen, not just the one carrying
+        // its marker: editing either rewrites what a filed settlement settled.
+        // A transfer always moves the balance, so membership alone decides it
+        // here — the predicate stays for the same reason the expense actions
+        // keep theirs, so every write path asks one question.
+        if (
+            existing.cycleClosedAt &&
+            movementMovesSettlementBalance(existing.type)
+        ) {
             return {
                 ok: false,
                 code: "cycle_closed",
-                message:
-                    "This transfer closed a settlement and can't be edited.",
+                message: existing.closedAt
+                    ? "This transfer closed a settlement and can't be edited."
+                    : "This transfer counts in a settlement you already closed, so it can't be edited.",
             };
         }
 

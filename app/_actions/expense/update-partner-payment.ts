@@ -6,7 +6,10 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
-import { partnerPaymentDescription } from "@/lib/domain/expense";
+import {
+    movesSettlementBalance,
+    partnerPaymentDescription,
+} from "@/lib/domain/expense";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import { expenseRepository, settingsRepository } from "@/lib/repositories";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
@@ -24,6 +27,8 @@ export type UpdatePartnerPaymentCode =
     | "validation"
     | "unauthenticated"
     | "not_found"
+    /** The row sits in a closed settlement cycle, so it is frozen (spec 0007 §3.5). */
+    | "cycle_closed"
     | "db_error";
 
 export type UpdatePartnerPaymentResult = ActionResult<
@@ -95,6 +100,23 @@ export async function updatePartnerPayment(
                 message: "Payment not found.",
             };
         }
+        // A payment is usually the very row that squared a cycle, so this is the
+        // likeliest expense to sit inside a closed one. Editing it would rewrite
+        // what a filed settlement says it settled.
+        //
+        // `movesSettlementBalance` is true for every row that reaches here — a
+        // payment always counts — so this reads as "the marker alone". It is
+        // asked through the shared predicate anyway, so all three write paths
+        // freeze on ONE definition of "the cycle counted this row" rather than
+        // three that drift apart.
+        if (existing.cycleClosedAt && movesSettlementBalance(existing)) {
+            return {
+                ok: false,
+                code: "cycle_closed",
+                message:
+                    "This payment counts in a settlement you already closed, so it can't be edited.",
+            };
+        }
 
         const { partnerName } = await settingsRepo.getSettings(userId);
         const count = await expenseRepo.updateForUser(id, userId, {
@@ -107,7 +129,8 @@ export async function updatePartnerPayment(
                 resolvePartnerName(partnerName),
             ),
             amount: v.amount,
-            // The amount entered is your share, so the two stay equal.
+            // The amount entered is the whole transfer you sent her, and no
+            // split is ever applied to it, so the two stay equal (spec 0007 §6b).
             isShared: false,
             yourPercentage: 1,
             actualExpenditure: v.amount,

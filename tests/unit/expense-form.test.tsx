@@ -38,7 +38,9 @@ const editable = {
     isShared: true,
     isPartnerPayment: false,
     yourPercentage: 0.68,
+    actualExpenditure: 170,
     paidBy: "you",
+    cycleClosedAt: null,
 };
 
 function renderForm(props?: Partial<Parameters<typeof ExpenseForm>[0]>) {
@@ -101,12 +103,12 @@ describe("ExpenseForm", () => {
         expect(screen.getByText("your share $68.00")).toBeDefined();
     });
 
-    // Spec 0007 §6a: the amount on a covered debt is ALREADY his share, and her
-    // card moved, not one of his. The server refuses to split it either way —
-    // but a form that still offers the controls takes the click, saves, and says
-    // nothing, so the user believes he changed something. The state has to be
-    // legible before anyone clicks.
-    it("offers no split and no card on a debt the partner covered", () => {
+    // Spec 0007 §6b: the amount on a partner payment IS what he transferred,
+    // and a transfer leaves a bank account, not a card. The server refuses to
+    // split it either way — but a form that still offers the controls takes the
+    // click, saves, and says nothing, so the user believes he changed something.
+    // The state has to be legible before anyone clicks.
+    it("offers no split and no card on a payment to the partner", () => {
         renderForm({ expense: { ...editable, isPartnerPayment: true } });
 
         const shared = screen.getByRole("checkbox", {
@@ -120,11 +122,9 @@ describe("ExpenseForm", () => {
 
         // The reason is on screen, in the settlement copy's voice.
         expect(
-            screen.getByText(/already your share of something she covered/i),
+            screen.getByText(/the payment you sent your partner/i),
         ).toBeDefined();
-        expect(
-            screen.getByText(/she paid, so no card of yours/i),
-        ).toBeDefined();
+        expect(screen.getByText(/a transfer, so no card/i)).toBeDefined();
     });
 
     it("leaves the split and card enabled on an ordinary expense", () => {

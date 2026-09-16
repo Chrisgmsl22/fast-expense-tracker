@@ -156,7 +156,8 @@ model Expense {
   // equals `amount`. One read excludes it: spend-by-card, because a payment
   // usually has no card, and a cardless row read as "Cash" is BUG-1's symptom.
   // The settlement layer reads this flag as the "you paid her" side of the
-  // balance.
+  // balance — the side that draws the balance DOWN, the opposite sign to what
+  // you owe her.
   isPartnerPayment  Boolean @default(false)
 
   // Forward-compat fields (UI ships in later phases — spec §3)
@@ -229,11 +230,17 @@ model Movement {
   date   DateTime
   amount Float // always positive; direction comes from `type`
   // gf_received | gf_paid | card_payment | gf_fronted | income | other.
-  // `gf_fronted` is LEGACY (spec 0007 §6a): a thing the partner fronted is now
-  // an `Expense{isPartnerPayment:true}`, so nothing writes this type anymore. The
-  // migration converts every row that has a `combined-expenses` category to
-  // convert into; settlement still sums any leftover, so a row that could not be
-  // converted keeps moving the balance instead of vanishing.
+  //
+  // `gf_fronted` is a debt the partner fronted. It is settlement-only and is
+  // NOT an expense (spec 0007 §6b): it is provisional, because something she
+  // owes you can shrink or cancel it before any money moves.
+  //
+  // `gf_paid` is LEGACY. Money you send her is an `Expense{isPartnerPayment}`
+  // now — that transfer is the moment real money leaves — so nothing writes
+  // this type anymore. NO migration converts the existing rows: the conversion
+  // is data, and data is deferred to its own PR. Until it runs, every read that
+  // counts payments must count these too (settlement's balance and the feed
+  // footer both do), or the money silently disappears from a screen.
   type   String
 
   cardId String? // set when type = "card_payment"

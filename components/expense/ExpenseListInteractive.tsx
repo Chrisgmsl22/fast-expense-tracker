@@ -2,9 +2,11 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { Lock, Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
+import { movesSettlementBalance } from "@/lib/domain/expense";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
+import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
 import { expenseCardLabel } from "@/lib/expense-display";
 import {
@@ -179,7 +181,12 @@ export function ExpenseListInteractive({
     // payment to the partner is an expense now (spec 0007 §6b), so it is already
     // among these rows: the helper returns `paidToPartner` as a breakdown of the
     // total rather than a separate sum to add on.
-    const totals = computeFeedTotals(filtered);
+    //
+    // Movements ride along only when they are on screen: a legacy `gf_paid`
+    // transfer still holds real money the footer must show, but under a category
+    // filter the list hides every movement, so counting them would total rows
+    // nobody can see.
+    const totals = computeFeedTotals(filtered, showMovements ? movements : []);
 
     function openEdit(id: string) {
         setActionError(null);
@@ -632,20 +639,39 @@ function ExpenseRow({
 }) {
     // Savings is a transfer — no card (never "Cash").
     const isSavings = expense.category.slug === SAVINGS_SLUG;
-    // A covered debt has no card because HER card moved; the shared helper says
-    // so rather than falling back to the word Cash (which is what BUG-1 looked
-    // like on this very screen).
+    // A payment to the partner has no card because a transfer leaves a bank
+    // account; the shared helper says so rather than falling back to the word
+    // Cash (which is what BUG-1 looked like on this very screen).
     const { name: cardName, color: cardColor } = expenseCardLabel(
         expense,
         partnerName,
     );
+    // A row a CLOSED settlement cycle counted is frozen server-side, so it shows
+    // no edit or delete — the same thing `SettlementJournal` does with a locked
+    // row. Rendering the controls and refusing after the submit offers a way out
+    // that is not there. The predicate is the settlement's own, so exactly the
+    // rows the cycle counted lose their controls: a solo expense of the same age
+    // stays editable.
+    const frozen =
+        expense.cycleClosedAt !== null && movesSettlementBalance(expense);
+    // Spec 0007 §6a decision 3: the gold that marked a transfer follows the
+    // payment into its new life as an expense row, so the same money keeps the
+    // same colour on every screen. The card-column dot alone was not the
+    // highlight the spec asked for.
+    const highlight = isSavings
+        ? "border-l-[3px] border-positive bg-positive-tint sm:pl-4"
+        : expense.isPartnerPayment
+          ? "border-l-[3px] border-transfer bg-transfer-tint sm:pl-4"
+          : "";
+    // A full-height coloured border replaces the short category bar.
+    const hasRowTint = isSavings || expense.isPartnerPayment;
     return (
         <li
-            className={`group relative grid grid-cols-[minmax(0,1fr)_auto_4rem] items-center gap-x-3 gap-y-0.5 py-3 pl-4 sm:gap-4 sm:py-2.5 sm:pl-0 ${ROW_GRID} ${isSavings ? "border-l-[3px] border-positive bg-positive-tint sm:pl-4" : ""}`}
+            className={`group relative grid grid-cols-[minmax(0,1fr)_auto_4rem] items-center gap-x-3 gap-y-0.5 py-3 pl-4 sm:gap-4 sm:py-2.5 sm:pl-0 ${ROW_GRID} ${highlight}`}
         >
-            {/* Mobile category accent — a short centered bar (savings gets a full
-                green left border + tint instead, so skip its bar). */}
-            {isSavings ? null : (
+            {/* Mobile category accent — a short centered bar (a tinted row gets
+                a full coloured left border instead, so skip its bar). */}
+            {hasRowTint ? null : (
                 <span
                     aria-hidden
                     className="absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-full sm:hidden"
@@ -717,30 +743,74 @@ function ExpenseRow({
                 )}
             </span>
 
-            {/* Actions — revealed on hover/focus (desktop), always shown on mobile */}
-            <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Edit ${expense.description}`}
-                    onClick={onEdit}
-                    disabled={pending}
-                >
-                    <Pencil />
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Delete ${expense.description}`}
-                    onClick={onDelete}
-                    disabled={pending}
-                >
-                    <Trash2 />
-                </Button>
-            </span>
+            {/* Actions — revealed on hover/focus (desktop), always shown on
+                mobile. A frozen row shows why it has none instead. */}
+            {frozen ? (
+                <LockedRowActions
+                    reason={`${expense.description} is locked: it counts in a settlement you already closed`}
+                />
+            ) : (
+                <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Edit ${expense.description}`}
+                        onClick={onEdit}
+                        disabled={pending}
+                    >
+                        <Pencil />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Delete ${expense.description}`}
+                        onClick={onDelete}
+                        disabled={pending}
+                    >
+                        <Trash2 />
+                    </Button>
+                </span>
+            )}
         </li>
+    );
+}
+
+/**
+ * What a frozen row shows where its edit + delete controls would be.
+ *
+ * One component for both row kinds, so an expense and a movement frozen by the
+ * same closed cycle cannot drift into two different lock treatments.
+ *
+ * The reason has to reach a keyboard user too. A `title` attribute only appears
+ * on hover, so the lock itself takes focus and the sentence becomes visible
+ * while it holds focus; a screen reader gets the same sentence as the lock's
+ * accessible name.
+ */
+function LockedRowActions({ reason }: { reason: string }) {
+    return (
+        <span className="group/lock relative flex items-center justify-end gap-1 text-xs text-muted-foreground">
+            <span
+                tabIndex={0}
+                role="img"
+                aria-label={reason}
+                title={reason}
+                className="rounded-sm p-0.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+                <Lock aria-hidden className="size-3.5" />
+            </span>
+            {/* The visible copy of the reason. `aria-hidden` because the lock
+                above already carries it as its accessible name. It opens to the
+                LEFT, inside the row's own band: the list is a bounded scroller,
+                so anything placed above the first row is clipped. */}
+            <span
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 right-full z-30 mr-1 hidden w-max max-w-[15rem] -translate-y-1/2 rounded-md bg-foreground px-2 py-1 text-background shadow-md group-hover/lock:block group-focus-within/lock:block"
+            >
+                {reason}
+            </span>
+        </span>
     );
 }
 
@@ -765,6 +835,17 @@ function MovementRow({
     // `title` names the row's own thing (a debt's note), so two debts don't get
     // one shared accessible name on their edit/delete controls.
     const { title, subline } = movementRowText(m, partnerName);
+    // A movement a CLOSED cycle counted is frozen server-side, so it shows no
+    // controls — exactly as `ExpenseRow` does with a row the same close froze.
+    // Rendering Edit on one opened a prefilled form that could only fail on
+    // submit.
+    //
+    // The predicate is membership + "did the cycle count it", not the marker
+    // column: `closedAt` marks ONE transfer per cycle, so asking for it alone
+    // left every other counted transfer in the cycle editable. A card payment
+    // moves no balance and stays editable at any age.
+    const frozen =
+        m.cycleClosedAt !== null && movementMovesSettlementBalance(m.type);
 
     return (
         <li
@@ -782,28 +863,38 @@ function MovementRow({
             >
                 {formatMxn(m.amount)}
             </span>
-            <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Edit ${title}`}
-                    onClick={onEdit}
-                    disabled={pending}
-                >
-                    <Pencil />
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Delete ${title}`}
-                    onClick={onDelete}
-                    disabled={pending}
-                >
-                    <Trash2 />
-                </Button>
-            </span>
+            {frozen ? (
+                <LockedRowActions
+                    reason={
+                        m.closedAt
+                            ? `${title} is locked: it closed a settlement you already filed`
+                            : `${title} is locked: it counts in a settlement you already closed`
+                    }
+                />
+            ) : (
+                <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Edit ${title}`}
+                        onClick={onEdit}
+                        disabled={pending}
+                    >
+                        <Pencil />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Delete ${title}`}
+                        onClick={onDelete}
+                        disabled={pending}
+                    >
+                        <Trash2 />
+                    </Button>
+                </span>
+            )}
         </li>
     );
 }

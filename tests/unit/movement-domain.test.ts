@@ -28,12 +28,14 @@ describe("partnerShareTotal", () => {
 
 describe("computeFeedTotals", () => {
     const groceries = {
+        id: "e1",
         amount: 1000,
         actualExpenditure: 680,
         isPartnerPayment: false,
         category: { slug: "groceries" },
     };
     const savings = {
+        id: "e2",
         amount: 5000,
         actualExpenditure: 5000,
         isPartnerPayment: false,
@@ -49,6 +51,7 @@ describe("computeFeedTotals", () => {
 
     it("counts a payment to the partner as spend, exactly once", () => {
         const payment = {
+            id: "e3",
             amount: 100,
             actualExpenditure: 100,
             isPartnerPayment: true,
@@ -75,6 +78,7 @@ describe("computeFeedTotals", () => {
             whatIReallySpent: 0,
             setAside: 0,
             paidToPartner: 0,
+            legacyPaidToPartner: 0,
             total: 0,
         });
     });

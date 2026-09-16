@@ -6,6 +6,8 @@ import {
     PARTNER_PAYMENT_CATEGORY_SLUG,
     PARTNER_PAYMENT_SUBCATEGORY_NAME,
 } from "@/lib/domain/expense";
+import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
+import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /** Category metadata for the detail header + budget math. */
@@ -52,18 +54,23 @@ export interface CategoryRepository {
         month: string,
     ): Promise<ExpenseListItem[]>;
     /**
-     * Where a fronted expense lands when the user picks nothing (spec 0007 §6a):
-     * the user's `combined-expenses` category and its "Covered for me"
-     * subcategory. Null when the user has no such category — the caller then
-     * refuses rather than filing the debt somewhere arbitrary. The subcategory is
-     * optional: a user who deleted it still gets the category.
+     * Where a payment to the partner lands when the user picks nothing (spec
+     * 0007 §6a): the user's `combined-expenses` category and the subcategory
+     * `PARTNER_PAYMENT_SUBCATEGORY_NAME` names. Null when the user has no such
+     * category — the caller then refuses rather than filing the payment
+     * somewhere arbitrary. The subcategory is optional: a user who deleted it
+     * still gets the category.
+     *
+     * The lookup is BY NAME, so it must use the name live rows actually hold —
+     * see the constant. A mismatch here is silent: every payment would file with
+     * `subcategoryId: null`.
      */
     getPartnerPaymentDefaults(
         userId: string,
     ): Promise<PartnerPaymentDefaults | null>;
 }
 
-/** The category (and optional subcategory) a fronted expense defaults to. */
+/** The category (and optional subcategory) a partner payment defaults to. */
 export type PartnerPaymentDefaults = {
     categoryId: string;
     subcategoryId: string | null;
@@ -148,29 +155,49 @@ export class PrismaCategoryRepository implements CategoryRepository {
         };
     }
 
-    getExpensesForCategoryMonth(
+    /**
+     * `cycleClosedAt` is resolved here too, through the same helpers the expense
+     * repository uses. This screen shows no edit or delete control today, so
+     * nothing reads it — but a row is either in a closed cycle or it is not, and
+     * hardcoding `null` would put a false fact on the row for the first caller
+     * that trusts it.
+     */
+    async getExpensesForCategoryMonth(
         userId: string,
         categoryId: string,
         month: string,
     ): Promise<ExpenseListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
-        return this.db.expense.findMany({
-            where: { userId, categoryId, date: { gte: start, lt: end } },
-            orderBy: { date: "desc" },
-            select: {
-                id: true,
-                date: true,
-                description: true,
-                amount: true,
-                actualExpenditure: true,
-                isShared: true,
-                isPartnerPayment: true,
-                category: {
-                    select: { id: true, slug: true, name: true, color: true },
+        const [rows, closes] = await Promise.all([
+            this.db.expense.findMany({
+                where: { userId, categoryId, date: { gte: start, lt: end } },
+                orderBy: { date: "desc" },
+                select: {
+                    id: true,
+                    date: true,
+                    description: true,
+                    amount: true,
+                    actualExpenditure: true,
+                    isShared: true,
+                    isPartnerPayment: true,
+                    createdAt: true,
+                    category: {
+                        select: {
+                            id: true,
+                            slug: true,
+                            name: true,
+                            color: true,
+                        },
+                    },
+                    subcategory: { select: { name: true } },
+                    card: { select: { name: true, color: true } },
                 },
-                subcategory: { select: { name: true } },
-                card: { select: { name: true, color: true } },
-            },
-        });
+            }),
+            getCycleCloses(this.db, userId),
+        ]);
+        return rows.map(({ createdAt, ...item }) => ({
+            ...item,
+            cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
+        }));
     }
 }

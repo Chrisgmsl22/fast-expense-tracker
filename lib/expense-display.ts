@@ -20,11 +20,14 @@ const NEUTRAL_PARTNER_LABEL = "I owed my partner";
  * The subcategory name a row DISPLAYS.
  *
  * Presentation only — nothing is renamed in the database. The seeded
- * "Covered for me" reads as `I owed {partner}`, which says what the payment
- * settled rather than what she bought. It resolves from the configured partner
- * name (CHORE-6.a), so it follows a change in Settings instead of going stale,
- * and stays partner-neutral when nobody is configured: a solo user has no one
- * to owe.
+ * "Purchases made by girlfriend" reads as `I owed {partner}`, which says what
+ * the payment settled rather than what she bought. It resolves from the
+ * configured partner name (CHORE-6.a), so it follows a change in Settings
+ * instead of going stale, and stays partner-neutral when nobody is configured: a
+ * solo user has no one to owe.
+ *
+ * This render-time label is why the stored rename could be deferred safely: the
+ * screens already say the right thing while the rows still carry the old name.
  *
  * Keyed on the SEEDED name rather than on `isPartnerPayment`, so a user who
  * renames this subcategory keeps their own name — an explicit choice outranks a

@@ -6,6 +6,7 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 import { addCardPayment } from "@/app/_actions/movement/add-card-payment";
 import { addTransfer } from "@/app/_actions/movement/add-transfer";
 import { deleteMovement } from "@/app/_actions/movement/delete";
+import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
 import { updateTransfer } from "@/app/_actions/movement/update-transfer";
 import { FakeMovementRepository } from "@/tests/support/fake-movement-repository";
 
@@ -213,6 +214,105 @@ describe("movement actions (unit, injected fake repo)", () => {
             const row = await repo.getById("u1", "mv1");
             expect(row?.amount).toBe(320);
             expect(row?.type).toBe("gf_received");
+        });
+    });
+
+    /**
+     * I-1 (round 4). The expense side freezes every row a closed cycle counted;
+     * the movement side froze only the cycle's MARKER. Both movement writes are
+     * scoped `closedAt: null`, and the DB CHECK allows `closedAt` on a transfer
+     * alone — so a `gf_fronted` debt never matched that scope, and deleting one
+     * out of a filed cycle succeeded and restated its "You owed Brenda" figure.
+     *
+     * The guard is now the same pair the expense actions use: the row's cycle is
+     * closed AND that cycle counted the row.
+     */
+    describe("a closed cycle freezes every row it counted", () => {
+        const CLOSED_AT = new Date("2026-07-12T00:00:00Z");
+
+        it("refuses to delete a debt the closed cycle counted", async () => {
+            const repo = new FakeMovementRepository();
+            // No `closedAt`: a debt can never carry the marker. Only membership
+            // places it in the cycle.
+            repo.seed("mv1", "u1", {
+                type: "gf_fronted",
+                amount: 220,
+                cycleClosedAt: CLOSED_AT,
+            });
+
+            const res = await deleteMovement({ id: "mv1" }, repo);
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.code).toBe("cycle_closed");
+            // It closed nothing, so the message must not say it did.
+            expect(res.message).not.toMatch(/closed a settlement and/i);
+            expect(await repo.getById("u1", "mv1")).not.toBeNull();
+        });
+
+        it("refuses to edit a debt the closed cycle counted", async () => {
+            const repo = new FakeMovementRepository();
+            repo.seed("mv1", "u1", {
+                type: "gf_fronted",
+                amount: 220,
+                cycleClosedAt: CLOSED_AT,
+            });
+
+            const res = await updatePartnerDebt(
+                { id: "mv1", date: "2026-07-10", amount: "999" },
+                repo,
+            );
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.code).toBe("cycle_closed");
+            expect(repo.updates).toHaveLength(0);
+            expect((await repo.getById("u1", "mv1"))?.amount).toBe(220);
+        });
+
+        it("refuses to delete a NON-marker transfer the closed cycle counted", async () => {
+            const repo = new FakeMovementRepository();
+            repo.seed("mv1", "u1", {
+                type: "gf_paid",
+                amount: 150,
+                cycleClosedAt: CLOSED_AT,
+            });
+
+            const res = await deleteMovement({ id: "mv1" }, repo);
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.code).toBe("cycle_closed");
+            expect(await repo.getById("u1", "mv1")).not.toBeNull();
+        });
+
+        it("still edits a debt in the OPEN cycle", async () => {
+            const repo = new FakeMovementRepository();
+            repo.seed("mv1", "u1", { type: "gf_fronted", amount: 220 });
+
+            const res = await updatePartnerDebt(
+                { id: "mv1", date: "2026-07-10", amount: "260" },
+                repo,
+            );
+
+            expect(res.ok).toBe(true);
+            expect(repo.updates).toHaveLength(1);
+        });
+
+        it("still deletes a CARD PAYMENT inside a closed cycle — it moves no balance", async () => {
+            // The mirror of the expense side's solo lunch: freezing on
+            // membership alone would refuse a row the cycle never counted, and
+            // name a settlement the user was never in.
+            const repo = new FakeMovementRepository();
+            repo.seed("mv1", "u1", {
+                type: "card_payment",
+                cycleClosedAt: CLOSED_AT,
+            });
+
+            const res = await deleteMovement({ id: "mv1" }, repo);
+
+            expect(res.ok).toBe(true);
+            expect(await repo.getById("u1", "mv1")).toBeNull();
         });
     });
 });

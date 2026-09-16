@@ -2,6 +2,8 @@ import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
 import type { MovementType } from "@/lib/domain/movement";
+import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
+import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 
 /** One movement as the feed renders it. */
 export type MovementListItem = {
@@ -11,6 +13,22 @@ export type MovementListItem = {
     type: MovementType;
     card: { name: string; color: string } | null;
     note: string | null;
+    /**
+     * Set when this transfer closed a settlement cycle — the row is the cycle's
+     * marker (see `MovementEditable.closedAt`). It travels with the LIST row,
+     * not just the editable one, so a feed can hide the controls the server will
+     * refuse instead of offering a way out that is not there.
+     */
+    closedAt: Date | null;
+    /**
+     * Same fact, same meaning as `ExpenseEditable.cycleClosedAt`: the close
+     * instant of the cycle this row belongs to, null while that cycle is open.
+     *
+     * This — not `closedAt` — is what freezes a row. A cycle counts debts and
+     * transfers alike, but only a transfer may carry the marker, so `closedAt`
+     * identifies one row per cycle and says nothing about the rest of it.
+     */
+    cycleClosedAt: Date | null;
 };
 
 /** Server-owned fields written on create/update (the owner is passed separately). */
@@ -31,12 +49,27 @@ export type MovementEditable = {
     cardId: string | null;
     note: string | null;
     /**
-     * Set when this transfer closed a settlement cycle (spec 0007 §3.5). Such a
-     * row is frozen: editing its amount would rewrite what a closed cycle
+     * Set when this transfer closed a settlement cycle (spec 0007 §3.5) — it is
+     * that cycle's marker. Editing its amount would rewrite what a closed cycle
      * settled, and deleting it would dissolve the boundary and merge that cycle
      * back into the open one.
      */
     closedAt: Date | null;
+    /**
+     * The close instant of the cycle this row BELONGS to, null while that cycle
+     * is open — mirrors `ExpenseEditable.cycleClosedAt`, derived the same way
+     * (this row's `createdAt` against the sequence of close instants).
+     *
+     * The marker column could never carry this fact. The DB CHECK allows
+     * `closedAt` only on a transfer, so a `gf_fronted` debt never has one — and
+     * scoping the writes on `closedAt: null` therefore froze the marker and
+     * nothing else. A closed cycle counted the debts too, so deleting one
+     * restated a settlement the user was told could not be reopened. Pair this
+     * with `movementMovesSettlementBalance`, exactly as the expense side pairs
+     * its own field with `movesSettlementBalance`: a card payment inside a
+     * closed cycle moves no balance and stays fully editable.
+     */
+    cycleClosedAt: Date | null;
 };
 
 /**
@@ -68,34 +101,45 @@ export class PrismaMovementRepository implements MovementRepository {
         month: string,
     ): Promise<MovementListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
-        const rows = await this.db.movement.findMany({
-            // `gf_fronted` is EXCLUDED: a debt she fronted is settlement-only
-            // (spec 0007 §6b). It is provisional — something she owes you can
-            // shrink or cancel it before any money moves — so showing it beside
-            // real spending invites reading it as money already gone. The
-            // settlement page reads its own window repository and still shows
-            // it, still counts it, and still edits it there.
-            //
-            // Filtered at the QUERY, not hidden at render: a row that never
-            // arrives cannot be forgotten by a view written later.
-            where: {
-                userId,
-                date: { gte: start, lt: end },
-                type: { not: "gf_fronted" },
-            },
-            orderBy: { date: "desc" },
-            select: {
-                id: true,
-                date: true,
-                amount: true,
-                type: true,
-                note: true,
-                card: { select: { name: true, color: true } },
-            },
-        });
+        const [rows, closes] = await Promise.all([
+            this.db.movement.findMany({
+                // `gf_fronted` is EXCLUDED: a debt she fronted is
+                // settlement-only (spec 0007 §6b). It is provisional — something
+                // she owes you can shrink or cancel it before any money moves —
+                // so showing it beside real spending invites reading it as money
+                // already gone. The settlement page reads its own window
+                // repository and still shows it, still counts it, and still
+                // edits it there.
+                //
+                // Filtered at the QUERY, not hidden at render: a row that never
+                // arrives cannot be forgotten by a view written later.
+                where: {
+                    userId,
+                    date: { gte: start, lt: end },
+                    type: { not: "gf_fronted" },
+                },
+                orderBy: { date: "desc" },
+                select: {
+                    id: true,
+                    date: true,
+                    amount: true,
+                    type: true,
+                    note: true,
+                    closedAt: true,
+                    createdAt: true,
+                    card: { select: { name: true, color: true } },
+                },
+            }),
+            getCycleCloses(this.db, userId),
+        ]);
         // `type` is a free-form string column; narrow it to the domain union at
-        // the boundary so callers get the typed shape.
-        return rows.map((r) => ({ ...r, type: r.type as MovementType }));
+        // the boundary so callers get the typed shape. `createdAt` is consumed
+        // here — it exists to place the row in a cycle, not to be rendered.
+        return rows.map(({ createdAt, ...r }) => ({
+            ...r,
+            type: r.type as MovementType,
+            cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
+        }));
     }
 
     async getById(
@@ -112,9 +156,19 @@ export class PrismaMovementRepository implements MovementRepository {
                 cardId: true,
                 note: true,
                 closedAt: true,
+                createdAt: true,
             },
         });
-        return row ? { ...row, type: row.type as MovementType } : null;
+        if (!row) return null;
+        const { createdAt, ...editable } = row;
+        return {
+            ...editable,
+            type: editable.type as MovementType,
+            cycleClosedAt: cycleCloseAtOrAfter(
+                await getCycleCloses(this.db, userId),
+                createdAt,
+            ),
+        };
     }
 
     insert(userId: string, data: MovementWriteData): Promise<{ id: string }> {
@@ -130,9 +184,15 @@ export class PrismaMovementRepository implements MovementRepository {
      * the caller reports not-found instead of mutating another user's row (IDOR
      * guard) — mirrors the expense repository.
      *
-     * `closedAt: null` freezes a cycle marker here, at the data boundary: its
+     * `closedAt: null` freezes a cycle MARKER here, at the data boundary: its
      * amount and direction are what a closed settlement says it settled, so no
      * edit path can rewrite them.
+     *
+     * It is a backstop for one row, not the freeze. Every OTHER row a closed
+     * cycle counted is frozen by the actions, on `cycleClosedAt` +
+     * `movementMovesSettlementBalance` — the same pair the expense actions use.
+     * A where-clause cannot express it: cycle membership is a `createdAt`
+     * comparison against a list of close instants, not a column.
      */
     async updateForUser(
         id: string,
@@ -154,6 +214,7 @@ export class PrismaMovementRepository implements MovementRepository {
      *
      * `closedAt: null` also protects a cycle marker: deleting it would dissolve
      * the boundary and silently merge a closed settlement into the open one.
+     * The rest of a closed cycle is frozen by the action — see `updateForUser`.
      */
     async deleteForUser(userId: string, id: string): Promise<number> {
         const result = await this.db.movement.deleteMany({

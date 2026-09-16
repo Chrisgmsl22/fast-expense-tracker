@@ -275,7 +275,70 @@ describe("a locked row", () => {
                 partnerName="Brenda"
             />,
         );
-        expect(screen.getByText(/closed a settlement · locked/)).toBeDefined();
+        // "IN a closed settlement", not "closed a settlement": a cycle freezes
+        // every row it counted, and only one of them carries the marker. The
+        // narrower wording was false on every debt and payment beside it.
+        expect(
+            screen.getByText(/in a closed settlement · locked/),
+        ).toBeDefined();
+    });
+
+    // Round 4, the third surface of the same defect. The Month TAB passes no
+    // `readOnly`, and an expense-backed row's `locked` was a hardcoded `false` —
+    // so a payment inside a filed settlement rendered Edit and Delete there.
+    // Delete hit `cycle_closed`; Edit opened a prefilled dialog that failed on
+    // save. Asserted through `SettlementViews`, the composed view, because the
+    // journal on its own never showed the bug.
+    it("drops the controls on a locked PAYMENT in the Month tab, which passes no readOnly", () => {
+        const lockedPayment: SettlementJournalItem = {
+            kind: "transfer",
+            id: "ePay",
+            date: JULY,
+            carriedOver: false,
+            locked: true,
+            direction: "gf_paid",
+            amount: 320,
+            note: null,
+            // A payment you sent is an EXPENSE now (spec 0007 §6b) — the row
+            // type whose `locked` the service hardcoded.
+            source: "expense",
+        };
+        const openPayment: SettlementJournalItem = {
+            ...lockedPayment,
+            id: "ePayOpen",
+            locked: false,
+        };
+
+        renderViews({ monthJournal: [lockedPayment, openPayment] });
+        fireEvent.click(screen.getByRole("tab", { name: "July" }));
+
+        // Two identical-looking payment rows, one locked: exactly one Edit and
+        // one Delete survive. Counting proves the lock rather than a panel that
+        // renders no controls at all.
+        expect(screen.getAllByRole("button", { name: /^Edit / })).toHaveLength(
+            1,
+        );
+        expect(
+            screen.getAllByRole("button", { name: /^Delete / }),
+        ).toHaveLength(1);
+        expect(
+            screen.getByText(/in a closed settlement · locked/),
+        ).toBeDefined();
+    });
+
+    // A frozen shared expense must not point at the Expenses screen: the same
+    // close froze it there too, so that names a way out that is not there.
+    it("does not send a locked shared expense to the Expenses screen", () => {
+        render(
+            <SettlementJournal
+                journal={[{ ...openRow, locked: true }]}
+                partnerName="Brenda"
+            />,
+        );
+        expect(screen.queryByText(/edit on the Expenses screen/)).toBeNull();
+        expect(
+            screen.getByText(/in a closed settlement · locked/),
+        ).toBeDefined();
     });
 });
 

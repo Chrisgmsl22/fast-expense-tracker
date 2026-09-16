@@ -6,10 +6,19 @@ import {
 import {
     canCloseCycle,
     computeCoupleBalance,
+    cycleCloseAtOrAfter,
+    movementMovesSettlementBalance,
     type CoupleBalance,
     type SettlementBreakdownKey,
     type SettlementInputs,
 } from "@/lib/domain/settlement";
+import {
+    isPartnerPaymentAutoLabel,
+    isZeroCents,
+    movesSettlementBalance,
+    partnerShareOf,
+    partnerPaymentDescription,
+} from "@/lib/domain/expense";
 import { partnerShareTotal } from "@/lib/domain/movement";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import { settlementRepository, settingsRepository } from "@/lib/repositories";
@@ -32,10 +41,16 @@ export type SettlementJournalItem = {
     /** True when the row falls in the previous month ("Earlier months" divider). */
     carriedOver: boolean;
     /**
-     * This row closed a settlement cycle, so it is frozen server-side. The flag
-     * rides ON THE ROW rather than on a view's props: a locked row must lose its
-     * edit/delete controls in every view, including one written later that never
-     * heard of cycles.
+     * A CLOSED settlement cycle counted this row, so it is frozen server-side —
+     * the same two-part fact the write paths refuse on: the row's cycle is
+     * closed AND that cycle counted the row.
+     *
+     * The flag rides ON THE ROW rather than on a view's props: a locked row must
+     * lose its edit/delete controls in every view, including one written later
+     * that never heard of cycles. That only holds because EVERY producer of a
+     * row derives the fact — an expense-backed row derived it as a hardcoded
+     * `false` for two rounds, and the Month view, which passes no `readOnly`,
+     * offered Edit and Delete on a payment inside a filed settlement.
      */
     locked: boolean;
 } & (
@@ -180,17 +195,20 @@ export type SettlementViewOptions = {
 /**
  * Drop any legacy `gf_paid` movement that has already become a payment-expense.
  *
- * The conversion migration reuses the movement's id for the expense it creates,
- * so a converted pair is recognisable without a join table. The migration
- * inserts and deletes together, so a twin should never exist. This says "should
- * never" out loud instead of trusting it: a partial restore or a replay against
- * a half-migrated copy would otherwise count one payment twice, and a silently
- * doubled settlement figure is the kind of error nobody spots until they pay it.
+ * The conversion migration must reuse the movement's id for the expense it
+ * creates — a REQUIREMENT on the deferred data PR, recorded in ADR-0024, and the
+ * only thing that makes a converted pair recognisable without a join table. The
+ * migration inserts and deletes together, so a twin should never exist. This
+ * says "should never" out loud instead of trusting it: a partial restore, or a
+ * data PR that assigns fresh ids, would otherwise count one payment twice, and a
+ * silently doubled settlement figure is the kind of error nobody spots until
+ * they pay it.
  *
- * The movement fallback is **transitional, not permanent**. It covers an account
- * whose payments could not be filed — no `combined-expenses` category when the
- * migration ran. Those payments still count in the balance until it is
- * converted. Nothing writes `gf_paid` anymore, so the set only shrinks.
+ * The movement fallback is **transitional, not permanent**. Until CHORE-12 runs
+ * the conversion, EVERY legacy `gf_paid` movement is still a movement; after it,
+ * only an account whose payments it could not file (no `combined-expenses`
+ * category) keeps any. Either way they count in the balance. Nothing writes
+ * `gf_paid` anymore, so the set only shrinks.
  */
 function withoutConvertedTwins(
     movements: SettlementMovementRow[],
@@ -248,9 +266,10 @@ function inputsFrom(
         // is not an expense (spec 0007 §6b).
         if (m.type === "gf_fronted") yourDebtToPartner += m.amount;
         else if (m.type === "gf_received") moneyPartnerPaidYou += m.amount;
-        // LEGACY `gf_paid` (spec 0007 §6b): the migration converted these to
-        // payment-expenses; an account it had to skip keeps them here. Still
-        // counted, so no balance silently loses a row.
+        // LEGACY `gf_paid` (spec 0007 §6b): nothing writes this type anymore,
+        // and the conversion to payment-expenses is deferred to CHORE-12, so
+        // every existing one is still here. Counted, so no balance silently
+        // loses a row before or after that conversion runs.
         else if (m.type === "gf_paid") moneyYouPaidPartner += m.amount;
     }
 
@@ -355,14 +374,25 @@ export async function getSettlement(
     );
     const hasPrevRows = prevExpenses.length > 0 || prevMovements.length > 0;
 
+    // Every close instant the user has filed — what makes a row's `locked` a
+    // derivation instead of a column lookup. The Month view especially needs it:
+    // it is a DATE window, so it always spans closed cycles.
+    const closes = markers.map((m) => m.closedAt);
+
     // One derivation of the rows behind the balance; the breakdown and the
     // journal are two views of it, so they cannot quote different money.
-    const rows = buildSettlementRows(expenses, movements, resolvedPartnerName);
+    const rows = buildSettlementRows(
+        expenses,
+        movements,
+        resolvedPartnerName,
+        closes,
+    );
     // Every view is a projection of the same derivation — no second row shape.
     const monthRowsByLine = buildSettlementRows(
         monthRows.expenses,
         monthRows.movements,
         resolvedPartnerName,
+        closes,
     );
 
     return {
@@ -386,6 +416,7 @@ export async function getSettlement(
             historyFloor,
             historyRows,
             resolvedPartnerName,
+            closes,
         ),
     };
 }
@@ -415,6 +446,7 @@ function buildHistory(
     floor: Date | null,
     rows: SettlementWindowRows,
     partnerName: string,
+    closes: readonly Date[],
 ): ClosedSettlementCycle[] {
     const cycles: ClosedSettlementCycle[] = [];
     let lowerBound = floor?.getTime() ?? Number.NEGATIVE_INFINITY;
@@ -431,6 +463,7 @@ function buildHistory(
             inCycle(rows.expenses),
             inCycle(rows.movements),
             partnerName,
+            closes,
         );
         cycles.push({
             id: marker.id,
@@ -484,16 +517,41 @@ function summarizeCycle(rows: SettlementRowsByLine): ClosedCycleSummary {
 const debtDescription = (note: string | null, partnerName: string): string =>
     note?.trim() || `I owe ${partnerName}`;
 
-/** The transfer row's label when it was logged without a note. */
+/**
+ * The transfer row's label when it was logged without a note. The outbound side
+ * defers to `partnerPaymentDescription`, the same helper that names a
+ * payment-EXPENSE, so a legacy `gf_paid` movement and its converted twin read
+ * identically and no panel can invent a second wording.
+ */
 const transferDescription = (
     note: string | null,
     direction: "gf_paid" | "gf_received",
     partnerName: string,
 ): string =>
-    note?.trim() ||
-    (direction === "gf_received"
-        ? `Transfer — ${partnerName} paid you`
-        : `Transfer — you paid ${partnerName}`);
+    direction === "gf_received"
+        ? note?.trim() || `Transfer — ${partnerName} paid you`
+        : partnerPaymentDescription(note, partnerName);
+
+/**
+ * The note behind a payment-expense's description, or null when it has none.
+ *
+ * A payment stores its note AS its description (`partnerPaymentDescription`),
+ * so recovering the note means undoing that: the auto-generated fallback is
+ * "no note", anything else is the user's own text. Carrying it is not cosmetic —
+ * the journal's edit form prefills from this field and saves what it holds, so
+ * a null here **overwrites the stored description with the fallback label** the
+ * next time anyone edits the amount. The debt row has always done the same
+ * thing with `debtDescription`; the payment row did not, and silently ate the
+ * text.
+ *
+ * The test is the label's PREFIX, not the label built from the current partner
+ * name: renaming the partner in Settings would otherwise leave every older
+ * auto-label unmatched, and the journal would prefill the edit form with the
+ * pre-rename label as if the user had typed it.
+ */
+function paymentNote(description: string): string | null {
+    return isPartnerPaymentAutoLabel(description) ? null : description;
+}
 
 /**
  * Newest first, matching the journal. Same-date rows fall back to `createdAt`
@@ -515,22 +573,24 @@ function byNewest(
 /** `amount` is a Float column, so net the drift out before comparing or showing. */
 const roundCents = (n: number): number => Math.round(n * 100) / 100;
 
-/** Sub-cent slack, the same epsilon `isBalanceSettled` uses for Float drift. */
-const isZeroCents = (n: number): boolean => Math.abs(n) < 0.005;
-
 /**
  * Round each row to the cent, independently of the rows beside it.
  *
  * This replaces a reconciliation that handed the leftover cent to the newest
  * row. That leftover only existed because `actualExpenditure` was stored as the
- * raw product; it is now rounded at write time (`computeActualExpenditure`) and
- * the existing rows were migrated, so there is nothing left to redistribute.
+ * raw product; new rows are now rounded at write time
+ * (`computeActualExpenditure`), so there is nothing left to redistribute.
  *
- * The rounding stays as a guard — a Float column can still carry drift, and a
- * row that predates the migration must not render four decimals. What must
- * never come back is the redistribution: it made a row's value depend on which
- * OTHER rows shared its view, which is how one expense read $383.99 in the
- * month panel and $384.00 in the history panel.
+ * Legacy rows still hold the raw unrounded product: the backfill is DEFERRED to
+ * the data-migration PR (CHORE-12), and no migration in this branch touches
+ * `actualExpenditure`. It does not matter here. The drift a Float carries is
+ * about 1e-13, so rounding each row independently at read time lands on the same
+ * cent as a stored rounded value would. That is why this guard stays: it is what
+ * keeps an unmigrated row from rendering four decimals.
+ *
+ * What must never come back is the redistribution: it made a row's value depend
+ * on which OTHER rows shared its view, which is how one expense read $383.99 in
+ * the month panel and $384.00 in the history panel.
  */
 function roundRowsToCents<T extends { amount: number }>(rows: T[]): T[] {
     return rows.map((r) => ({ ...r, amount: roundCents(r.amount) }));
@@ -554,25 +614,31 @@ type SettlementRow = SettlementBreakdownItem & {
 type SettlementRowsByLine = Record<SettlementBreakdownKey, SettlementRow[]>;
 
 /**
- * The single rule for "this expense moves the couple balance". `partnerShareTotal`
- * sums (amount − actualExpenditure) over EVERY expense, so a row counts exactly
- * when that slice is non-zero. Both panels ask this one question — asking it twice,
- * once per panel, is how two views start disagreeing about which rows exist.
- */
-function partnerShareOf(e: SettlementExpenseRow): number {
-    return e.amount - e.actualExpenditure;
-}
-
-/**
  * Every row behind the balance, grouped by the breakdown line it belongs to,
  * newest first, each amount already reconciled to cents. This is the one source
  * both `buildBreakdownItems` and `buildJournal` read.
+ *
+ * `closes` is every cycle-close instant the user has filed. It is what makes
+ * `locked` a DERIVED fact on every row rather than a column lookup: only a
+ * transfer carries the marker column, but a cycle freezes every row it counted,
+ * whichever table that row lives in.
  */
 function buildSettlementRows(
     expenses: SettlementExpenseRow[],
     movements: SettlementMovementRow[],
     partnerName: string,
+    closes: readonly Date[],
 ): SettlementRowsByLine {
+    /**
+     * Frozen means TWO things — the row's cycle is closed AND that cycle counted
+     * the row. This is the SAME pair the three write paths refuse on
+     * (`expense/update`, `expense/delete`, `expense/update-partner-payment`),
+     * built from the same two helpers, so the locked set and the frozen set
+     * cannot drift into disagreement.
+     */
+    const expenseLocked = (e: SettlementExpenseRow): boolean =>
+        cycleCloseAtOrAfter(closes, e.createdAt) !== null &&
+        movesSettlementBalance(e);
     const rows: SettlementRowsByLine = {
         partner_share: [],
         your_debt: [],
@@ -597,13 +663,18 @@ function buildSettlementRows(
                 description: e.description,
                 amount: e.actualExpenditure,
                 gross: null,
-                note: null,
-                // Only a transfer movement can carry the cycle marker.
-                locked: false,
+                // The row's REAL note, recovered from its description. The edit
+                // form prefills from here and writes back what it finds, so a
+                // hardcoded null was erasing the user's text on every edit.
+                note: paymentNote(e.description),
+                locked: expenseLocked(e),
             });
             continue;
         }
 
+        // `partnerShareOf` + `isZeroCents` ARE `movesSettlementBalance`, the
+        // predicate the closed-cycle freeze refuses on. One definition, so a
+        // frozen row and a counted row can never be different sets.
         const partnerShare = partnerShareOf(e);
         if (isZeroCents(partnerShare)) continue;
         rows.partner_share.push({
@@ -615,8 +686,7 @@ function buildSettlementRows(
             amount: partnerShare,
             gross: e.amount,
             note: null,
-            // Only a transfer can carry the marker, so an expense never locks.
-            locked: false,
+            locked: expenseLocked(e),
         });
     }
 
@@ -628,9 +698,14 @@ function buildSettlementRows(
             date: m.date,
             amount: m.amount,
             gross: null,
-            // The DB CHECK keeps `closedAt` off anything but a transfer, so
-            // reading it for every movement kind is safe.
-            locked: m.closedAt !== null,
+            // Derived exactly like the expense side, and for the same reason: a
+            // cycle freezes every row it COUNTED, not just the transfer that
+            // carries its marker. Reading `m.closedAt` alone left a debt — which
+            // can never hold the marker, the DB CHECK sees to that — editable
+            // and deletable inside a filed settlement.
+            locked:
+                cycleCloseAtOrAfter(closes, m.createdAt) !== null &&
+                movementMovesSettlementBalance(m.type),
         };
         if (m.type === "gf_fronted") {
             // A thing she fronted that you owe her — the "you owe" side, and

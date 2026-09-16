@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 
 import { MonthFeed } from "@/components/dashboard/MonthFeed";
+import { PARTNER_PAYMENT_SUBCATEGORY_NAME } from "@/lib/domain/expense";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
@@ -23,13 +24,14 @@ const partnerPayment: ExpenseListItem = {
     actualExpenditure: 200,
     isShared: false,
     isPartnerPayment: true,
+    cycleClosedAt: null,
     category: {
         id: "c9",
         slug: "combined-expenses",
         name: "Combined Expenses",
         color: "#d97706",
     },
-    subcategory: { name: "Covered for me" },
+    subcategory: { name: PARTNER_PAYMENT_SUBCATEGORY_NAME },
     card: null,
 };
 
@@ -42,6 +44,7 @@ const expenses: ExpenseListItem[] = [
         actualExpenditure: 1237,
         isShared: true,
         isPartnerPayment: false,
+        cycleClosedAt: null,
         category: {
             id: "c1",
             slug: "groceries",
@@ -59,6 +62,7 @@ const expenses: ExpenseListItem[] = [
         actualExpenditure: 185,
         isShared: false,
         isPartnerPayment: false,
+        cycleClosedAt: null,
         category: {
             id: "c2",
             slug: "transport",
@@ -78,6 +82,8 @@ const debt: MovementListItem = {
     type: "gf_fronted",
     card: null,
     note: "she covered the vet",
+    closedAt: null,
+    cycleClosedAt: null,
 };
 
 describe("MonthFeed", () => {
@@ -99,15 +105,15 @@ describe("MonthFeed", () => {
     });
 
     it("labels a partner payment, never Cash", () => {
-        // The row has no card because HER card moved. Falling back to the word
-        // Cash — as a bare `?? "Cash"` does — puts the BUG-1 symptom back on
-        // screen even though the totals are right.
+        // The row has no card because a transfer leaves a bank account, not a
+        // card. Falling back to the word Cash — as a bare `?? "Cash"` does —
+        // puts the BUG-1 symptom back on screen even though the totals are right.
         render(
             <MonthFeed
                 expenses={[
                     {
                         ...expenses[0]!,
-                        id: "fronted",
+                        id: "payment",
                         description: "Sushi",
                         card: null,
                         isShared: false,
@@ -168,6 +174,8 @@ describe("MonthFeed", () => {
                 type: "gf_received",
                 card: null,
                 note: null,
+                closedAt: null,
+                cycleClosedAt: null,
             },
         ];
         render(
@@ -193,6 +201,7 @@ describe("MonthFeed", () => {
                 actualExpenditure: 680,
                 isShared: true,
                 isPartnerPayment: false,
+                cycleClosedAt: null,
                 category: {
                     id: "cg",
                     slug: "groceries",
@@ -210,6 +219,7 @@ describe("MonthFeed", () => {
                 actualExpenditure: 5000,
                 isShared: false,
                 isPartnerPayment: false,
+                cycleClosedAt: null,
                 category: {
                     id: "cs",
                     slug: "savings",
@@ -263,6 +273,8 @@ describe("MonthFeed", () => {
                 type: "card_payment",
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
+                closedAt: null,
+                cycleClosedAt: null,
             },
         ];
         render(
@@ -309,6 +321,8 @@ describe("MonthFeed", () => {
                 type: "card_payment",
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
+                closedAt: null,
+                cycleClosedAt: null,
             },
         ];
         render(
@@ -397,6 +411,7 @@ describe("MonthFeed", () => {
                 actualExpenditure: 5000,
                 isShared: false,
                 isPartnerPayment: false,
+                cycleClosedAt: null,
                 category: {
                     id: "cs",
                     slug: "savings",

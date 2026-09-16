@@ -15,12 +15,12 @@ import { SettlementChip } from "./SettlementChip";
 /**
  * Right-rail month feed — a read-only list of the month's expenses **and money
  * movements** (card payments, transfers to the partner), newest first, with a
- * pinned footer. Movements are colour-tagged (card payment blue, "I paid
- * {partner}" gold, "I owe {partner}" orange) and never enter the spend total —
- * a debt she fronted is shown for awareness only. The footer splits money into
- * Charged / What I really spent (consumption) / Set aside (savings) / Paid to
- * {partner} / Total. Who-owes-whom lives in the settlement slice, not here
- * (ADR-0018).
+ * pinned footer. A debt she fronted never reaches this list: it is
+ * settlement-only and provisional (spec 0007 §6b). Remaining movements are
+ * colour-tagged (card payment blue, a legacy "I paid {partner}" transfer gold)
+ * and never enter the consumption total. The footer splits money into Charged /
+ * What I really spent (consumption) / Set aside (savings) / Paid to {partner} /
+ * Total. Who-owes-whom lives in the settlement slice, not here (ADR-0018).
  */
 export function MonthFeed({
     expenses,
@@ -50,9 +50,12 @@ export function MonthFeed({
     const feed = buildFeed(expenses, movements);
 
     // A payment to the partner is an expense now (spec 0007 §6b), so it is
-    // already among these rows; the helper reports it as a breakdown line rather
-    // than a separate sum.
-    const totals = computeFeedTotals(expenses);
+    // already among the expense rows; the helper reports it as a breakdown line
+    // rather than a separate sum. The movements go in too, because a LEGACY
+    // `gf_paid` transfer is still a movement until the data PR converts it —
+    // reading expenses alone would render the gold transfer row above a footer
+    // that had silently dropped its money.
+    const totals = computeFeedTotals(expenses, movements);
 
     const count = feed.length;
 
@@ -249,8 +252,9 @@ function MovementRow({
     partnerName: string;
 }) {
     const { amountClass, rowTint } = movementDisplay(m.type, partnerName);
-    // Card payments carry their card name; transfers carry their note; a debt
-    // leads with its note (what she fronted).
+    // Only card payments and transfers reach this list — `buildFeed` drops a
+    // debt she fronted (spec 0007 §6b). Card payments carry their card name;
+    // transfers carry their note.
     const { title, subline } = movementRowText(m, partnerName);
 
     return (

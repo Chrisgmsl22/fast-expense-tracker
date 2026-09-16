@@ -21,6 +21,14 @@ export type CloseSettlementCycleCode =
      * used to answer `ok:true`, a success for work not done.
      */
     | "no_marker"
+    /**
+     * The transfer the close would have marked is no longer there — deleted
+     * between the read that picked it and the write that would mark it. The
+     * write matches zero rows, exactly as a double submit does, and the two used
+     * to be reported alike: `alreadyClosed`. They are opposite outcomes. One
+     * cycle is filed; the other never closed and the user was told it had.
+     */
+    | "marker_gone"
     | "db_error";
 
 export type CloseSettlementCycleResult = ActionResult<
@@ -99,13 +107,37 @@ export async function closeSettlementCycle(
             movementId,
             deps.now ?? new Date(),
         );
+
+        if (count === 0) {
+            // `markCycleClose` matches nothing for two very different reasons:
+            // the row is already a marker (a double submit — harmless), or the
+            // row is GONE, deleted between the read above and this write. Ask
+            // which: a marker for it exists only in the first case.
+            const markers = await settlementRepo.getCycleMarkers(userId);
+            if (!markers.some((m) => m.id === movementId)) {
+                // Do the refresh the message asks for: the page is showing a
+                // transfer that is gone, so leaving the reload to the user keeps
+                // a stale journal on screen behind our own "refresh" advice.
+                revalidatePath("/settlement");
+                return {
+                    ok: false,
+                    code: "marker_gone",
+                    message:
+                        "The transfer that would close this settlement is no longer there. " +
+                        "Refresh the page and try again.",
+                };
+            }
+            revalidatePath("/settlement");
+            return {
+                ok: true,
+                data: { markedMovementId: null, alreadyClosed: true },
+            };
+        }
+
         revalidatePath("/settlement");
         return {
             ok: true,
-            data: {
-                markedMovementId: count > 0 ? movementId : null,
-                alreadyClosed: count === 0,
-            },
+            data: { markedMovementId: movementId, alreadyClosed: false },
         };
     } catch (e) {
         console.error("closeSettlementCycle: db write failed", e);

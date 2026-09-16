@@ -8,14 +8,16 @@
  */
 
 import { SAVINGS_SLUG } from "./dashboard";
+import { partnerShareOf } from "./expense";
 
 /** All `Movement.type` values in the schema. */
 export type MovementType =
     | "card_payment"
     // LEGACY (spec 0007 §6b): money you sent her is an
     // `Expense{isPartnerPayment:true}` now, because a payment is real spending
-    // of yours. Nothing writes this type anymore; the type survives so a row the
-    // migration could not convert still reads.
+    // of yours. Nothing writes this type anymore; the type survives because the
+    // conversion of existing rows is deferred (CHORE-12), so they all still read
+    // as movements.
     | "gf_paid"
     | "gf_received"
     // A debt she fronted — settlement only, never consumption (spec 0007 §6b).
@@ -29,25 +31,35 @@ export type MovementType =
 export type ExpenseShare = { amount: number; actualExpenditure: number };
 
 /**
- * The partner's total share of the given expenses — the slice that isn't yours
- * (`amount − actualExpenditure`); 0 for an unshared expense, so summing over
- * every expense is safe. This is one input to the two-sided couple balance built
- * in the settlement slice (the "she owes you" side).
+ * The partner's total share of the given expenses — the slice that isn't yours;
+ * 0 for an unshared expense, so summing over every expense is safe. This is one
+ * input to the two-sided couple balance built in the settlement slice (the "she
+ * owes you" side).
+ *
+ * It sums `partnerShareOf`, the same per-row figure the journal shows and the
+ * closed-cycle freeze refuses on, so the total and the row set agree by
+ * construction.
  */
 export function partnerShareTotal(expenses: ExpenseShare[]): number {
-    return expenses.reduce(
-        (sum, e) => sum + (e.amount - e.actualExpenditure),
-        0,
-    );
+    return expenses.reduce((sum, e) => sum + partnerShareOf(e), 0);
 }
 
 /** Minimal expense shape the footer totals read. */
 export type FeedTotalExpense = {
+    /** Matched against a legacy movement's id to spot a converted twin. */
+    id: string;
     amount: number;
     actualExpenditure: number;
     /** Money you sent the partner — a real expense of yours (spec 0007 §6b). */
     isPartnerPayment: boolean;
     category: { slug: string };
+};
+
+/** Minimal movement shape the footer totals read. */
+export type FeedTotalMovement = {
+    id: string;
+    amount: number;
+    type: MovementType;
 };
 
 /** The figures the feed footer shows (ADR-0018 §1). */
@@ -59,12 +71,24 @@ export type FeedTotals = {
     /** My-share allocated to Savings this month. */
     setAside: number;
     /**
-     * The part of `whatIReallySpent` that went to the partner — a BREAKDOWN of
-     * it, never an addend. A payment is an ordinary expense now, so it is
-     * already inside the figure above.
+     * Everything that went to the partner this month, from both storage shapes:
+     *
+     * - a payment-EXPENSE is already inside `whatIReallySpent`, so its part of
+     *   this figure is a BREAKDOWN of that one, never an addend;
+     * - a legacy `gf_paid` MOVEMENT is not consumption anywhere, so its part is
+     *   cash that has been counted nowhere else.
+     *
+     * Only the second part reaches `total`. See `legacyPaidToPartner`.
      */
     paidToPartner: number;
-    /** Money that actually left = spent + set aside. */
+    /**
+     * The legacy-movement slice of `paidToPartner` — the part that is cash out
+     * with no consumption row behind it. Exposed because it is the only piece
+     * `total` may add, and a caller that added `paidToPartner` instead would
+     * bill every converted payment twice.
+     */
+    legacyPaidToPartner: number;
+    /** Money that actually left = spent + set aside + legacy transfers. */
     total: number;
 };
 
@@ -75,19 +99,44 @@ export type FeedTotals = {
  * double-count.
  *
  * **A payment to the partner is an ordinary expense** (spec 0007 §6b): it is his
- * money leaving for something he consumed, so it is counted once, here, like any
- * other row. `paidToPartner` re-reads those same rows as a breakdown line — it
- * is NOT added to the total, or the payment would be billed twice.
+ * money leaving for something he consumed, so it is counted once, among the
+ * expenses, like any other row.
  *
- * That is the whole gain of the reversal: under the old model a debt-expense and
- * its settling transfer had to be kept out of each other's ledger by hand. One
- * row now means one figure.
+ * **A LEGACY `gf_paid` movement is not.** No migration has converted those rows
+ * — the conversion is data, deferred to its own PR — so on production every
+ * transfer is still a movement. It renders in both feeds, and reading only
+ * expenses here would drop the whole "Paid to {partner}" line and shrink Total
+ * by the transfer amount, while the settlement page went on counting it. So the
+ * legacy rows are added, with two rules:
+ *
+ * 1. **Never a converted twin.** The deferred data PR must reuse the movement's
+ *    id for the expense it creates (a REQUIREMENT on that PR, recorded in
+ *    ADR-0024) — so a movement whose id is already a payment-expense is dropped.
+ *    The same test, `withoutConvertedTwins`, guards the settlement service. If
+ *    that PR ever assigns fresh ids instead, both dedups miss and every
+ *    converted transfer counts twice.
+ * 2. **Never into a consumption figure.** `charged` and `whatIReallySpent` are
+ *    the consumption ledger; a legacy transfer is cash whose consumption was
+ *    never recorded. It joins `total` ("what actually left") and the
+ *    "Paid to {partner}" line only. The two ledgers stay unsummed (spec 0007
+ *    §6a).
+ *
+ * The set only shrinks: nothing writes `gf_paid` anymore. When the data PR has
+ * run, `movements` carries no `gf_paid` and this reduces to the expense-only
+ * case — `total` unchanged, since the transfer moves from `legacyPaidToPartner`
+ * into `whatIReallySpent`. `charged` and `whatIReallySpent` each RISE by the
+ * transfer amount at conversion: that restatement is the point of the model
+ * (the payment is consumption now), not an accident of this function.
  */
-export function computeFeedTotals(expenses: FeedTotalExpense[]): FeedTotals {
+export function computeFeedTotals(
+    expenses: FeedTotalExpense[],
+    movements: FeedTotalMovement[] = [],
+): FeedTotals {
     let charged = 0;
     let whatIReallySpent = 0;
     let setAside = 0;
     let paidToPartner = 0;
+    const paymentExpenseIds = new Set<string>();
     for (const e of expenses) {
         if (e.category.slug === SAVINGS_SLUG) {
             setAside += e.actualExpenditure;
@@ -95,13 +144,25 @@ export function computeFeedTotals(expenses: FeedTotalExpense[]): FeedTotals {
         }
         charged += e.amount;
         whatIReallySpent += e.actualExpenditure;
-        if (e.isPartnerPayment) paidToPartner += e.actualExpenditure;
+        if (e.isPartnerPayment) {
+            paidToPartner += e.actualExpenditure;
+            paymentExpenseIds.add(e.id);
+        }
     }
+
+    let legacyPaidToPartner = 0;
+    for (const m of movements) {
+        if (m.type !== "gf_paid") continue;
+        if (paymentExpenseIds.has(m.id)) continue;
+        legacyPaidToPartner += m.amount;
+    }
+
     return {
         charged,
         whatIReallySpent,
         setAside,
-        paidToPartner,
-        total: whatIReallySpent + setAside,
+        paidToPartner: paidToPartner + legacyPaidToPartner,
+        legacyPaidToPartner,
+        total: whatIReallySpent + setAside + legacyPaidToPartner,
     };
 }

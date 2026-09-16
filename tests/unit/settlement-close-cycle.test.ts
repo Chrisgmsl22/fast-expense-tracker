@@ -10,6 +10,7 @@ import { getSettlement } from "@/lib/services/settlement/settlement.service";
 import type {
     SettlementExpenseRow,
     SettlementMovementRow,
+    SettlementRepository,
 } from "@/lib/repositories/settlement.repository";
 import { FakeSettlementRepository } from "@/tests/support/fake-settlement-repository";
 import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
@@ -234,5 +235,58 @@ describe("closeSettlementCycle — the direction the tests never covered", () =>
 
         expect(res.ok).toBe(true);
         if (res.ok) expect(res.data.alreadyClosed).toBe(true);
+    });
+});
+
+/**
+ * `markCycleClose` returns 0 for two opposite reasons: the row is already a
+ * marker (a double submit — the cycle IS closed), or the row was deleted between
+ * the read that picked it and the write that would mark it (the cycle did NOT
+ * close). Mapping both to `alreadyClosed: true` told the user a settlement was
+ * filed when nothing was written.
+ */
+describe("closeSettlementCycle — a zero-count write", () => {
+    beforeEach(() => {
+        authMock.mockReset();
+        authMock.mockResolvedValue({ user: { id: "u1" } });
+    });
+
+    /** The real deps, with the marking write forced to match nothing. */
+    function withFailedWrite(markerSurvives: boolean) {
+        const { settlementRepo, deps } = setup([expense()], [movement()]);
+        const repo: SettlementRepository = {
+            getForWindow: (userId, start, end) =>
+                settlementRepo.getForWindow(userId, start, end),
+            getForCreatedRange: (userId, after, through) =>
+                settlementRepo.getForCreatedRange(userId, after, through),
+            getCycleMarkers: async () =>
+                markerSurvives
+                    ? [{ id: "m1", date: JULY, closedAt: NOW, amount: 320 }]
+                    : [],
+            markCycleClose: async () => 0,
+        };
+        return { ...deps, settlementRepo: repo };
+    }
+
+    it("reports already-closed when a marker for that transfer exists", async () => {
+        const res = await closeSettlementCycle(withFailedWrite(true));
+
+        expect(res.ok).toBe(true);
+        if (res.ok) {
+            expect(res.data.alreadyClosed).toBe(true);
+            expect(res.data.markedMovementId).toBeNull();
+        }
+    });
+
+    it("reports a real error when the transfer is gone instead", async () => {
+        const res = await closeSettlementCycle(withFailedWrite(false));
+
+        // Nothing was written, so "closed" would be a lie. The user gets a
+        // message that tells them what to do about it.
+        expect(res.ok).toBe(false);
+        if (!res.ok) {
+            expect(res.code).toBe("marker_gone");
+            expect(res.message).toMatch(/no longer there/i);
+        }
     });
 });

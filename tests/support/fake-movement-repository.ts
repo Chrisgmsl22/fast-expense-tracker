@@ -8,8 +8,19 @@ import type {
 type StoredMovement = {
     id: string;
     userId: string;
-    /** Set when this transfer closed a settlement cycle — the row is frozen. */
+    /** Set when this transfer closed a settlement cycle — it is the marker. */
     closedAt: Date | null;
+    /**
+     * Mirrors `MovementEditable.cycleClosedAt`: the close instant of the cycle
+     * this row belongs to, null while that cycle is open. The Prisma adapter
+     * derives it from the marker movements; the fake takes it as arranged state,
+     * so an action's closed-cycle refusal is testable without a database.
+     *
+     * A marker is inside the cycle it closed, so seeding `closedAt` alone would
+     * arrange an impossible row. `seed` fills this from `closedAt` unless the
+     * caller sets it, which keeps every existing marker fixture honest.
+     */
+    cycleClosedAt: Date | null;
 } & MovementWriteData;
 
 /**
@@ -38,7 +49,12 @@ export class FakeMovementRepository implements MovementRepository {
     seed(
         id: string,
         userId: string,
-        over: Partial<MovementWriteData & { closedAt: Date | null }> = {},
+        over: Partial<
+            MovementWriteData & {
+                closedAt: Date | null;
+                cycleClosedAt: Date | null;
+            }
+        > = {},
     ): void {
         this.rows.set(id, {
             id,
@@ -50,6 +66,13 @@ export class FakeMovementRepository implements MovementRepository {
             note: null,
             closedAt: null,
             ...over,
+            // A marker belongs to the cycle it closed, so it is frozen by
+            // membership too. Derived after the spread so a caller that seeds
+            // only `closedAt` still gets a coherent row.
+            cycleClosedAt:
+                over.cycleClosedAt !== undefined
+                    ? over.cycleClosedAt
+                    : (over.closedAt ?? null),
         });
     }
 
@@ -67,6 +90,8 @@ export class FakeMovementRepository implements MovementRepository {
                     type: r.type,
                     card: null,
                     note: r.note,
+                    closedAt: r.closedAt,
+                    cycleClosedAt: r.cycleClosedAt,
                 }))
         );
     }
@@ -85,6 +110,7 @@ export class FakeMovementRepository implements MovementRepository {
             cardId: row.cardId,
             note: row.note,
             closedAt: row.closedAt,
+            cycleClosedAt: row.cycleClosedAt,
         };
     }
 
@@ -97,6 +123,9 @@ export class FakeMovementRepository implements MovementRepository {
             id: `mv_${++this.seq}`,
             userId,
             closedAt: null,
+            // A new row always lands in the OPEN cycle — there is no close at or
+            // after the instant it was entered.
+            cycleClosedAt: null,
             ...data,
         };
         this.rows.set(row.id, row);

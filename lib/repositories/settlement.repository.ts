@@ -12,9 +12,11 @@ export type SettlementExpenseRow = {
     actualExpenditure: number;
     isShared: boolean;
     /**
-     * A debt the partner fronted (spec 0007 §6a). It is the "you owe her" side
-     * of the balance, where an ordinary expense contributes her share of what
-     * YOU paid — opposite signs, so the two can never be read alike.
+     * Money you SENT the partner (spec 0007 §6b) — the "you paid her" side of
+     * the balance, which draws it DOWN. An ordinary expense does the opposite:
+     * it contributes her share of what you paid, which pushes the balance up.
+     * Opposite signs, so the two must never be read alike. A debt she fronted is
+     * neither — it is a `Movement{gf_fronted}` and never an expense.
      */
     isPartnerPayment: boolean;
     /** Entry time: what cycle membership compares, and the same-`date` tie-break. */

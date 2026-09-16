@@ -259,14 +259,15 @@ describe("SettlementJournal", () => {
         expect(deleteExpenseMock).not.toHaveBeenCalled();
     });
 
-    // I-1: a legacy `gf_fronted` movement the migration could not convert still
-    // counts in the balance and still renders as a `partner_debt` row. It looks
-    // identical to a converted one, so only the row's `source` can route it.
-    it("deletes a legacy movement-backed debt through the movement action", async () => {
-        deleteMock.mockResolvedValue({ ok: true, data: { id: "legacy1" } });
-        const legacy: SettlementJournalItem = {
+    // I-1: a debt is a `gf_fronted` MOVEMENT and stays one (spec 0007 §6b), so
+    // its journal row carries `source: "movement"`. Nothing in the rendered row
+    // says which table it came from, so `source` is the only thing that can send
+    // the delete to the movement action instead of the expense one.
+    it("deletes a movement-backed debt through the movement action", async () => {
+        deleteMock.mockResolvedValue({ ok: true, data: { id: "debt1" } });
+        const debtRow: SettlementJournalItem = {
             kind: "partner_debt",
-            id: "legacy1",
+            id: "debt1",
             date: june,
             carriedOver: true,
             locked: false,
@@ -274,23 +275,23 @@ describe("SettlementJournal", () => {
             amount: 150,
             source: "movement",
         };
-        render(<SettlementJournal journal={[legacy]} partnerName="Brenda" />);
+        render(<SettlementJournal journal={[debtRow]} partnerName="Brenda" />);
         fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
 
         const dialog = await screen.findByRole("dialog");
         fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
         await waitFor(() =>
-            expect(deleteMock).toHaveBeenCalledWith({ id: "legacy1" }),
+            expect(deleteMock).toHaveBeenCalledWith({ id: "debt1" }),
         );
         // Sending it to the expense table would report "not found" for a row
         // sitting in plain sight.
-        expect(deleteExpenseMock).not.toHaveBeenCalledWith({ id: "legacy1" });
+        expect(deleteExpenseMock).not.toHaveBeenCalledWith({ id: "debt1" });
     });
 
     it("offers edit AND delete on a movement-backed debt", () => {
-        const legacy: SettlementJournalItem = {
+        const debtRow: SettlementJournalItem = {
             kind: "partner_debt",
-            id: "legacy1",
+            id: "debt1",
             date: june,
             carriedOver: true,
             locked: false,
@@ -298,7 +299,7 @@ describe("SettlementJournal", () => {
             amount: 150,
             source: "movement",
         };
-        render(<SettlementJournal journal={[legacy]} partnerName="Brenda" />);
+        render(<SettlementJournal journal={[debtRow]} partnerName="Brenda" />);
 
         // A debt is a movement by design now (spec 0007 §6b) and
         // `PartnerDebtForm` writes `updatePartnerDebt`, so it is editable. The

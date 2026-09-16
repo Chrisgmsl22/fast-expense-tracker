@@ -77,6 +77,7 @@ const expenses = [
         actualExpenditure: 136,
         isShared: true,
         isPartnerPayment: false,
+        cycleClosedAt: null,
         category: { id: "c1", slug: "food", name: "Food", color: "#ef4444" },
         subcategory: { name: "Restaurants" },
         card: { name: "Amex", color: "#ca8a04" },
@@ -89,6 +90,7 @@ const expenses = [
         actualExpenditure: 1000,
         isShared: false,
         isPartnerPayment: false,
+        cycleClosedAt: null,
         category: {
             id: "c2",
             slug: "transport",
@@ -108,6 +110,8 @@ const movements: MovementListItem[] = [
         type: "card_payment",
         card: { name: "Amex", color: "#ca8a04" },
         note: null,
+        closedAt: null,
+        cycleClosedAt: null,
     },
     {
         id: "mv2",
@@ -116,6 +120,8 @@ const movements: MovementListItem[] = [
         type: "gf_paid",
         card: null,
         note: "netted",
+        closedAt: null,
+        cycleClosedAt: null,
     },
 ];
 
@@ -127,6 +133,8 @@ const debt: MovementListItem = {
     type: "gf_fronted",
     card: null,
     note: "she covered the vet",
+    closedAt: null,
+    cycleClosedAt: null,
 };
 
 const props = {
@@ -148,14 +156,15 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("labels a partner payment, never Cash", () => {
-        // Her card moved, not one of his, so the row has no card. The bare
-        // `?? "Cash"` fallback printed the BUG-1 symptom on this very screen.
+        // The row is money he sent her — a transfer leaves a bank account, not a
+        // card, so it has no card. The bare `?? "Cash"` fallback printed the
+        // BUG-1 symptom on this very screen.
         render(
             <ExpenseListInteractive
                 expenses={[
                     {
                         ...expenses[1]!,
-                        id: "fronted",
+                        id: "payment",
                         description: "Sushi",
                         card: null,
                         isPartnerPayment: true,
@@ -177,6 +186,120 @@ describe("ExpenseListInteractive", () => {
         ).toBeDefined();
         expect(
             screen.getByRole("button", { name: "Delete Tacos" }),
+        ).toBeDefined();
+    });
+
+    it("drops edit + delete on a row a closed settlement counted", () => {
+        // The server refuses this write. Rendering the buttons anyway offers a
+        // way out that is not there and only reports the refusal after the
+        // submit — `SettlementJournal` already hides the controls on a locked
+        // row, and this list must read the same.
+        const frozen = [
+            {
+                ...expenses[0]!,
+                cycleClosedAt: new Date("2026-05-20T00:00:00Z"),
+            },
+        ];
+        render(<ExpenseListInteractive expenses={frozen} {...props} />);
+
+        expect(screen.getByText("Tacos")).toBeDefined();
+        expect(screen.queryByRole("button", { name: "Edit Tacos" })).toBeNull();
+        expect(
+            screen.queryByRole("button", { name: "Delete Tacos" }),
+        ).toBeNull();
+        expect(screen.getByText(/is locked/i)).toBeDefined();
+    });
+
+    it("keeps edit + delete on a SOLO row of the same age", () => {
+        // A closed cycle counted nothing of a solo row, so nothing freezes it.
+        // Hiding its controls would lock the whole history behind the first
+        // close, which is the regression this pair of tests pins.
+        const solo = [
+            {
+                ...expenses[1]!,
+                cycleClosedAt: new Date("2026-05-20T00:00:00Z"),
+            },
+        ];
+        render(<ExpenseListInteractive expenses={solo} {...props} />);
+
+        expect(screen.getByRole("button", { name: "Edit Uber" })).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Delete Uber" }),
+        ).toBeDefined();
+    });
+
+    it("drops edit + delete on the TRANSFER that closed a cycle, keeping them on an open movement beside it", () => {
+        // The cycle marker is a `gf_paid` transfer and `buildFeed` only drops
+        // `gf_fronted`, so the marker renders on this screen. Its writes are
+        // refused server-side, so rendering Edit opened a fully prefilled form
+        // that could only fail on submit — the same "control that exists only to
+        // fail" the expense side already fixed.
+        const closedAt = new Date("2026-05-20T00:00:00Z");
+        const marked: MovementListItem[] = [
+            movements[0]!,
+            // A marker is inside the cycle it closed, so it carries BOTH facts.
+            { ...movements[1]!, closedAt, cycleClosedAt: closedAt },
+        ];
+        render(
+            <ExpenseListInteractive
+                expenses={[]}
+                {...{ ...props, movements: marked }}
+            />,
+        );
+
+        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        expect(
+            screen.queryByRole("button", { name: "Edit Paid Brenda" }),
+        ).toBeNull();
+        expect(
+            screen.queryByRole("button", { name: "Delete Paid Brenda" }),
+        ).toBeNull();
+        expect(screen.getByText(/is locked/i)).toBeDefined();
+
+        // The card payment is the same age and in no cycle, so it keeps its
+        // controls — the freeze is a cycle's, not the month's.
+        expect(
+            screen.getByRole("button", { name: "Edit Card payment" }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Delete Card payment" }),
+        ).toBeDefined();
+    });
+
+    // I-1 round 4: freezing on the marker column alone froze exactly ONE row per
+    // cycle. A cycle counts every transfer in it, so the others were still
+    // offered Edit and Delete — and the server, once it freezes them too,
+    // refuses. Membership is the predicate, `closedAt` only names the marker.
+    it("drops the controls on a NON-marker transfer inside a closed cycle, not on a card payment of the same cycle", () => {
+        const cycleClosedAt = new Date("2026-05-21T00:00:00Z");
+        const inClosedCycle: MovementListItem[] = [
+            // A card payment moves no settlement balance, so a closed cycle
+            // never counted it and it stays editable at any age.
+            { ...movements[0]!, cycleClosedAt },
+            // A transfer with no marker of its own — counted by the cycle all
+            // the same.
+            { ...movements[1]!, closedAt: null, cycleClosedAt },
+        ];
+        render(
+            <ExpenseListInteractive
+                expenses={[]}
+                {...{ ...props, movements: inClosedCycle }}
+            />,
+        );
+
+        expect(
+            screen.queryByRole("button", { name: "Edit Paid Brenda" }),
+        ).toBeNull();
+        expect(
+            screen.queryByRole("button", { name: "Delete Paid Brenda" }),
+        ).toBeNull();
+        // It did not close anything, so the reason must not claim it did.
+        expect(
+            screen.getByText(/counts in a settlement you already closed/i),
+        ).toBeDefined();
+
+        expect(
+            screen.getByRole("button", { name: "Edit Card payment" }),
         ).toBeDefined();
     });
 
@@ -202,6 +325,7 @@ describe("ExpenseListInteractive", () => {
                 actualExpenditure: 5000,
                 isShared: false,
                 isPartnerPayment: false,
+                cycleClosedAt: null,
                 category: {
                     id: "cs",
                     slug: "savings",
@@ -330,9 +454,13 @@ describe("ExpenseListInteractive", () => {
         ).toBeDefined();
     });
 
-    it("interleaves movements and folds a partner payment into the footer", () => {
-        // Money sent to the partner is an EXPENSE now (spec 0007 §6b), so the
-        // footer's "Paid to" figure comes from that row, not from a movement.
+    it("interleaves movements and counts BOTH payment shapes in the footer", () => {
+        // Money sent to the partner is an EXPENSE now (spec 0007 §6b). But no
+        // migration has converted the old rows, so `movements` still holds a
+        // legacy `gf_paid` of $300 ("mv2") beside this $300 payment-expense —
+        // two real transfers, and the footer has to show both. Reading expenses
+        // alone left the gold movement row on screen above a footer that had
+        // silently dropped its money.
         const payment = {
             ...expenses[0]!,
             id: "ePay",
@@ -354,7 +482,11 @@ describe("ExpenseListInteractive", () => {
         expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = screen.getByTestId("totals-desktop");
         expect(within(totals).getByText("Paid to Brenda")).toBeDefined();
-        expect(within(totals).getByText("$300.00")).toBeDefined();
+        expect(within(totals).getByText("$600.00")).toBeDefined();
+        // Consumption ($1,436 = the expenses, payment included) plus the legacy
+        // transfer's cash. The legacy $300 never joins a consumption figure.
+        expect(within(totals).getByText("$1,436.00")).toBeDefined();
+        expect(within(totals).getByText("$1,736.00")).toBeDefined();
     });
 
     it("hides movements when a category filter is active (they have no category)", () => {

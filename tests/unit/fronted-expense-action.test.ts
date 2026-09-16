@@ -54,7 +54,7 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
         authMock.mockResolvedValue({ user: { id: "u1" } });
     });
 
-    it("stores the debt as an expense carrying the fronted marker", async () => {
+    it("stores the payment as an expense carrying the payment marker", async () => {
         const repo = new FakeExpenseRepository();
         repo.setSubcategory("covered", "combined");
         const res = await addPartnerPayment(
@@ -72,7 +72,7 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
         expect(row.paidBy).toBe("you");
     });
 
-    it("treats the amount as his share — no split is applied", async () => {
+    it("treats the amount as what he sent — no split is applied", async () => {
         const repo = new FakeExpenseRepository();
         repo.setSubcategory("covered", "combined");
         await addPartnerPayment(
@@ -88,11 +88,11 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
         expect(row.actualExpenditure).toBe(680);
         expect(row.isShared).toBe(false);
         expect(row.yourPercentage).toBe(1);
-        // Her card moved, not one of his.
+        // A transfer leaves a bank account, so there is no card.
         expect(row.cardId).toBeNull();
     });
 
-    it("defaults to combined-expenses and its 'Covered for me' subcategory", async () => {
+    it("defaults to combined-expenses and its partner-payment subcategory", async () => {
         const repo = new FakeExpenseRepository();
         repo.setSubcategory("covered", "combined");
         await addPartnerPayment(input(), deps({ expenseRepo: repo }));
@@ -140,7 +140,7 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
         expect(repo.inserts[0]!.subcategoryId).toBeNull();
     });
 
-    it("labels an untitled debt 'I owe {partner}' and keeps a note as the description", async () => {
+    it("labels an untitled payment as money SENT, and keeps a note as the description", async () => {
         const repo = new FakeExpenseRepository();
         repo.setSubcategory("covered", "combined");
         await addPartnerPayment(input(), deps({ expenseRepo: repo }));
@@ -149,7 +149,12 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
             deps({ expenseRepo: repo }),
         );
 
-        expect(repo.inserts[0]!.description).toBe("I owe Brenda");
+        // This string is the `Expense.description`: it renders on Expenses, the
+        // dashboard feed, the category rollup and the settlement breakdown. "I
+        // owe Brenda" described the debt — the opposite event to the one this
+        // row records — and it is also the wording the settlement journal uses
+        // to title the very same row.
+        expect(repo.inserts[0]!.description).toBe("Transfer — you paid Brenda");
         expect(repo.inserts[1]!.description).toBe("Sushi");
     });
 
