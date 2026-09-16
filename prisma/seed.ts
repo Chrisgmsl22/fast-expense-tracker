@@ -130,6 +130,9 @@ export const CATEGORY_SEED: readonly CategorySeed[] = [
         slug: "combined-expenses",
         name: "Combined Expenses",
         isRelevant: true,
+        // "Purchases made by girlfriend" is the name live databases hold, and this seed
+        // matches BY NAME — seeding the new name before the rows are renamed creates a
+        // duplicate. Flip both together in the data migration.
         subcategories: [
             "Purchases made by girlfriend",
             "Purchases made between the two",

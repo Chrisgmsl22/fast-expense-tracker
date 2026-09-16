@@ -1,4 +1,5 @@
 import { formatExpenseDate, formatMxn } from "@/lib/format";
+import { subcategoryLabel } from "@/lib/expense-display";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /**
@@ -10,9 +11,11 @@ import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 export function CategoryExpenses({
     expenses,
     color,
+    partnerName = null,
 }: {
     expenses: ExpenseListItem[];
     color: string;
+    partnerName?: string | null;
 }) {
     return (
         <section>
@@ -43,7 +46,10 @@ export function CategoryExpenses({
                                         className="mt-0.5 block truncate text-xs font-medium"
                                         style={{ color }}
                                     >
-                                        {e.subcategory.name}
+                                        {subcategoryLabel(
+                                            e.subcategory.name,
+                                            partnerName,
+                                        )}
                                     </span>
                                 )}
                             </span>

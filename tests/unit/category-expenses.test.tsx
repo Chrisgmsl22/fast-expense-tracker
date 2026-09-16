@@ -12,6 +12,8 @@ function exp(over: Partial<ExpenseListItem> & { id: string }): ExpenseListItem {
         amount: over.amount ?? 1400,
         actualExpenditure: over.actualExpenditure ?? 1400,
         isShared: over.isShared ?? false,
+        isPartnerPayment: over.isPartnerPayment ?? false,
+        cycleClosedAt: over.cycleClosedAt ?? null,
         category: over.category ?? {
             id: "cat1",
             slug: "health",
@@ -45,6 +47,7 @@ describe("CategoryExpenses", () => {
                     exp({
                         id: "e1",
                         isShared: true,
+                        isPartnerPayment: false,
                         amount: 1000,
                         actualExpenditure: 680,
                     }),

@@ -5,7 +5,18 @@ import type {
     MovementWriteData,
 } from "@/lib/repositories/movement.repository";
 
-type StoredMovement = { id: string; userId: string } & MovementWriteData;
+type StoredMovement = {
+    id: string;
+    userId: string;
+    /** Set when this transfer closed a settlement cycle — it is the marker. */
+    closedAt: Date | null;
+    /**
+     * Mirrors `MovementEditable.cycleClosedAt`, taken as arranged state. A marker is
+     * inside the cycle it closed, so `seed` fills this from `closedAt` unless the caller
+     * sets it — seeding `closedAt` alone would arrange an impossible row.
+     */
+    cycleClosedAt: Date | null;
+} & MovementWriteData;
 
 /**
  * In-memory `MovementRepository` for unit tests. Satisfies the exact contract the
@@ -33,7 +44,12 @@ export class FakeMovementRepository implements MovementRepository {
     seed(
         id: string,
         userId: string,
-        over: Partial<MovementWriteData> = {},
+        over: Partial<
+            MovementWriteData & {
+                closedAt: Date | null;
+                cycleClosedAt: Date | null;
+            }
+        > = {},
     ): void {
         this.rows.set(id, {
             id,
@@ -43,7 +59,13 @@ export class FakeMovementRepository implements MovementRepository {
             type: "card_payment",
             cardId: null,
             note: null,
+            closedAt: null,
             ...over,
+            // Derived after the spread, so a caller that seeds only `closedAt` still gets a coherent row.
+            cycleClosedAt:
+                over.cycleClosedAt !== undefined
+                    ? over.cycleClosedAt
+                    : (over.closedAt ?? null),
         });
     }
 
@@ -61,6 +83,8 @@ export class FakeMovementRepository implements MovementRepository {
                     type: r.type,
                     card: null,
                     note: r.note,
+                    closedAt: r.closedAt,
+                    cycleClosedAt: r.cycleClosedAt,
                 }))
         );
     }
@@ -78,6 +102,8 @@ export class FakeMovementRepository implements MovementRepository {
             type: row.type,
             cardId: row.cardId,
             note: row.note,
+            closedAt: row.closedAt,
+            cycleClosedAt: row.cycleClosedAt,
         };
     }
 
@@ -86,7 +112,15 @@ export class FakeMovementRepository implements MovementRepository {
         data: MovementWriteData,
     ): Promise<{ id: string }> {
         if (this.failOnWrite) throw new Error("fake: insert failed");
-        const row: StoredMovement = { id: `mv_${++this.seq}`, userId, ...data };
+        const row: StoredMovement = {
+            id: `mv_${++this.seq}`,
+            userId,
+            closedAt: null,
+            // A new row always lands in the OPEN cycle — there is no close at or
+            // after the instant it was entered.
+            cycleClosedAt: null,
+            ...data,
+        };
         this.rows.set(row.id, row);
         this.inserts.push(row);
         return { id: row.id };
@@ -99,7 +133,8 @@ export class FakeMovementRepository implements MovementRepository {
     ): Promise<number> {
         if (this.failOnWrite) throw new Error("fake: update failed");
         const row = this.rows.get(id);
-        if (!row || row.userId !== userId) return 0;
+        // Mirrors the Prisma where-clause, cycle-marker guard included.
+        if (!row || row.userId !== userId || row.closedAt) return 0;
         this.rows.set(id, { ...row, ...data });
         this.updates.push({ id, userId, data });
         return 1;
@@ -108,7 +143,8 @@ export class FakeMovementRepository implements MovementRepository {
     async deleteForUser(userId: string, id: string): Promise<number> {
         if (this.failOnWrite) throw new Error("fake: delete failed");
         const row = this.rows.get(id);
-        if (!row || row.userId !== userId) return 0;
+        // Mirrors the Prisma where-clause, cycle-marker guard included.
+        if (!row || row.userId !== userId || row.closedAt) return 0;
         this.rows.delete(id);
         return 1;
     }

@@ -47,6 +47,11 @@ vi.mock("@/components/movement/TransferForm", () => ({
         <div data-testid="transfer-form">editing tr {transfer?.id}</div>
     ),
 }));
+vi.mock("@/components/movement/PartnerDebtForm", () => ({
+    PartnerDebtForm: ({ debt }: { debt?: { id: string } }) => (
+        <div data-testid="partner-debt-form">editing debt {debt?.id}</div>
+    ),
+}));
 
 import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteractive";
 import { deleteExpense } from "@/app/_actions/expense/delete";
@@ -71,6 +76,8 @@ const expenses = [
         amount: 200,
         actualExpenditure: 136,
         isShared: true,
+        isPartnerPayment: false,
+        cycleClosedAt: null,
         category: { id: "c1", slug: "food", name: "Food", color: "#ef4444" },
         subcategory: { name: "Restaurants" },
         card: { name: "Amex", color: "#ca8a04" },
@@ -82,6 +89,8 @@ const expenses = [
         amount: 1000,
         actualExpenditure: 1000,
         isShared: false,
+        isPartnerPayment: false,
+        cycleClosedAt: null,
         category: {
             id: "c2",
             slug: "transport",
@@ -101,6 +110,8 @@ const movements: MovementListItem[] = [
         type: "card_payment",
         card: { name: "Amex", color: "#ca8a04" },
         note: null,
+        closedAt: null,
+        cycleClosedAt: null,
     },
     {
         id: "mv2",
@@ -109,8 +120,22 @@ const movements: MovementListItem[] = [
         type: "gf_paid",
         card: null,
         note: "netted",
+        closedAt: null,
+        cycleClosedAt: null,
     },
 ];
+
+/** A thing the partner fronted that he owes back — never a cash outflow. */
+const debt: MovementListItem = {
+    id: "mv3",
+    date: new Date("2026-05-16T06:00:00Z"),
+    amount: 1500,
+    type: "gf_fronted",
+    card: null,
+    note: "she covered the vet",
+    closedAt: null,
+    cycleClosedAt: null,
+};
 
 const props = {
     movements: [],
@@ -130,6 +155,27 @@ describe("ExpenseListInteractive", () => {
         ).toBeDefined();
     });
 
+    it("labels a partner payment, never Cash", () => {
+        // A payment has no card, and the bare `?? "Cash"` fallback printed BUG-1's symptom here.
+        render(
+            <ExpenseListInteractive
+                expenses={[
+                    {
+                        ...expenses[1]!,
+                        id: "payment",
+                        description: "Sushi",
+                        card: null,
+                        isPartnerPayment: true,
+                    },
+                ]}
+                {...props}
+            />,
+        );
+
+        expect(screen.getAllByText(/Paid Brenda/).length).toBeGreaterThan(0);
+        expect(screen.queryByText(/\bCash\b/)).toBeNull();
+    });
+
     it("renders a row with per-row edit + delete actions", () => {
         render(<ExpenseListInteractive expenses={expenses} {...props} />);
         expect(screen.getByText("Tacos")).toBeDefined();
@@ -138,6 +184,112 @@ describe("ExpenseListInteractive", () => {
         ).toBeDefined();
         expect(
             screen.getByRole("button", { name: "Delete Tacos" }),
+        ).toBeDefined();
+    });
+
+    it("drops edit + delete on a row a closed settlement counted", () => {
+        // The server refuses this write, so rendering the buttons offers a way out that
+        // is not there — `SettlementJournal` already hides them on a locked row.
+        const frozen = [
+            {
+                ...expenses[0]!,
+                cycleClosedAt: new Date("2026-05-20T00:00:00Z"),
+            },
+        ];
+        render(<ExpenseListInteractive expenses={frozen} {...props} />);
+
+        expect(screen.getByText("Tacos")).toBeDefined();
+        expect(screen.queryByRole("button", { name: "Edit Tacos" })).toBeNull();
+        expect(
+            screen.queryByRole("button", { name: "Delete Tacos" }),
+        ).toBeNull();
+        expect(screen.getByText(/is locked/i)).toBeDefined();
+    });
+
+    it("keeps edit + delete on a SOLO row of the same age", () => {
+        // A closed cycle counted nothing of a solo row, so nothing freezes it. Hiding
+        // its controls would lock the whole history behind the first close.
+        const solo = [
+            {
+                ...expenses[1]!,
+                cycleClosedAt: new Date("2026-05-20T00:00:00Z"),
+            },
+        ];
+        render(<ExpenseListInteractive expenses={solo} {...props} />);
+
+        expect(screen.getByRole("button", { name: "Edit Uber" })).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Delete Uber" }),
+        ).toBeDefined();
+    });
+
+    it("drops edit + delete on the TRANSFER that closed a cycle, keeping them on an open movement beside it", () => {
+        // The cycle marker is a `gf_paid` transfer and `buildFeed` keeps it, so it
+        // renders here — with writes the server refuses.
+        const closedAt = new Date("2026-05-20T00:00:00Z");
+        const marked: MovementListItem[] = [
+            movements[0]!,
+            // A marker is inside the cycle it closed, so it carries BOTH facts.
+            { ...movements[1]!, closedAt, cycleClosedAt: closedAt },
+        ];
+        render(
+            <ExpenseListInteractive
+                expenses={[]}
+                {...{ ...props, movements: marked }}
+            />,
+        );
+
+        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        expect(
+            screen.queryByRole("button", { name: "Edit Paid Brenda" }),
+        ).toBeNull();
+        expect(
+            screen.queryByRole("button", { name: "Delete Paid Brenda" }),
+        ).toBeNull();
+        expect(screen.getByText(/is locked/i)).toBeDefined();
+
+        // The card payment is the same age and in no cycle, so it keeps its
+        // controls — the freeze is a cycle's, not the month's.
+        expect(
+            screen.getByRole("button", { name: "Edit Card payment" }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Delete Card payment" }),
+        ).toBeDefined();
+    });
+
+    // A cycle counts every transfer in it, so membership is the predicate; `closedAt`
+    // only names the marker.
+    it("drops the controls on a NON-marker transfer inside a closed cycle, not on a card payment of the same cycle", () => {
+        const cycleClosedAt = new Date("2026-05-21T00:00:00Z");
+        const inClosedCycle: MovementListItem[] = [
+            // A card payment moves no settlement balance, so a closed cycle
+            // never counted it and it stays editable at any age.
+            { ...movements[0]!, cycleClosedAt },
+            // A transfer with no marker of its own — counted by the cycle all
+            // the same.
+            { ...movements[1]!, closedAt: null, cycleClosedAt },
+        ];
+        render(
+            <ExpenseListInteractive
+                expenses={[]}
+                {...{ ...props, movements: inClosedCycle }}
+            />,
+        );
+
+        expect(
+            screen.queryByRole("button", { name: "Edit Paid Brenda" }),
+        ).toBeNull();
+        expect(
+            screen.queryByRole("button", { name: "Delete Paid Brenda" }),
+        ).toBeNull();
+        // It did not close anything, so the reason must not claim it did.
+        expect(
+            screen.getByText(/counts in a settlement you already closed/i),
+        ).toBeDefined();
+
+        expect(
+            screen.getByRole("button", { name: "Edit Card payment" }),
         ).toBeDefined();
     });
 
@@ -162,6 +314,8 @@ describe("ExpenseListInteractive", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 isShared: false,
+                isPartnerPayment: false,
+                cycleClosedAt: null,
                 category: {
                     id: "cs",
                     slug: "savings",
@@ -290,20 +444,36 @@ describe("ExpenseListInteractive", () => {
         ).toBeDefined();
     });
 
-    it("interleaves money movements in the All view and folds them into the footer", () => {
+    it("interleaves movements and counts BOTH payment shapes in the footer", () => {
+        // Money sent to the partner is an EXPENSE now (spec 0007 §6b), but the old rows
+        // are unconverted, so a legacy `gf_paid` of $300 sits beside this $300
+        // payment-expense — two real transfers, and the footer must show both.
+        const payment = {
+            ...expenses[0]!,
+            id: "ePay",
+            description: "Settled up",
+            amount: 300,
+            actualExpenditure: 300,
+            isShared: false,
+            isPartnerPayment: true,
+            card: null,
+        };
         render(
             <ExpenseListInteractive
-                expenses={expenses}
+                expenses={[...expenses, payment]}
                 {...{ ...props, movements }}
             />,
         );
-        // Card payment + transfer lines present (no partner-money tag anymore).
+        // The card payment row still renders; the payment row carries her label.
         expect(screen.getByText("Card payment")).toBeDefined();
-        expect(screen.getByText("Paid Brenda")).toBeDefined();
-        // Footer shows the transfer under "Paid to Brenda".
+        expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = screen.getByTestId("totals-desktop");
         expect(within(totals).getByText("Paid to Brenda")).toBeDefined();
-        expect(within(totals).getByText("$300.00")).toBeDefined();
+        expect(within(totals).getByText("$600.00")).toBeDefined();
+        // Consumption ($1,436 = the expenses, payment included) plus the legacy
+        // transfer's cash. The legacy $300 never joins a consumption figure.
+        expect(within(totals).getByText("$1,436.00")).toBeDefined();
+        expect(within(totals).getByText("$1,736.00")).toBeDefined();
     });
 
     it("hides movements when a category filter is active (they have no category)", () => {
@@ -425,5 +595,40 @@ describe("ExpenseListInteractive", () => {
             expect(deleteMovement).toHaveBeenCalledWith({ id: "mv2" }),
         );
         await waitFor(() => expect(refreshMock).toHaveBeenCalled());
+    });
+
+    it("never shows a debt she fronted, even when handed one", () => {
+        // Settlement-only (spec 0007 §6b). The month query excludes it and `buildFeed`
+        // drops it again, so no caller can put the orange row back.
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements: [...movements, debt] }}
+            />,
+        );
+        expect(screen.queryByText("she covered the vet")).toBeNull();
+        expect(screen.queryByText(/I owe Brenda/)).toBeNull();
+        // Its edit and delete controls go with it — editing a debt is the
+        // settlement page's job now.
+        expect(
+            screen.queryByRole("button", { name: /she covered the vet/ }),
+        ).toBeNull();
+    });
+
+    it("leaves the totals untouched when a debt is present", () => {
+        const { unmount } = render(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
+        const without = screen.getByTestId("totals-desktop").textContent;
+        unmount();
+
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements: [debt] }}
+            />,
+        );
+        // No cash left the account, so no figure may move (ADR-0020).
+        expect(screen.getByTestId("totals-desktop").textContent).toBe(without);
     });
 });

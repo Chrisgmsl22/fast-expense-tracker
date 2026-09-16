@@ -36,8 +36,11 @@ const editable = {
     description: "Tacos",
     notes: null,
     isShared: true,
+    isPartnerPayment: false,
     yourPercentage: 0.68,
+    actualExpenditure: 170,
     paidBy: "you",
+    cycleClosedAt: null,
 };
 
 function renderForm(props?: Partial<Parameters<typeof ExpenseForm>[0]>) {
@@ -98,6 +101,39 @@ describe("ExpenseForm", () => {
 
         // 100 × 0.68 = 68 → formatted as MXN.
         expect(screen.getByText("your share $68.00")).toBeDefined();
+    });
+
+    // A payment is never split and leaves no card (spec 0007 §6b). A form that still
+    // offers the controls takes the click, saves, and says nothing.
+    it("offers no split and no card on a payment to the partner", () => {
+        renderForm({ expense: { ...editable, isPartnerPayment: true } });
+
+        const shared = screen.getByRole("checkbox", {
+            name: /shared expense/i,
+        }) as HTMLInputElement;
+        expect(shared.getAttribute("data-disabled")).not.toBeNull();
+        expect(shared.getAttribute("data-checked")).toBeNull();
+
+        const card = screen.getByLabelText("Card") as HTMLButtonElement;
+        expect(card.getAttribute("data-disabled")).not.toBeNull();
+
+        // The reason is on screen, in the settlement copy's voice.
+        expect(
+            screen.getByText(/the payment you sent your partner/i),
+        ).toBeDefined();
+        expect(screen.getByText(/a transfer, so no card/i)).toBeDefined();
+    });
+
+    it("leaves the split and card enabled on an ordinary expense", () => {
+        renderForm({ expense: editable });
+
+        const shared = screen.getByRole("checkbox", {
+            name: /shared expense/i,
+        });
+        expect(shared.getAttribute("data-disabled")).toBeNull();
+        expect(
+            screen.getByLabelText("Card").getAttribute("data-disabled"),
+        ).toBe(null);
     });
 
     it("labels the split from the configured percentage", () => {
@@ -168,6 +204,7 @@ describe("ExpenseForm", () => {
         const unsharedRow = {
             ...editable,
             isShared: false,
+            isPartnerPayment: false,
             yourPercentage: 1,
         };
         (updateExpense as unknown as Mock).mockResolvedValue({

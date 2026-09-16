@@ -4,14 +4,10 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-    addTransfer,
-    type AddTransferResult,
-} from "@/app/_actions/movement/add-transfer";
-import {
-    updateTransfer,
-    type UpdateTransferResult,
-} from "@/app/_actions/movement/update-transfer";
+import { addTransfer } from "@/app/_actions/movement/add-transfer";
+import { updateTransfer } from "@/app/_actions/movement/update-transfer";
+import { addPartnerPayment } from "@/app/_actions/expense/add-partner-payment";
+import { updatePartnerPayment } from "@/app/_actions/expense/update-partner-payment";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { TransferInput } from "@/lib/schemas/movement";
 
@@ -32,21 +28,27 @@ type Props = {
     initialAmount?: string;
     /** When present, the form edits this transfer instead of creating one. */
     transfer?: TransferEditable;
+    /**
+     * Which table the row being edited lives in. A LEGACY `gf_paid` row is still a
+     * movement (conversion deferred), so routing an edit by direction alone answers
+     * "not found" for a row in plain sight. New rows are always expenses.
+     */
+    source?: "expense" | "movement";
     partnerName: string;
     onSuccess?: () => void;
     onCancel?: () => void;
 };
 
 /**
- * Log a cash transfer with the partner (ADR-0018 + spec 0004). `direction` picks
- * the side: money you sent her (`gf_paid`) or money she sent you (`gf_received`,
- * settling what she owes). Just the amount you settled (netted in your head); no
- * category, no split — it's cash, not an expense.
+ * Log a settlement transfer. The two sides are not symmetric (spec 0007 §6b): you →
+ * her is an `Expense{isPartnerPayment}` in Combined Expenses; her → you stays a
+ * `Movement{gf_received}`. No split is applied to either.
  */
 export function TransferForm({
     direction = "gf_paid",
     initialAmount = "",
     transfer,
+    source = "expense",
     partnerName,
     onSuccess,
     onCancel,
@@ -60,9 +62,10 @@ export function TransferForm({
     const [formError, setFormError] = useState<string | null>(null);
 
     const inbound = direction === "gf_received";
+    const outbound = !inbound;
     const blurb = inbound
         ? `Money ${partnerName} sent you — settles what she owes you. Not an expense.`
-        : `The amount you settled with ${partnerName} — money out of your account, not an expense.`;
+        : `Money you sent ${partnerName} — this IS your expense, counted in your budget under Combined Expenses.`;
     const submitLabel = transfer
         ? "Save changes"
         : inbound
@@ -74,20 +77,34 @@ export function TransferForm({
         const form = e.currentTarget;
         startTransition(async () => {
             try {
-                const res: AddTransferResult | UpdateTransferResult = transfer
-                    ? await updateTransfer({
-                          id: transfer.id,
-                          date,
-                          amount,
-                          direction,
-                          note: note || undefined,
-                      })
-                    : await addTransfer({
-                          date,
-                          amount,
-                          direction,
-                          note: note || undefined,
-                      });
+                const res =
+                    outbound && source === "expense"
+                        ? transfer
+                            ? await updatePartnerPayment({
+                                  id: transfer.id,
+                                  date,
+                                  amount,
+                                  note: note || undefined,
+                              })
+                            : await addPartnerPayment({
+                                  date,
+                                  amount,
+                                  note: note || undefined,
+                              })
+                        : transfer
+                          ? await updateTransfer({
+                                id: transfer.id,
+                                date,
+                                amount,
+                                direction,
+                                note: note || undefined,
+                            })
+                          : await addTransfer({
+                                date,
+                                amount,
+                                direction,
+                                note: note || undefined,
+                            });
                 if (res.ok) {
                     setErrors({});
                     setFormError(null);

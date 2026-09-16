@@ -116,6 +116,42 @@ Opening a PR without a clean review pass is a process violation (it shipped the 
 - **Open-ended exploration** ("how should we structure X?"). Use main thread with `Plan` or just talk it through.
 - **Already in flight** in main thread. Don't fork mid-task.
 
+## Fanning out: when several agents on one job pays
+
+Parallel **slices** need separate worktrees (below). Fanning several agents at
+one job inside a **single** branch is different, and it pays only when the work
+partitions cleanly. The test is what the unit of work is.
+
+**Fan out when the unit is a file and the files do not interact.** A comment
+cleanup, a rename across call sites, adding a field to many fixtures, applying a
+per-file worklist. Agents edit disjoint files, never touch the git index, and
+nothing they do depends on another's result.
+
+**Do not fan out when the work is one judgement.** A review, a design decision,
+a debugging hunt, a fix whose shape is not yet known. Splitting these produces
+inconsistent verdicts that a human then has to reconcile — more expensive than
+doing it once.
+
+**The rules that make it safe**
+
+1. **Partition by file, never by block.** Two agents in one worktree editing
+   different files is fine: they hold no shared state. Two editing the same file
+   clobber each other, because neither sees the other's write.
+2. **Gates run once, at the end, alone.** Integration tests share one Postgres
+   database and truncate between tests, so two suites at once corrupt each other
+   and report failures that are not real. One agent — or the orchestrator — runs
+   `test`, `test:integration`, `typecheck` and `lint` after every worker lands.
+3. **Decide first, apply in parallel.** Have one reviewer produce the verdicts
+   **with the exact replacement text**, then let the workers paste. Judgement
+   made once, applied N ways, cannot drift.
+4. **A half-applied fan-out is worse than none** — the next reader cannot tell
+   which files were done. Track what each worker owned, and confirm each landed.
+
+**The cost is tokens, not correctness.** Each worker reads its own slice of
+context, so you pay the setup N times. Below roughly 50 files it is rarely worth
+it; the two-PR comment cleanup (464 and 111 blocks) ran fine as one agent each,
+while CHORE-17's 108 files is the case that wants four.
+
 ## Filesystem isolation: single-slice vs parallel-slice flows
 
 How a subagent's filesystem changes reach the repo depends on **how the orchestrator invokes it**, not on what the subagent does. The orchestrator (main thread, you, or whatever is launching the subagent) picks the isolation mode; the subagent always creates its own feature branch as step 1 regardless.

@@ -8,46 +8,49 @@
  */
 
 import { SAVINGS_SLUG } from "./dashboard";
+import { partnerShareOf } from "./expense";
 
-/** All `Movement.type` values in the schema. Only two ship in the Add menu. */
+/** All `Movement.type` values in the schema. */
 export type MovementType =
     | "card_payment"
+    // LEGACY (spec 0007 §6b): nothing writes this type; the conversion of existing
+    // rows is deferred, so they all still read as movements.
     | "gf_paid"
     | "gf_received"
-    // A thing the partner fronted that you owe her — settlement-only (ADR-0020).
-    // Never a cash event, so it's excluded from the month feed; the settlement
-    // page is the one place it shows.
+    // A debt she fronted — settlement only, provisional until money moves (spec 0007 §6b).
     | "gf_fronted"
     | "income"
     | "other";
-
-/** The movement kinds the user can create from the Add menu. */
-export const CREATABLE_MOVEMENT_TYPES = ["card_payment", "gf_paid"] as const;
 
 /** Minimal shape the couple-balance math needs from a shared expense. */
 export type ExpenseShare = { amount: number; actualExpenditure: number };
 
 /**
- * The partner's total share of the given expenses — the slice that isn't yours
- * (`amount − actualExpenditure`); 0 for an unshared expense, so summing over
- * every expense is safe. This is one input to the two-sided couple balance built
- * in the settlement slice (the "she owes you" side).
+ * The partner's total share of the given expenses — 0 for an unshared expense, so
+ * summing over every expense is safe.
  */
 export function partnerShareTotal(expenses: ExpenseShare[]): number {
-    return expenses.reduce(
-        (sum, e) => sum + (e.amount - e.actualExpenditure),
-        0,
-    );
+    return expenses.reduce((sum, e) => sum + partnerShareOf(e), 0);
 }
 
 /** Minimal expense shape the footer totals read. */
 export type FeedTotalExpense = {
+    /** Matched against a legacy movement's id to spot a converted twin. */
+    id: string;
     amount: number;
     actualExpenditure: number;
+    /** Money you sent the partner — a real expense of yours (spec 0007 §6b). */
+    isPartnerPayment: boolean;
     category: { slug: string };
 };
 
-/** The four figures the feed footer shows (ADR-0018 §1). */
+export type FeedTotalMovement = {
+    id: string;
+    amount: number;
+    type: MovementType;
+};
+
+/** The figures the feed footer shows (ADR-0018 §1). */
 export type FeedTotals = {
     /** Raw card/cash charges — consumption only (excludes savings transfers). */
     charged: number;
@@ -55,9 +58,17 @@ export type FeedTotals = {
     whatIReallySpent: number;
     /** My-share allocated to Savings this month. */
     setAside: number;
-    /** Transfers you sent the partner (`gf_paid`). */
+    /**
+     * Everything that went to the partner this month. The payment-expense part is a
+     * BREAKDOWN of `whatIReallySpent`, never an addend — only `legacyPaidToPartner` is.
+     */
     paidToPartner: number;
-    /** Money that actually left = spent + set aside + paid to partner. */
+    /**
+     * The legacy-movement slice of `paidToPartner` — cash with no consumption row
+     * behind it, and the only piece `total` may add.
+     */
+    legacyPaidToPartner: number;
+    /** Money that actually left = spent + set aside + legacy transfers. */
     total: number;
 };
 
@@ -65,29 +76,47 @@ export type FeedTotals = {
  * Footer totals for a month, splitting consumption from the savings transfer so
  * "What I really spent" matches the dashboard's Spent. Card payments never enter
  * here: their charges were already counted as expenses, so adding them would
- * double-count. `paidToPartner` is the summed `gf_paid` amount — new outflow
- * (your share of things the partner fronted) not otherwise captured.
+ * double-count.
+ *
+ * Legacy `gf_paid` movements are still unconverted on production, so they count as
+ * cash out — never into `charged` / `whatIReallySpent`. The conversion must reuse the
+ * movement id (ADR-0024), or the twin dedup below misses and every one counts twice.
  */
 export function computeFeedTotals(
     expenses: FeedTotalExpense[],
-    paidToPartner: number,
+    movements: FeedTotalMovement[] = [],
 ): FeedTotals {
     let charged = 0;
     let whatIReallySpent = 0;
     let setAside = 0;
+    let paidToPartner = 0;
+    const paymentExpenseIds = new Set<string>();
     for (const e of expenses) {
         if (e.category.slug === SAVINGS_SLUG) {
             setAside += e.actualExpenditure;
-        } else {
-            charged += e.amount;
-            whatIReallySpent += e.actualExpenditure;
+            continue;
+        }
+        charged += e.amount;
+        whatIReallySpent += e.actualExpenditure;
+        if (e.isPartnerPayment) {
+            paidToPartner += e.actualExpenditure;
+            paymentExpenseIds.add(e.id);
         }
     }
+
+    let legacyPaidToPartner = 0;
+    for (const m of movements) {
+        if (m.type !== "gf_paid") continue;
+        if (paymentExpenseIds.has(m.id)) continue;
+        legacyPaidToPartner += m.amount;
+    }
+
     return {
         charged,
         whatIReallySpent,
         setAside,
-        paidToPartner,
-        total: whatIReallySpent + setAside + paidToPartner,
+        paidToPartner: paidToPartner + legacyPaidToPartner,
+        legacyPaidToPartner,
+        total: whatIReallySpent + setAside + legacyPaidToPartner,
     };
 }

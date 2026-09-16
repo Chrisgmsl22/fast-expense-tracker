@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 
 import { MonthFeed } from "@/components/dashboard/MonthFeed";
+import { PARTNER_PAYMENT_SUBCATEGORY_NAME } from "@/lib/domain/expense";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
@@ -13,6 +14,27 @@ const sheOwes: CoupleBalance = {
     breakdown: [],
 };
 
+// Money sent to the partner is an EXPENSE now (spec 0007 §6b), so the footer
+// figure and the row both come from this one row.
+const partnerPayment: ExpenseListItem = {
+    id: "ePay",
+    date: new Date("2026-06-22T06:00:00Z"),
+    description: "Settled up",
+    amount: 200,
+    actualExpenditure: 200,
+    isShared: false,
+    isPartnerPayment: true,
+    cycleClosedAt: null,
+    category: {
+        id: "c9",
+        slug: "combined-expenses",
+        name: "Combined Expenses",
+        color: "#d97706",
+    },
+    subcategory: { name: PARTNER_PAYMENT_SUBCATEGORY_NAME },
+    card: null,
+};
+
 const expenses: ExpenseListItem[] = [
     {
         id: "e1",
@@ -21,6 +43,8 @@ const expenses: ExpenseListItem[] = [
         amount: 1820,
         actualExpenditure: 1237,
         isShared: true,
+        isPartnerPayment: false,
+        cycleClosedAt: null,
         category: {
             id: "c1",
             slug: "groceries",
@@ -37,6 +61,8 @@ const expenses: ExpenseListItem[] = [
         amount: 185,
         actualExpenditure: 185,
         isShared: false,
+        isPartnerPayment: false,
+        cycleClosedAt: null,
         category: {
             id: "c2",
             slug: "transport",
@@ -47,6 +73,18 @@ const expenses: ExpenseListItem[] = [
         card: null,
     },
 ];
+
+/** A thing the partner fronted that he owes back — never a cash outflow. */
+const debt: MovementListItem = {
+    id: "d1",
+    date: new Date("2026-06-19T06:00:00Z"),
+    amount: 1500,
+    type: "gf_fronted",
+    card: null,
+    note: "she covered the vet",
+    closedAt: null,
+    cycleClosedAt: null,
+};
 
 describe("MonthFeed", () => {
     it("lists the month's expenses with share subtext and card fallback", () => {
@@ -64,6 +102,33 @@ describe("MonthFeed", () => {
         // Null card falls back to Cash; non-shared shows "solo".
         expect(screen.getByText(/Cash/)).toBeDefined();
         expect(screen.getByText("solo")).toBeDefined();
+    });
+
+    it("labels a partner payment, never Cash", () => {
+        // A payment has no card; the bare `?? "Cash"` fallback is BUG-1's symptom.
+        render(
+            <MonthFeed
+                expenses={[
+                    {
+                        ...expenses[0]!,
+                        id: "payment",
+                        description: "Sushi",
+                        card: null,
+                        isShared: false,
+                        isPartnerPayment: true,
+                    },
+                ]}
+                movements={[]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+
+        // The label sits beside a colour dot in the same line, so match the
+        // text node rather than the whole element.
+        expect(screen.getByText(/Paid Brenda/)).toBeDefined();
+        expect(screen.queryByText(/\bCash\b/)).toBeNull();
     });
 
     it("totals Charged + What I really spent in the footer", () => {
@@ -107,6 +172,8 @@ describe("MonthFeed", () => {
                 type: "gf_received",
                 card: null,
                 note: null,
+                closedAt: null,
+                cycleClosedAt: null,
             },
         ];
         render(
@@ -131,6 +198,8 @@ describe("MonthFeed", () => {
                 amount: 1000,
                 actualExpenditure: 680,
                 isShared: true,
+                isPartnerPayment: false,
+                cycleClosedAt: null,
                 category: {
                     id: "cg",
                     slug: "groceries",
@@ -147,6 +216,8 @@ describe("MonthFeed", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 isShared: false,
+                isPartnerPayment: false,
+                cycleClosedAt: null,
                 category: {
                     id: "cs",
                     slug: "savings",
@@ -200,19 +271,13 @@ describe("MonthFeed", () => {
                 type: "card_payment",
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
-            },
-            {
-                id: "m2",
-                date: new Date("2026-06-22T06:00:00Z"),
-                amount: 200,
-                type: "gf_paid",
-                card: null,
-                note: "netted week",
+                closedAt: null,
+                cycleClosedAt: null,
             },
         ];
         render(
             <MonthFeed
-                expenses={expenses}
+                expenses={[...expenses, partnerPayment]}
                 movements={movements}
                 monthLabel="June 2026"
                 partnerName="Brenda"
@@ -222,7 +287,7 @@ describe("MonthFeed", () => {
         // Card payment line present (no partner-money tag anymore).
         expect(screen.getByText("Card payment")).toBeDefined();
         // Transfer line + footer "Paid to Brenda" figure.
-        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.getByText("Paid to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
@@ -254,19 +319,13 @@ describe("MonthFeed", () => {
                 type: "card_payment",
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
-            },
-            {
-                id: "m2",
-                date: new Date("2026-06-22T06:00:00Z"),
-                amount: 200,
-                type: "gf_paid",
-                card: null,
-                note: "netted week",
+                closedAt: null,
+                cycleClosedAt: null,
             },
         ];
         render(
             <MonthFeed
-                expenses={expenses}
+                expenses={[...expenses, partnerPayment]}
                 movements={movements}
                 monthLabel="June 2026"
                 settlement={sheOwes}
@@ -278,7 +337,7 @@ describe("MonthFeed", () => {
         expect(screen.getByText("Card payment")).toBeDefined();
         // Historical partner data stays visible (immutable history, ADR-0021):
         // the transfer row + the monthly "Paid to Brenda" footer figure.
-        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.getByText("Paid to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
@@ -286,6 +345,55 @@ describe("MonthFeed", () => {
         // running balance stays live and settleable via /settlement (ADR-0021,
         // decision 8; nothing is frozen).
         expect(screen.queryByRole("link")).toBeNull();
+    });
+
+    it("never shows a debt she fronted, even when handed one", () => {
+        // Settlement-only (spec 0007 §6b): the month query excludes it and `buildFeed`
+        // drops it again.
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[debt]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+        expect(screen.queryByText("she covered the vet")).toBeNull();
+        expect(screen.queryByText(/I owe Brenda/)).toBeNull();
+    });
+
+    it("changes no footer total when a debt is present (no cash moved)", () => {
+        // A debt reaches NO ledger (spec 0007 §6b), so adding one must not move a
+        // figure. Both renders carry the same expenses; only the debt differs.
+        const movements: MovementListItem[] = [];
+        const { unmount } = render(
+            <MonthFeed
+                expenses={expenses}
+                movements={movements}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+        const without = screen.getByTestId("feed-totals").textContent;
+        unmount();
+
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[...movements, debt]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+        // Charged / What I really spent / Set aside / Paid to Brenda / Total —
+        // every figure identical (ADR-0020).
+        expect(screen.getByTestId("feed-totals").textContent).toBe(without);
+        // …and the debt is not on screen at all: it reaches no ledger AND no
+        // feed (spec 0007 §6b).
+        expect(screen.queryByText("she covered the vet")).toBeNull();
     });
 
     it("shows no card (not Cash) for a savings row", () => {
@@ -297,6 +405,8 @@ describe("MonthFeed", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 isShared: false,
+                isPartnerPayment: false,
+                cycleClosedAt: null,
                 category: {
                     id: "cs",
                     slug: "savings",

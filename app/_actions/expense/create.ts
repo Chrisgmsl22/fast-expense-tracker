@@ -91,6 +91,8 @@ export async function createExpense(
             actualExpenditure: computeActualExpenditure(v),
             paidBy: v.paidBy,
             notes: v.notes ?? null,
+            // `addPartnerPayment` is the only writer of a payment row.
+            isPartnerPayment: false,
         });
         return { ok: true, data: { id: created.id } };
     } catch (e) {

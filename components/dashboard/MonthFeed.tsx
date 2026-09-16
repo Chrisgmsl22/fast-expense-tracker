@@ -1,22 +1,23 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
-import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
+import { computeFeedTotals } from "@/lib/domain/movement";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
-import { CASH_COLOR } from "@/lib/palette";
-import { movementDisplay } from "@/components/movement/movement-display";
+import { expenseCardLabel } from "@/lib/expense-display";
+import {
+    movementDisplay,
+    movementRowText,
+} from "@/components/movement/movement-display";
 import { SettlementChip } from "./SettlementChip";
 
 /**
  * Right-rail month feed — a read-only list of the month's expenses **and money
  * movements** (card payments, transfers to the partner), newest first, with a
- * pinned footer. Movements are colour-tagged (card payment blue, "I paid
- * {partner}" gold) and never enter the spend total. The footer splits money into
- * Charged / What I really spent (consumption) / Set aside (savings) / Paid to
- * {partner} / Total. Who-owes-whom lives in the settlement slice, not here
- * (ADR-0018).
+ * pinned footer.
+ * A debt she fronted never reaches this list: it is settlement-only and
+ * provisional (spec 0007 §6b).
  */
 export function MonthFeed({
     expenses,
@@ -45,8 +46,9 @@ export function MonthFeed({
 }) {
     const feed = buildFeed(expenses, movements);
 
-    const paidToPartner = sumByType(movements, "gf_paid");
-    const totals = computeFeedTotals(expenses, paidToPartner);
+    // Movements go in because a legacy `gf_paid` transfer is still a movement until
+    // the data PR converts it; the footer would otherwise drop its money.
+    const totals = computeFeedTotals(expenses, movements);
 
     const count = feed.length;
 
@@ -73,6 +75,7 @@ export function MonthFeed({
                             <ExpenseRow
                                 key={`e-${item.expense.id}`}
                                 expense={item.expense}
+                                partnerName={partnerName}
                             />
                         ) : (
                             <MovementRow
@@ -164,17 +167,21 @@ export function MonthFeed({
     );
 }
 
-function sumByType(movements: MovementListItem[], type: MovementType): number {
-    return movements
-        .filter((m) => m.type === type)
-        .reduce((sum, m) => sum + m.amount, 0);
-}
-
 /** One expense line (neutral). */
-function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
+function ExpenseRow({
+    expense: e,
+    partnerName,
+}: {
+    expense: ExpenseListItem;
+    partnerName: string;
+}) {
     const isSavings = e.category.slug === SAVINGS_SLUG;
-    const cardColor = e.card?.color ?? CASH_COLOR;
-    const cardName = e.card?.name ?? "Cash";
+    // Same helper the Expenses list uses, so the two screens cannot print
+    // different words for the same row.
+    const { name: cardName, color: cardColor } = expenseCardLabel(
+        e,
+        partnerName,
+    );
     return (
         <li
             className={`flex items-center gap-3 py-2.5 pr-4 pl-4 ${isSavings ? "border-l-[3px] border-positive bg-positive-tint" : "relative"}`}
@@ -237,13 +244,9 @@ function MovementRow({
     movement: MovementListItem;
     partnerName: string;
 }) {
-    const { label, amountClass, rowTint } = movementDisplay(
-        m.type,
-        partnerName,
-    );
-    // Card payments carry their card name; transfers carry their note.
-    const subline =
-        m.type === "card_payment" ? (m.card?.name ?? "") : (m.note ?? "");
+    const { amountClass, rowTint } = movementDisplay(m.type, partnerName);
+    // `buildFeed` drops a debt she fronted, so only card payments and transfers reach here.
+    const { title, subline } = movementRowText(m, partnerName);
 
     return (
         <li
@@ -251,7 +254,7 @@ function MovementRow({
         >
             <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">
-                    {label}
+                    {title}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {formatExpenseDate(m.date)}

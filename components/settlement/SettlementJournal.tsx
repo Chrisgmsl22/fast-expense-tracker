@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeftRight, BarChart3, Check, Pencil, Trash2 } from "lucide-react";
 
+import { deleteExpense } from "@/app/_actions/expense/delete";
 import { deleteMovement } from "@/app/_actions/movement/delete";
 import {
     PartnerDebtForm,
@@ -46,6 +47,38 @@ function transferTitle(
         : `Transfer — you paid ${partnerName}`;
 }
 
+/**
+ * Why a locked row has no controls. It says "in a closed settlement", not "closed a
+ * settlement": a cycle freezes every row it counted, not just the marker.
+ */
+const LOCKED_REASON = "in a closed settlement · locked";
+
+/**
+ * A debt's second line. The generic "I owe {partner}" drops here when the note is
+ * the title, matching `movementRowText`. Only `locked` explains a missing control:
+ * a locked row has no delete either, so "delete to change" names a way out that is not there.
+ */
+function debtSubtitle(row: PartnerDebtRow, partnerName: string): string {
+    const label = defaultDebtDescription(partnerName);
+    return [
+        formatExpenseDate(row.date),
+        row.description === label ? null : label,
+        row.locked ? LOCKED_REASON : null,
+    ]
+        .filter(Boolean)
+        .join(" · ");
+}
+
+function transferSubtitle(row: TransferRow): string {
+    return [
+        formatExpenseDate(row.date),
+        row.note,
+        row.locked ? LOCKED_REASON : null,
+    ]
+        .filter(Boolean)
+        .join(" · ");
+}
+
 function rowTitle(row: DeletableRow, partnerName: string): string {
     return row.kind === "partner_debt"
         ? row.description
@@ -63,9 +96,24 @@ function rowTitle(row: DeletableRow, partnerName: string): string {
 export function SettlementJournal({
     journal,
     partnerName,
+    title = "Movement journal",
+    emptyMessage = "Nothing to settle yet.",
+    bare = false,
+    readOnly = false,
 }: {
     journal: SettlementJournalItem[];
     partnerName: string;
+    /** Heading for this projection of the rows ("Open settlement", a month, …). */
+    title?: string;
+    /** What an empty set of rows says — a real empty state, never a bare zero. */
+    emptyMessage?: string;
+    /** Drop the card chrome when the caller already provides it (History). */
+    bare?: boolean;
+    /**
+     * Hide the edit/delete controls. A closed cycle's rows are frozen server-side, so
+     * offering the buttons would only lead to a refusal.
+     */
+    readOnly?: boolean;
 }) {
     const router = useRouter();
     const [editing, setEditing] = useState<PartnerDebtEditable | null>(null);
@@ -110,7 +158,12 @@ export function SettlementJournal({
     function confirmDelete() {
         if (!deleting) return;
         startTransition(async () => {
-            const res = await deleteMovement({ id: deleting.id });
+            // Route on the ROW's own table, never on its kind: after the inversion a
+            // payment is an expense and a debt is a movement (spec 0007 §6b).
+            const res =
+                deleting.source === "expense"
+                    ? await deleteExpense({ id: deleting.id })
+                    : await deleteMovement({ id: deleting.id });
             if (res.ok) {
                 setDeleting(null);
                 router.refresh();
@@ -120,12 +173,16 @@ export function SettlementJournal({
         });
     }
 
+    const shell = bare ? "" : "rounded-xl border p-5";
+
     if (journal.length === 0) {
         return (
-            <div className="rounded-xl border p-5">
-                <p className="font-semibold">Movement journal</p>
-                <p className="mt-3 text-sm text-muted-foreground">
-                    Nothing to settle yet.
+            <div className={shell}>
+                {!bare && <p className="font-semibold">{title}</p>}
+                <p
+                    className={`text-sm text-muted-foreground ${bare ? "" : "mt-3"}`}
+                >
+                    {emptyMessage}
                 </p>
             </div>
         );
@@ -136,13 +193,15 @@ export function SettlementJournal({
     const firstCarriedId = journal.find((j) => j.carriedOver)?.id;
 
     return (
-        <div className="rounded-xl border p-5">
-            <div className="flex items-baseline justify-between">
-                <p className="font-semibold">Movement journal</p>
-                <p className="text-xs text-muted-foreground">
-                    shared expenses · debts · transfers
-                </p>
-            </div>
+        <div className={shell}>
+            {!bare && (
+                <div className="flex items-baseline justify-between">
+                    <p className="font-semibold">{title}</p>
+                    <p className="text-xs text-muted-foreground">
+                        shared expenses · debts · transfers
+                    </p>
+                </div>
+            )}
 
             {actionError && !deleting && (
                 <p className="mt-3 text-sm text-destructive" role="alert">
@@ -162,11 +221,22 @@ export function SettlementJournal({
                             item={item}
                             partnerName={partnerName}
                             actions={
-                                item.kind === "partner_debt" ? (
+                                // The row carries `locked`, so a view cannot reintroduce
+                                // the buttons by forgetting `readOnly`. Every producer of
+                                // a row must derive it.
+                                readOnly || item.locked ? null : item.kind ===
+                                  "partner_debt" ? (
                                     <RowActions
                                         label={item.description}
                                         pending={pending}
-                                        onEdit={() => openEdit(item)}
+                                        // A movement-backed debt is the editable
+                                        // case — `PartnerDebtForm` writes
+                                        // `updatePartnerDebt`.
+                                        onEdit={
+                                            item.source === "movement"
+                                                ? () => openEdit(item)
+                                                : undefined
+                                        }
                                         onDelete={() => {
                                             setActionError(null);
                                             setDeleting(item);
@@ -231,6 +301,7 @@ export function SettlementJournal({
                         <TransferForm
                             key={editingTransfer.id}
                             direction={editingTransfer.direction}
+                            source={editingTransfer.source}
                             transfer={transferEdit}
                             partnerName={partnerName}
                             onCancel={() => setEditingTransfer(null)}
@@ -306,21 +377,24 @@ function RowActions({
 }: {
     label: string;
     pending: boolean;
-    onEdit: () => void;
+    /** Omitted when the row has no edit form — the button is then not rendered. */
+    onEdit?: () => void;
     onDelete: () => void;
 }) {
     return (
         <span className="flex shrink-0 gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-            <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Edit ${label}`}
-                onClick={onEdit}
-                disabled={pending}
-            >
-                <Pencil />
-            </Button>
+            {onEdit && (
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Edit ${label}`}
+                    onClick={onEdit}
+                    disabled={pending}
+                >
+                    <Pencil />
+                </Button>
+            )}
             <Button
                 type="button"
                 variant="ghost"
@@ -350,7 +424,12 @@ function JournalRow({
                 icon={<Check className="size-4" />}
                 iconClass="bg-positive-tint text-positive"
                 title={item.description}
-                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32%`}
+                // Say why this row has no controls; inert for no stated reason is the
+                // thing to avoid. It must not point at the Expenses screen — the same
+                // close froze it there.
+                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32% · ${
+                    item.locked ? LOCKED_REASON : "edit on the Expenses screen"
+                }`}
                 amount={`+${formatMxn(item.partnerShare)}`}
                 amountClass="text-positive"
                 actions={actions}
@@ -364,7 +443,7 @@ function JournalRow({
                 iconClass="bg-debt-tint text-debt"
                 rowTint="border-debt bg-debt-tint"
                 title={item.description}
-                subtitle={`${formatExpenseDate(item.date)} · un-itemized`}
+                subtitle={debtSubtitle(item, partnerName)}
                 amount={`−${formatMxn(item.amount)}`}
                 amountClass="text-debt"
                 actions={actions}
@@ -390,11 +469,7 @@ function JournalRow({
                     ? `Transfer — ${partnerName} paid you`
                     : `Transfer — you paid ${partnerName}`
             }
-            subtitle={
-                item.note
-                    ? `${formatExpenseDate(item.date)} · ${item.note}`
-                    : formatExpenseDate(item.date)
-            }
+            subtitle={transferSubtitle(item)}
             amount={formatMxn(item.amount)}
             amountClass={inbound ? "text-positive" : "text-transfer"}
             actions={actions}

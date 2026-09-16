@@ -19,9 +19,8 @@ export const expenseInputSchema = z
         isShared: z.boolean().default(false),
         yourPercentage: z.coerce.number().min(0).max(1).default(1),
         // DEPRECATED (ADR-0020): every expense is the user's own. Locked to
-        // "you" so no request can reintroduce a partner-fronted expense — a
-        // thing the partner fronted is a `gf_fronted` movement now, never an
-        // expense. Kept on the schema until the `paidBy` column is dropped.
+        // "you" so no request can retype who paid. A payment is marked by
+        // `isPartnerPayment`, which this form cannot set. Kept until `paidBy` is dropped.
         paidBy: z.literal("you").default("you"),
     })
     .refine((v) => !v.isShared || v.yourPercentage < 1, {
@@ -30,3 +29,18 @@ export const expenseInputSchema = z
     });
 
 export type ExpenseInput = z.infer<typeof expenseInputSchema>;
+
+/**
+ * Money the user SENT the partner (spec 0007 §6b). The amount is what he transferred,
+ * so there is no `isShared` and no `yourPercentage`: the action stores `amount` and
+ * `actualExpenditure` equal. Category and subcategory are optional and default.
+ */
+export const partnerPaymentInputSchema = z.object({
+    date: z.coerce.date(),
+    amount: z.coerce.number().positive("Amount must be greater than 0"),
+    note: z.string().max(200).optional(),
+    categoryId: z.string().min(1).optional(),
+    subcategoryId: z.string().min(1).optional(),
+});
+
+export type PartnerPaymentInput = z.infer<typeof partnerPaymentInputSchema>;

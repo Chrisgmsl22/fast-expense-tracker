@@ -2,13 +2,19 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { Lock, Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
-import { computeFeedTotals } from "@/lib/domain/movement";
+import { movesSettlementBalance } from "@/lib/domain/expense";
+import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
+import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
-import { CASH_COLOR } from "@/lib/palette";
-import { movementDisplay } from "@/components/movement/movement-display";
+import { expenseCardLabel } from "@/lib/expense-display";
+import {
+    movementDisplay,
+    movementRowText,
+} from "@/components/movement/movement-display";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
+import { TotalsBar } from "@/components/money/TotalsBar";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -77,12 +83,28 @@ function CategoryPill({ name, color }: { name: string; color: string }) {
 
 const ROW_GRID = "sm:grid-cols-[5.5rem_minmax(0,1fr)_10rem_9rem_8rem_4rem]";
 
+/** Same phrasing as `SettlementJournal`'s delete, so one action reads alike on both screens. */
+function movementDeleteMessage(
+    m: MovementListItem,
+    partnerName: string,
+): string {
+    const { title } = movementRowText(m, partnerName);
+    return `${title} (${formatMxn(m.amount)}) will be permanently removed.`;
+}
+
+function movementEditTitle(type: MovementType | undefined): string {
+    if (type === "card_payment") return "Edit card payment";
+    return "Edit transfer";
+}
+
 /**
  * Client list, re-skinned to Confirmed designs V1 + money movements
  * (ADR-0018). Expenses keep category filter chips, pills, and
- * edit/delete. Money movements (card payments blue, "I paid {partner}" amber)
- * interleave by date in the unfiltered ("All") view — they have no category, so a
- * category filter hides them — and are editable + deletable (CHORE-5).
+ * edit/delete. Money movements (card payment blue, "{partner} paid me" green)
+ * interleave by date in the unfiltered ("All") view — they have no category, so
+ * a category filter hides them — and are editable + deletable (CHORE-5).
+ * A debt she fronted does NOT appear here — it is settlement-only (spec 0007
+ * §6b). Money you SENT her does, as an ordinary expense.
  */
 export function ExpenseListInteractive({
     expenses,
@@ -148,14 +170,10 @@ export function ExpenseListInteractive({
         [filtered, movements, showMovements],
     );
 
-    const paidToPartner = showMovements
-        ? movements
-              .filter((m) => m.type === "gf_paid")
-              .reduce((sum, m) => sum + m.amount, 0)
-        : 0;
-    // Same helper the dashboard feed uses, so "What I really spent" is the same
-    // consumption number on both screens — savings excluded (ADR-0018 §1).
-    const totals = computeFeedTotals(filtered, paidToPartner);
+    // Same helper as the dashboard feed, so both screens print one number.
+    // Movements ride along only when on screen: under a category filter the list
+    // hides them, so counting them would total rows nobody can see.
+    const totals = computeFeedTotals(filtered, showMovements ? movements : []);
 
     function openEdit(id: string) {
         setActionError(null);
@@ -295,6 +313,7 @@ export function ExpenseListInteractive({
                         <ExpenseRow
                             key={`e-${item.expense.id}`}
                             expense={item.expense}
+                            partnerName={partnerName}
                             pending={pending}
                             onEdit={() => openEdit(item.expense.id)}
                             onDelete={() => setDeleting(item.expense)}
@@ -321,47 +340,43 @@ export function ExpenseListInteractive({
             {/* Totals — desktop footer sits just below the bounded list and
                 stays put; sticky bottom-4 keeps it visible if the page itself
                 still scrolls on shorter viewports. */}
-            <div
-                data-testid="totals-desktop"
-                className="sticky bottom-4 z-30 mt-4 hidden items-center justify-end gap-6 rounded-lg bg-foreground px-5 py-3 text-sm text-background shadow-lg sm:flex"
-            >
-                <span className="text-background/70">
-                    Charged{" "}
-                    <span className="font-semibold text-background">
-                        {formatMxn(totals.charged)}
-                    </span>
-                </span>
-                {totals.setAside > 0 && (
-                    <span className="text-background/70">
-                        Set aside{" "}
-                        <span className="font-semibold text-background">
-                            {formatMxn(totals.setAside)}
-                        </span>
-                    </span>
-                )}
-                {totals.paidToPartner > 0 && (
-                    <span className="text-background/70">
-                        Paid to {partnerName}{" "}
-                        <span className="font-semibold text-background">
-                            {formatMxn(totals.paidToPartner)}
-                        </span>
-                    </span>
-                )}
-                <span className="text-background/70">
-                    What I really spent{" "}
-                    <span className="rounded-full bg-spent-tint px-2 py-0.5 font-semibold text-spent">
-                        {formatMxn(totals.whatIReallySpent)}
-                    </span>
-                </span>
-                {(totals.setAside > 0 || totals.paidToPartner > 0) && (
-                    <span className="border-l border-background/20 pl-6 text-background/70">
-                        Total{" "}
-                        <span className="ml-1 text-base font-semibold text-background">
-                            {formatMxn(totals.total)}
-                        </span>
-                    </span>
-                )}
-            </div>
+            <TotalsBar
+                testId="totals-desktop"
+                className="sticky bottom-4 z-30 mt-4 hidden shadow-lg sm:flex"
+                items={[
+                    { label: "Charged", value: formatMxn(totals.charged) },
+                    ...(totals.setAside > 0
+                        ? [
+                              {
+                                  label: "Set aside",
+                                  value: formatMxn(totals.setAside),
+                              },
+                          ]
+                        : []),
+                    ...(totals.paidToPartner > 0
+                        ? [
+                              {
+                                  label: `Paid to ${partnerName}`,
+                                  value: formatMxn(totals.paidToPartner),
+                              },
+                          ]
+                        : []),
+                    {
+                        label: "What I really spent",
+                        value: formatMxn(totals.whatIReallySpent),
+                        tone: "highlight" as const,
+                    },
+                    ...(totals.setAside > 0 || totals.paidToPartner > 0
+                        ? [
+                              {
+                                  label: "Total",
+                                  value: formatMxn(totals.total),
+                                  tone: "strong" as const,
+                              },
+                          ]
+                        : []),
+                ]}
+            />
 
             {/* Totals — mobile pinned bar */}
             <div
@@ -448,11 +463,12 @@ export function ExpenseListInteractive({
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>
-                            {editingMovement?.type === "card_payment"
-                                ? "Edit card payment"
-                                : "Edit transfer"}
+                            {movementEditTitle(editingMovement?.type)}
                         </DialogTitle>
                     </DialogHeader>
+                    {/* No debt branch: a `gf_fronted` row never reaches this
+                        list (spec 0007 §6b), so it can never be the row being
+                        edited. Debts are edited on the settlement page. */}
                     {editingMovement &&
                         (editingMovement.type === "card_payment" ? (
                             <CardPaymentForm
@@ -558,7 +574,10 @@ export function ExpenseListInteractive({
                         <DialogTitle>Delete this movement?</DialogTitle>
                         <DialogDescription>
                             {deletingMovement
-                                ? `${movementDisplay(deletingMovement.type, partnerName).label} of ${formatMxn(deletingMovement.amount)} will be permanently removed.`
+                                ? movementDeleteMessage(
+                                      deletingMovement,
+                                      partnerName,
+                                  )
                                 : ""}
                         </DialogDescription>
                     </DialogHeader>
@@ -594,26 +613,42 @@ export function ExpenseListInteractive({
 /** One expense row — one responsive tree (mobile card, desktop grid). */
 function ExpenseRow({
     expense,
+    partnerName,
     pending,
     onEdit,
     onDelete,
 }: {
     expense: ExpenseListItem;
+    partnerName: string;
     pending: boolean;
     onEdit: () => void;
     onDelete: () => void;
 }) {
     // Savings is a transfer — no card (never "Cash").
     const isSavings = expense.category.slug === SAVINGS_SLUG;
-    const cardColor = expense.card?.color ?? CASH_COLOR;
-    const cardName = expense.card?.name ?? "Cash";
+    // A payment has no card; the shared helper says so instead of "Cash" (BUG-1).
+    const { name: cardName, color: cardColor } = expenseCardLabel(
+        expense,
+        partnerName,
+    );
+    // A row a closed cycle counted is frozen server-side, so it shows no controls.
+    // The predicate is the settlement's own: a solo expense of the same age stays editable.
+    const frozen =
+        expense.cycleClosedAt !== null && movesSettlementBalance(expense);
+    // The gold that marked a transfer follows the payment into its expense row (spec 0007 §6a).
+    const highlight = isSavings
+        ? "border-l-[3px] border-positive bg-positive-tint sm:pl-4"
+        : expense.isPartnerPayment
+          ? "border-l-[3px] border-transfer bg-transfer-tint sm:pl-4"
+          : "";
+    const hasRowTint = isSavings || expense.isPartnerPayment;
     return (
         <li
-            className={`group relative grid grid-cols-[minmax(0,1fr)_auto_4rem] items-center gap-x-3 gap-y-0.5 py-3 pl-4 sm:gap-4 sm:py-2.5 sm:pl-0 ${ROW_GRID} ${isSavings ? "border-l-[3px] border-positive bg-positive-tint sm:pl-4" : ""}`}
+            className={`group relative grid grid-cols-[minmax(0,1fr)_auto_4rem] items-center gap-x-3 gap-y-0.5 py-3 pl-4 sm:gap-4 sm:py-2.5 sm:pl-0 ${ROW_GRID} ${highlight}`}
         >
-            {/* Mobile category accent — a short centered bar (savings gets a full
-                green left border + tint instead, so skip its bar). */}
-            {isSavings ? null : (
+            {/* Mobile category accent — a short centered bar (a tinted row gets
+                a full coloured left border instead, so skip its bar). */}
+            {hasRowTint ? null : (
                 <span
                     aria-hidden
                     className="absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-full sm:hidden"
@@ -685,30 +720,68 @@ function ExpenseRow({
                 )}
             </span>
 
-            {/* Actions — revealed on hover/focus (desktop), always shown on mobile */}
-            <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Edit ${expense.description}`}
-                    onClick={onEdit}
-                    disabled={pending}
-                >
-                    <Pencil />
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Delete ${expense.description}`}
-                    onClick={onDelete}
-                    disabled={pending}
-                >
-                    <Trash2 />
-                </Button>
-            </span>
+            {/* Actions — revealed on hover/focus (desktop), always shown on
+                mobile. A frozen row shows why it has none instead. */}
+            {frozen ? (
+                <LockedRowActions
+                    reason={`${expense.description} is locked: it counts in a settlement you already closed`}
+                />
+            ) : (
+                <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Edit ${expense.description}`}
+                        onClick={onEdit}
+                        disabled={pending}
+                    >
+                        <Pencil />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Delete ${expense.description}`}
+                        onClick={onDelete}
+                        disabled={pending}
+                    >
+                        <Trash2 />
+                    </Button>
+                </span>
+            )}
         </li>
+    );
+}
+
+/**
+ * What a frozen row shows where its edit + delete controls would be. The lock takes
+ * focus and carries the reason as its accessible name — a `title` appears on hover
+ * only, so a keyboard user would never get it.
+ */
+function LockedRowActions({ reason }: { reason: string }) {
+    return (
+        <span className="group/lock relative flex items-center justify-end gap-1 text-xs text-muted-foreground">
+            <span
+                tabIndex={0}
+                role="img"
+                aria-label={reason}
+                title={reason}
+                className="rounded-sm p-0.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+                <Lock aria-hidden className="size-3.5" />
+            </span>
+            {/* The visible copy of the reason. `aria-hidden` because the lock
+                above already carries it as its accessible name. It opens to the
+                LEFT, inside the row's own band: the list is a bounded scroller,
+                so anything placed above the first row is clipped. */}
+            <span
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 right-full z-30 mr-1 hidden w-max max-w-[15rem] -translate-y-1/2 rounded-md bg-foreground px-2 py-1 text-background shadow-md group-hover/lock:block group-focus-within/lock:block"
+            >
+                {reason}
+            </span>
+        </span>
     );
 }
 
@@ -726,20 +799,24 @@ function MovementRow({
     onEdit: () => void;
     onDelete: () => void;
 }) {
-    const {
-        label,
-        amountClass: amountColor,
-        rowTint,
-    } = movementDisplay(m.type, partnerName);
-    const subline =
-        m.type === "card_payment" ? (m.card?.name ?? "") : (m.note ?? "");
+    const { amountClass: amountColor, rowTint } = movementDisplay(
+        m.type,
+        partnerName,
+    );
+    // `title` names the row's own thing (a debt's note), so two debts don't get
+    // one shared accessible name on their edit/delete controls.
+    const { title, subline } = movementRowText(m, partnerName);
+    // A movement a CLOSED cycle counted is frozen server-side, so it shows no
+    // controls. `closedAt` marks one transfer per cycle and cannot be the predicate.
+    const frozen =
+        m.cycleClosedAt !== null && movementMovesSettlementBalance(m.type);
 
     return (
         <li
             className={`group flex items-center gap-3 border-l-[3px] py-3 pr-1 pl-4 sm:py-2.5 ${rowTint}`}
         >
             <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{label}</span>
+                <span className="block truncate font-medium">{title}</span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {formatExpenseDate(m.date)}
                     {subline ? ` · ${subline}` : ""}
@@ -750,28 +827,38 @@ function MovementRow({
             >
                 {formatMxn(m.amount)}
             </span>
-            <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Edit ${label}`}
-                    onClick={onEdit}
-                    disabled={pending}
-                >
-                    <Pencil />
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Delete ${label}`}
-                    onClick={onDelete}
-                    disabled={pending}
-                >
-                    <Trash2 />
-                </Button>
-            </span>
+            {frozen ? (
+                <LockedRowActions
+                    reason={
+                        m.closedAt
+                            ? `${title} is locked: it closed a settlement you already filed`
+                            : `${title} is locked: it counts in a settlement you already closed`
+                    }
+                />
+            ) : (
+                <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Edit ${title}`}
+                        onClick={onEdit}
+                        disabled={pending}
+                    >
+                        <Pencil />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Delete ${title}`}
+                        onClick={onDelete}
+                        disabled={pending}
+                    >
+                        <Trash2 />
+                    </Button>
+                </span>
+            )}
         </li>
     );
 }

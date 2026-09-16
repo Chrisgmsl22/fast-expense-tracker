@@ -2,6 +2,12 @@ import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
 import type { SubcategorySpendRow } from "@/lib/domain/category";
+import {
+    PARTNER_PAYMENT_CATEGORY_SLUG,
+    PARTNER_PAYMENT_SUBCATEGORY_NAME,
+} from "@/lib/domain/expense";
+import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
+import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /** Category metadata for the detail header + budget math. */
@@ -47,7 +53,21 @@ export interface CategoryRepository {
         categoryId: string,
         month: string,
     ): Promise<ExpenseListItem[]>;
+    /**
+     * Where a payment to the partner lands when the user picks nothing (spec 0007 §6a);
+     * null when the user has no `combined-expenses` category. The lookup is BY NAME, so
+     * a drifted constant silently files every payment with a null subcategory.
+     */
+    getPartnerPaymentDefaults(
+        userId: string,
+    ): Promise<PartnerPaymentDefaults | null>;
 }
+
+/** The category (and optional subcategory) a partner payment defaults to. */
+export type PartnerPaymentDefaults = {
+    categoryId: string;
+    subcategoryId: string | null;
+};
 
 export class PrismaCategoryRepository implements CategoryRepository {
     constructor(private readonly db: PrismaClient) {}
@@ -105,28 +125,69 @@ export class PrismaCategoryRepository implements CategoryRepository {
         return rows;
     }
 
-    getExpensesForCategoryMonth(
+    async getPartnerPaymentDefaults(
+        userId: string,
+    ): Promise<PartnerPaymentDefaults | null> {
+        const category = await this.db.category.findUnique({
+            where: {
+                userId_slug: { userId, slug: PARTNER_PAYMENT_CATEGORY_SLUG },
+            },
+            select: {
+                id: true,
+                subcategories: {
+                    where: { name: PARTNER_PAYMENT_SUBCATEGORY_NAME },
+                    select: { id: true },
+                    take: 1,
+                },
+            },
+        });
+        if (!category) return null;
+        return {
+            categoryId: category.id,
+            subcategoryId: category.subcategories[0]?.id ?? null,
+        };
+    }
+
+    /**
+     * `cycleClosedAt` is resolved here too, through the same helpers the expense
+     * repository uses: hardcoding null would put a false fact on the row.
+     */
+    async getExpensesForCategoryMonth(
         userId: string,
         categoryId: string,
         month: string,
     ): Promise<ExpenseListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
-        return this.db.expense.findMany({
-            where: { userId, categoryId, date: { gte: start, lt: end } },
-            orderBy: { date: "desc" },
-            select: {
-                id: true,
-                date: true,
-                description: true,
-                amount: true,
-                actualExpenditure: true,
-                isShared: true,
-                category: {
-                    select: { id: true, slug: true, name: true, color: true },
+        const [rows, closes] = await Promise.all([
+            this.db.expense.findMany({
+                where: { userId, categoryId, date: { gte: start, lt: end } },
+                orderBy: { date: "desc" },
+                select: {
+                    id: true,
+                    date: true,
+                    description: true,
+                    amount: true,
+                    actualExpenditure: true,
+                    isShared: true,
+                    isPartnerPayment: true,
+                    createdAt: true,
+                    category: {
+                        select: {
+                            id: true,
+                            slug: true,
+                            name: true,
+                            color: true,
+                        },
+                    },
+                    subcategory: { select: { name: true } },
+                    card: { select: { name: true, color: true } },
                 },
-                subcategory: { select: { name: true } },
-                card: { select: { name: true, color: true } },
-            },
-        });
+            }),
+            getCycleCloses(this.db, userId),
+        ]);
+        return rows.map(({ createdAt, ...item }) => ({
+            ...item,
+            cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
+        }));
     }
 }

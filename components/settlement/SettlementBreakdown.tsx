@@ -1,8 +1,19 @@
+import { ChevronRight } from "lucide-react";
+
 import type {
     CoupleBalance,
     SettlementBreakdownKey,
 } from "@/lib/domain/settlement";
-import { formatMxn } from "@/lib/format";
+import { formatExpenseDate, formatMxn } from "@/lib/format";
+import type {
+    SettlementBreakdownItem,
+    SettlementBreakdownItems,
+} from "@/lib/services/settlement/settlement.service";
+import {
+    Collapsible,
+    CollapsiblePanel,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { balanceTone } from "./balance-display";
 
 const labelsFor = (
@@ -27,12 +38,21 @@ const AMOUNT_CLASS: Record<SettlementBreakdownKey, string> = {
     you_paid: "text-transfer",
 };
 
-/** "How this balance is made" — the four signed lines + the net (spec 0004 §3.1). */
+/** Sub-cent slack — the epsilon `isBalanceSettled` uses for Float drift. */
+const isZeroCents = (n: number): boolean => Math.abs(n) < 0.005;
+
+/**
+ * "How this balance is made" — the four signed lines + the net (spec 0004 §3.1).
+ * Each line opens to the rows behind it; collapsed by default.
+ */
 export function SettlementBreakdown({
     balance,
+    breakdownItems,
     partnerName,
 }: {
     balance: CoupleBalance;
+    /** The rows behind each line, from `getSettlement`. */
+    breakdownItems: SettlementBreakdownItems;
     partnerName: string;
 }) {
     const tone = balanceTone(balance.direction, partnerName);
@@ -45,13 +65,11 @@ export function SettlementBreakdown({
     return (
         <div className="rounded-xl border p-5">
             <p className="font-semibold">How this balance is made</p>
-            <ul className="mt-3 space-y-2 text-sm">
-                {balance.breakdown.map((line) => (
-                    <li
-                        key={line.key}
-                        className="flex items-center justify-between gap-3"
-                    >
-                        <span>
+            <ul className="mt-3 space-y-1 text-sm">
+                {balance.breakdown.map((line) => {
+                    const items = breakdownItems[line.key];
+                    const label = (
+                        <>
                             {labels[line.key]}
                             {SUBLABELS[line.key] ? (
                                 <span className="text-muted-foreground">
@@ -59,15 +77,80 @@ export function SettlementBreakdown({
                                     ({SUBLABELS[line.key]})
                                 </span>
                             ) : null}
-                        </span>
+                        </>
+                    );
+                    const total = (
                         <span
                             className={`shrink-0 font-semibold tabular-nums ${AMOUNT_CLASS[line.key]}`}
                         >
-                            {line.sign === "-" ? "−" : "+"}
+                            {/* Nothing moved in this direction, so the line
+                                carries no sign — "−$0.00" reads as a debit. */}
+                            {isZeroCents(line.amount)
+                                ? ""
+                                : line.sign === "-"
+                                  ? "−"
+                                  : "+"}
                             {formatMxn(line.amount)}
                         </span>
-                    </li>
-                ))}
+                    );
+
+                    return (
+                        <li key={line.key}>
+                            {items.length === 0 ? (
+                                // Nothing to open — say so inline rather than offer an empty region. A line with
+                                // no rows but a non-zero total is a real inconsistency, so it says that instead.
+                                <div className="flex items-center justify-between gap-3 py-1 pl-5">
+                                    <span>
+                                        {label}
+                                        <span className="text-muted-foreground">
+                                            {" "}
+                                            {isZeroCents(line.amount)
+                                                ? "— nothing this window"
+                                                : "— no itemized rows"}
+                                        </span>
+                                    </span>
+                                    {total}
+                                </div>
+                            ) : (
+                                <Collapsible>
+                                    <CollapsibleTrigger
+                                        aria-controls={`breakdown-${line.key}`}
+                                        className="group flex w-full items-center justify-between gap-3 py-1 text-left hover:bg-muted/50"
+                                    >
+                                        <span className="flex min-w-0 items-start gap-1.5">
+                                            <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform group-aria-expanded:rotate-90" />
+                                            <span>{label}</span>
+                                        </span>
+                                        {total}
+                                    </CollapsibleTrigger>
+                                    {/* Kept mounted (and `hidden` while closed,
+                                        so it stays out of the a11y tree) purely
+                                        so the trigger's `aria-controls` always
+                                        points at a real element — Base UI drops
+                                        the attribute when the panel unmounts. */}
+                                    <CollapsiblePanel
+                                        id={`breakdown-${line.key}`}
+                                        keepMounted
+                                    >
+                                        <ul className="mt-1 mb-2 ml-5 space-y-1.5 border-l pl-3">
+                                            {items.map((item) => (
+                                                <BreakdownItemRow
+                                                    key={item.id}
+                                                    item={item}
+                                                    sign={line.sign}
+                                                    amountClass={
+                                                        AMOUNT_CLASS[line.key]
+                                                    }
+                                                    partnerName={partnerName}
+                                                />
+                                            ))}
+                                        </ul>
+                                    </CollapsiblePanel>
+                                </Collapsible>
+                            )}
+                        </li>
+                    );
+                })}
             </ul>
             {/* Net balance as a dark band flush to the card edges — the same
                 high-contrast treatment as the expenses totals bar, so the
@@ -77,5 +160,43 @@ export function SettlementBreakdown({
                 <span className="font-bold tabular-nums">{netLabel}</span>
             </div>
         </div>
+    );
+}
+
+/**
+ * One revealed row. A partner-share row also names the full expense it came out of,
+ * labelled so the two figures can't be read as one.
+ */
+function BreakdownItemRow({
+    item,
+    sign,
+    amountClass,
+    partnerName,
+}: {
+    item: SettlementBreakdownItem;
+    sign: "+" | "-";
+    amountClass: string;
+    partnerName: string;
+}) {
+    const subtitle =
+        item.gross === null
+            ? formatExpenseDate(item.date)
+            : `${formatExpenseDate(item.date)} · ${partnerName}'s share of ${formatMxn(item.gross)} you paid`;
+
+    return (
+        <li className="flex items-start justify-between gap-3">
+            <span className="min-w-0">
+                <span className="block truncate text-xs font-medium">
+                    {item.description}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                    {subtitle}
+                </span>
+            </span>
+            <span className={`shrink-0 text-xs tabular-nums ${amountClass}`}>
+                {sign === "-" ? "−" : "+"}
+                {formatMxn(item.amount)}
+            </span>
+        </li>
     );
 }

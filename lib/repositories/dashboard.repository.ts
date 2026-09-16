@@ -113,12 +113,14 @@ export class PrismaDashboardRepository implements DashboardRepository {
         const { start, end } = getMonthRangeUtc(month);
         const grouped = await this.db.expense.groupBy({
             by: ["cardId"],
-            // Savings is a transfer, not card spend — exclude it so it doesn't
-            // show as a phantom "Cash" segment.
+            // Savings and partner payments are excluded HERE, in the query, so the
+            // grouping never sees them. Both have a null `cardId`, which this query
+            // reads as cash — that phantom "Cash" segment is BUG-1.
             where: {
                 userId,
                 date: { gte: start, lt: end },
                 category: { slug: { not: SAVINGS_SLUG } },
+                isPartnerPayment: false,
             },
             _sum: { actualExpenditure: true },
         });

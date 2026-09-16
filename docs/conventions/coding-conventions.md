@@ -214,6 +214,24 @@ names and simple structure, is the primary documentation.
   `// Step 1:`, or `// === Section ===`. Slice provenance lives in git history
   and PRs, not the source. (Linking an ADR for a non-obvious decision is fine —
   that's a _why_.)
+- **No review provenance either.** Never `// I-1 round 4`, `// the round-2 fix
+missed this`, or `// the failure mode this repo keeps shipping`. How a line
+  came to be reviewed is history; what it does is the comment.
+- **Three lines is the cap.** An earned comment is 1–3 lines. Longer is allowed
+  but must be **defended**: say in your report or the PR what a reader loses if
+  it were cut to three — a wrong change they would make, a trap they would walk
+  into, money that would be miscounted. _"It explains the design"_ is not a
+  reason. In the two-PR audit that produced this rule, **not one block above
+  three lines survived** that test.
+- **The density of the surrounding file is not a licence.** Matching the
+  neighbours is the rule for naming and structure, never for comments — most of
+  this codebase predates this section, so copying it reproduces the problem.
+  Default-to-none and the cap win, whatever sits above and below.
+- **Never comment a future.** Do not describe what figures will look like after
+  a deferred migration, or what a later slice will adopt. That code does not
+  exist, so nothing can hold the claim true, and it goes stale the day it ships.
+- **Never point outside the repo.** This repo is public. A comment referencing a
+  local path or a private task log is unfollowable for every reader.
 - **Incomplete work uses a marker, not prose** — and the marker is temporary:
     - `TODO:` — work still to do, scoped where possible (`// TODO(1.6): wire edit action`).
     - `FIXME:` — a known defect to fix.
@@ -224,6 +242,11 @@ names and simple structure, is the primary documentation.
 Both roles apply this: the `implementer` writes to it; the `reviewer` treats
 comment quality as an explicit lens and challenges every comment in a diff —
 needed, or noise?
+
+`scripts/check-comment-size.sh` warns at commit time on a block over the cap,
+counting **added lines only** — editing a file that already carries long blocks
+stays silent. It never blocks: a long comment is allowed, it just has to be
+worth defending. Bringing the existing code back to this bar is **CHORE-17**.
 
 ## Formatting
 

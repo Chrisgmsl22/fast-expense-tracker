@@ -40,6 +40,14 @@ describe("AddExpenseButton", () => {
         expect(screen.getByText("Brenda paid me")).toBeDefined();
     });
 
+    it("never offers 'I owe {partner}', even in Shared mode", () => {
+        // A debt is created on the settlement page, where the balance it moves is in
+        // view. The row itself still SHOWS in the expenses feed.
+        render(<AddExpenseButton {...props} sharesExpenses />);
+        openMenu();
+        expect(screen.queryByText("I owe Brenda")).toBeNull();
+    });
+
     it("hides the partner transfer items in Solo mode (CHORE-6.b)", () => {
         render(<AddExpenseButton {...props} sharesExpenses={false} />);
         openMenu();
@@ -49,5 +57,6 @@ describe("AddExpenseButton", () => {
         // Partner money movements are gone.
         expect(screen.queryByText("I paid Brenda")).toBeNull();
         expect(screen.queryByText("Brenda paid me")).toBeNull();
+        expect(screen.queryByText("I owe Brenda")).toBeNull();
     });
 });
