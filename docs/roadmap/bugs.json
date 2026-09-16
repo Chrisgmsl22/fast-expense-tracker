@@ -30,6 +30,16 @@
             "spec": null,
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "BUG-4",
+            "title": "Dashboard reads categories and subcategories with no userId — cross-user leak into the Add-expense picker",
+            "description": "app/(dashboard)/dashboard/page.tsx calls db.category.findMany and db.subcategory.findMany with no userId filter, although Category.userId has existed since CHORE-8.a made categories per-user. Every user's categories therefore feed the Add-expense picker, so one account can see another account's category names and file an expense against a foreign categoryId. Found during the PR #73 review; it predates that PR and neither #73 nor #74 introduced or worsened it. Severity is bounded today because the app has one real user, but it becomes a live data-isolation bug the moment CHORE-8.d opens public signup — file it before that ships. The page also violates docs/conventions/architecture.md by importing db directly: a page must not query.",
+            "proposedSolution": "Move both reads behind the repository layer, scoped by userId, and have the page call a service instead of db. Then close the write side: createExpense currently user-scopes only the reimbursed path (getCategorySlug), so a foreign categoryId passes validation for every other funding source — validate that the categoryId and subcategoryId belong to the session user on every create and update, not just one branch. Tests: a second user's category is absent from the picker; a create naming a foreign categoryId is rejected; the same for subcategoryId. Blocks CHORE-8.d.",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
         }
     ]
 }

@@ -140,6 +140,46 @@
             "spec": "docs/specs/0005-cash-basis-money-model.md",
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "CHORE-13",
+            "title": "Adopt the month switcher on Dashboard and Expenses",
+            "description": "The month switcher shipped in PR #74 remembers your choice on Settlement only, so moving from Dashboard to Expenses silently resets you to the current month. Found in manual testing: the control looks broken because it is half-adopted. MonthPicker already writes the shared cookie on every page that renders it; only Settlement reads it back, so Expenses sets the memory and then ignores its own write. Ids 10, 11 and 12 are taken by in-flight branches — this is 13 deliberately.",
+            "plan": "Both pages already accept a ?month= search param and already resolve `monthParam ?? now`. Swap that resolution for `await getScopedMonth(monthParam)` (lib/month-scope.server.ts) — one line each in app/(dashboard)/dashboard/page.tsx and app/(dashboard)/expenses/page.tsx — and render <MonthPicker month={month} /> on Dashboard, which does not have it yet. Expenses already renders it. The precedence is URL param, then the remembered month, then today, so a shared link still pins its month. Tests: a stored month is honoured when no param is present; an explicit param beats the stored month; an invalid param falls back rather than throwing; the choice survives a Dashboard to Expenses round trip. Depends on CHORE-11 (#74) merging first, since the helper ships there.",
+            "status": "open",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-14",
+            "title": "Rebuild the feed footer around four figures, after the inversion lands",
+            "description": "Owner feedback from manual testing: the footer is confusing. It grew to six lines across PRs #73 and #74, two of them near-duplicates, and it no longer reads as one idea. He wants four things and nothing else: what he was charged, what he paid the partner, how much came from savings, and the total. IMPORTANT SEQUENCING: today, combining savings-funded purchases with savings-funded transfers into one figure is forbidden — a purchase is consumption and a transfer is cash, and spec 0007 §6a bans a figure spanning both ledgers. That exact sum was a Critical caught in the #73 review. Once CHORE-11 (#74) merges, the payment IS the expense, so both sides become the same ledger and the combined figure he asked for becomes honest. Do not attempt this before that merge; it would be built twice and the first build would be wrong.",
+            "plan": "Wait for CHORE-11 and the #73 merge, and for slice F to remove the cross-ledger Total. Then design four rows against the merged model: (1) Charged — every row at full value; (2) Paid to {partner}; (3) From savings — purchases and partner payments together, which is one ledger after the inversion; (4) Total. Reuse NON_INCOME_FUNDED_LABEL and the existing constants rather than inventing a fifth phrasing. Fold in the two near-duplicate lines rather than leaving them beside the new ones. Brainstorm the visual treatment with the owner before building; he asked for 'a prettier structure' without a specific shape in mind, so this needs a design pass, not just a refactor. Tests: each figure against fixtures with mixed funding; a page-level assertion that no two rows state the same money; and a guard that no field sums across the ledgers, in the style of the #73 test that loops every returned field asserting none equals the forbidden sum.",
+            "status": "open",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-15",
+            "title": "Thread the funding flag through the feed totals, and refuse a frozen row at the edit read",
+            "description": "Two follow-ups the #73 and #74 review rounds deliberately deferred, grouped because both are 'a predicate narrower than the read path it mirrors' — the shape that produced six defects across those reviews. (a) computeFeedTotals in lib/domain/movement.ts partitions on the NARROWED fundedFrom, so a stored value outside the enum lands in whatIReallySpent instead of the non-income figure, breaking the cross-screen agreement spec 0007 §2 exists to guarantee. Unreachable through the app because Zod validates writes; reachable via a raw DB edit or a future fourth funding value. (b) getMovementForEdit and getExpenseForEdit prefill a frozen row without refusing, so a stale tab can open a dialog that can only fail on save. Loud and non-corrupting — every write path refuses — but the two reads are symmetric and fixing one alone would repeat the one-surface mistake.",
+            "plan": "(a) Carry countedInBudget out of expense.repository.ts the way category.repository.ts already does, computed from the RAW column via isBudgetFunded, and thread it through FeedTotalExpense, MonthFeed.tsx and ExpenseListInteractive.tsx plus their fixtures. isBudgetFunded is already exported. Test with an out-of-band value written directly to the database, at the real seam. (b) Have both edit reads return the cycle_closed refusal the write paths return, using the same movesSettlementBalance / movementMovesSettlementBalance predicates, so the read and the write agree by construction. Do both in one slice. Depends on CHORE-11 and the #73 merge, since (a) touches a file both branches rewrote.",
+            "status": "open",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-16",
+            "title": "Clean up after the settlement rework — branches, worktrees and review debt",
+            "description": "Housekeeping that accumulated across the two settlement sessions. None of it changes behaviour; all of it misleads the next reader if left. The divergent spec copy is the sharpest item: feat/fronted-debt-as-expense carries a docs/specs/0007 about 130 lines apart from the live one, so anyone who opens that branch reads a superseded design as if it were current.",
+            "plan": "(1) After CHORE-11 merges, delete the superseded branch feat/fronted-debt-as-expense and its divergent spec copy. (2) Remove the six stale worktrees left from merged or superseded work; never remove one with uncommitted changes — report it and let the owner decide. (3) Clear the review debt the round-5 pass listed: strip the review-round tags ('for two rounds', 'Round 4', 'I-1') from comments, since the why survives without the round number; de-duplicate the close-set query between settlement.repository.ts and cycle-closes.ts, which agree only by coincidence; add the missing test for the updateTransfer closed-cycle guard; and parallelise the serial await in movement.repository.ts getById, which getForMonth already does correctly. (4) Consider renaming tests/unit/fronted-expense-action.test.ts and tests/integration/fronted-subcategory-rename.test.ts, whose names still say 'fronted' under the superseded model — owner's call, since a rename adds diff noise for no behaviour change.",
+            "status": "open",
+            "spec": null,
+            "pr": null,
+            "issue": null
         }
     ]
 }
