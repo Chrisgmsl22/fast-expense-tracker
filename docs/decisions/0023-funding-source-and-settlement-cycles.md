@@ -101,5 +101,8 @@ closed settlement is deliberately not built.
 
 ## Scope note
 
-This ADR records the whole of spec 0007. Only decisions 1-6 are implemented so
-far (the `fundedFrom` slice); 7 and 8 land in later slices.
+This ADR records the whole of spec 0007. Implemented so far (the `fundedFrom`
+slice): decisions 1-6, plus the funding-source half of decision 7 — a `gf_paid`
+transfer carries `fundedFrom` and a savings-funded one leaves the cash figures
+while still settling the balance in full (spec 0007 §6a decision 5). Decision 7's
+dedicated Expenses section, and all of decision 8, land in later slices.
