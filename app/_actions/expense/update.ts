@@ -136,7 +136,7 @@ export async function updateExpense(
                   actualExpenditure: computeActualExpenditure(v),
               };
 
-        // An expense has no marker column, so the refusal is here, not in the repository.
+        // The repository's write is not scoped by the cycle, so the refusal is here.
         // Both the row as stored and the row as it WOULD be are checked: ticking "shared"
         // inside a closed cycle adds a partner share to a filed balance.
         if (existing.cycleClosedAt) {

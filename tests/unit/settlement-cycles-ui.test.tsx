@@ -358,7 +358,10 @@ describe("SettlementCloseCard", () => {
     it("closes once the user confirms, then refreshes", async () => {
         closeMock.mockResolvedValue({
             ok: true,
-            data: { markedMovementId: "m1", alreadyClosed: false },
+            data: {
+                marked: { id: "m1", kind: "movement" },
+                alreadyClosed: false,
+            },
         });
         render(<SettlementCloseCard partnerName="Brenda" />);
         fireEvent.click(

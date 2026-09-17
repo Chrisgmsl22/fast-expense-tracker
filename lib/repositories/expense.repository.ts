@@ -49,8 +49,8 @@ export type ExpenseEditable = {
     isPartnerPayment: boolean;
     /**
      * The close instant of the cycle this row belongs to, null while it is open (spec
-     * 0007 §3.5). An expense has no marker column, so the repository derives it. A
-     * marker alone does not freeze a row — pair it with `movesSettlementBalance`.
+     * 0007 §3.5). Derived from every close filed in EITHER table, never read off this
+     * row, and paired with `movesSettlementBalance` before it freezes anything.
      */
     cycleClosedAt: Date | null;
 };

@@ -123,19 +123,18 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 | 6   | Savings           | `savings`           | yes        | Emergency fund · Open savings · Future purchases                                                          |
 | 7   | Services          | `services`          | yes        | Electricity · Gas · Water · Trash · Phone plan · Internet                                                 |
 | 8   | Health            | `health`            | yes        | Medicine · Doctors appt · Dentist · Additional medication · Therapy · Other expenses                      |
-| 9   | Combined Expenses | `combined-expenses` | yes        | Purchases made by girlfriend[^1] · Purchases made between the two · Cats                                  |
+| 9   | Combined Expenses | `combined-expenses` | yes        | Covered for me[^1] · Purchases made between the two · Cats                                                |
 | 10  | Personal          | `personal`          | no         | Courses · Education · Books · Subscriptions · Cash withdrawals · Technology · Accountant · Other          |
 | 11  | Debt              | `debt`              | yes        | Car loan · Credit card balance · Personal loans · Monthly installments                                    |
 | 12  | Disposable Income | `disposable-income` | no         | Entertainment · Hobbies · Dining out · Social events · Tech gadgets · Ecommerce expenses                  |
 | 13  | Unassigned        | `unassigned`        | no         | (none — sentinel for orphaned expenses)                                                                   |
 
 [^1]:
-    **This name is transitional.** Spec 0007 §6b renames it to "Covered for me"
-    — the row is his share of a payment he sent, not a purchase she made. The
-    rename is data, not schema: the seed matches subcategories BY NAME, so
-    renaming before the existing rows are renamed creates a duplicate. Both flip
-    together in CHORE-12, and this table is updated with them. Until then, the
-    name above is what live databases hold.
+    Renamed from "Purchases made by girlfriend" by CHORE-12 — the row is his
+    share of a payment he sent, not a purchase she made. The name is now stored,
+    not computed at render: `subcategoryLabel` used to rewrite the old name to
+    "I owed {partner}", and that describes a debt, which under spec 0007 §6b is
+    never an expense.
 
 - In **Add expense**, the **Subcategory** options are driven by the chosen **Category** (e.g. Category = Health → subcategory choices = Medicine, Doctors appt, Dentist, …).
 - `isRelevant: yes` → counts toward **Essentials (50%)**; `isRelevant: no` → **Discretionary (25%)**; `Savings` category feeds the **Savings (25%)** bucket.

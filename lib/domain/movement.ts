@@ -18,8 +18,9 @@ import {
 /** All `Movement.type` values in the schema. */
 export type MovementType =
     | "card_payment"
-    // LEGACY (spec 0007 §6b): nothing writes this type; the conversion of existing
-    // rows is deferred, so they all still read as movements.
+    // LEGACY (spec 0007 §6b): nothing writes this type. The conversion migration
+    // moves existing rows to `Expense{isPartnerPayment}`, except on an account with
+    // no `combined-expenses` category — those keep reading as movements.
     | "gf_paid"
     | "gf_received"
     // A debt she fronted — settlement only, provisional until money moves (spec 0007 §6b).
@@ -113,9 +114,10 @@ export type FeedTotalMovement = {
  * funding filter, so the footer cannot contradict the buckets above it. Card
  * payments never enter — their charges were already counted as expenses.
  *
- * Legacy `gf_paid` movements are still unconverted on production, so they count as
- * cash out on their own. The conversion must reuse the movement id (ADR-0024), or
- * the twin dedup below misses and every converted payment counts twice.
+ * A legacy `gf_paid` movement that the conversion could not file — an account with
+ * no `combined-expenses` category — survives, so it still counts as cash out on its
+ * own. The conversion reuses the movement id (ADR-0024); without that the twin dedup
+ * below would miss and every converted payment would count twice.
  */
 export function computeFeedTotals(
     expenses: FeedTotalExpense[],

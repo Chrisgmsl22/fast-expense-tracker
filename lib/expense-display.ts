@@ -1,4 +1,3 @@
-import { PARTNER_PAYMENT_SUBCATEGORY_NAME } from "@/lib/domain/expense";
 import { CASH_COLOR } from "@/lib/palette";
 
 /**
@@ -9,24 +8,6 @@ export const PARTNER_PAYMENT_COLOR = "#ca8a04";
 
 /** What a row shows in its card column: a label and the dot beside it. */
 export type ExpenseCardLabel = { name: string; color: string };
-
-/** Shown in place of the partner's name when no partner is configured. */
-const NEUTRAL_PARTNER_LABEL = "I owed my partner";
-
-/**
- * The subcategory name a row DISPLAYS — presentation only, nothing is renamed in the
- * database. Keyed on the SEEDED name, not `isPartnerPayment`, so a user who renames
- * this subcategory keeps their own name.
- */
-export function subcategoryLabel(
-    storedName: string,
-    partnerName: string | null,
-): string {
-    if (storedName !== PARTNER_PAYMENT_SUBCATEGORY_NAME) return storedName;
-    return partnerName?.trim()
-        ? `I owed ${partnerName.trim()}`
-        : NEUTRAL_PARTNER_LABEL;
-}
 
 /**
  * The card label for one expense row — the single answer both the Expenses list and

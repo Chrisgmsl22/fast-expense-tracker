@@ -351,6 +351,7 @@ const closingTransfer = movement({
 });
 const marker: SettlementCycleMarker = {
     id: "mClose",
+    kind: "movement",
     date: JULY,
     closedAt: CLOSED_AT,
     amount: 320,
@@ -437,6 +438,7 @@ describe("getSettlement — settlement cycles", () => {
             [
                 {
                     id: "mClose1",
+                    kind: "movement",
                     date: JUNE,
                     closedAt: firstClose,
                     amount: 320,
@@ -534,12 +536,12 @@ describe("getSettlement — settlement cycles", () => {
             ],
         );
         expect(s.balance.direction).toBe("settled");
-        expect(s.closableMovementId).toBe("mNew");
+        expect(s.closableMarker).toEqual({ id: "mNew", kind: "movement" });
     });
 
-    it("has nothing to close when the open cycle holds no transfer", async () => {
+    it("has nothing to close when the open cycle holds no transfer and no payment", async () => {
         const s = await run([expense()]);
-        expect(s.closableMovementId).toBeNull();
+        expect(s.closableMarker).toBeNull();
     });
 
     it("scopes the Month view to the month being viewed", async () => {
@@ -563,7 +565,13 @@ describe("getSettlement — settlement cycles", () => {
     it("lists only the settlements closed in the viewed month", async () => {
         const juneClose = new Date("2026-06-10T00:00:00Z");
         const markers: SettlementCycleMarker[] = [
-            { id: "mClose1", date: JUNE, closedAt: juneClose, amount: 320 },
+            {
+                id: "mClose1",
+                kind: "movement",
+                date: JUNE,
+                closedAt: juneClose,
+                amount: 320,
+            },
             marker, // closed 2026-07-12
         ];
         const movements = [
@@ -646,7 +654,13 @@ describe("getSettlement — settlement cycles", () => {
         // The transfer is dated July; the user confirmed the close in August.
         const augustClose = new Date("2026-08-03T00:00:00Z");
         const markers: SettlementCycleMarker[] = [
-            { id: "mClose", date: JULY, closedAt: augustClose, amount: 320 },
+            {
+                id: "mClose",
+                kind: "movement",
+                date: JULY,
+                closedAt: augustClose,
+                amount: 320,
+            },
         ];
         const august = await run([], [closingTransfer], markers, "2026-08");
         expect(august.history.map((c) => c.id)).toEqual(["mClose"]);
