@@ -3,6 +3,12 @@
 This is the single "where are we?" index for the project. Each phase has its
 own file with vertical slices, marked as `[PR]`.
 
+> **Work in flight right now is in [`execution-plan.md`](./execution-plan.md)** —
+> which open chores and bugs run together, in what order, and which files each
+> group owns so two branches cannot collide. Read it before starting anything.
+> The slice table below covers the original phases, not the money rework, and
+> the chores and bugs in `chores.json` / `bugs.json` are where that work lives.
+
 > **UI design source of truth:** every UI slice follows [`docs/designs-screens/`](../designs-screens/README.md) — **`Confirmed designs V1`** for all screens (login included). The per-screen build plan + order is in [`ui-build-plan.md`](./ui-build-plan.md). Match layout, component inventory, and the color systems; build with shadcn/Base UI + Tailwind + lucide. The `implementer` and `reviewer` agents enforce this for any UI-related work.
 
 <!-- roadmap:status:start -->
@@ -10,7 +16,7 @@ own file with vertical slices, marked as `[PR]`.
 
 ## Currently active (derived)
 
-**In progress:** none · **Available next:** 1.6, 1.7
+**In progress:** none · **Available next:** 2.7, 2.8, 2.9, 3.1, 5.1
 
 | Slice | Phase | Type        | State     | Depends on       |
 | ----- | ----- | ----------- | --------- | ---------------- |
@@ -23,22 +29,30 @@ own file with vertical slices, marked as `[PR]`.
 | 1.3   | 1     | fan-out     | shipped   | 1.1              |
 | 1.4   | 1     | fan-out     | shipped   | 1.1, 1.8         |
 | 1.5   | 1     | fan-out     | shipped   | 1.1              |
-| 1.6   | 1     | integration | available | 1.4, 1.5         |
-| 1.7   | 1     | fan-out     | available | 1.1              |
+| 1.6   | 1     | integration | shipped   | 1.4, 1.5         |
+| 1.7   | 1     | fan-out     | shipped   | 1.1              |
 | 1.8   | 1     | foundation  | shipped   | 1.1              |
 | 1.9   | 1     | foundation  | shipped   | 1.1              |
 | 1.10  | 1     | fan-out     | shipped   | 1.3, 1.9         |
-| 2.1   | 2     | fan-out     | blocked   | 1.6              |
-| 2.2   | 2     | fan-out     | blocked   | 1.6              |
-| 2.3   | 2     | foundation  | blocked   | 2.1, 2.2         |
-| 2.4   | 2     | fan-out     | blocked   | 2.3              |
-| 2.5   | 2     | fan-out     | blocked   | 2.4              |
-| 2.6   | 2     | integration | blocked   | 2.5              |
-| 3.1   | 3     | foundation  | blocked   | 1.4, 1.5, 1.6    |
+| 2.1   | 2     | fan-out     | shipped   | 1.6              |
+| 2.2   | 2     | fan-out     | shipped   | 1.6              |
+| 2.3   | 2     | foundation  | shipped   | 2.1, 2.2         |
+| 2.4a  | 2     | foundation  | shipped   | 2.3              |
+| 2.4b  | 2     | fan-out     | shipped   | 2.4a             |
+| 2.4c  | 2     | fan-out     | shipped   | 2.4a             |
+| 2.5   | 2     | fan-out     | shipped   | 2.4b, 2.4c       |
+| 2.6   | 2     | integration | shipped   | 2.5              |
+| 2.7   | 2     | fan-out     | available | 1.1              |
+| 2.8   | 2     | fan-out     | available | 2.4a             |
+| 2.9   | 2     | fan-out     | available | 2.3              |
+| 2.10  | 2     | fan-out     | shipped   | 2.4c             |
+| 2.11  | 2     | fan-out     | shipped   | 2.3, 2.4c        |
+| 2.12  | 2     | integration | shipped   | 2.6              |
+| 3.1   | 3     | foundation  | available | 1.4, 1.5, 1.6    |
 | 3.2   | 3     | fan-out     | blocked   | 3.1              |
 | 3.3   | 3     | fan-out     | blocked   | 3.1              |
 | 3.4   | 3     | integration | blocked   | 3.2, 3.3         |
-| 5.1   | 5     | foundation  | blocked   | 1.4, 1.6         |
+| 5.1   | 5     | foundation  | available | 1.4, 1.6         |
 | 5.2   | 5     | integration | blocked   | 5.1              |
 | 6.1   | 6     | foundation  | blocked   | phase:1, phase:2 |
 | 6.2   | 6     | fan-out     | blocked   | 6.1              |
