@@ -15,6 +15,7 @@ import { SettlementCloseCard } from "@/components/settlement/SettlementCloseCard
 import { SettlementHelp } from "@/components/settlement/SettlementHelp";
 import { SettlementJournalKey } from "@/components/settlement/SettlementJournalKey";
 import { pastMonthNotice } from "@/components/settlement/past-month-notice";
+import { toMonthPosition } from "@/components/settlement/month-position";
 import { SettlementViews } from "@/components/settlement/SettlementViews";
 
 // Per-request, DB-backed — never prerender at build (no DB in preview builds).
@@ -125,7 +126,7 @@ export default async function SettlementPage({
                     openJournal={settlement.journal}
                     monthJournal={settlement.month.journal}
                     monthLabel={monthLabel}
-                    isCurrentMonth={settlement.month.isCurrent}
+                    monthPosition={toMonthPosition(month, currentMonth)}
                     history={settlement.history}
                     partnerName={partnerName}
                 />
