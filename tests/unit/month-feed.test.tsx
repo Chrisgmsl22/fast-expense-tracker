@@ -346,7 +346,7 @@ describe("MonthFeed", () => {
         expect(totals.queryByText("$8,200.00")).toBeNull();
         // The excluded money is surfaced under its OWN cash line, named for the
         // partner — never merged into the consumption line (spec 0007 §6a).
-        expect(totals.getByText("Paid to Brenda from savings")).toBeDefined();
+        expect(totals.getByText("of which paid to Brenda")).toBeDefined();
         expect(totals.getByText("$8,000.00")).toBeDefined();
         expect(totals.queryByText("Not from this month's income")).toBeNull();
     });
@@ -423,7 +423,7 @@ describe("MonthFeed", () => {
 
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.getByText("Not from this month's income")).toBeDefined();
-        expect(totals.getByText("Paid to Brenda from savings")).toBeDefined();
+        expect(totals.getByText("of which paid to Brenda")).toBeDefined();
         // Three times $680, never once $1,360: Charged (source-agnostic), the
         // consumption exclusion, and the cash exclusion. Each is one ledger's
         // view of the money; no line adds two of them together.
@@ -452,9 +452,7 @@ describe("MonthFeed", () => {
         );
 
         const totals = within(screen.getByTestId("feed-totals"));
-        const line = totals.getByText(
-            "Paid to Brenda from savings",
-        ).parentElement!;
+        const line = totals.getByText("of which paid to Brenda").parentElement!;
         expect(within(line).getByText("$530.00")).toBeDefined();
         // A breakdown only: nothing income-funded happened this month.
         expect(totals.queryByText("Paid to Brenda")).toBeNull();
@@ -472,7 +470,7 @@ describe("MonthFeed", () => {
         );
 
         const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.queryByText("Paid to Brenda from savings")).toBeNull();
+        expect(totals.queryByText("of which paid to Brenda")).toBeNull();
     });
 
     it("renders the settlement chip in Shared mode when a balance is passed", () => {

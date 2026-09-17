@@ -506,7 +506,7 @@ describe("ExpenseListInteractive", () => {
         expect(within(totals).queryByText("Paid to Brenda")).toBeNull();
         // Its own cash line — the consumption line stays out of it.
         expect(
-            within(totals).getByText("Paid to Brenda from savings"),
+            within(totals).getByText("of which paid to Brenda"),
         ).toBeDefined();
         expect(within(totals).getByText("$8,000.00")).toBeDefined();
         expect(
@@ -514,7 +514,7 @@ describe("ExpenseListInteractive", () => {
         ).toBeNull();
         // The mobile bar carries the short form of the same line.
         const mobile = screen.getByTestId("totals-mobile");
-        expect(within(mobile).getByText("Paid from savings")).toBeDefined();
+        expect(within(mobile).getByText("of which to partner")).toBeDefined();
     });
 
     it("names savings-funded PAYMENTS on that same line (BUG-5)", () => {
@@ -540,7 +540,7 @@ describe("ExpenseListInteractive", () => {
 
         const totals = screen.getByTestId("totals-desktop");
         expect(
-            within(totals).getByText("Paid to Brenda from savings"),
+            within(totals).getByText("of which paid to Brenda"),
         ).toBeDefined();
         expect(within(totals).getAllByText("$530.00").length).toBeGreaterThan(
             0,
@@ -548,7 +548,7 @@ describe("ExpenseListInteractive", () => {
         // A breakdown: no income-funded money reached her this month.
         expect(within(totals).queryByText("Paid to Brenda")).toBeNull();
         const mobile = screen.getByTestId("totals-mobile");
-        expect(within(mobile).getByText("Paid from savings")).toBeDefined();
+        expect(within(mobile).getByText("of which to partner")).toBeDefined();
     });
 
     it("omits the savings line when no money reached her that way", () => {
@@ -561,10 +561,10 @@ describe("ExpenseListInteractive", () => {
 
         const totals = screen.getByTestId("totals-desktop");
         expect(
-            within(totals).queryByText("Paid to Brenda from savings"),
+            within(totals).queryByText("of which paid to Brenda"),
         ).toBeNull();
         const mobile = screen.getByTestId("totals-mobile");
-        expect(within(mobile).queryByText("Paid from savings")).toBeNull();
+        expect(within(mobile).queryByText("of which to partner")).toBeNull();
     });
 
     it("hides movements when a category filter is active (they have no category)", () => {

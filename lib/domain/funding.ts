@@ -85,15 +85,15 @@ export const NON_INCOME_FUNDED_HINT =
     "savings or reimbursed — outside the budget";
 
 /**
- * The CASH half. Kept apart from `NON_INCOME_FUNDED_LABEL` (consumption):
- * summing the two prints the same pesos twice — her fronted dinner, then the
- * transfer settling it (spec 0007 §6a).
+ * Partly a SUBSET of `NON_INCOME_FUNDED_LABEL` — the payment half is counted
+ * there too — so "of which" stops the two reading as separate money when both
+ * print the same figure. CHORE-14 replaces the wording with real nesting.
  */
 export function nonIncomeFundedTransferLabel(partnerName: string): string {
-    return `Paid to ${partnerName} from savings`;
+    return `of which paid to ${partnerName}`;
 }
 
-export const NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL = "Paid from savings";
+export const NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL = "of which to partner";
 
 export const FUNDING_SOURCE_BADGE: Record<
     Exclude<FundingSource, "income">,

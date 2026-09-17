@@ -245,6 +245,27 @@ The same pesos appear in both at different moments — she fronts the food
 double count, **because the two are never summed**. The UI must make that
 impossible rather than merely discouraged: no `Total` spanning both.
 
+#### The carve-out: one payment, two tables
+
+**2026-09-17.** The rule bans summing a _fronted expense_ with the _transfer
+that settles it_ — two different moments in one pesos' life. It does **not** ban
+summing one payment stored two ways.
+
+After §6b a payment to the partner is an `Expense`, but the legacy `gf_paid`
+rows are still movements until the CHORE-12 conversion runs. So the same
+economic event lives in two tables at once, and a figure naming "money that
+reached her" has to read both or it under-reports. ADR-0024 decision 4 states
+the ground: _a payment is both the cash leaving his account and the consumption
+it funded, so both ledgers read the same row._
+
+A figure may therefore sum payment-expenses with legacy `gf_paid` movements,
+**deduplicated by id**, because the conversion reuses the movement's id. Two
+figures do this today — `paidToPartner` and `paidToPartnerFromSavings` — and
+both reduce to the expense-only case once the conversion runs.
+
+What stays banned: any figure adding a **fronted expense** to the **transfer
+settling it**, and any `Total` spanning the two ledgers.
+
 ### Decisions
 
 > **Decision 1 was REVERSED on 2026-09-15, after use.** The debt was the expense;
