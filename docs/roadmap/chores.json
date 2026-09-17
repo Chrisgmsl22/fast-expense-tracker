@@ -198,7 +198,7 @@
             "plan": "(1) After CHORE-11 merges, delete the superseded branch feat/fronted-debt-as-expense and its divergent spec copy. (2) Remove the six stale worktrees left from merged or superseded work; never remove one with uncommitted changes — report it and let the owner decide. (3) Clear the review debt the round-5 pass listed: strip the review-round tags ('for two rounds', 'Round 4', 'I-1') from comments, since the why survives without the round number; de-duplicate the close-set query between settlement.repository.ts and cycle-closes.ts, which agree only by coincidence; add the missing test for the updateTransfer closed-cycle guard; and parallelise the serial await in movement.repository.ts getById, which getForMonth already does correctly. (4) Consider renaming tests/unit/fronted-expense-action.test.ts and tests/integration/fronted-subcategory-rename.test.ts, whose names still say 'fronted' under the superseded model — owner's call, since a rename adds diff noise for no behaviour change. PARTIAL as shipped: (1), (2) and (3) are done (branch/worktree cleanup was a git operation with no diff); (4), the test-file rename, was deliberately left for the owner's call.",
             "status": "shipped",
             "spec": null,
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/78",
             "issue": null
         },
         {
