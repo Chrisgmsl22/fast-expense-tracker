@@ -51,10 +51,11 @@ export default async function SettlementPage({
         redirect("/dashboard");
     }
     const partnerName = resolvePartnerName(settings.partnerName);
-    // `closedAt` lives on Movement, so a cycle with no transfer cannot be marked.
+    // A cycle holding neither a transfer nor a payment has no row to mark, so the
+    // offer is hidden rather than shown and then refused.
     const canClose =
         isBalanceSettled(settlement.balance) &&
-        settlement.closableMovementId !== null;
+        settlement.closableMarker !== null;
     // UTC: the value is a calendar month, not a timestamp to shift.
     const monthLabel = new Intl.DateTimeFormat("en-US", {
         month: "long",

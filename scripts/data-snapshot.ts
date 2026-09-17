@@ -6,6 +6,8 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { fileURLToPath } from "node:url";
 
 import { getCurrentMonthCdmx, shiftMonth } from "../lib/dates.ts";
+import { movesSettlementBalance } from "../lib/domain/expense.ts";
+import { movementMovesSettlementBalance } from "../lib/domain/settlement.ts";
 
 /** Loopback names only. A hostname anywhere else is someone's real data. */
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
@@ -190,29 +192,36 @@ async function rowCounts(db: Db): Promise<void> {
     );
 }
 
-/** The expense fields every section below reads, plus `fundedFrom` when it exists. */
+/** The expense fields every section below reads, plus the ones that may not exist yet. */
 type ExpenseRow = {
     date: Date;
+    createdAt: Date;
     amount: number;
     actualExpenditure: number;
+    isPartnerPayment: boolean;
     categoryId: string;
     cardId: string | null;
     fundedFrom?: string;
+    closedAt?: Date | null;
 };
 
 async function loadExpenses(
     db: Db,
     withFundedFrom: boolean,
+    withClosedAt: boolean,
 ): Promise<ExpenseRow[]> {
-    // The column is absent on this branch, so the select is built dynamically;
-    // `modelHasField` is what makes the cast safe.
+    // A column may be absent on the branch in the working tree, so the select is
+    // built dynamically; `modelHasField` is what makes the cast safe.
     const select = {
         date: true,
+        createdAt: true,
         amount: true,
         actualExpenditure: true,
+        isPartnerPayment: true,
         categoryId: true,
         cardId: true,
         ...(withFundedFrom ? { fundedFrom: true } : {}),
+        ...(withClosedAt ? { closedAt: true } : {}),
     } as Record<string, boolean>;
     return (await db.expense.findMany({
         select: select as never,
@@ -361,42 +370,59 @@ function perCard(
     );
 }
 
-function settlementCycles(movements: MovementRow[]): void {
+function settlementCycles(
+    expenses: ExpenseRow[],
+    movements: MovementRow[],
+): void {
     heading("Settlement cycles");
-    const markers = movements
-        .filter((m) => m.closedAt !== null)
-        .sort((a, b) => a.closedAt!.getTime() - b.closedAt!.getTime());
+    // The marker sits on a transfer OR on the payment-expense that squared the
+    // cycle (spec 0007 §6b), so both tables are read.
+    const markers = [
+        ...movements
+            .filter((m) => m.closedAt != null)
+            .map((m) => ({ closedAt: m.closedAt!, amount: m.amount })),
+        ...expenses
+            .filter((e) => e.closedAt != null)
+            .map((e) => ({
+                closedAt: e.closedAt!,
+                amount: e.actualExpenditure,
+            })),
+    ].sort((a, b) => a.closedAt.getTime() - b.closedAt.getTime());
     if (markers.length === 0) {
         console.log("  (none closed — the whole history is one open cycle)");
         return;
     }
     // Membership is by ENTRY time against the close instant (spec 0007 §3.5),
-    // the same rule the settlement service applies.
+    // the same rule the settlement service applies. Only the rows a cycle COUNTS
+    // are tallied — an ordinary purchase is entered inside a cycle without being
+    // part of it — through the same two predicates the service asks.
+    const entered = [
+        ...expenses.filter((e) => movesSettlementBalance(e)),
+        ...movements.filter((m) => movementMovesSettlementBalance(m.type)),
+    ].map((r) => r.createdAt.getTime());
     let lower = Number.NEGATIVE_INFINITY;
     const rows = markers.map((marker) => {
-        const upper = marker.closedAt!.getTime();
-        const held = movements.filter(
-            (m) =>
-                m.createdAt.getTime() > lower && m.createdAt.getTime() <= upper,
-        ).length;
+        const upper = marker.closedAt.getTime();
+        const counted = entered.filter((t) => t > lower && t <= upper).length;
         lower = upper;
         return [
-            marker.closedAt!.toISOString().slice(0, 16).replace("T", " "),
+            marker.closedAt.toISOString().slice(0, 16).replace("T", " "),
             mxn(round2(marker.amount)),
-            held,
+            counted,
         ];
     });
-    table(["closed at (UTC)", "settled", "movements held"], rows);
+    table(["closed at (UTC)", "settled", "rows counted"], rows);
     console.log(`  open cycle: everything entered after the last close.`);
 }
 
 export async function snapshot(db: Db): Promise<void> {
     const withFundedFrom = modelHasField("Expense", "fundedFrom");
+    const withExpenseMarker = modelHasField("Expense", "closedAt");
 
     await rowCounts(db);
 
     const [expenses, movements, categories, cards] = await Promise.all([
-        loadExpenses(db, withFundedFrom),
+        loadExpenses(db, withFundedFrom, withExpenseMarker),
         db.movement.findMany({
             select: {
                 date: true,
@@ -430,7 +456,7 @@ export async function snapshot(db: Db): Promise<void> {
 
     partnerFlows(movements);
     perCard(expenses, movements, cards);
-    settlementCycles(movements);
+    settlementCycles(expenses, movements);
     console.log("");
 }
 

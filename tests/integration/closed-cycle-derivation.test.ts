@@ -43,7 +43,7 @@ async function seedExpense(opts: {
     });
 }
 
-/** A transfer carrying a cycle marker — only a transfer may (spec 0007 §3.5). */
+/** A transfer carrying a cycle marker — the only movement that may (spec 0007 §3.5). */
 async function seedClose(userId: string, closedAt: Date) {
     return db.movement.create({
         data: {
@@ -51,6 +51,31 @@ async function seedClose(userId: string, closedAt: Date) {
             date: closedAt,
             amount: 500,
             type: "gf_paid",
+            closedAt,
+        },
+    });
+}
+
+/**
+ * The other marker: a payment-expense that closed a cycle. Only a payment may carry
+ * one, and it is entered before the close it holds.
+ */
+async function seedPaymentClose(
+    userId: string,
+    categoryId: string,
+    closedAt: Date,
+    createdAt: Date,
+) {
+    return db.expense.create({
+        data: {
+            userId,
+            categoryId,
+            date: closedAt,
+            description: "Transfer — you paid Brenda",
+            amount: 500,
+            actualExpenditure: 500,
+            isPartnerPayment: true,
+            createdAt,
             closedAt,
         },
     });
@@ -201,6 +226,121 @@ describe("closed-cycle derivation (integration)", () => {
         const editable = await repo.getById(user.id, row.id);
 
         expect(editable?.actualExpenditure).toBe(680);
+    });
+});
+
+/**
+ * The marker has two homes now. A cycle squared by paying the partner is closed on the
+ * payment-EXPENSE, so the close set is the union of the two tables (spec 0007 §6b).
+ */
+describe("closed-cycle derivation from an expense marker (integration)", () => {
+    it("freezes a row entered before a cycle closed on a payment-expense", async () => {
+        const user = await seedUser();
+        const cat = await seedCategory(user.id);
+        await seedPaymentClose(user.id, cat.id, MAY_20, MAY_10);
+        const row = await seedExpense({
+            userId: user.id,
+            categoryId: cat.id,
+            description: "before the payment close",
+            createdAt: MAY_10,
+        });
+
+        const editable = await repo.getById(user.id, row.id);
+
+        expect(editable?.cycleClosedAt?.toISOString()).toBe(
+            MAY_20.toISOString(),
+        );
+    });
+
+    it("places the marker-carrying payment inside the cycle it closed", async () => {
+        // This is what makes the existing `cycle_closed` refusal cover the marker:
+        // deleting it would dissolve the boundary, so the row must read as frozen.
+        const user = await seedUser();
+        const cat = await seedCategory(user.id);
+        const payment = await seedPaymentClose(user.id, cat.id, MAY_20, MAY_10);
+
+        const editable = await repo.getById(user.id, payment.id);
+
+        expect(editable?.isPartnerPayment).toBe(true);
+        expect(editable?.cycleClosedAt?.toISOString()).toBe(
+            MAY_20.toISOString(),
+        );
+    });
+
+    it("leaves a row entered after the payment close in the open cycle", async () => {
+        const user = await seedUser();
+        const cat = await seedCategory(user.id);
+        await seedPaymentClose(user.id, cat.id, MAY_10, MAY_10);
+        const row = await seedExpense({
+            userId: user.id,
+            categoryId: cat.id,
+            description: "after the payment close",
+            createdAt: MAY_20,
+        });
+
+        const editable = await repo.getById(user.id, row.id);
+
+        expect(editable?.cycleClosedAt).toBeNull();
+    });
+
+    it("never reads another user's payment close", async () => {
+        const user = await seedUser("me@example.com");
+        const other = await seedUser("other@example.com");
+        const cat = await seedCategory(user.id);
+        const otherCat = await seedCategory(other.id);
+        await seedPaymentClose(other.id, otherCat.id, MAY_20, MAY_10);
+        const row = await seedExpense({
+            userId: user.id,
+            categoryId: cat.id,
+            description: "mine",
+            createdAt: MAY_10,
+        });
+
+        const editable = await repo.getById(user.id, row.id);
+
+        expect(editable?.cycleClosedAt).toBeNull();
+    });
+
+    it("freezes a MOVEMENT too — the close set spans both tables", async () => {
+        const user = await seedUser();
+        const cat = await seedCategory(user.id);
+        await seedPaymentClose(user.id, cat.id, MAY_20, MAY_10);
+        const debt = await db.movement.create({
+            data: {
+                userId: user.id,
+                date: new Date("2026-05-15T12:00:00Z"),
+                amount: 220,
+                type: "gf_fronted",
+                createdAt: MAY_10,
+            },
+        });
+
+        const editable = await movementRepo.getById(user.id, debt.id);
+
+        expect(editable?.cycleClosedAt?.toISOString()).toBe(
+            MAY_20.toISOString(),
+        );
+    });
+
+    it("takes the earliest close at or after the row, whichever table it is in", async () => {
+        const user = await seedUser();
+        const cat = await seedCategory(user.id);
+        // A movement close in May 30 and an expense close in May 20: the row entered
+        // on May 10 belongs to the FIRST one at or after it.
+        await seedClose(user.id, MAY_30);
+        await seedPaymentClose(user.id, cat.id, MAY_20, MAY_10);
+        const row = await seedExpense({
+            userId: user.id,
+            categoryId: cat.id,
+            description: "between two closes in two tables",
+            createdAt: MAY_10,
+        });
+
+        const editable = await repo.getById(user.id, row.id);
+
+        expect(editable?.cycleClosedAt?.toISOString()).toBe(
+            MAY_20.toISOString(),
+        );
     });
 });
 

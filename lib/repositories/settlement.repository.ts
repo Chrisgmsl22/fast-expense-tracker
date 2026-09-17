@@ -5,7 +5,10 @@ import {
     type TransferFundingSource,
 } from "@/lib/domain/funding";
 import type { MovementType } from "@/lib/domain/movement";
-import { CYCLE_CLOSING_TYPES } from "@/lib/domain/settlement";
+import {
+    CYCLE_CLOSING_TYPES,
+    type SettlementRowRef,
+} from "@/lib/domain/settlement";
 
 /** An expense the couple-balance math reads. */
 export type SettlementExpenseRow = {
@@ -54,16 +57,19 @@ export type SettlementWindowRows = {
     movements: SettlementMovementRow[];
 };
 
-/** The transfer that closed a cycle — the boundary between two cycles. */
-export type SettlementCycleMarker = {
-    id: string;
-    /** The transfer's own date, for display ("closed on"). */
+/**
+ * The row that closed a cycle — the boundary between two cycles. Either table can hold
+ * one: a transfer, or the payment-expense that squared the balance (spec 0007 §6b).
+ */
+export type SettlementCycleMarker = SettlementRowRef & {
+    /** The row's own date, for display ("closed on"). */
     date: Date;
     /**
-     * The boundary itself — the instant the user confirmed the close, NOT the transfer's
+     * The boundary itself — the instant the user confirmed the close, NOT the row's
      * entry time. Rows entered up to here belong to the cycle being closed.
      */
     closedAt: Date;
+    /** What it took to square the cycle: the transfer's amount, or what you sent her. */
     amount: number;
 };
 
@@ -92,16 +98,18 @@ export interface SettlementRepository {
         through: Date | null,
     ): Promise<SettlementWindowRows>;
 
-    /** Every cycle-closing marker for the user, oldest first. */
+    /** Every cycle-closing marker for the user, both tables, oldest first. */
     getCycleMarkers(userId: string): Promise<SettlementCycleMarker[]>;
 
     /**
-     * Record `closedAt` on one transfer. Returns rows affected: 0 when the row isn't the
-     * user's, is already a marker (a double submit), or isn't a transfer.
+     * Record `closedAt` on one row, in the table `marker.kind` names. Returns rows
+     * affected: 0 when the row isn't the user's, is already a marker (a double submit),
+     * or cannot carry one — a movement that isn't a transfer, an expense that isn't a
+     * payment.
      */
     markCycleClose(
         userId: string,
-        movementId: string,
+        marker: SettlementRowRef,
         closedAt: Date,
     ): Promise<number>;
 }
@@ -218,14 +226,41 @@ export class PrismaSettlementRepository implements SettlementRepository {
     }
 
     async getCycleMarkers(userId: string): Promise<SettlementCycleMarker[]> {
-        const rows = await this.db.movement.findMany({
-            where: { userId, closedAt: { not: null } },
-            orderBy: { closedAt: "asc" },
-            select: { id: true, date: true, closedAt: true, amount: true },
-        });
-        // `closedAt` is nullable in the schema; the where-clause already
+        const [movements, expenses] = await Promise.all([
+            this.db.movement.findMany({
+                where: { userId, closedAt: { not: null } },
+                select: { id: true, date: true, closedAt: true, amount: true },
+            }),
+            this.db.expense.findMany({
+                where: { userId, closedAt: { not: null } },
+                select: {
+                    id: true,
+                    date: true,
+                    closedAt: true,
+                    // What actually reached her — the figure the balance counts
+                    // for a payment row (spec 0007 §6b).
+                    actualExpenditure: true,
+                },
+            }),
+        ]);
+        // `closedAt` is nullable in the schema; the where-clauses already
         // excluded the nulls, so narrow the type here at the boundary.
-        return rows.map((r) => ({ ...r, closedAt: r.closedAt as Date }));
+        return [
+            ...movements.map((m) => ({
+                id: m.id,
+                kind: "movement" as const,
+                date: m.date,
+                closedAt: m.closedAt as Date,
+                amount: m.amount,
+            })),
+            ...expenses.map((e) => ({
+                id: e.id,
+                kind: "expense" as const,
+                date: e.date,
+                closedAt: e.closedAt as Date,
+                amount: e.actualExpenditure,
+            })),
+        ].sort((a, b) => a.closedAt.getTime() - b.closedAt.getTime());
     }
 
     /**
@@ -234,12 +269,24 @@ export class PrismaSettlementRepository implements SettlementRepository {
      */
     async markCycleClose(
         userId: string,
-        movementId: string,
+        marker: SettlementRowRef,
         closedAt: Date,
     ): Promise<number> {
+        if (marker.kind === "expense") {
+            const result = await this.db.expense.updateMany({
+                where: {
+                    id: marker.id,
+                    userId,
+                    closedAt: null,
+                    isPartnerPayment: true,
+                },
+                data: { closedAt },
+            });
+            return result.count;
+        }
         const result = await this.db.movement.updateMany({
             where: {
-                id: movementId,
+                id: marker.id,
                 userId,
                 closedAt: null,
                 type: { in: [...CYCLE_CLOSING_TYPES] },

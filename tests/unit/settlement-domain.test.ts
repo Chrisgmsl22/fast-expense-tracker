@@ -133,7 +133,7 @@ describe("isBalanceSettled", () => {
         expect(isBalanceSettled(r)).toBe(false);
     });
 
-    it("only a transfer may carry the cycle marker", () => {
+    it("only a transfer MOVEMENT may carry the cycle marker", () => {
         expect(canCloseCycle("gf_paid")).toBe(true);
         expect(canCloseCycle("gf_received")).toBe(true);
         // A debt or a card payment never closes a cycle — real money squares it.

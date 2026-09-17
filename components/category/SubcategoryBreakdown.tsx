@@ -1,7 +1,6 @@
 import type { SubcategoryBar } from "@/lib/domain/category";
 import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
 import { formatMxn } from "@/lib/format";
-import { subcategoryLabel } from "@/lib/expense-display";
 
 /**
  * Every figure here is funding-filtered (spec 0007 §2) — amounts, percents, and
@@ -12,13 +11,11 @@ export function SubcategoryBreakdown({
     bars,
     color,
     spentNotFromIncome,
-    partnerName = null,
 }: {
     bars: SubcategoryBar[];
     color: string;
     /** My-share the funding filter kept out of these bars; 0 when none. */
     spentNotFromIncome: number;
-    partnerName?: string | null;
 }) {
     const withSpend = bars.filter((b) => b.spent > 0);
     const zero = bars.filter((b) => b.spent === 0);
@@ -68,9 +65,7 @@ export function SubcategoryBreakdown({
                     {withSpend.map((b) => (
                         <li key={b.id ?? "other"}>
                             <div className="flex items-baseline justify-between gap-3 text-sm">
-                                <span className="truncate">
-                                    {subcategoryLabel(b.name, partnerName)}
-                                </span>
+                                <span className="truncate">{b.name}</span>
                                 <span className="whitespace-nowrap">
                                     <span className="font-semibold">
                                         {formatMxn(b.spent)}
@@ -107,9 +102,7 @@ export function SubcategoryBreakdown({
                     )}
                     {zero.map((b) => (
                         <span key={b.id ?? "other"}>
-                            {filtered
-                                ? subcategoryLabel(b.name, partnerName)
-                                : `${subcategoryLabel(b.name, partnerName)} — $0`}
+                            {filtered ? b.name : `${b.name} — $0`}
                         </span>
                     ))}
                 </p>

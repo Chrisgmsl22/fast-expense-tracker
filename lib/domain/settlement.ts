@@ -93,8 +93,21 @@ export function isBalanceSettled(balance: CoupleBalance): boolean {
 }
 
 /**
- * The only movement types that may carry the cycle marker (spec 0007 §3.5): a cycle
- * closes when real money squares the balance, so only a transfer can.
+ * Which table a settlement row lives in. A payment you sent her is an `Expense` and a
+ * transfer is a `Movement`, so the id alone never says which table to read or write.
+ */
+export type SettlementRowSource = "expense" | "movement";
+
+/** One settlement row named across both tables — the id plus the table it is in. */
+export type SettlementRowRef = {
+    id: string;
+    kind: SettlementRowSource;
+};
+
+/**
+ * The only MOVEMENT types that may carry the cycle marker (spec 0007 §3.5): a cycle
+ * closes when real money squares the balance. A payment-expense may carry one too, and
+ * `Expense.isPartnerPayment` is that table's rule.
  */
 export const CYCLE_CLOSING_TYPES = ["gf_paid", "gf_received"] as const;
 

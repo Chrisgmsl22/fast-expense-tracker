@@ -11,9 +11,10 @@ import { FakeExpenseRepository } from "@/tests/support/fake-expense-repository";
 import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
 
 /**
- * A closed settlement is a filed record, and the close dialog says so. An expense
- * carries no marker column, so the repository resolves `cycleClosedAt` and every write
- * path pairs it with `movesSettlementBalance` — the marker alone is not the rule.
+ * A closed settlement is a filed record, and the close dialog says so. `cycleClosedAt`
+ * is resolved by the repository from every close instant, not read off the row, and
+ * every write path pairs it with `movesSettlementBalance` — a marker alone is not the
+ * rule.
  */
 const CLOSED_AT = new Date("2026-09-12T18:00:00Z");
 
@@ -100,8 +101,8 @@ describe("a row the closed cycle COUNTED is frozen", () => {
         expect(res.ok).toBe(false);
         if (res.ok) return;
         expect(res.code).toBe("cycle_closed");
-        // A payment-expense never carries the marker — only a movement does —
-        // so the message says the cycle COUNTED it, not that it closed one.
+        // The message names the freeze the row always has — being counted — which
+        // holds whether or not this payment is also the row carrying the marker.
         expect(res.message).toMatch(/payment counts in a settlement/i);
         expect(repo.deletes).toHaveLength(0);
     });

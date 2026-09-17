@@ -56,9 +56,12 @@ its marker until half 1 lands.
 - **The conversion MUST reuse the movement's id.** `withoutConvertedTwins`,
   `computeFeedTotals`'s twin filter and ADR-0024 all assume it, and nothing
   enforces it. New ids double every transfer.
-- **Rename the subcategory rows by id first**, then flip
-  `PARTNER_PAYMENT_SUBCATEGORY_NAME` and `prisma/seed.ts` together. The seed
-  matches by name, so a half-done rename creates a duplicate on the next re-seed.
+- **Rename the subcategory rows first**, then flip
+  `PARTNER_PAYMENT_SUBCATEGORY_NAME` and `prisma/seed.ts` together. The statement
+  finds the row **by name**, scoped to that account's `combined-expenses`
+  category, and updates it **in place** — no new row, so every expense keeps the
+  `subcategoryId` it points at. The seed matches by name too, so a half-done
+  rename creates a duplicate on the next re-seed.
 - **`Expense.closedAt` lands before the conversion**, not beside it.
 
 Source material is outside the repo, at

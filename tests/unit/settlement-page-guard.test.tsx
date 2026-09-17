@@ -29,7 +29,7 @@ import SettlementPage from "@/app/(dashboard)/settlement/page";
 /** The cycle fields every settlement now carries (spec 0007 §3.5). */
 const cycleStub = {
     openedAt: null,
-    closableMovementId: null,
+    closableMarker: null,
     month: { label: "2026-07", isCurrent: true, journal: [] },
     history: [],
 };
