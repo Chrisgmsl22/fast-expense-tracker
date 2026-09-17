@@ -27,6 +27,46 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-09-16 — after merging a branch that changed the Prisma schema, regenerate the client and restart the dev server
+
+- **Symptom:** merging CHORE-12 into this branch brought `Expense.closedAt`.
+  `pnpm typecheck` failed with `'closedAt' does not exist in type
+ExpenseUpdateInput`. Separately, `/settlement` returned HTTP 500 with
+  `Unknown argument 'closedAt'` from Prisma at runtime, while typecheck and all
+  859 unit + 155 integration tests passed.
+- **Root cause:** the generated Prisma client in `node_modules` still predated
+  the merge, so typecheck failed against the stale types. The running dev
+  server process held that same stale client in memory even after the client
+  was regenerated — tests spawn a fresh process and loaded the new client, so
+  they went green while the long-running server stayed broken.
+- **Fix / decision:** `pnpm -C <path> exec prisma generate` fixed typecheck; a
+  dev server restart cleared the in-memory client and fixed the runtime 500.
+- **Lesson for next time:** a green test suite does not mean the running app
+  works — tests load a fresh client, a long-lived dev server does not. Also:
+  `prisma migrate status` / `migrate deploy` need the env loaded — use the
+  repo's `dotenv -e .env.local --` form (see `db:migrate` in `package.json`),
+  not a bare `prisma` call.
+
+---
+
+### 2026-09-16 — `pnpm test:integration -- <file>` does not narrow the run
+
+- **Symptom:** three separate agents in one session each believed they'd run a
+  single integration test file and reported counts for one file, but the
+  reported counts matched the full 17-file suite.
+- **Root cause:** `pnpm test:integration -- tests/integration/some.test.ts`
+  silently runs the **whole** suite — pnpm v11 swallows the `--` separator, so
+  vitest never receives the path filter.
+- **Fix / decision:** use `pnpm -C <path> test:integration
+tests/integration/<file>.test.ts` — the path goes straight after the script
+  name, with **no** `--`. The same trap applies to `pnpm test` for unit files.
+- **Lesson for next time:** every worktree shares one Postgres test database
+  and truncates between tests, so an unintended full integration run can
+  corrupt a run another session is mid-way through. Verify a "narrowed" test
+  command actually narrowed before trusting its count.
+
+---
+
 ### 2026-09-16 — A `"use client"` export called from a server component: no gate catches it
 
 - **Symptom:** `app/(dashboard)/settlement/page.tsx` (a server page) imported and
@@ -50,8 +90,8 @@ server but toMonthPosition is on the client` — `/settlement` returned HTTP 500
 
 ### 2026-09-16 — `scripts/check-comment-size.sh` reads `--cached` only; it can't see unstaged work
 
-- **Symptom:** The hook green-lit two 5-line comment blocks against its own
-  `CAP=3` while reviewing an uncommitted working tree.
+- **Symptom:** The hook green-lit several over-cap comment blocks against its
+  own `CAP=3` while reviewing an uncommitted working tree.
 - **Root cause:** it reads `git diff --cached`; with nothing staged it exits 0
   having checked nothing, which reads as a pass.
 - **Lesson for next time:** it's a pre-commit hook — an agent reviewing an
