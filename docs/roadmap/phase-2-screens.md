@@ -82,7 +82,14 @@ the two-numbers footer.
 
 Partner name lives in `lib/partner.ts` (`PARTNER_NAME`, currently "Brenda") — a single source, no hardcoded "girlfriend" copy in the new UI.
 
-#### 2.7: Card management `[PR]`
+#### 2.7: Card management — **SHIPPED as CHORE-6.c (PR #63)**
+
+> **Do not pick this up — it is built.** `components/settings/CardsForm.tsx`,
+> `lib/repositories/card.repository.ts` and `Card.archivedAt` are in production.
+> The derived block above still calls it _available_ because status is inferred
+> by grepping merge commits for `feat/2.7-`, and this landed under
+> `feat/CHORE-6.c-card-management` — the blind spot
+> [ADR-0008](../decisions/0008-derived-roadmap-status.md) documents.
 
 Add / edit / delete the user's cards (name + color + type) — surfaced from slice 2.1, where the capture form revealed cards are per-user rows with no management UI. **Design pending** (no Confirmed-designs-V1 screen yet); parallel-capable (deps: card model from 1.1 only), so a parallel agent can pick it up independently of the screen sequence. Resolves the "cards should be dynamic" follow-up.
 
