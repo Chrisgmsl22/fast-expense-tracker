@@ -43,8 +43,8 @@ describe("a payment to the partner is an ordinary expense", () => {
     it("counts in the cash figure too — it IS money that left", () => {
         const totals = computeFeedTotals([paymentExpense]);
 
-        expect(totals.whatIReallySpent).toBe(PAYMENT);
-        expect(totals.charged).toBe(PAYMENT);
+        expect(totals.whatIReallySpent.amount).toBe(PAYMENT);
+        expect(totals.charged.amount).toBe(PAYMENT);
     });
 
     it("appears once: a breakdown of the total, never added on top of it", () => {
@@ -52,7 +52,7 @@ describe("a payment to the partner is an ordinary expense", () => {
 
         // `paidToPartner` re-reads the same row, so adding it to the total would bill
         // the payment twice.
-        expect(totals.paidToPartner).toBe(PAYMENT);
+        expect(totals.paidToPartner.amount).toBe(PAYMENT);
         expect(totals.total).toBe(PAYMENT);
     });
 
@@ -67,10 +67,10 @@ describe("a payment to the partner is an ordinary expense", () => {
         };
         const totals = computeFeedTotals([groceries, paymentExpense]);
 
-        expect(totals.charged).toBe(1000 + PAYMENT);
-        expect(totals.whatIReallySpent).toBe(680 + PAYMENT);
+        expect(totals.charged.amount).toBe(1000 + PAYMENT);
+        expect(totals.whatIReallySpent.amount).toBe(680 + PAYMENT);
         // Only the payment is attributed to her.
-        expect(totals.paidToPartner).toBe(PAYMENT);
+        expect(totals.paidToPartner.amount).toBe(PAYMENT);
         expect(totals.total).toBe(680 + PAYMENT);
     });
 });
@@ -99,8 +99,10 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
     it("still reaches the footer when nothing has been converted", () => {
         const totals = computeFeedTotals([groceries], [legacyTransfer]);
 
-        expect(totals.paidToPartner).toBe(8011.2);
-        expect(totals.legacyPaidToPartner).toBe(8011.2);
+        expect(totals.paidToPartner.amount).toBe(8011.2);
+        expect(totals.paidToPartner.of.fromIncome.of.fromLegacyTransfers).toBe(
+            8011.2,
+        );
         // Cash that left, added to the cash figure.
         expect(totals.total).toBe(680 + 8011.2);
     });
@@ -110,8 +112,8 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
 
         // Its consumption was never recorded anywhere, so adding it here would
         // invent spending; `charged` and `whatIReallySpent` see expenses only.
-        expect(totals.charged).toBe(1000);
-        expect(totals.whatIReallySpent).toBe(680);
+        expect(totals.charged.amount).toBe(1000);
+        expect(totals.whatIReallySpent.amount).toBe(680);
     });
 
     it("is dropped once its converted twin exists — never counted twice", () => {
@@ -127,10 +129,12 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
         };
         const totals = computeFeedTotals([converted], [legacyTransfer]);
 
-        expect(totals.paidToPartner).toBe(8011.2);
-        expect(totals.legacyPaidToPartner).toBe(0);
+        expect(totals.paidToPartner.amount).toBe(8011.2);
+        expect(totals.paidToPartner.of.fromIncome.of.fromLegacyTransfers).toBe(
+            0,
+        );
         // Counted once, by the expense — the movement adds nothing on top.
-        expect(totals.whatIReallySpent).toBe(8011.2);
+        expect(totals.whatIReallySpent.amount).toBe(8011.2);
         expect(totals.total).toBe(8011.2);
     });
 
@@ -159,7 +163,7 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
             ],
         );
 
-        expect(totals.paidToPartner).toBe(0);
+        expect(totals.paidToPartner.amount).toBe(0);
         expect(totals.total).toBe(680);
     });
 });
@@ -174,9 +178,9 @@ describe("a debt she fronted reaches no ledger", () => {
 
     it("is not in the cash figure either", () => {
         const totals = computeFeedTotals([]);
-        expect(totals.whatIReallySpent).toBe(0);
-        expect(totals.charged).toBe(0);
-        expect(totals.paidToPartner).toBe(0);
+        expect(totals.whatIReallySpent.amount).toBe(0);
+        expect(totals.charged.amount).toBe(0);
+        expect(totals.paidToPartner.amount).toBe(0);
         expect(totals.total).toBe(0);
     });
 });

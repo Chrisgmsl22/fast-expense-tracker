@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 
-import { formatMxn, formatExpenseDate } from "@/lib/format";
+import {
+    formatMxn,
+    formatMxnWhole,
+    formatExpenseDate,
+    formatMonthLabel,
+} from "@/lib/format";
 
 describe("formatMxn", () => {
     it("formats an amount with thousands grouping and two decimals", () => {
@@ -20,5 +25,26 @@ describe("formatExpenseDate", () => {
         const s = formatExpenseDate(new Date("2026-05-15T06:00:00Z"));
         expect(s).toMatch(/15/);
         expect(s).toMatch(/2026/);
+    });
+});
+
+describe("formatMonthLabel", () => {
+    it("names the calendar month a `YYYY-MM` string stands for", () => {
+        expect(formatMonthLabel("2026-06")).toBe("June 2026");
+    });
+
+    it("does not shift January back into the previous year", () => {
+        expect(formatMonthLabel("2026-01")).toBe("January 2026");
+    });
+});
+
+describe("formatMxnWhole", () => {
+    it("drops the cents so a figure fits a donut's centre", () => {
+        expect(formatMxnWhole(52465.22)).toMatch(/52,465/);
+        expect(formatMxnWhole(52465.22)).not.toMatch(/\.22/);
+    });
+
+    it("rounds rather than truncating", () => {
+        expect(formatMxnWhole(1234.6)).toMatch(/1,235/);
     });
 });

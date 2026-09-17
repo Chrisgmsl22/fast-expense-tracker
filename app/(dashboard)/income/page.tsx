@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
-import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
+import { getCurrentMonthCdmx } from "@/lib/dates";
+import { getScopedMonth } from "@/lib/month-scope.server";
 import { incomeRepository } from "@/lib/repositories";
 import { IncomeScreen } from "@/components/income/IncomeScreen";
 import { MonthPicker } from "@/components/expense/MonthPicker";
@@ -13,10 +14,8 @@ export default async function IncomePage({
     searchParams: Promise<{ month?: string }>;
 }) {
     const { month: monthParam } = await searchParams;
-    const month =
-        monthParam && isValidMonth(monthParam)
-            ? monthParam
-            : getCurrentMonthCdmx();
+    const month = await getScopedMonth(monthParam);
+    const currentMonth = getCurrentMonthCdmx();
 
     const session = await auth();
     const userId = session?.user?.id;
@@ -41,7 +40,11 @@ export default async function IncomePage({
     return (
         <main className="p-8">
             <div className="mb-6">
-                <MonthPicker month={month} />
+                <MonthPicker
+                    month={month}
+                    remember
+                    currentMonth={currentMonth}
+                />
             </div>
             <IncomeScreen
                 fixed={summary.fixed}

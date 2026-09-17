@@ -99,6 +99,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         expect(screen.getByText("Soriana")).toBeDefined();
@@ -126,6 +127,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
 
@@ -143,6 +145,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         // charged = 1820 + 185 = 2005; spent = 1237 + 185 = 1422
@@ -159,6 +162,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         expect(
@@ -188,10 +192,15 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
-        expect(screen.getByText("Brenda paid you")).toBeDefined();
+        // The row and the footer line share the wording, so scope to the list.
+        expect(screen.getAllByText("Brenda paid you")).toHaveLength(2);
         expect(screen.queryByText("Paid Brenda")).toBeNull();
+        const totals = within(screen.getByTestId("feed-totals"));
+        expect(totals.getByText("Brenda paid you")).toBeDefined();
+        expect(totals.getByText("$700.00")).toBeDefined();
     });
 
     it("splits the footer into Charged / spent / Set aside / Total when savings is present", () => {
@@ -242,6 +251,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         const totals = within(screen.getByTestId("feed-totals"));
@@ -263,6 +273,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         expect(screen.queryByText("Set aside")).toBeNull();
@@ -290,6 +301,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         // Card payment line present (no partner-money tag anymore).
@@ -297,11 +309,12 @@ describe("MonthFeed", () => {
         // Transfer line + footer "Paid to Brenda" figure.
         expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.getByText("Paid to Brenda")).toBeDefined();
+        // The payment is a breakdown of what I really spent, so it reads as one.
+        expect(totals.getByText("of which paid to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
     });
 
-    it("keeps a savings-funded transfer out of 'Paid to Brenda' but badged in the list", () => {
+    it("keeps a savings-funded transfer out of the budget figures but badged in the list", () => {
         // Spec 0007 §6a decision 5: it used no part of this month's income, so
         // it leaves the cash figures — while staying visible as a row, and
         // still counting in full toward the settlement balance elsewhere.
@@ -336,17 +349,21 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
 
         expect(screen.getByText("from savings")).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
-        // Only the income-funded 200 reaches the figure.
+        // Only the income-funded 200 reaches the figure the Total adds.
+        expect(totals.getByText("Transfers to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
         expect(totals.queryByText("$8,200.00")).toBeNull();
         // The excluded money is surfaced under its OWN cash line, named for the
         // partner — never merged into the consumption line (spec 0007 §6a).
-        expect(totals.getByText("of which paid to Brenda")).toBeDefined();
+        expect(
+            totals.getByText("Transfers to Brenda (not from income)"),
+        ).toBeDefined();
         expect(totals.getByText("$8,000.00")).toBeDefined();
         expect(totals.queryByText("Not from this month's income")).toBeNull();
     });
@@ -374,6 +391,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         // Both rows really are on screen, so this isn't a vacuous pass.
@@ -418,12 +436,15 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
 
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.getByText("Not from this month's income")).toBeDefined();
-        expect(totals.getByText("of which paid to Brenda")).toBeDefined();
+        expect(
+            totals.getByText("Transfers to Brenda (not from income)"),
+        ).toBeDefined();
         // Three times $680, never once $1,360: Charged (source-agnostic), the
         // consumption exclusion, and the cash exclusion. Each is one ledger's
         // view of the money; no line adds two of them together.
@@ -448,14 +469,21 @@ describe("MonthFeed", () => {
                 monthLabel="October 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
 
         const totals = within(screen.getByTestId("feed-totals"));
-        const line = totals.getByText("of which paid to Brenda").parentElement!;
-        expect(within(line).getByText("$530.00")).toBeDefined();
+        // Nested in the DOM, not merely adjacent: the child renders INSIDE its
+        // parent's container, so a flatten-to-siblings regression fails here.
+        const parent = totals.getByTestId("summary-line-not-from-income");
+        expect(
+            within(parent).getByText("Not from this month's income"),
+        ).toBeDefined();
+        const child = within(parent).getByText("of which paid to Brenda");
+        expect(within(child.parentElement!).getByText("$530.00")).toBeDefined();
         // A breakdown only: nothing income-funded happened this month.
-        expect(totals.queryByText("Paid to Brenda")).toBeNull();
+        expect(totals.queryByText("Transfers to Brenda")).toBeNull();
     });
 
     it("omits the savings line when no money reached her that way", () => {
@@ -466,11 +494,56 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
 
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.queryByText("of which paid to Brenda")).toBeNull();
+    });
+
+    it("keeps the reminder, and its scope, on an empty month", () => {
+        // The empty branch renders no chin, and it is the branch a past month is
+        // most likely to hit — the one place the caption was still missing.
+        render(
+            <MonthFeed
+                expenses={[]}
+                movements={[]}
+                monthLabel="March 2026"
+                settlement={sheOwes}
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth={false}
+            />,
+        );
+
+        expect(screen.getByRole("link").getAttribute("href")).toBe(
+            "/settlement",
+        );
+        expect(screen.getByText("Brenda owes you")).toBeDefined();
+        expect(
+            screen.getByText("The open settlement — not March 2026."),
+        ).toBeDefined();
+    });
+
+    it("says the balance is the open cycle when another month is on screen", () => {
+        // The rail's own figures are the viewed month and the dashboard carries a
+        // month picker, so an unqualified chip reads as that month's debt.
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[]}
+                monthLabel="March 2026"
+                settlement={sheOwes}
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth={false}
+            />,
+        );
+
+        expect(
+            screen.getByText("The open settlement — not March 2026."),
+        ).toBeDefined();
     });
 
     it("renders the settlement chip in Shared mode when a balance is passed", () => {
@@ -482,6 +555,7 @@ describe("MonthFeed", () => {
                 settlement={sheOwes}
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         // The chip is a link to the settlement page.
@@ -512,6 +586,7 @@ describe("MonthFeed", () => {
                 settlement={sheOwes}
                 partnerName="Brenda"
                 sharesExpenses={false}
+                isCurrentMonth
             />,
         );
         // Non-partner activity stays.
@@ -520,7 +595,7 @@ describe("MonthFeed", () => {
         // the transfer row + the monthly "Paid to Brenda" footer figure.
         expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.getByText("Paid to Brenda")).toBeDefined();
+        expect(totals.getByText("of which paid to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
         // Only the settlement chip (its link) is hidden on the dashboard — the
         // running balance stays live and settleable via /settlement (ADR-0021,
@@ -538,6 +613,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         expect(screen.queryByText("she covered the vet")).toBeNull();
@@ -555,6 +631,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         const without = screen.getByTestId("feed-totals").textContent;
@@ -567,6 +644,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         // Charged / What I really spent / Set aside / Paid to Brenda / Total —
@@ -606,6 +684,7 @@ describe("MonthFeed", () => {
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
+                isCurrentMonth
             />,
         );
         expect(screen.getByText("Emergency fund")).toBeDefined();

@@ -18,7 +18,7 @@ export function MonthPicker({
     remember?: boolean;
     /**
      * The live month, supplied by the server so the control never disagrees with the
-     * render's clock. When it differs from `month`, a "This month" button appears.
+     * render's clock. When it differs from `month`, a back-to-current button appears.
      */
     currentMonth?: string;
 }) {
@@ -40,7 +40,9 @@ export function MonthPicker({
     }
 
     return (
-        <div className="flex items-center gap-2 text-sm">
+        // Wraps so the back-to-current button drops to its own line at 390px
+        // instead of pushing the arrows off screen.
+        <div className="flex flex-wrap items-center gap-2 text-sm">
             <Button
                 variant="outline"
                 size="icon-sm"
@@ -67,11 +69,11 @@ export function MonthPicker({
             </Button>
             {currentMonth && currentMonth !== month && (
                 <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
                     onClick={() => go(currentMonth)}
                 >
-                    This month
+                    Take me back to the current month
                 </Button>
             )}
         </div>

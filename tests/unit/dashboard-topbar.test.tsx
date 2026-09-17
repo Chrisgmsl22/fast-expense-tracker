@@ -15,6 +15,7 @@ import { DashboardTopbar } from "@/components/dashboard/DashboardTopbar";
 
 const props = {
     month: "2026-06",
+    currentMonth: "2026-06",
     monthLabel: "June 2026",
     incomeTotal: 50000,
     sharePercentage: 0.68,
@@ -36,5 +37,27 @@ describe("DashboardTopbar", () => {
         // Non-partner content is unchanged.
         expect(screen.getByText("June 2026")).toBeDefined();
         expect(screen.getByText(/Total income/)).toBeDefined();
+    });
+
+    it("carries a month picker that remembers the choice", () => {
+        render(<DashboardTopbar {...props} sharesExpenses />);
+        expect(screen.getByLabelText(/filter by month/i)).toBeDefined();
+        expect(
+            screen.queryByRole("button", { name: /take me back/i }),
+        ).toBeNull();
+    });
+
+    it("offers the back-to-current button while a past month is on screen", () => {
+        render(
+            <DashboardTopbar
+                {...props}
+                month="2026-04"
+                monthLabel="April 2026"
+                sharesExpenses
+            />,
+        );
+        expect(
+            screen.getByRole("button", { name: /take me back/i }),
+        ).toBeDefined();
     });
 });

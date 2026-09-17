@@ -84,16 +84,15 @@ export const NON_INCOME_FUNDED_SHORT_LABEL = "Not from income";
 export const NON_INCOME_FUNDED_HINT =
     "savings or reimbursed — outside the budget";
 
-/**
- * Partly a SUBSET of `NON_INCOME_FUNDED_LABEL` — the payment half is counted
- * there too — so "of which" stops the two reading as separate money when both
- * print the same figure. CHORE-14 replaces the wording with real nesting.
- */
-export function nonIncomeFundedTransferLabel(partnerName: string): string {
+/** Names a figure as a breakdown of the line above it, never money beside it. */
+export function ofWhichPaidToPartner(partnerName: string): string {
     return `of which paid to ${partnerName}`;
 }
 
-export const NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL = "of which to partner";
+/** Short form, for the pinned mobile bar. */
+export function ofWhichPaidToPartnerShort(partnerName: string): string {
+    return `of which to ${partnerName}`;
+}
 
 export const FUNDING_SOURCE_BADGE: Record<
     Exclude<FundingSource, "income">,

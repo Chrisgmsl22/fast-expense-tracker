@@ -27,6 +27,28 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-09-16 — A new meaning borrowed a colour token, and two arcs became one
+
+- **Symptom:** CHORE-14's breakdown modal drew "not from this month's income" in
+  `--bucket-discretionary` (#d97706) beside "money to the partner" in
+  `--transfer` (#ca8a04). Nine degrees of hue apart, as the only two arcs of one
+  donut: indistinguishable, and hopeless under any colour-vision deficiency. The
+  reviewer caught it two rounds after an earlier hue clash in a different chart.
+- **Root cause:** a new semantic meaning was given the nearest existing token
+  rather than its own, and the fix for the first clash was checked only in the
+  chart where it was reported. `globals.css` had already separated gold from
+  orange deliberately; the borrowed amber landed between them.
+- **Fix / decision:** re-toned the slices by what FUNDED them, so no two arcs in
+  any donut sit under 100° apart.
+- **Lessons for next time:**
+    1. A new semantic meaning gets its **own** colour token, not the nearest
+       existing one. A token carries a meaning; reusing it merges two.
+    2. Check **every** chart's slice set pairwise for hue distance, not only the
+       chart where a collision was reported. Adjacent arcs have no labels between
+       them, so the hue is the whole distinction.
+
+---
+
 ### 2026-08-05 — A brand-new worktree reported itself as "likely merged"
 
 - **Symptom:** `[worktrees]` flagged a freshly created `chore/harness-rebuild`

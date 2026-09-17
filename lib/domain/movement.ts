@@ -52,47 +52,74 @@ export type FeedTotalExpense = {
     fundedFrom: FundingSource;
 };
 
+/**
+ * A figure and the parts it is made of. `amount` is always the sum of its parts,
+ * so a child can never be read as money beside its parent (BUG-5).
+ */
+export type Breakdown<Parts> = { amount: number; of: Parts };
+
+/**
+ * The two tables one payment to the partner can live in. Until the CHORE-12
+ * conversion runs the same payment exists as either, so a figure naming money that
+ * reached her reads both, deduplicated by id (spec 0007 §6a carve-out).
+ */
+export type PartnerPaymentSources = {
+    /** Payment-expenses — already inside the consumption figure this sits under. */
+    fromPaymentExpenses: number;
+    /** Legacy `gf_paid` movements — cash with no expense row behind it. */
+    fromLegacyTransfers: number;
+};
+
 /** The figures the feed footer shows (ADR-0018 §1, extended by spec 0007). */
 export type FeedTotals = {
     /**
      * Raw card/cash charges — every funding source at full value: you really
      * did charge it (spec 0007 §3.2).
      */
-    charged: number;
+    charged: Breakdown<{
+        /** Equals `whatIReallySpent.amount`: the same rows, read as a slice of the charge. */
+        myIncome: number;
+        /**
+         * Smaller than `notFromIncome.amount` when a Savings-category row was
+         * funded from savings: that row is consumption, but nothing charged it.
+         */
+        myNonIncome: number;
+        partnerShare: number;
+    }>;
     /**
      * Your share of consumption funded by THIS month's income — the budget
      * number. Excludes savings-funded and reimbursed rows so it equals the sum
      * the dashboard's buckets are built from (spec 0007 §2).
      */
-    whatIReallySpent: number;
+    whatIReallySpent: Breakdown<{
+        spentOnMyself: number;
+        sentToPartner: number;
+    }>;
     /**
      * My-share allocated to Savings this month, income-funded only — so it
      * matches the dashboard's savings bucket.
      */
     setAside: number;
     /**
-     * Income-funded money that went to the partner. The payment-expense part is a
-     * BREAKDOWN of `whatIReallySpent`, never an addend — only `legacyPaidToPartner` is.
-     */
-    paidToPartner: number;
-    /**
-     * The legacy-movement slice of `paidToPartner` — cash with no consumption row
-     * behind it, and the only piece `total` may add.
-     */
-    legacyPaidToPartner: number;
-    /**
      * CONSUMPTION ledger: non-income-funded expenses, payments to the partner
      * included. Transfers stay out — one line summing both ledgers prints $1,360
      * for a $680 dinner she fronted and he later settled (spec 0007 §6a).
      */
-    notFromIncome: number;
+    notFromIncome: Breakdown<{
+        ownSpending: number;
+        sentToPartner: number;
+    }>;
     /**
-     * CASH ledger: savings-funded legacy `gf_paid` movements. Never folded into
-     * `notFromIncome` or `total`. Goes to zero once the conversion lands.
+     * Every peso that reached her, whichever money funded it and whichever table
+     * holds it (spec 0007 §6a carve-out). Only `fromLegacyTransfers` is money no
+     * figure above already holds, so it is the only piece `total` may add.
      */
-    notFromIncomeTransfers: number;
-    /** Savings-funded payment-expenses + `notFromIncomeTransfers`. */
-    paidToPartnerFromSavings: number;
+    paidToPartner: Breakdown<{
+        fromIncome: Breakdown<PartnerPaymentSources>;
+        notFromIncome: Breakdown<PartnerPaymentSources>;
+    }>;
+    /** CASH IN: `gf_received` transfers this month. Never netted against what you paid. */
+    partnerPaidYou: number;
     /**
      * This month's income that left. Neither excluded figure is added — that
      * money came from another month.
@@ -123,18 +150,21 @@ export function computeFeedTotals(
     expenses: FeedTotalExpense[],
     movements: FeedTotalMovement[] = [],
 ): FeedTotals {
-    let charged = 0;
-    let whatIReallySpent = 0;
+    // Every accumulator is a LEAF of the hierarchy, so each parent below is the
+    // sum of its own parts and no peso is added twice or dropped.
+    let chargedPartnerShare = 0;
+    let chargedNonIncome = 0;
+    let spentOnMyself = 0;
+    let sentToPartnerFromIncome = 0;
     let setAside = 0;
-    let notFromIncome = 0;
-    let paidToPartner = 0;
-    let savingsFundedPayments = 0;
+    let nonIncomeOwnSpending = 0;
+    let nonIncomeSentToPartner = 0;
     const paymentExpenseIds = new Set<string>();
     for (const e of expenses) {
         const isSavingsCategory = e.category.slug === SAVINGS_SLUG;
-        // `charged` is source-agnostic on purpose — the card saw the charge
-        // whatever money settled it (spec 0007 §3.2, ADR-0020 §6).
-        if (!isSavingsCategory) charged += e.amount;
+        // The charge slices are source-agnostic on purpose — the card saw the
+        // charge whatever money settled it (spec 0007 §3.2, ADR-0020 §6).
+        if (!isSavingsCategory) chargedPartnerShare += partnerShareOf(e);
         // Dedup by identity, not by funding: a converted twin is already counted
         // as an expense whichever money funded it.
         if (e.isPartnerPayment) paymentExpenseIds.add(e.id);
@@ -143,44 +173,84 @@ export function computeFeedTotals(
             // Another month's money (or a refund). Kept out of BOTH budget
             // figures — including `setAside`, so moving old savings into the
             // Savings category isn't counted as allocating income twice.
-            notFromIncome += e.actualExpenditure;
+            if (!isSavingsCategory) chargedNonIncome += e.actualExpenditure;
             // Named here too, or the money reaching her hides among every
-            // unrelated savings-funded row (BUG-5). A breakdown, not an addend.
-            if (e.isPartnerPayment && e.fundedFrom === "savings")
-                savingsFundedPayments += e.actualExpenditure;
+            // unrelated savings-funded row (BUG-5).
+            if (e.isPartnerPayment)
+                nonIncomeSentToPartner += e.actualExpenditure;
+            else nonIncomeOwnSpending += e.actualExpenditure;
         } else if (isSavingsCategory) {
             setAside += e.actualExpenditure;
+        } else if (e.isPartnerPayment) {
+            sentToPartnerFromIncome += e.actualExpenditure;
         } else {
-            whatIReallySpent += e.actualExpenditure;
-            // A breakdown of the line above, never an addend (spec 0007 §6a).
-            if (e.isPartnerPayment) paidToPartner += e.actualExpenditure;
+            spentOnMyself += e.actualExpenditure;
         }
     }
 
-    let legacyPaidToPartner = 0;
-    let notFromIncomeTransfers = 0;
+    let legacyFromIncome = 0;
+    let legacyNotFromIncome = 0;
+    let partnerPaidYou = 0;
     for (const m of movements) {
+        if (m.type === "gf_received") {
+            partnerPaidYou += m.amount;
+            continue;
+        }
         if (m.type !== "gf_paid") continue;
         if (paymentExpenseIds.has(m.id)) continue;
-        // A savings-funded transfer goes to the CASH ledger, never into
-        // `notFromIncome` (consumption) — the two are never summed (§6a).
         if (m.fundedFrom === BUDGET_FUNDING_SOURCE)
-            legacyPaidToPartner += m.amount;
-        else notFromIncomeTransfers += m.amount;
+            legacyFromIncome += m.amount;
+        else legacyNotFromIncome += m.amount;
     }
 
+    const whatIReallySpent = spentOnMyself + sentToPartnerFromIncome;
+    const notFromIncome = nonIncomeOwnSpending + nonIncomeSentToPartner;
+    const paidFromIncome = sentToPartnerFromIncome + legacyFromIncome;
+    const paidNotFromIncome = nonIncomeSentToPartner + legacyNotFromIncome;
+
     return {
-        charged,
-        whatIReallySpent,
+        charged: {
+            amount: whatIReallySpent + chargedNonIncome + chargedPartnerShare,
+            of: {
+                myIncome: whatIReallySpent,
+                myNonIncome: chargedNonIncome,
+                partnerShare: chargedPartnerShare,
+            },
+        },
+        whatIReallySpent: {
+            amount: whatIReallySpent,
+            of: { spentOnMyself, sentToPartner: sentToPartnerFromIncome },
+        },
         setAside,
-        paidToPartner: paidToPartner + legacyPaidToPartner,
-        legacyPaidToPartner,
-        notFromIncome,
-        notFromIncomeTransfers,
-        // Same rationale as `legacyPaidToPartner`: an unconverted `gf_paid` is
-        // the same economic event, so it reads on this line until CHORE-12.
-        paidToPartnerFromSavings:
-            savingsFundedPayments + notFromIncomeTransfers,
-        total: whatIReallySpent + setAside + legacyPaidToPartner,
+        notFromIncome: {
+            amount: notFromIncome,
+            of: {
+                ownSpending: nonIncomeOwnSpending,
+                sentToPartner: nonIncomeSentToPartner,
+            },
+        },
+        paidToPartner: {
+            amount: paidFromIncome + paidNotFromIncome,
+            of: {
+                fromIncome: {
+                    amount: paidFromIncome,
+                    of: {
+                        fromPaymentExpenses: sentToPartnerFromIncome,
+                        fromLegacyTransfers: legacyFromIncome,
+                    },
+                },
+                notFromIncome: {
+                    amount: paidNotFromIncome,
+                    of: {
+                        fromPaymentExpenses: nonIncomeSentToPartner,
+                        fromLegacyTransfers: legacyNotFromIncome,
+                    },
+                },
+            },
+        },
+        partnerPaidYou,
+        // A legacy transfer is the only addend: every other partner figure is a
+        // breakdown of a line already counted (spec 0007 §6a).
+        total: whatIReallySpent + setAside + legacyFromIncome,
     };
 }

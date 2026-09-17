@@ -1,10 +1,7 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals } from "@/lib/domain/movement";
-import {
-    NON_INCOME_FUNDED_LABEL,
-    nonIncomeFundedTransferLabel,
-} from "@/lib/domain/funding";
 import { FundingBadge } from "@/components/expense/FundingBadge";
+import { SummaryRail } from "@/components/money/SummaryRail";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
@@ -15,7 +12,7 @@ import {
     movementDisplay,
     movementRowText,
 } from "@/components/movement/movement-display";
-import { SettlementChip } from "./SettlementChip";
+import { SettlementReminder } from "@/components/money/SettlementReminder";
 
 /**
  * Right-rail month feed — a read-only list of the month's expenses **and money
@@ -31,6 +28,8 @@ export function MonthFeed({
     settlement,
     partnerName,
     sharesExpenses,
+    isCurrentMonth,
+    incomeTotal,
 }: {
     expenses: ExpenseListItem[];
     movements: MovementListItem[];
@@ -48,6 +47,10 @@ export function MonthFeed({
      * movements are never rewritten (ADR-0021), just no longer created in solo.
      */
     sharesExpenses: boolean;
+    /** False while browsing another month — the settlement chip then says so. */
+    isCurrentMonth: boolean;
+    /** This month's income, for the breakdown modal's "% of income" line. */
+    incomeTotal?: number;
 }) {
     const feed = buildFeed(expenses, movements);
 
@@ -94,102 +97,26 @@ export function MonthFeed({
             )}
 
             {count > 0 && (
-                <div
-                    data-testid="feed-totals"
-                    className="space-y-1.5 border-t p-4 text-sm"
-                >
-                    {sharesExpenses && settlement && (
-                        <div className="pb-1">
-                            <SettlementChip
-                                balance={settlement}
-                                partnerName={partnerName}
-                            />
-                        </div>
-                    )}
-                    {/* Every amount carries the same px-2 + tabular-nums so the
-                        digits line up in one right-aligned column — even the
-                        "spent" pill and the Total band (which bleeds to the card
-                        edges but re-insets its content to match). */}
-                    <div className="flex items-center justify-between">
-                        <span className="font-medium text-foreground">
-                            Charged
-                        </span>
-                        <span className="px-2 font-semibold text-foreground tabular-nums">
-                            {formatMxn(totals.charged)}
-                        </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="font-medium text-foreground">
-                            What I really spent
-                        </span>
-                        <span className="rounded-full bg-spent-tint px-2 py-0.5 font-semibold text-spent tabular-nums">
-                            {formatMxn(totals.whatIReallySpent)}
-                        </span>
-                    </div>
-                    {totals.setAside > 0 && (
-                        <div className="flex items-center justify-between">
-                            <span className="font-medium text-foreground">
-                                Set aside
-                            </span>
-                            <span className="px-2 font-semibold text-bucket-savings tabular-nums">
-                                {formatMxn(totals.setAside)}
-                            </span>
-                        </div>
-                    )}
-                    {totals.notFromIncome > 0 && (
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">
-                                {NON_INCOME_FUNDED_LABEL}
-                            </span>
-                            <span className="px-2 tabular-nums text-muted-foreground">
-                                {formatMxn(totals.notFromIncome)}
-                            </span>
-                        </div>
-                    )}
-                    {totals.paidToPartner > 0 && (
-                        <div className="flex items-center justify-between">
-                            <span className="font-medium text-foreground">
-                                Paid to {partnerName}
-                            </span>
-                            <span className="px-2 font-semibold text-transfer tabular-nums">
-                                {formatMxn(totals.paidToPartner)}
-                            </span>
-                        </div>
-                    )}
-                    {/* Every peso that reached her from another month's money —
-                        transfer or payment-expense alike (spec 0007 §6a). */}
-                    {totals.paidToPartnerFromSavings > 0 && (
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">
-                                {nonIncomeFundedTransferLabel(partnerName)}
-                            </span>
-                            <span className="px-2 tabular-nums text-muted-foreground">
-                                {formatMxn(totals.paidToPartnerFromSavings)}
-                            </span>
-                        </div>
-                    )}
-                    {/* Gated on the two figures that ADD to it. `paidToPartner` is a
-                        breakdown of "what I really spent", so gating on it would print
-                        a Total restating the line above (spec 0007 §6a). */}
-                    {(totals.setAside > 0 ||
-                        totals.legacyPaidToPartner > 0) && (
-                        <div className="-mx-4 -mb-4 mt-1 flex items-center justify-between rounded-b-lg bg-foreground px-4 py-2.5 text-background">
-                            <span className="font-medium">Total</span>
-                            <span className="px-2 font-semibold tabular-nums">
-                                {formatMxn(totals.total)}
-                            </span>
-                        </div>
-                    )}
-                </div>
+                <SummaryRail
+                    totals={totals}
+                    monthLabel={monthLabel}
+                    partnerName={partnerName}
+                    settlement={settlement}
+                    sharesExpenses={sharesExpenses}
+                    isCurrentMonth={isCurrentMonth}
+                    incomeTotal={incomeTotal}
+                />
             )}
 
-            {count === 0 && sharesExpenses && settlement && (
-                <div className="border-t p-4">
-                    <SettlementChip
-                        balance={settlement}
-                        partnerName={partnerName}
-                    />
-                </div>
+            {count === 0 && (
+                <SettlementReminder
+                    settlement={settlement}
+                    partnerName={partnerName}
+                    sharesExpenses={sharesExpenses}
+                    isCurrentMonth={isCurrentMonth}
+                    monthLabel={monthLabel}
+                    className="border-t p-4"
+                />
             )}
         </div>
     );

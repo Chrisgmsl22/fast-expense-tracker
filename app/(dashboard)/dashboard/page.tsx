@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
+import { getCurrentMonthCdmx } from "@/lib/dates";
+import { getScopedMonth } from "@/lib/month-scope.server";
+import { formatMonthLabel } from "@/lib/format";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import {
     expenseRepository,
@@ -26,10 +28,8 @@ export default async function DashboardPage({
     searchParams: Promise<{ month?: string }>;
 }) {
     const { month: monthParam } = await searchParams;
-    const month =
-        monthParam && isValidMonth(monthParam)
-            ? monthParam
-            : getCurrentMonthCdmx();
+    const month = await getScopedMonth(monthParam);
+    const currentMonth = getCurrentMonthCdmx();
 
     const session = await auth();
     const userId = session?.user?.id;
@@ -74,17 +74,13 @@ export default async function DashboardPage({
     const partnerName = resolvePartnerName(settings.partnerName);
     const { sharesExpenses } = settings;
 
-    // "2026-06" → "June 2026" (UTC: a calendar month, not a timestamp to shift).
-    const monthLabel = new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-    }).format(new Date(`${month}-01T12:00:00Z`));
+    const monthLabel = formatMonthLabel(month);
 
     return (
         <main className="p-4 sm:p-6 lg:p-8">
             <DashboardTopbar
                 month={month}
+                currentMonth={currentMonth}
                 monthLabel={monthLabel}
                 incomeTotal={summary.income.total}
                 sharePercentage={sharePercentage}
@@ -127,6 +123,8 @@ export default async function DashboardPage({
                         settlement={settlement.balance}
                         partnerName={partnerName}
                         sharesExpenses={sharesExpenses}
+                        isCurrentMonth={month === currentMonth}
+                        incomeTotal={summary.income.total}
                     />
                 </aside>
             </div>

@@ -33,6 +33,18 @@ describe("resolveMonth — URL, then store, then now", () => {
     it("ignores a malformed cookie — it is user-editable input", () => {
         expect(resolveMonth({ stored: "2026-13", now: NOW })).toBe("2026-09");
     });
+
+    it("treats an empty ?month= as absent, so the memory still applies", () => {
+        expect(resolveMonth({ param: "", stored: "2026-06", now: NOW })).toBe(
+            "2026-06",
+        );
+    });
+
+    it("falls back to today when both the param and the cookie are junk", () => {
+        expect(
+            resolveMonth({ param: "2026-99", stored: "june", now: NOW }),
+        ).toBe("2026-09");
+    });
 });
 
 describe("monthCookieString", () => {
