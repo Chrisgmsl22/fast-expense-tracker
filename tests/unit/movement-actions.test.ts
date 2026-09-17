@@ -319,6 +319,33 @@ describe("movement actions (unit, injected fake repo)", () => {
             expect(await repo.getById("u1", "mv1")).not.toBeNull();
         });
 
+        it("refuses to edit a NON-marker transfer the closed cycle counted", async () => {
+            const repo = new FakeMovementRepository();
+            repo.seed("mv1", "u1", {
+                type: "gf_paid",
+                amount: 150,
+                cycleClosedAt: CLOSED_AT,
+            });
+
+            const res = await updateTransfer(
+                {
+                    id: "mv1",
+                    date: "2026-07-10",
+                    amount: "999",
+                    direction: "gf_paid",
+                },
+                repo,
+            );
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.code).toBe("cycle_closed");
+            // It closed nothing, so the message must not say it did.
+            expect(res.message).not.toMatch(/closed a settlement and/i);
+            expect(repo.updates).toHaveLength(0);
+            expect((await repo.getById("u1", "mv1"))?.amount).toBe(150);
+        });
+
         it("still edits a debt in the OPEN cycle", async () => {
             const repo = new FakeMovementRepository();
             repo.seed("mv1", "u1", { type: "gf_fronted", amount: 220 });

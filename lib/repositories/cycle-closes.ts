@@ -1,4 +1,10 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
+
+/** The one predicate that defines a cycle-close marker row. */
+export const cycleCloseWhere = (userId: string): Prisma.MovementWhereInput => ({
+    userId,
+    closedAt: { not: null },
+});
 
 /**
  * Every settlement-cycle close instant this user has filed, unordered. An expense
@@ -10,7 +16,7 @@ export async function getCycleCloses(
     userId: string,
 ): Promise<Date[]> {
     const markers = await db.movement.findMany({
-        where: { userId, closedAt: { not: null } },
+        where: cycleCloseWhere(userId),
         select: { closedAt: true },
     });
     return markers.map((m) => m.closedAt).filter((c): c is Date => c !== null);

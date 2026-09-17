@@ -6,6 +6,7 @@ import {
 } from "@/lib/domain/funding";
 import type { MovementType } from "@/lib/domain/movement";
 import { CYCLE_CLOSING_TYPES } from "@/lib/domain/settlement";
+import { cycleCloseWhere } from "@/lib/repositories/cycle-closes";
 
 /** An expense the couple-balance math reads. */
 export type SettlementExpenseRow = {
@@ -219,7 +220,7 @@ export class PrismaSettlementRepository implements SettlementRepository {
 
     async getCycleMarkers(userId: string): Promise<SettlementCycleMarker[]> {
         const rows = await this.db.movement.findMany({
-            where: { userId, closedAt: { not: null } },
+            where: cycleCloseWhere(userId),
             orderBy: { closedAt: "asc" },
             select: { id: true, date: true, closedAt: true, amount: true },
         });

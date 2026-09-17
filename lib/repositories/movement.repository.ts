@@ -133,30 +133,30 @@ export class PrismaMovementRepository implements MovementRepository {
         userId: string,
         id: string,
     ): Promise<MovementEditable | null> {
-        const row = await this.db.movement.findFirst({
-            where: { id, userId },
-            select: {
-                id: true,
-                date: true,
-                amount: true,
-                type: true,
-                cardId: true,
-                note: true,
-                fundedFrom: true,
-                closedAt: true,
-                createdAt: true,
-            },
-        });
+        const [row, closes] = await Promise.all([
+            this.db.movement.findFirst({
+                where: { id, userId },
+                select: {
+                    id: true,
+                    date: true,
+                    amount: true,
+                    type: true,
+                    cardId: true,
+                    note: true,
+                    fundedFrom: true,
+                    closedAt: true,
+                    createdAt: true,
+                },
+            }),
+            getCycleCloses(this.db, userId),
+        ]);
         if (!row) return null;
         const { createdAt, ...editable } = row;
         return {
             ...editable,
             type: editable.type as MovementType,
             fundedFrom: toTransferFundingSource(editable.fundedFrom),
-            cycleClosedAt: cycleCloseAtOrAfter(
-                await getCycleCloses(this.db, userId),
-                createdAt,
-            ),
+            cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
         };
     }
 
