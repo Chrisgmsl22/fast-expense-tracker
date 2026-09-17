@@ -27,6 +27,39 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-09-16 — A `"use client"` export called from a server component: no gate catches it
+
+- **Symptom:** `app/(dashboard)/settlement/page.tsx` (a server page) imported and
+  called `toMonthPosition()` from `components/settlement/SettlementViews.tsx`,
+  which starts with `"use client"`. Every export of a client module is a client
+  reference, so the page threw `Attempted to call toMonthPosition() from the
+server but toMonthPosition is on the client` — `/settlement` returned HTTP 500
+  on every month.
+- **Root cause:** `pnpm typecheck`, `pnpm lint`, and 849 unit + 127 integration
+  tests all passed — none of them models the React Server Component boundary.
+  Only a real request surfaced it.
+- **Fix / decision:** moved the pure helper into its own plain module with no
+  directive (`components/settlement/month-position.ts`), the same pattern as
+  `components/settlement/past-month-notice.ts`.
+- **Lesson for next time:** a pure helper shared between a server page and a
+  client component needs its own directive-free module. An FE change is not
+  verified until it has served a real request — green gates don't model this
+  boundary.
+
+---
+
+### 2026-09-16 — `scripts/check-comment-size.sh` reads `--cached` only; it can't see unstaged work
+
+- **Symptom:** The hook green-lit two 5-line comment blocks against its own
+  `CAP=3` while reviewing an uncommitted working tree.
+- **Root cause:** it reads `git diff --cached`; with nothing staged it exits 0
+  having checked nothing, which reads as a pass.
+- **Lesson for next time:** it's a pre-commit hook — an agent reviewing an
+  uncommitted working tree must apply the 3-line cap by hand. A clean exit from
+  it on unstaged work means nothing.
+
+---
+
 ### 2026-08-05 — A brand-new worktree reported itself as "likely merged"
 
 - **Symptom:** `[worktrees]` flagged a freshly created `chore/harness-rebuild`
