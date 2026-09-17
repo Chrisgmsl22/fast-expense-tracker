@@ -20,6 +20,7 @@
         "roadmap:status": "node scripts/roadmap-status.ts",
         "bugs:status": "node scripts/bugs-status.ts",
         "chores:status": "node scripts/chores-status.ts",
+        "data:snapshot": "dotenv -e .env.local -- node scripts/data-snapshot.ts",
         "db:up": "docker compose up -d db",
         "db:down": "docker compose down",
         "db:generate": "prisma generate",

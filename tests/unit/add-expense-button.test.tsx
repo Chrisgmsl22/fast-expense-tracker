@@ -15,9 +15,6 @@ vi.mock("@/components/movement/CardPaymentForm", () => ({
 vi.mock("@/components/movement/TransferForm", () => ({
     TransferForm: () => <div data-testid="transfer-form" />,
 }));
-vi.mock("@/components/movement/PartnerDebtForm", () => ({
-    PartnerDebtForm: () => <div data-testid="partner-debt-form" />,
-}));
 
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
 
@@ -41,14 +38,14 @@ describe("AddExpenseButton", () => {
         expect(screen.getByText("Card payment")).toBeDefined();
         expect(screen.getByText("I paid Brenda")).toBeDefined();
         expect(screen.getByText("Brenda paid me")).toBeDefined();
-        expect(screen.getByText("I owe Brenda")).toBeDefined();
     });
 
-    it("opens the debt form from the 'I owe {partner}' item", () => {
+    it("never offers 'I owe {partner}', even in Shared mode", () => {
+        // A debt is created on the settlement page, where the balance it moves is in
+        // view. The row itself still SHOWS in the expenses feed.
         render(<AddExpenseButton {...props} sharesExpenses />);
         openMenu();
-        fireEvent.click(screen.getByText("I owe Brenda"));
-        expect(screen.getByTestId("partner-debt-form")).toBeDefined();
+        expect(screen.queryByText("I owe Brenda")).toBeNull();
     });
 
     it("hides the partner transfer items in Solo mode (CHORE-6.b)", () => {

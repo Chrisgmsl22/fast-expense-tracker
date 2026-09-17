@@ -7,19 +7,29 @@ vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
 vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
     updatePartnerDebt: vi.fn(),
 }));
+vi.mock("@/app/_actions/expense/add-partner-payment", () => ({
+    addPartnerPayment: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/update-partner-payment", () => ({
+    updatePartnerPayment: vi.fn(),
+}));
 
 import { PartnerDebtForm } from "@/components/movement/PartnerDebtForm";
 import { addPartnerDebt } from "@/app/_actions/movement/add-partner-debt";
 import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
 
-const addPartnerDebtMock = addPartnerDebt as unknown as Mock;
-const updatePartnerDebtMock = updatePartnerDebt as unknown as Mock;
+// A debt is a MOVEMENT again (spec 0007 §6b) — settlement only.
+const addDebtMock = addPartnerDebt as unknown as Mock;
+const updateDebtMock = updatePartnerDebt as unknown as Mock;
 
 beforeEach(() => {
-    addPartnerDebtMock.mockReset();
-    addPartnerDebtMock.mockResolvedValue({ ok: true, data: { id: "mv1" } });
-    updatePartnerDebtMock.mockReset();
-    updatePartnerDebtMock.mockResolvedValue({ ok: true, data: { id: "mv1" } });
+    addDebtMock.mockReset();
+    addDebtMock.mockResolvedValue({ ok: true, data: { id: "mv1" } });
+    updateDebtMock.mockReset();
+    updateDebtMock.mockResolvedValue({
+        ok: true,
+        data: { id: "mv1" },
+    });
 });
 
 describe("PartnerDebtForm", () => {
@@ -30,23 +40,24 @@ describe("PartnerDebtForm", () => {
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
         });
-        fireEvent.change(screen.getByLabelText(/Amount you owe/), {
+        fireEvent.change(screen.getByLabelText(/What you owe/), {
             target: { value: "500" },
         });
         fireEvent.click(screen.getByRole("button", { name: "Log debt" }));
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-        expect(addPartnerDebtMock).toHaveBeenCalledWith({
+        expect(addDebtMock).toHaveBeenCalledWith({
             amount: "500",
             date: "2026-07-10",
             note: undefined,
         });
-        // A debt is settlement-only — it never carries a category.
+        // The form takes no category: a debt files itself under the
+        // `combined-expenses` default, editable from the expense row after.
         expect(screen.queryByRole("combobox", { name: "Category" })).toBeNull();
     });
 
     it("surfaces a validation error without calling onSuccess", async () => {
-        addPartnerDebtMock.mockResolvedValue({
+        addDebtMock.mockResolvedValue({
             ok: false,
             code: "validation",
             message: "Invalid debt",
@@ -58,7 +69,7 @@ describe("PartnerDebtForm", () => {
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
         });
-        fireEvent.change(screen.getByLabelText(/Amount you owe/), {
+        fireEvent.change(screen.getByLabelText(/What you owe/), {
             target: { value: "0" },
         });
         fireEvent.click(screen.getByRole("button", { name: "Log debt" }));
@@ -88,21 +99,21 @@ describe("PartnerDebtForm", () => {
 
         // Prefilled from the debt prop.
         expect(
-            (screen.getByLabelText(/Amount you owe/) as HTMLInputElement).value,
+            (screen.getByLabelText(/What you owe/) as HTMLInputElement).value,
         ).toBe("680");
         // Edit its amount, then save.
-        fireEvent.change(screen.getByLabelText(/Amount you owe/), {
+        fireEvent.change(screen.getByLabelText(/What you owe/), {
             target: { value: "700" },
         });
         fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-        expect(updatePartnerDebtMock).toHaveBeenCalledWith({
+        expect(updateDebtMock).toHaveBeenCalledWith({
             id: "mv9",
             amount: "700",
             date: "2026-07-10",
             note: "gas she covered",
         });
-        expect(addPartnerDebtMock).not.toHaveBeenCalled();
+        expect(addDebtMock).not.toHaveBeenCalled();
     });
 });

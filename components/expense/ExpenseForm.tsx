@@ -155,6 +155,9 @@ export function ExpenseForm({
     const selectedCategory = categories.find((c) => c.id === categoryId);
     // Savings is a transfer, not a card purchase — no payment method applies.
     const isSavings = selectedCategory?.slug === SAVINGS_SLUG;
+    // A payment is never split and leaves a bank account, not a card. The server
+    // clamps both; disabling the controls stops the form taking a click it drops.
+    const isPartnerPayment = expense?.isPartnerPayment ?? false;
     const selectedSubcategory = availableSubcategories.find(
         (s) => s.id === subcategoryId,
     );
@@ -205,13 +208,15 @@ export function ExpenseForm({
             amount,
             categoryId,
             subcategoryId: subcategoryId || undefined,
-            // Savings is a transfer — force no card, even when editing a legacy
-            // savings row that still carries one (the field is disabled).
-            cardId: isSavings ? undefined : cardId || undefined,
+            // Savings and a partner payment both leave a bank account, so force no card —
+            // including on a legacy row that still carries one.
+            cardId:
+                isSavings || isPartnerPayment ? undefined : cardId || undefined,
             description,
             notes: notes || undefined,
-            isShared,
-            yourPercentage: String(yourPercentage),
+            isShared: isPartnerPayment ? false : isShared,
+            // A payment is never split: the figure entered IS what you sent.
+            yourPercentage: isPartnerPayment ? "1" : String(yourPercentage),
             fundedFrom,
             // Every expense is the user's (ADR-0018); `paidBy` defaults "you"
             // in the schema, so the form no longer sends it.
@@ -377,11 +382,24 @@ export function ExpenseForm({
                 </div>
 
                 <div>
-                    <Label htmlFor="cardId">Card</Label>
+                    <Label htmlFor="cardId">
+                        Card
+                        {isSavings ? (
+                            <span className="font-normal text-muted-foreground">
+                                {" "}
+                                (not needed for savings)
+                            </span>
+                        ) : isPartnerPayment ? (
+                            <span className="font-normal text-muted-foreground">
+                                {" "}
+                                (a transfer, so no card)
+                            </span>
+                        ) : null}
+                    </Label>
                     <Select
                         value={cardId}
                         onValueChange={(value) => setCardId(value ?? "")}
-                        disabled={isSavings}
+                        disabled={isSavings || isPartnerPayment}
                     >
                         <SelectTrigger
                             id="cardId"
@@ -391,6 +409,10 @@ export function ExpenseForm({
                             {isSavings ? (
                                 <span className="text-muted-foreground">
                                     Savings — no card
+                                </span>
+                            ) : isPartnerPayment ? (
+                                <span className="text-muted-foreground">
+                                    Covered by your partner — no card
                                 </span>
                             ) : selectedCard ? (
                                 <Dotted color={selectedCard.color}>
@@ -410,11 +432,6 @@ export function ExpenseForm({
                             ))}
                         </SelectContent>
                     </Select>
-                    {isSavings ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            not needed for savings
-                        </p>
-                    ) : null}
                 </div>
             </div>
 
@@ -540,16 +557,24 @@ export function ExpenseForm({
                 <div>
                     <label className="flex items-start gap-2.5">
                         <Checkbox
-                            checked={isShared}
+                            checked={isPartnerPayment ? false : isShared}
                             onCheckedChange={(checked) => setIsShared(checked)}
                             aria-label="Shared expense"
+                            disabled={isPartnerPayment}
                             className="mt-0.5 data-checked:border-positive data-checked:bg-positive"
                         />
                         <span className="text-sm">
-                            <span className="block font-medium">
+                            <span
+                                className={`block font-medium ${isPartnerPayment ? "text-muted-foreground" : ""}`}
+                            >
                                 {`Shared expense · ${yourPct}/${partnerPct}`}
                             </span>
-                            {isShared ? (
+                            {isPartnerPayment ? (
+                                <span className="block text-muted-foreground">
+                                    This amount is the payment you sent your
+                                    partner — there is nothing left to split.
+                                </span>
+                            ) : isShared ? (
                                 <span className="block text-positive">
                                     {`your share ${formatMxn(yourShare)}`}
                                 </span>

@@ -44,6 +44,8 @@ function exp(
         fundedFrom,
         countedInBudget: over.countedInBudget ?? fundedFrom === "income",
         isShared: over.isShared ?? false,
+        isPartnerPayment: over.isPartnerPayment ?? false,
+        cycleClosedAt: over.cycleClosedAt ?? null,
         category: over.category ?? {
             id: "cat1",
             slug: "health",
@@ -67,6 +69,7 @@ function fakeCategoryRepo(
         getSubcategorySpends: async () => over.subSpends ?? subSpends,
         getExpensesForCategoryMonth: async () =>
             over.expenses ?? [exp({ id: "e1" }), exp({ id: "e2" })],
+        getPartnerPaymentDefaults: async () => null,
     };
 }
 

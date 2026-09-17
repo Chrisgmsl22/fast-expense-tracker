@@ -6,14 +6,30 @@ import type { ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { shiftMonth } from "@/lib/dates";
+import { monthCookieString } from "@/lib/month-scope";
 
-export function MonthPicker({ month }: { month: string }) {
+export function MonthPicker({
+    month,
+    remember = false,
+    currentMonth,
+}: {
+    month: string;
+    /** Also remember the choice (`lib/month-scope.ts`), so it survives navigation. */
+    remember?: boolean;
+    /**
+     * The live month, supplied by the server so the control never disagrees with the
+     * render's clock. When it differs from `month`, a "This month" button appears.
+     */
+    currentMonth?: string;
+}) {
     const router = useRouter();
     // Stay on the current route (e.g. /expenses or /income) — only the month
     // query param changes, so the same control drives every month-scoped page.
     const pathname = usePathname();
 
     function go(next: string) {
+        // Write the store and the URL together, so the two can never disagree.
+        if (remember) document.cookie = monthCookieString(next);
         router.push(`${pathname}?month=${next}`);
     }
 
@@ -49,6 +65,15 @@ export function MonthPicker({ month }: { month: string }) {
             >
                 <ChevronRight />
             </Button>
+            {currentMonth && currentMonth !== month && (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => go(currentMonth)}
+                >
+                    This month
+                </Button>
+            )}
         </div>
     );
 }

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
     cardPaymentInputSchema,
-    partnerDebtInputSchema,
     transferInputSchema,
 } from "@/lib/schemas/movement";
 
@@ -135,35 +134,5 @@ describe("transferInputSchema", () => {
             );
             expect(res.success).toBe(true);
         });
-    });
-});
-
-describe("partnerDebtInputSchema", () => {
-    it("accepts a valid debt (amount + date) with an optional note", () => {
-        const res = partnerDebtInputSchema.safeParse({
-            date: "2026-06-20",
-            amount: "500",
-            note: "groceries she covered",
-        });
-        expect(res.success).toBe(true);
-        if (!res.success) return;
-        expect(res.data.amount).toBe(500);
-        expect(res.data.note).toBe("groceries she covered");
-    });
-
-    it("accepts a debt with no note (settlement-only, no category)", () => {
-        const res = partnerDebtInputSchema.safeParse({
-            date: "2026-06-20",
-            amount: "500",
-        });
-        expect(res.success).toBe(true);
-    });
-
-    it("rejects a non-positive amount", () => {
-        const res = partnerDebtInputSchema.safeParse({
-            date: "2026-06-20",
-            amount: "0",
-        });
-        expect(res.success).toBe(false);
     });
 });

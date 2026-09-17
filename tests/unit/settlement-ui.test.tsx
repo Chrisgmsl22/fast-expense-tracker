@@ -8,8 +8,12 @@ import {
 } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-const { deleteMock } = vi.hoisted(() => ({
+const { deleteMock, deleteExpenseMock } = vi.hoisted(() => ({
     deleteMock: vi.fn(),
+    deleteExpenseMock: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/delete", () => ({
+    deleteExpense: deleteExpenseMock,
 }));
 vi.mock("@/app/_actions/movement/delete", () => ({
     deleteMovement: deleteMock,
@@ -21,6 +25,12 @@ vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
 }));
 vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
     updatePartnerDebt: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/add-partner-payment", () => ({
+    addPartnerPayment: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/update-partner-payment", () => ({
+    updatePartnerPayment: vi.fn(),
 }));
 // TransferForm (rendered in the transfer edit dialog) imports these too.
 vi.mock("@/app/_actions/movement/add-transfer", () => ({
@@ -125,7 +135,26 @@ describe("SettlementChip", () => {
 
 describe("SettlementBreakdown", () => {
     it("renders the four lines and the net", () => {
-        render(<SettlementBreakdown balance={sheOwes} partnerName="Brenda" />);
+        render(
+            <SettlementBreakdown
+                balance={sheOwes}
+                breakdownItems={{
+                    partner_share: [
+                        {
+                            id: "e1",
+                            date: new Date("2026-07-10T06:00:00Z"),
+                            description: "Groceries",
+                            amount: 700,
+                            gross: 2187.5,
+                        },
+                    ],
+                    your_debt: [],
+                    partner_paid: [],
+                    you_paid: [],
+                }}
+                partnerName="Brenda"
+            />,
+        );
         expect(
             screen.getByText(/32% of shared expenses you logged/),
         ).toBeDefined();
@@ -151,6 +180,7 @@ describe("SettlementJournal", () => {
             id: "e1",
             date: july,
             carriedOver: false,
+            locked: false,
             description: "Groceries",
             gross: 1000,
             partnerShare: 320,
@@ -160,18 +190,23 @@ describe("SettlementJournal", () => {
             id: "m1",
             date: july,
             carriedOver: false,
+            locked: false,
             direction: "gf_received",
             amount: 320,
             fundedFrom: "income",
             note: "rent",
+            source: "movement",
         },
         {
             kind: "partner_debt",
             id: "e2",
             date: june,
             carriedOver: true,
+            locked: false,
             description: "I owe Brenda",
             amount: 300,
+            // A debt is a movement again (spec 0007 §6b).
+            source: "movement",
         },
     ];
 
@@ -205,10 +240,13 @@ describe("SettlementJournal", () => {
                 id: "m2",
                 date: july,
                 carriedOver: false,
+                locked: false,
                 direction,
                 amount: 700,
                 fundedFrom,
                 note: null,
+                // A LEGACY transfer: the badge case that still lives on a movement.
+                source: "movement",
             },
         ];
 
@@ -263,7 +301,9 @@ describe("SettlementJournal", () => {
         expect(screen.queryByLabelText("Edit Groceries")).toBeNull();
     });
 
-    it("opens the delete confirm and calls deleteMovement", async () => {
+    // A DEBT is a movement again (spec 0007 §6b), so it deletes through the
+    // movement action. Routing is by the row's own `source`, never by its kind.
+    it("opens the delete confirm and deletes the debt as a movement", async () => {
         deleteMock.mockResolvedValue({ ok: true, data: { id: "e2" } });
         render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
@@ -274,6 +314,54 @@ describe("SettlementJournal", () => {
         await waitFor(() =>
             expect(deleteMock).toHaveBeenCalledWith({ id: "e2" }),
         );
+        expect(deleteExpenseMock).not.toHaveBeenCalled();
+    });
+
+    // Nothing in the rendered row says which table it came from, so `source` is the only
+    // thing that can send the delete to the movement action.
+    it("deletes a movement-backed debt through the movement action", async () => {
+        deleteMock.mockResolvedValue({ ok: true, data: { id: "debt1" } });
+        const debtRow: SettlementJournalItem = {
+            kind: "partner_debt",
+            id: "debt1",
+            date: june,
+            carriedOver: true,
+            locked: false,
+            description: "I owe Brenda",
+            amount: 150,
+            source: "movement",
+        };
+        render(<SettlementJournal journal={[debtRow]} partnerName="Brenda" />);
+        fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
+
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+        await waitFor(() =>
+            expect(deleteMock).toHaveBeenCalledWith({ id: "debt1" }),
+        );
+        // Sending it to the expense table would report "not found" for a row
+        // sitting in plain sight.
+        expect(deleteExpenseMock).not.toHaveBeenCalledWith({ id: "debt1" });
+    });
+
+    it("offers edit AND delete on a movement-backed debt", () => {
+        const debtRow: SettlementJournalItem = {
+            kind: "partner_debt",
+            id: "debt1",
+            date: june,
+            carriedOver: true,
+            locked: false,
+            description: "I owe Brenda",
+            amount: 150,
+            source: "movement",
+        };
+        render(<SettlementJournal journal={[debtRow]} partnerName="Brenda" />);
+
+        // A debt is a movement by design now (spec 0007 §6b) and `PartnerDebtForm` writes
+        // `updatePartnerDebt`, so it is editable.
+        expect(screen.getByLabelText("Edit I owe Brenda")).toBeDefined();
+        expect(screen.getByLabelText("Delete I owe Brenda")).toBeDefined();
+        expect(screen.queryByText(/delete to change/)).toBeNull();
     });
 
     it("loads the debt into an edit form, prefilled from the row", async () => {
@@ -284,11 +372,8 @@ describe("SettlementJournal", () => {
         expect(within(dialog).getByText('Edit "I owe Brenda"')).toBeDefined();
         // Prefilled straight from the journal row — no server round-trip.
         expect(
-            (
-                within(dialog).getByLabelText(
-                    /Amount you owe/,
-                ) as HTMLInputElement
-            ).value,
+            (within(dialog).getByLabelText(/What you owe/) as HTMLInputElement)
+                .value,
         ).toBe("300");
     });
 
@@ -335,5 +420,83 @@ describe("SettlementJournal", () => {
         await waitFor(() =>
             expect(deleteMock).toHaveBeenCalledWith({ id: "m1" }),
         );
+    });
+});
+
+describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () => {
+    const payment: SettlementJournalItem = {
+        kind: "transfer",
+        id: "ePay",
+        date: new Date("2026-07-11T06:00:00Z"),
+        carriedOver: false,
+        locked: false,
+        direction: "gf_paid",
+        amount: 150,
+        note: null,
+        fundedFrom: "income",
+        source: "expense",
+    };
+
+    beforeEach(() => {
+        deleteMock.mockReset();
+        deleteExpenseMock.mockReset();
+    });
+
+    it("deletes a payment through the EXPENSE action, not the movement one", async () => {
+        // The reported defect: the dialog closed, no error appeared, and the $150 row
+        // survived — `deleteMovement` answered as though it worked.
+        deleteExpenseMock.mockResolvedValue({ ok: true, data: { id: "ePay" } });
+        render(<SettlementJournal journal={[payment]} partnerName="Brenda" />);
+        fireEvent.click(
+            screen.getByLabelText("Delete Transfer — you paid Brenda"),
+        );
+
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+        await waitFor(() =>
+            expect(deleteExpenseMock).toHaveBeenCalledWith({ id: "ePay" }),
+        );
+        expect(deleteMock).not.toHaveBeenCalled();
+    });
+
+    it("surfaces a failed delete instead of closing quietly", async () => {
+        deleteExpenseMock.mockResolvedValue({
+            ok: false,
+            code: "not_found",
+            message: "Expense not found.",
+        });
+        render(<SettlementJournal journal={[payment]} partnerName="Brenda" />);
+        fireEvent.click(
+            screen.getByLabelText("Delete Transfer — you paid Brenda"),
+        );
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+        expect(await screen.findByRole("alert")).toHaveProperty(
+            "textContent",
+            "Expense not found.",
+        );
+    });
+
+    it("still routes money SHE sent through the movement action", async () => {
+        deleteMock.mockResolvedValue({ ok: true, data: { id: "mIn" } });
+        const received: SettlementJournalItem = {
+            ...payment,
+            id: "mIn",
+            direction: "gf_received",
+            source: "movement",
+        };
+        render(<SettlementJournal journal={[received]} partnerName="Brenda" />);
+        fireEvent.click(
+            screen.getByLabelText("Delete Transfer — Brenda paid you"),
+        );
+        const dialog = await screen.findByRole("dialog");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+        await waitFor(() =>
+            expect(deleteMock).toHaveBeenCalledWith({ id: "mIn" }),
+        );
+        expect(deleteExpenseMock).not.toHaveBeenCalled();
     });
 });

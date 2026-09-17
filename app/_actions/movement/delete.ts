@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
+import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
 
@@ -14,6 +15,8 @@ export type DeleteMovementCode =
     | "validation"
     | "unauthenticated"
     | "not_found"
+    /** The row closed a settlement cycle, so it is frozen (spec 0007 §3.5). */
+    | "cycle_closed"
     | "db_error";
 
 export type DeleteMovementResult = ActionResult<
@@ -25,8 +28,9 @@ export type DeleteMovementResult = ActionResult<
 /**
  * Delete a movement for the signed-in user (ADR-0018). Scoped by `userId` — a
  * row that isn't the user's matches nothing and returns `not_found` rather than
- * deleting another user's data (IDOR guard). No edit UI ships this slice; a
- * mistaken movement is fixed by delete + re-add.
+ * deleting another user's data (IDOR guard).
+ *
+ * A row a **closed settlement cycle counted** is refused (spec 0007 §3.5).
  */
 export async function deleteMovement(
     input: unknown,
@@ -53,6 +57,30 @@ export async function deleteMovement(
     }
 
     try {
+        // A missing row short-circuits here rather than after the delete attempt.
+        const existing = await repo.getById(userId, id);
+        if (!existing) {
+            return {
+                ok: false,
+                code: "not_found",
+                message: "Movement not found.",
+            };
+        }
+        // Frozen = cycle closed AND that cycle counted the row. The DB CHECK allows
+        // `closedAt` only on a transfer, so the marker can never freeze a debt.
+        if (
+            existing.cycleClosedAt &&
+            movementMovesSettlementBalance(existing.type)
+        ) {
+            return {
+                ok: false,
+                code: "cycle_closed",
+                message: existing.closedAt
+                    ? "This transfer closed a settlement and can't be deleted."
+                    : "This row counts in a settlement you already closed, so it can't be deleted.",
+            };
+        }
+
         const count = await repo.deleteForUser(userId, id);
         if (count === 0) {
             return {

@@ -3,10 +3,16 @@ import type { PrismaClient } from "@prisma/client";
 import { getMonthRangeUtc } from "@/lib/dates";
 import type { SubcategorySpendRow } from "@/lib/domain/category";
 import {
+    PARTNER_PAYMENT_CATEGORY_SLUG,
+    PARTNER_PAYMENT_SUBCATEGORY_NAME,
+} from "@/lib/domain/expense";
+import {
     BUDGET_FUNDING_FILTER,
     isBudgetFunded,
     toFundingSource,
 } from "@/lib/domain/funding";
+import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
+import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /** Category metadata for the detail header + budget math. */
@@ -66,7 +72,21 @@ export interface CategoryRepository {
         categoryId: string,
         month: string,
     ): Promise<CategoryExpenseListItem[]>;
+    /**
+     * Where a payment to the partner lands when the user picks nothing (spec 0007 §6a);
+     * null when the user has no `combined-expenses` category. The lookup is BY NAME, so
+     * a drifted constant silently files every payment with a null subcategory.
+     */
+    getPartnerPaymentDefaults(
+        userId: string,
+    ): Promise<PartnerPaymentDefaults | null>;
 }
+
+/** The category (and optional subcategory) a partner payment defaults to. */
+export type PartnerPaymentDefaults = {
+    categoryId: string;
+    subcategoryId: string | null;
+};
 
 export class PrismaCategoryRepository implements CategoryRepository {
     constructor(private readonly db: PrismaClient) {}
@@ -131,6 +151,33 @@ export class PrismaCategoryRepository implements CategoryRepository {
         return rows;
     }
 
+    async getPartnerPaymentDefaults(
+        userId: string,
+    ): Promise<PartnerPaymentDefaults | null> {
+        const category = await this.db.category.findUnique({
+            where: {
+                userId_slug: { userId, slug: PARTNER_PAYMENT_CATEGORY_SLUG },
+            },
+            select: {
+                id: true,
+                subcategories: {
+                    where: { name: PARTNER_PAYMENT_SUBCATEGORY_NAME },
+                    select: { id: true },
+                    take: 1,
+                },
+            },
+        });
+        if (!category) return null;
+        return {
+            categoryId: category.id,
+            subcategoryId: category.subcategories[0]?.id ?? null,
+        };
+    }
+
+    /**
+     * `cycleClosedAt` is resolved here too, through the same helpers the expense
+     * repository uses: hardcoding null would put a false fact on the row.
+     */
     async getExpensesForCategoryMonth(
         userId: string,
         categoryId: string,
@@ -139,30 +186,41 @@ export class PrismaCategoryRepository implements CategoryRepository {
         const { start, end } = getMonthRangeUtc(month);
         // No funding filter: this is the LIST, not a total. A savings-funded row
         // still belongs on screen (badged); only the aggregates above skip it.
-        const rows = await this.db.expense.findMany({
-            where: { userId, categoryId, date: { gte: start, lt: end } },
-            orderBy: { date: "desc" },
-            select: {
-                id: true,
-                date: true,
-                description: true,
-                amount: true,
-                actualExpenditure: true,
-                isShared: true,
-                fundedFrom: true,
-                category: {
-                    select: { id: true, slug: true, name: true, color: true },
+        const [rows, closes] = await Promise.all([
+            this.db.expense.findMany({
+                where: { userId, categoryId, date: { gte: start, lt: end } },
+                orderBy: { date: "desc" },
+                select: {
+                    id: true,
+                    date: true,
+                    description: true,
+                    amount: true,
+                    actualExpenditure: true,
+                    isShared: true,
+                    fundedFrom: true,
+                    isPartnerPayment: true,
+                    createdAt: true,
+                    category: {
+                        select: {
+                            id: true,
+                            slug: true,
+                            name: true,
+                            color: true,
+                        },
+                    },
+                    subcategory: { select: { id: true, name: true } },
+                    card: { select: { name: true, color: true } },
                 },
-                subcategory: { select: { id: true, name: true } },
-                card: { select: { name: true, color: true } },
-            },
-        });
-        return rows.map((r) => ({
-            ...r,
-            fundedFrom: toFundingSource(r.fundedFrom),
+            }),
+            getCycleCloses(this.db, userId),
+        ]);
+        return rows.map(({ createdAt, ...item }) => ({
+            ...item,
+            fundedFrom: toFundingSource(item.fundedFrom),
             // Read before the narrowing above, which would hide an out-of-band
             // value behind `income` and take the row out of both figures.
-            countedInBudget: isBudgetFunded(r.fundedFrom),
+            countedInBudget: isBudgetFunded(item.fundedFrom),
+            cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
         }));
     }
 }

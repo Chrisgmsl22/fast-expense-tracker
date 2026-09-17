@@ -8,6 +8,7 @@
  */
 
 import { SAVINGS_SLUG } from "./dashboard";
+import { partnerShareOf } from "./expense";
 import {
     BUDGET_FUNDING_SOURCE,
     type FundingSource,
@@ -17,11 +18,11 @@ import {
 /** All `Movement.type` values in the schema. */
 export type MovementType =
     | "card_payment"
+    // LEGACY (spec 0007 §6b): nothing writes this type; the conversion of existing
+    // rows is deferred, so they all still read as movements.
     | "gf_paid"
     | "gf_received"
-    // A thing the partner fronted that you owe her (ADR-0020). It shows in the
-    // month feed and the settlement journal, but no cash left your account, so
-    // it enters no total and never becomes an expense.
+    // A debt she fronted — settlement only, provisional until money moves (spec 0007 §6b).
     | "gf_fronted"
     | "income"
     | "other";
@@ -30,22 +31,21 @@ export type MovementType =
 export type ExpenseShare = { amount: number; actualExpenditure: number };
 
 /**
- * The partner's total share of the given expenses — the slice that isn't yours
- * (`amount − actualExpenditure`); 0 for an unshared expense, so summing over
- * every expense is safe. This is one input to the two-sided couple balance built
- * in the settlement slice (the "she owes you" side).
+ * The partner's total share of the given expenses — 0 for an unshared expense, so
+ * summing over every expense is safe.
  */
 export function partnerShareTotal(expenses: ExpenseShare[]): number {
-    return expenses.reduce(
-        (sum, e) => sum + (e.amount - e.actualExpenditure),
-        0,
-    );
+    return expenses.reduce((sum, e) => sum + partnerShareOf(e), 0);
 }
 
 /** Minimal expense shape the footer totals read. */
 export type FeedTotalExpense = {
+    /** Matched against a legacy movement's id to spot a converted twin. */
+    id: string;
     amount: number;
     actualExpenditure: number;
+    /** Money you sent the partner — a real expense of yours (spec 0007 §6b). */
+    isPartnerPayment: boolean;
     category: { slug: string };
     /** Which month's money funded it (spec 0007 §3.1). */
     fundedFrom: FundingSource;
@@ -70,19 +70,28 @@ export type FeedTotals = {
      */
     setAside: number;
     /**
-     * `gf_paid` transfers funded by THIS month's income only. A savings-funded
-     * transfer still counts in full toward the settlement balance — a different
-     * ledger (spec 0007 §6a decision 5).
+     * Income-funded money that went to the partner. The payment-expense part is a
+     * BREAKDOWN of `whatIReallySpent`, never an addend — only `legacyPaidToPartner` is.
      */
     paidToPartner: number;
     /**
-     * CONSUMPTION ledger. Transfers stay out: one line summing both ledgers
-     * prints $1,360 for a $680 dinner she fronted and he later settled
-     * (spec 0007 §6a).
+     * The legacy-movement slice of `paidToPartner` — cash with no consumption row
+     * behind it, and the only piece `total` may add.
+     */
+    legacyPaidToPartner: number;
+    /**
+     * CONSUMPTION ledger: non-income-funded expenses, payments to the partner
+     * included. Transfers stay out — one line summing both ledgers prints $1,360
+     * for a $680 dinner she fronted and he later settled (spec 0007 §6a).
      */
     notFromIncome: number;
-    /** CASH ledger: savings-funded transfers. Never folded into `notFromIncome` or `total`. */
+    /**
+     * CASH ledger: savings-funded legacy `gf_paid` movements. Never folded into
+     * `notFromIncome` or `total`. Goes to zero once the conversion lands.
+     */
     notFromIncomeTransfers: number;
+    /** Savings-funded payment-expenses + `notFromIncomeTransfers`. */
+    paidToPartnerFromSavings: number;
     /**
      * This month's income that left. Neither excluded figure is added — that
      * money came from another month.
@@ -92,6 +101,8 @@ export type FeedTotals = {
 
 /** Minimal movement shape the footer totals read. */
 export type FeedTotalMovement = {
+    /** Matched against a payment-expense id to spot a converted twin (ADR-0024). */
+    id: string;
     type: MovementType;
     amount: number;
     fundedFrom: TransferFundingSource;
@@ -101,50 +112,73 @@ export type FeedTotalMovement = {
  * Footer totals for a month. "What I really spent" carries the dashboard's
  * funding filter, so the footer cannot contradict the buckets above it. Card
  * payments never enter — their charges were already counted as expenses.
+ *
+ * Legacy `gf_paid` movements are still unconverted on production, so they count as
+ * cash out on their own. The conversion must reuse the movement id (ADR-0024), or
+ * the twin dedup below misses and every converted payment counts twice.
  */
 export function computeFeedTotals(
     expenses: FeedTotalExpense[],
-    movements: FeedTotalMovement[],
+    movements: FeedTotalMovement[] = [],
 ): FeedTotals {
-    let paidToPartner = 0;
-    let notFromIncomeTransfers = 0;
-    for (const m of movements) {
-        if (m.type !== "gf_paid") continue;
-        // A savings-funded transfer moves to its own field instead of being
-        // subtracted downstream, and stays out of `notFromIncome` — the other
-        // ledger (spec 0007 §6a).
-        if (m.fundedFrom === BUDGET_FUNDING_SOURCE) paidToPartner += m.amount;
-        else notFromIncomeTransfers += m.amount;
-    }
-
     let charged = 0;
     let whatIReallySpent = 0;
     let setAside = 0;
     let notFromIncome = 0;
+    let paidToPartner = 0;
+    let savingsFundedPayments = 0;
+    const paymentExpenseIds = new Set<string>();
     for (const e of expenses) {
         const isSavingsCategory = e.category.slug === SAVINGS_SLUG;
         // `charged` is source-agnostic on purpose — the card saw the charge
         // whatever money settled it (spec 0007 §3.2, ADR-0020 §6).
         if (!isSavingsCategory) charged += e.amount;
+        // Dedup by identity, not by funding: a converted twin is already counted
+        // as an expense whichever money funded it.
+        if (e.isPartnerPayment) paymentExpenseIds.add(e.id);
 
         if (e.fundedFrom !== BUDGET_FUNDING_SOURCE) {
             // Another month's money (or a refund). Kept out of BOTH budget
             // figures — including `setAside`, so moving old savings into the
             // Savings category isn't counted as allocating income twice.
             notFromIncome += e.actualExpenditure;
+            // Named here too, or the money reaching her hides among every
+            // unrelated savings-funded row (BUG-5). A breakdown, not an addend.
+            if (e.isPartnerPayment && e.fundedFrom === "savings")
+                savingsFundedPayments += e.actualExpenditure;
         } else if (isSavingsCategory) {
             setAside += e.actualExpenditure;
         } else {
             whatIReallySpent += e.actualExpenditure;
+            // A breakdown of the line above, never an addend (spec 0007 §6a).
+            if (e.isPartnerPayment) paidToPartner += e.actualExpenditure;
         }
     }
+
+    let legacyPaidToPartner = 0;
+    let notFromIncomeTransfers = 0;
+    for (const m of movements) {
+        if (m.type !== "gf_paid") continue;
+        if (paymentExpenseIds.has(m.id)) continue;
+        // A savings-funded transfer goes to the CASH ledger, never into
+        // `notFromIncome` (consumption) — the two are never summed (§6a).
+        if (m.fundedFrom === BUDGET_FUNDING_SOURCE)
+            legacyPaidToPartner += m.amount;
+        else notFromIncomeTransfers += m.amount;
+    }
+
     return {
         charged,
         whatIReallySpent,
         setAside,
-        paidToPartner,
+        paidToPartner: paidToPartner + legacyPaidToPartner,
+        legacyPaidToPartner,
         notFromIncome,
         notFromIncomeTransfers,
-        total: whatIReallySpent + setAside + paidToPartner,
+        // Same rationale as `legacyPaidToPartner`: an unconverted `gf_paid` is
+        // the same economic event, so it reads on this line until CHORE-12.
+        paidToPartnerFromSavings:
+            savingsFundedPayments + notFromIncomeTransfers,
+        total: whatIReallySpent + setAside + legacyPaidToPartner,
     };
 }

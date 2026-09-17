@@ -10,7 +10,11 @@ export type FeedItem =
     | { kind: "expense"; date: Date; expense: ExpenseListItem }
     | { kind: "movement"; date: Date; movement: MovementListItem };
 
-/** Merge expenses + movements into one list, newest first. */
+/**
+ * Merge expenses + movements into one list, newest first. A `gf_fronted` debt is
+ * dropped: it is settlement-only (spec 0007 §6b). The month query already excludes
+ * it; this second guard covers a caller assembling its own movement list.
+ */
 export function buildFeed(
     expenses: ExpenseListItem[],
     movements: MovementListItem[],
@@ -19,9 +23,15 @@ export function buildFeed(
         ...expenses.map(
             (e): FeedItem => ({ kind: "expense", date: e.date, expense: e }),
         ),
-        ...movements.map(
-            (m): FeedItem => ({ kind: "movement", date: m.date, movement: m }),
-        ),
+        ...movements
+            .filter((m) => m.type !== "gf_fronted")
+            .map(
+                (m): FeedItem => ({
+                    kind: "movement",
+                    date: m.date,
+                    movement: m,
+                }),
+            ),
     ];
     return items.sort((a, b) => b.date.getTime() - a.date.getTime());
 }

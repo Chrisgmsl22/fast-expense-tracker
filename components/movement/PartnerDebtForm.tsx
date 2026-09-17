@@ -32,11 +32,9 @@ type Props = {
 };
 
 /**
- * Log an "I owe {partner}" debt — something she fronted that you owe her back
- * (ADR-0020). It's settlement-only: saved as a `Movement{type:"gf_fronted"}`,
- * never an expense, so it stays out of your spending, categories, and budget. It
- * only adds to what you owe her; a transfer settles it. Logged from the
- * settlement page or the `+ Add` menu, and editable from the expenses feed.
+ * Log an "I owe {partner}" debt as a `Movement{type:"gf_fronted"}` — settlement
+ * only, never in the budget, because a debt is provisional until money moves
+ * (spec 0007 §6b). The amount is **what you owe**, not what she paid.
  */
 export function PartnerDebtForm({
     debt,
@@ -107,7 +105,7 @@ export function PartnerDebtForm({
             }
         >
             <p className="text-sm text-muted-foreground">
-                {`Something ${partnerName} fronted that you owe her back. It only adds to what you owe her — settle it with a transfer. It's not part of your spending.`}
+                {`Something ${partnerName} fronted that you owe her back. Enter what YOU owe, not what she paid. This is settlement only — it does not touch your budget. The payment you make later is the expense.`}
             </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -125,7 +123,18 @@ export function PartnerDebtForm({
                     {fieldError("date")}
                 </div>
                 <div className="sm:col-span-2">
-                    <Label htmlFor="debt-amount">Amount you owe (MXN)</Label>
+                    <Label htmlFor="debt-amount">
+                        {`What you owe ${partnerName} (MXN)`}
+                    </Label>
+                    {/* The $500 carwash: he typed what SHE paid because the
+                        question was ambiguous. Say whose figure this is, at the
+                        field, not only in a heading the form may not show. */}
+                    <p
+                        id="debt-amount-help"
+                        className="mt-0.5 text-xs text-muted-foreground"
+                    >
+                        Your share only — not what {partnerName} paid.
+                    </p>
                     <div className="relative mt-1.5">
                         <span
                             aria-hidden
@@ -136,6 +145,7 @@ export function PartnerDebtForm({
                         <Input
                             id="debt-amount"
                             name="amount"
+                            aria-describedby="debt-amount-help"
                             type="number"
                             inputMode="decimal"
                             step="0.01"

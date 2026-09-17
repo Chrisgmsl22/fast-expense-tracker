@@ -5,7 +5,7 @@
             "id": "BUG-1",
             "title": "Partner-debt ('I owe') logged as a phantom Cash expense on the dashboard",
             "description": "Logging 'I owe {partner} $X' stores an Expense{paidBy:'gf', cardId:null} — intended as cost (ADR-0018). But Spend-by-card (getCardSpends) groups every expense by cardId, so the debt surfaces as a second 'Cash' row next to real cash spend. Two 'Cash' entries appear on the dashboard: the real one and the phantom.",
-            "proposedSolution": "Retired by CHORE-4 (PR #53): 'I owe {partner}' is no longer an Expense{paidBy:'gf'} but a settlement-only Movement{type:'gf_fronted'}, so it never reaches getCardSpends — the phantom Cash row is gone by construction, not by a filter.",
+            "proposedSolution": "Retired by CHORE-4 (PR #53): 'I owe {partner}' became a settlement-only Movement{type:'gf_fronted'}, so it never reached getCardSpends. It STAYS a settlement-only movement — spec 0007 §6b settles that a debt is provisional and never an expense. What became an expense is the PAYMENT you send her, marked Expense{isPartnerPayment:true}: it is real money leaving your account, so it belongs in the budget. A payment has no cardId either, so the same phantom-Cash hazard applies to it and is prevented the same way: an isPartnerPayment:false filter in getCardSpends (a query-boundary exclusion, like the savings one), pinned by name in tests/integration/dashboard-repository.test.ts.",
             "status": "merged",
             "spec": "docs/specs/0005-cash-basis-money-model.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/53",
@@ -15,8 +15,8 @@
             "id": "BUG-2",
             "title": "Category colors render gray in production",
             "description": "Category dots + 'Where the money went' bars show neutral gray in prod; card colors are fine. Not a Tailwind purge (colors applied via inline style). Prod Category.color rows still hold the schema default #6b7280 — prod was never re-seeded since per-slug colors landed.",
-            "proposedSolution": "Confirm prod state via Neon MCP, then carefully re-seed prod (seed already refreshes Category.color on upsert). Bundle: FK-safely delete the Amex Gold card (no longer owned). Folded into CHORE-6.a's manual owner prod-migration trip — SQL/steps in docs/operations/owner-shared-mode-migration.md §2. No app code.",
-            "status": "open",
+            "proposedSolution": "Fixed by the data migration prisma/migrations/20260914000000_backfill_category_colors. It sets Category.color per slug from literals copied out of prisma/seed.ts → CATEGORY_COLORS, updates only rows still holding the gray default #6b7280 (so a user-chosen color survives), is scoped by slug not userId, leaves the 'unassigned' sentinel gray on purpose, and touches no other table. vercel.json runs `prisma migrate deploy` on every prod build, so it applies on merge with no manual prod access. RETRACTED — the earlier 're-seed prod' instruction: the seed also upserts Cards and matches them by NAME (prisma/seed.ts:301-321 — findFirst({ name }), then update({ color, type }) or create), so a prod re-seed rewrites every card's color/type and re-creates any card the owner renamed in Settings as a duplicate. The Amex Gold rider (docs/operations/owner-shared-mode-migration.md §2b) is untouched and stays manual. No app code.",
+            "status": "fixed",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,
             "issue": null
@@ -38,6 +38,26 @@
             "proposedSolution": "Move both reads behind the repository layer, scoped by userId, and have the page call a service instead of db. Then close the write side: createExpense currently user-scopes only the reimbursed path (getCategorySlug), so a foreign categoryId passes validation for every other funding source — validate that the categoryId and subcategoryId belong to the session user on every create and update, not just one branch. Tests: a second user's category is absent from the picker; a create naming a foreign categoryId is rejected; the same for subcategoryId. Blocks CHORE-8.d.",
             "status": "open",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "BUG-5",
+            "title": "A savings-funded payment to the partner appears in no line of the expenses chin",
+            "description": "Reported from manual testing on October 2026: two 'Transfer — you paid Brenda' rows, $300 and $230, both tagged 'from savings', and the chin showed only Charged $10,380.00 / Not from this month's income $8,788.00 / What I really spent $680.00. Neither 'Paid to Brenda' nor 'Paid to Brenda from savings' rendered. Verified in ExpenseListInteractive.tsx: the 'Paid to {partner}' line is gated on totals.paidToPartner > 0, and after the #74 merge paidToPartner counts only INCOME-funded payment-expenses plus income-funded legacy movements. notFromIncomeTransfers is gated the same way and holds only savings-funded legacy gf_paid MOVEMENTS — but a payment is an Expense now, so it is 0 too. The money is therefore folded silently into 'Not from this month's income' beside every unrelated savings purchase, and nothing says how much of it reached the partner. Introduced by the #74/#73 merge: neither branch had this gap alone, because before the inversion a payment was a movement and landed in notFromIncomeTransfers.",
+            "proposedSolution": "Surface the savings-funded payment-expense total as its own figure — it is consumption (spec 0007 §6a decision 2 puts a savings-funded payment in notFromIncome), so it is a BREAKDOWN of 'Not from this month's income', never an addend. Add a field alongside paidToPartner, computed in computeFeedTotals from payment-expenses whose fundedFrom is not income, and render it nested. Do NOT sum it with notFromIncomeTransfers (the cash ledger) — spec 0007 §6a bans a figure spanning both. Lands naturally inside CHORE-14, which restructures the chin; fix it there rather than bolting a seventh flat line onto a footer already too dense.",
+            "status": "open",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "BUG-6",
+            "title": "A future month is called 'a past month', and the open settlement tab disappears on any month but this one",
+            "description": "Two faults in one place, both reported from manual testing. (1) SettlementViews.tsx:126 renders '{month} is a past month. The open settlement is always the current one — switch back to this month to see it.' It is gated on isCurrentMonth being false, so a FUTURE month gets the same sentence: viewing October 2026 on 16 September 2026 states that October is past. (2) The 'Open settlement' tab itself is removed for any non-current month (SettlementViews.tsx:49), so after closing a cycle he switched to October, could not see the open settlement at all, and had no way back to it except changing the month. The tab list silently changes shape depending on which month is selected, which is why it read as the tab having vanished.",
+            "proposedSolution": "(1) Split the copy: 'past' only when the month is genuinely before the current one; a future month needs its own sentence, and neither should claim the open settlement is unreachable. (2) Decide whether the open settlement belongs in the tab list at all times — it is one cycle, not a property of the selected month, so removing it makes the page inconsistent with itself. Preferred: always render the tab and let it stay selectable, since 'the open settlement is always the current one' is exactly the reason it should not disappear when the month changes. Tests: a future month, the current month and a past month each render the tab list and the correct notice.",
+            "status": "open",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
             "pr": null,
             "issue": null
         }

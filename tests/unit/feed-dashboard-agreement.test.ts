@@ -24,6 +24,8 @@ function expense(
         actualExpenditure: 0,
         isShared: false,
         fundedFrom: "income",
+        isPartnerPayment: false,
+        cycleClosedAt: null,
         category: {
             id: "c1",
             slug: "shopping",
@@ -112,10 +114,10 @@ function expensesTabTotals(
 
 /** A month with all three funding sources, a transfer, and a debt. */
 const movements: FeedTotalMovement[] = [
-    { type: "gf_paid", amount: 700, fundedFrom: "income" },
-    { type: "gf_paid", amount: 250, fundedFrom: "savings" },
-    { type: "gf_fronted", amount: 450, fundedFrom: "income" },
-    { type: "card_payment", amount: 5000, fundedFrom: "income" },
+    { id: "m1", type: "gf_paid", amount: 700, fundedFrom: "income" },
+    { id: "m2", type: "gf_paid", amount: 250, fundedFrom: "savings" },
+    { id: "m3", type: "gf_fronted", amount: 450, fundedFrom: "income" },
+    { id: "m4", type: "card_payment", amount: 5000, fundedFrom: "income" },
 ];
 
 describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
@@ -236,8 +238,8 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
         // `gf_paid` still lands in the total; a debt (`gf_fronted`) never
         // reaches these totals at all. Funding source changes neither.
         const totals = computeFeedTotals(month, [
-            { type: "gf_paid", amount: 700, fundedFrom: "income" },
-            { type: "gf_fronted", amount: 450, fundedFrom: "income" },
+            { id: "m1", type: "gf_paid", amount: 700, fundedFrom: "income" },
+            { id: "m2", type: "gf_fronted", amount: 450, fundedFrom: "income" },
         ]);
 
         expect(totals.paidToPartner).toBe(700);
@@ -248,7 +250,7 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
         // It used no part of this month's income, so it leaves the budget and
         // cash figures — but the settlement balance still counts it in full.
         const totals = computeFeedTotals(month, [
-            { type: "gf_paid", amount: 700, fundedFrom: "savings" },
+            { id: "m1", type: "gf_paid", amount: 700, fundedFrom: "savings" },
         ]);
 
         expect(totals.paidToPartner).toBe(0);
@@ -270,6 +272,7 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
             fundedFrom: "savings",
         });
         const settling = {
+            id: "m1",
             type: "gf_paid" as const,
             amount: 680,
             fundedFrom: "savings" as const,

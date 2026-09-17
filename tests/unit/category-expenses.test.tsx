@@ -23,6 +23,8 @@ function exp(
         fundedFrom,
         countedInBudget: over.countedInBudget ?? fundedFrom === "income",
         isShared: over.isShared ?? false,
+        isPartnerPayment: over.isPartnerPayment ?? false,
+        cycleClosedAt: over.cycleClosedAt ?? null,
         category: over.category ?? {
             id: "cat1",
             slug: "health",
@@ -56,6 +58,7 @@ describe("CategoryExpenses", () => {
                     exp({
                         id: "e1",
                         isShared: true,
+                        isPartnerPayment: false,
                         amount: 1000,
                         actualExpenditure: 680,
                         fundedFrom: "income" as const,

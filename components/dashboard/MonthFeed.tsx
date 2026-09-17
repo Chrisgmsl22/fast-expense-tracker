@@ -10,7 +10,7 @@ import { buildFeed } from "@/lib/feed";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
-import { CASH_COLOR } from "@/lib/palette";
+import { expenseCardLabel } from "@/lib/expense-display";
 import {
     movementDisplay,
     movementRowText,
@@ -20,12 +20,9 @@ import { SettlementChip } from "./SettlementChip";
 /**
  * Right-rail month feed — a read-only list of the month's expenses **and money
  * movements** (card payments, transfers to the partner), newest first, with a
- * pinned footer. Movements are colour-tagged (card payment blue, "I paid
- * {partner}" gold, "I owe {partner}" orange) and never enter the spend total —
- * a debt she fronted is shown for awareness only.
- * The footer splits money into consumption, savings and cash lines; the cash
- * half is never added to the consumption one (spec 0007 §6a).
- * Who-owes-whom lives in the settlement slice, not here (ADR-0018).
+ * pinned footer. A debt she fronted never reaches this list: it is
+ * settlement-only and provisional (spec 0007 §6b). The footer keeps the
+ * consumption and cash lines apart, never summed (spec 0007 §6a).
  */
 export function MonthFeed({
     expenses,
@@ -54,6 +51,8 @@ export function MonthFeed({
 }) {
     const feed = buildFeed(expenses, movements);
 
+    // Movements go in because a legacy `gf_paid` transfer is still a movement until
+    // the data PR converts it; the footer would otherwise drop its money.
     const totals = computeFeedTotals(expenses, movements);
 
     const count = feed.length;
@@ -81,6 +80,7 @@ export function MonthFeed({
                             <ExpenseRow
                                 key={`e-${item.expense.id}`}
                                 expense={item.expense}
+                                partnerName={partnerName}
                             />
                         ) : (
                             <MovementRow
@@ -156,21 +156,23 @@ export function MonthFeed({
                             </span>
                         </div>
                     )}
-                    {/* The cash half — never added to the consumption line above (spec 0007 §6a). */}
-                    {totals.notFromIncomeTransfers > 0 && (
+                    {/* Every peso that reached her from another month's money —
+                        transfer or payment-expense alike (spec 0007 §6a). */}
+                    {totals.paidToPartnerFromSavings > 0 && (
                         <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">
                                 {nonIncomeFundedTransferLabel(partnerName)}
                             </span>
                             <span className="px-2 tabular-nums text-muted-foreground">
-                                {formatMxn(totals.notFromIncomeTransfers)}
+                                {formatMxn(totals.paidToPartnerFromSavings)}
                             </span>
                         </div>
                     )}
-                    {/* Total only when it says something beyond "what I really
-                        spent" — i.e. savings or a transfer added to it. Dark band
-                        (flush to the card bottom) so it's easy to spot. */}
-                    {(totals.setAside > 0 || totals.paidToPartner > 0) && (
+                    {/* Gated on the two figures that ADD to it. `paidToPartner` is a
+                        breakdown of "what I really spent", so gating on it would print
+                        a Total restating the line above (spec 0007 §6a). */}
+                    {(totals.setAside > 0 ||
+                        totals.legacyPaidToPartner > 0) && (
                         <div className="-mx-4 -mb-4 mt-1 flex items-center justify-between rounded-b-lg bg-foreground px-4 py-2.5 text-background">
                             <span className="font-medium">Total</span>
                             <span className="px-2 font-semibold tabular-nums">
@@ -194,10 +196,20 @@ export function MonthFeed({
 }
 
 /** One expense line (neutral). */
-function ExpenseRow({ expense: e }: { expense: ExpenseListItem }) {
+function ExpenseRow({
+    expense: e,
+    partnerName,
+}: {
+    expense: ExpenseListItem;
+    partnerName: string;
+}) {
     const isSavings = e.category.slug === SAVINGS_SLUG;
-    const cardColor = e.card?.color ?? CASH_COLOR;
-    const cardName = e.card?.name ?? "Cash";
+    // Same helper the Expenses list uses, so the two screens cannot print
+    // different words for the same row.
+    const { name: cardName, color: cardColor } = expenseCardLabel(
+        e,
+        partnerName,
+    );
     return (
         <li
             className={`flex items-center gap-3 py-2.5 pr-4 pl-4 ${isSavings ? "border-l-[3px] border-positive bg-positive-tint" : "relative"}`}
@@ -266,6 +278,7 @@ function MovementRow({
     partnerName: string;
 }) {
     const { amountClass, rowTint } = movementDisplay(m.type, partnerName);
+    // `buildFeed` drops a debt she fronted, so only card payments and transfers reach here.
     const { title, subline } = movementRowText(m, partnerName);
 
     return (

@@ -1,13 +1,22 @@
 import type {
     ExpenseEditable,
+    ExpenseInsertData,
     ExpenseListItem,
     ExpenseRepository,
     ExpenseWriteData,
 } from "@/lib/repositories/expense.repository";
 
-type StoredExpense = { id: string; userId: string } & ExpenseWriteData;
+type StoredExpense = {
+    id: string;
+    userId: string;
+    /**
+     * Mirrors `ExpenseEditable.cycleClosedAt`, taken as arranged state — so an action's
+     * closed-cycle refusal is testable without a database.
+     */
+    cycleClosedAt: Date | null;
+} & ExpenseInsertData;
 
-const DEFAULT_WRITE: ExpenseWriteData = {
+const DEFAULT_WRITE: ExpenseInsertData = {
     categoryId: "cat1",
     subcategoryId: null,
     cardId: null,
@@ -20,6 +29,7 @@ const DEFAULT_WRITE: ExpenseWriteData = {
     paidBy: "you",
     fundedFrom: "income",
     notes: null,
+    isPartnerPayment: false,
 };
 
 /**
@@ -44,6 +54,9 @@ export class FakeExpenseRepository implements ExpenseRepository {
     readonly updates: { id: string; userId: string; data: ExpenseWriteData }[] =
         [];
 
+    /** Every `deleteForUser` call that matched a row, in order — for assertions. */
+    readonly deletes: { id: string; userId: string }[] = [];
+
     // --- arrange helpers ---
 
     setSubcategory(subcategoryId: string, categoryId: string): void {
@@ -58,9 +71,15 @@ export class FakeExpenseRepository implements ExpenseRepository {
     seedExpense(
         id: string,
         userId: string,
-        over: Partial<ExpenseWriteData> = {},
+        over: Partial<ExpenseInsertData & { cycleClosedAt: Date | null }> = {},
     ): void {
-        this.rows.set(id, { id, userId, ...DEFAULT_WRITE, ...over });
+        this.rows.set(id, {
+            id,
+            userId,
+            cycleClosedAt: null,
+            ...DEFAULT_WRITE,
+            ...over,
+        });
     }
 
     // --- ExpenseRepository contract ---
@@ -79,8 +98,12 @@ export class FakeExpenseRepository implements ExpenseRepository {
             notes: row.notes,
             isShared: row.isShared,
             yourPercentage: row.yourPercentage,
+            // The STORED share, as the Prisma adapter returns it — never a recomputation.
+            actualExpenditure: row.actualExpenditure,
             paidBy: row.paidBy,
             fundedFrom: row.fundedFrom,
+            isPartnerPayment: row.isPartnerPayment,
+            cycleClosedAt: row.cycleClosedAt,
         };
     }
 
@@ -105,10 +128,15 @@ export class FakeExpenseRepository implements ExpenseRepository {
 
     async insert(
         userId: string,
-        data: ExpenseWriteData,
+        data: ExpenseInsertData,
     ): Promise<{ id: string }> {
         if (this.failOnWrite) throw new Error("fake: insert failed");
-        const row: StoredExpense = { id: `exp_${++this.seq}`, userId, ...data };
+        const row: StoredExpense = {
+            id: `exp_${++this.seq}`,
+            userId,
+            cycleClosedAt: null,
+            ...data,
+        };
         this.rows.set(row.id, row);
         this.inserts.push(row);
         return { id: row.id };
@@ -122,8 +150,24 @@ export class FakeExpenseRepository implements ExpenseRepository {
         if (this.failOnWrite) throw new Error("fake: update failed");
         const existing = this.rows.get(id);
         if (!existing || existing.userId !== userId) return 0;
-        this.rows.set(id, { id, userId, ...data });
+        // `isPartnerPayment` is write-once: the real adapter's update shape has no such
+        // field, so the fake must not let an update change it either.
+        this.rows.set(id, {
+            id,
+            userId,
+            ...data,
+            isPartnerPayment: existing.isPartnerPayment,
+            cycleClosedAt: existing.cycleClosedAt,
+        });
         this.updates.push({ id, userId, data });
+        return 1;
+    }
+
+    async deleteForUser(userId: string, id: string): Promise<number> {
+        const existing = this.rows.get(id);
+        if (!existing || existing.userId !== userId) return 0;
+        this.rows.delete(id);
+        this.deletes.push({ id, userId });
         return 1;
     }
 }

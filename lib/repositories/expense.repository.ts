@@ -2,6 +2,8 @@ import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
 import { toFundingSource, type FundingSource } from "@/lib/domain/funding";
+import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
+import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 
 export type ExpenseListItem = {
     id: string;
@@ -12,6 +14,13 @@ export type ExpenseListItem = {
     isShared: boolean;
     /** Which month's money funded it (spec 0007 §3.1) — drives the row badge. */
     fundedFrom: FundingSource;
+    /** Money you SENT the partner — both consumption and cash out, one row. */
+    isPartnerPayment: boolean;
+    /**
+     * The close instant of this row's cycle, null while it is open. The LIST carries it
+     * so a frozen row can drop its controls instead of failing after the submit.
+     */
+    cycleClosedAt: Date | null;
     category: { id: string; slug: string; name: string; color: string };
     subcategory: { name: string } | null;
     card: { name: string; color: string } | null;
@@ -29,8 +38,21 @@ export type ExpenseEditable = {
     notes: string | null;
     isShared: boolean;
     yourPercentage: number;
+    /**
+     * The row's STORED share, never a recomputation: the closed-cycle guard and the
+     * settlement balance both read this column and must not disagree on a legacy row.
+     */
+    actualExpenditure: number;
     paidBy: string;
     fundedFrom: FundingSource;
+    /** Whether this row is money you sent the partner (spec 0007 §6b). */
+    isPartnerPayment: boolean;
+    /**
+     * The close instant of the cycle this row belongs to, null while it is open (spec
+     * 0007 §3.5). An expense has no marker column, so the repository derives it. A
+     * marker alone does not freeze a row — pair it with `movesSettlementBalance`.
+     */
+    cycleClosedAt: Date | null;
 };
 
 /**
@@ -38,6 +60,9 @@ export type ExpenseEditable = {
  * (`actualExpenditure`, the UTC `date`) are resolved by the caller; the owner
  * and immutable defaults (`isRecurring`, original-currency columns) are set by
  * the adapter, not passed in.
+ *
+ * `isPartnerPayment` is deliberately absent: it is set once, at insert, so an edit
+ * cannot silently turn a payment into an ordinary purchase.
  */
 export type ExpenseWriteData = {
     categoryId: string;
@@ -54,6 +79,11 @@ export type ExpenseWriteData = {
     notes: string | null;
 };
 
+/** What `insert` takes: the update shape plus the write-once payment marker. */
+export type ExpenseInsertData = ExpenseWriteData & {
+    isPartnerPayment: boolean;
+};
+
 /**
  * Data-access contract for expenses — the "port". Callers (actions, pages)
  * depend on this interface, never on Prisma directly, so any implementation
@@ -68,12 +98,14 @@ export interface ExpenseRepository {
     getSubcategoryCategoryId(subcategoryId: string): Promise<string | null>;
     /** Scoped by user: a category the user doesn't own resolves to null, which is not Health, so the rule fails closed. */
     getCategorySlug(userId: string, categoryId: string): Promise<string | null>;
-    insert(userId: string, data: ExpenseWriteData): Promise<{ id: string }>;
+    insert(userId: string, data: ExpenseInsertData): Promise<{ id: string }>;
     updateForUser(
         id: string,
         userId: string,
         data: ExpenseWriteData,
     ): Promise<number>;
+    /** Delete one expense, scoped by owner. Returns rows affected (0 = not the user's). */
+    deleteForUser(userId: string, id: string): Promise<number>;
 }
 
 /**
@@ -98,13 +130,24 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 notes: true,
                 isShared: true,
                 yourPercentage: true,
+                actualExpenditure: true,
                 paidBy: true,
                 fundedFrom: true,
+                isPartnerPayment: true,
+                createdAt: true,
             },
         });
         if (!row) return null;
-        // The column is a plain String, so narrow it here rather than casting.
-        return { ...row, fundedFrom: toFundingSource(row.fundedFrom) };
+        const { createdAt, ...editable } = row;
+        return {
+            ...editable,
+            // The column is a plain String, so narrow it here rather than casting.
+            fundedFrom: toFundingSource(editable.fundedFrom),
+            cycleClosedAt: cycleCloseAtOrAfter(
+                await getCycleCloses(this.db, userId),
+                createdAt,
+            ),
+        };
     }
 
     async getForMonth(
@@ -112,27 +155,38 @@ export class PrismaExpenseRepository implements ExpenseRepository {
         month: string,
     ): Promise<ExpenseListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
-        const rows = await this.db.expense.findMany({
-            where: { userId, date: { gte: start, lt: end } },
-            orderBy: { date: "desc" },
-            select: {
-                id: true,
-                date: true,
-                description: true,
-                amount: true,
-                actualExpenditure: true,
-                isShared: true,
-                fundedFrom: true,
-                category: {
-                    select: { id: true, slug: true, name: true, color: true },
+        const [rows, closes] = await Promise.all([
+            this.db.expense.findMany({
+                where: { userId, date: { gte: start, lt: end } },
+                orderBy: { date: "desc" },
+                select: {
+                    id: true,
+                    date: true,
+                    description: true,
+                    amount: true,
+                    actualExpenditure: true,
+                    isShared: true,
+                    fundedFrom: true,
+                    isPartnerPayment: true,
+                    createdAt: true,
+                    category: {
+                        select: {
+                            id: true,
+                            slug: true,
+                            name: true,
+                            color: true,
+                        },
+                    },
+                    subcategory: { select: { name: true } },
+                    card: { select: { name: true, color: true } },
                 },
-                subcategory: { select: { name: true } },
-                card: { select: { name: true, color: true } },
-            },
-        });
-        return rows.map((r) => ({
-            ...r,
-            fundedFrom: toFundingSource(r.fundedFrom),
+            }),
+            getCycleCloses(this.db, userId),
+        ]);
+        return rows.map(({ createdAt, ...item }) => ({
+            ...item,
+            fundedFrom: toFundingSource(item.fundedFrom),
+            cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
         }));
     }
 
@@ -157,7 +211,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
         return category?.slug ?? null;
     }
 
-    insert(userId: string, data: ExpenseWriteData): Promise<{ id: string }> {
+    insert(userId: string, data: ExpenseInsertData): Promise<{ id: string }> {
         return this.db.expense.create({
             data: {
                 userId,
@@ -185,6 +239,18 @@ export class PrismaExpenseRepository implements ExpenseRepository {
         const result = await this.db.expense.updateMany({
             where: { id, userId },
             data,
+        });
+        return result.count;
+    }
+
+    /**
+     * `deleteMany`, so the where-clause can carry `userId` and a row that isn't the
+     * user's matches nothing (IDOR guard). The closed-cycle refusal is NOT here: it
+     * needs facts the caller holds, and a silent zero count gives no message.
+     */
+    async deleteForUser(userId: string, id: string): Promise<number> {
+        const result = await this.db.expense.deleteMany({
+            where: { id, userId },
         });
         return result.count;
     }

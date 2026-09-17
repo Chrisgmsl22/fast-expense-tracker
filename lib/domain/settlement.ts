@@ -91,3 +91,54 @@ export function computeCoupleBalance(inputs: SettlementInputs): CoupleBalance {
 export function isBalanceSettled(balance: CoupleBalance): boolean {
     return Math.abs(balance.balance) < 0.005;
 }
+
+/**
+ * The only movement types that may carry the cycle marker (spec 0007 §3.5): a cycle
+ * closes when real money squares the balance, so only a transfer can.
+ */
+export const CYCLE_CLOSING_TYPES = ["gf_paid", "gf_received"] as const;
+
+export type CycleClosingType = (typeof CYCLE_CLOSING_TYPES)[number];
+
+/** True when this movement type is allowed to carry the cycle marker. */
+export function canCloseCycle(type: string): type is CycleClosingType {
+    return (CYCLE_CLOSING_TYPES as readonly string[]).includes(type);
+}
+
+/**
+ * The movement types a settlement cycle COUNTS — the twin of `movesSettlementBalance`.
+ * WIDER than `CYCLE_CLOSING_TYPES`: a debt never carries the marker, but it is just
+ * as much inside the cycle, so it freezes with it.
+ */
+export const SETTLEMENT_MOVEMENT_TYPES = [
+    "gf_fronted",
+    ...CYCLE_CLOSING_TYPES,
+] as const;
+
+export type SettlementMovementType = (typeof SETTLEMENT_MOVEMENT_TYPES)[number];
+
+/** True when a cycle counts this movement type, so a closed cycle freezes it. */
+export function movementMovesSettlementBalance(
+    type: string,
+): type is SettlementMovementType {
+    return (SETTLEMENT_MOVEMENT_TYPES as readonly string[]).includes(type);
+}
+
+/**
+ * The close instant of the cycle a row entered at `enteredAt` belongs to, or null
+ * while that cycle is open. A cycle runs up to and INCLUDING its own close, so the
+ * row belongs to the FIRST close at or after it. `closes` may arrive unordered.
+ */
+export function cycleCloseAtOrAfter(
+    closes: readonly Date[],
+    enteredAt: Date,
+): Date | null {
+    let earliest: Date | null = null;
+    for (const close of closes) {
+        if (close.getTime() < enteredAt.getTime()) continue;
+        if (earliest === null || close.getTime() < earliest.getTime()) {
+            earliest = close;
+        }
+    }
+    return earliest;
+}

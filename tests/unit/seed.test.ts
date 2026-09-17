@@ -2,6 +2,10 @@
 import { describe, it, expect, vi } from "vitest";
 import bcrypt from "bcryptjs";
 
+import {
+    PARTNER_PAYMENT_CATEGORY_SLUG,
+    PARTNER_PAYMENT_SUBCATEGORY_NAME,
+} from "@/lib/domain/expense";
 import { CATEGORY_SEED, CARD_SEED, runSeed } from "@/prisma/seed";
 
 const ADMIN = { adminEmail: "admin@example.com", adminPassword: "s3cret-pw" };
@@ -121,6 +125,27 @@ describe("CATEGORY_SEED data", () => {
         const unassigned = CATEGORY_SEED.find((c) => c.slug === "unassigned");
         expect(unassigned?.subcategories).toEqual([]);
     });
+
+    /**
+     * The seed, `getPartnerPaymentDefaults` and `subcategoryLabel` all match this
+     * subcategory BY NAME. If the seed drifts from the constant, a payment files with
+     * `subcategoryId: null` and nothing says so.
+     */
+    it("seeds the partner-payment subcategory under the name the code looks up", () => {
+        const combined = CATEGORY_SEED.find(
+            (c) => c.slug === PARTNER_PAYMENT_CATEGORY_SLUG,
+        );
+
+        expect(combined?.subcategories).toContain(
+            PARTNER_PAYMENT_SUBCATEGORY_NAME,
+        );
+        // Exactly one, or a fresh provision creates the duplicate outright.
+        expect(
+            combined?.subcategories.filter(
+                (n) => n === PARTNER_PAYMENT_SUBCATEGORY_NAME,
+            ),
+        ).toHaveLength(1);
+    });
 });
 
 describe("CARD_SEED data", () => {
@@ -215,6 +240,25 @@ describe("runSeed", () => {
         );
         expect(createdNames).not.toContain("Rent");
         expect(createdNames).not.toContain("Gasoline");
+    });
+
+    /**
+     * Re-seeding an UNMIGRATED database: the rows still carry "Purchases made by
+     * girlfriend" and the seed matches by name, so a seed carrying the new name would
+     * create a SECOND subcategory beside the old one.
+     */
+    it("creates no duplicate partner-payment subcategory on an unmigrated database", async () => {
+        const { db, subcategory } = makeDb({
+            existingSubNames: new Set([PARTNER_PAYMENT_SUBCATEGORY_NAME]),
+        });
+        await runSeed(db, ADMIN);
+
+        const createdNames = subcategory.create.mock.calls.map(
+            (c) => c[0].data.name,
+        );
+        expect(createdNames).not.toContain(PARTNER_PAYMENT_SUBCATEGORY_NAME);
+        // And no second name for the same thing, under any spelling.
+        expect(createdNames).not.toContain("Covered for me");
     });
 
     it("creates the 5 cards for the admin user on a fresh DB", async () => {

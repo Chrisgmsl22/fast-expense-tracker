@@ -36,6 +36,10 @@
             "Bash(git push -f *)",
             "Bash(git commit --no-verify*)",
             "Bash(git commit -n *)",
+            "Bash(git push origin main*)",
+            "Bash(git push origin HEAD:main*)",
+
+            "mcp__github__merge_pull_request",
 
             "Bash(npm install -g*)",
             "Bash(pnpm add -g*)",

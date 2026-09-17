@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { db } from "@/lib/db";
+import { PrismaMovementRepository } from "@/lib/repositories/movement.repository";
 import { PrismaSettlementRepository } from "@/lib/repositories/settlement.repository";
 
 const repo = new PrismaSettlementRepository(db);
@@ -131,5 +132,136 @@ describe("PrismaSettlementRepository.getForWindow (integration)", () => {
             amount: 8000,
             fundedFrom: "savings",
         });
+    });
+});
+
+describe("PrismaSettlementRepository cycles (integration)", () => {
+    it("selects rows by entry time, not by date", async () => {
+        const user = await seedUser("cycles@example.com");
+        const cat = await seedCategory(user.id);
+        // Both rows are created now; only their dates differ. An old-dated row
+        // entered now must still fall inside a range that starts before now.
+        await db.expense.create({
+            data: {
+                userId: user.id,
+                categoryId: cat.id,
+                date: new Date("2025-01-10T06:00:00Z"),
+                description: "Entered late",
+                amount: 1000,
+                actualExpenditure: 680,
+                isShared: true,
+            },
+        });
+
+        const before = new Date(Date.now() - 60_000);
+        const rows = await repo.getForCreatedRange(user.id, before, null);
+        expect(rows.expenses.map((e) => e.description)).toEqual([
+            "Entered late",
+        ]);
+
+        // A range that ends before the row was entered excludes it, even though
+        // its DATE is far older than that boundary.
+        const empty = await repo.getForCreatedRange(user.id, null, before);
+        expect(empty.expenses).toEqual([]);
+    });
+
+    it("marks a transfer as the cycle close, once, and lists it as a marker", async () => {
+        const user = await seedUser("marker@example.com");
+        const transfer = await db.movement.create({
+            data: {
+                userId: user.id,
+                date: new Date("2026-07-05T06:00:00Z"),
+                amount: 320,
+                type: "gf_received",
+            },
+        });
+
+        const closedAt = new Date("2026-07-06T18:30:00Z");
+        expect(await repo.markCycleClose(user.id, transfer.id, closedAt)).toBe(
+            1,
+        );
+        // A double submit matches nothing the second time — no second marker.
+        expect(
+            await repo.markCycleClose(user.id, transfer.id, new Date()),
+        ).toBe(0);
+
+        const markers = await repo.getCycleMarkers(user.id);
+        expect(markers).toHaveLength(1);
+        // The boundary stored is the close instant, not the transfer's own date
+        // or entry time.
+        expect(markers[0]).toMatchObject({
+            id: transfer.id,
+            amount: 320,
+            closedAt,
+        });
+    });
+
+    it("freezes the marker: it can't be edited or deleted through the movement repository", async () => {
+        const user = await seedUser("frozen@example.com");
+        const transfer = await db.movement.create({
+            data: {
+                userId: user.id,
+                date: new Date("2026-07-05T06:00:00Z"),
+                amount: 320,
+                type: "gf_received",
+            },
+        });
+        await repo.markCycleClose(user.id, transfer.id, new Date());
+
+        const movements = new PrismaMovementRepository(db);
+        expect(
+            await movements.updateForUser(transfer.id, user.id, {
+                date: new Date("2026-07-05T06:00:00Z"),
+                amount: 999,
+                type: "gf_paid",
+                cardId: null,
+                note: null,
+            }),
+        ).toBe(0);
+        expect(await movements.deleteForUser(user.id, transfer.id)).toBe(0);
+
+        const still = await movements.getById(user.id, transfer.id);
+        expect(still).toMatchObject({ amount: 320, type: "gf_received" });
+        expect(still?.closedAt).not.toBeNull();
+    });
+
+    it("refuses the marker on a movement that isn't a transfer", async () => {
+        const user = await seedUser("nonmarker@example.com");
+        const debt = await db.movement.create({
+            data: {
+                userId: user.id,
+                date: new Date("2026-07-05T06:00:00Z"),
+                amount: 300,
+                type: "gf_fronted",
+            },
+        });
+
+        expect(await repo.markCycleClose(user.id, debt.id, new Date())).toBe(0);
+        expect(await repo.getCycleMarkers(user.id)).toEqual([]);
+        // The DB CHECK backs the query guard on create AND update.
+        await expect(
+            db.movement.update({
+                where: { id: debt.id },
+                data: { closedAt: new Date() },
+            }),
+        ).rejects.toThrow();
+    });
+
+    it("never marks another user's transfer", async () => {
+        const user = await seedUser("owner@example.com");
+        const other = await seedUser("intruder@example.com");
+        const transfer = await db.movement.create({
+            data: {
+                userId: user.id,
+                date: new Date("2026-07-05T06:00:00Z"),
+                amount: 100,
+                type: "gf_paid",
+            },
+        });
+
+        expect(
+            await repo.markCycleClose(other.id, transfer.id, new Date()),
+        ).toBe(0);
+        expect(await repo.getCycleMarkers(user.id)).toEqual([]);
     });
 });

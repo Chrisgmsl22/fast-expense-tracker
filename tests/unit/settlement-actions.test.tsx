@@ -14,8 +14,15 @@ vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
 vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
     updatePartnerDebt: vi.fn(),
 }));
+vi.mock("@/app/_actions/expense/add-partner-payment", () => ({
+    addPartnerPayment: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/update-partner-payment", () => ({
+    updatePartnerPayment: vi.fn(),
+}));
 
 import { SettlementActions } from "@/components/settlement/SettlementActions";
+import { pastMonthNotice } from "@/components/settlement/past-month-notice";
 
 describe("SettlementActions", () => {
     it("renders both actions", () => {
@@ -86,9 +93,57 @@ describe("SettlementActions", () => {
         fireEvent.click(screen.getByRole("button", { name: /I owe Brenda/ }));
 
         const dialog = await screen.findByRole("dialog");
-        expect(within(dialog).getByLabelText(/Amount you owe/)).toBeDefined();
+        expect(within(dialog).getByLabelText(/What you owe/)).toBeDefined();
         expect(
             within(dialog).queryByRole("combobox", { name: "Category" }),
         ).toBeNull();
+    });
+
+    it("carries the past-month warning INTO the transfer dialog", async () => {
+        // The dialog covers the page, so the page's own copy of this sentence
+        // is invisible at exactly the moment it matters.
+        const notice = pastMonthNotice("August 2026");
+        render(
+            <SettlementActions
+                direction="she_owes"
+                netAmount={700}
+                partnerName="Brenda"
+                pastMonthNotice={notice}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Log a transfer" }));
+
+        const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).getByText(notice)).toBeDefined();
+    });
+
+    it("carries the past-month warning INTO the debt dialog", async () => {
+        const notice = pastMonthNotice("August 2026");
+        render(
+            <SettlementActions
+                direction="she_owes"
+                netAmount={700}
+                partnerName="Brenda"
+                pastMonthNotice={notice}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: /I owe Brenda/ }));
+
+        const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).getByText(notice)).toBeDefined();
+    });
+
+    it("shows no such warning while on the current month", async () => {
+        render(
+            <SettlementActions
+                direction="she_owes"
+                netAmount={700}
+                partnerName="Brenda"
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Log a transfer" }));
+
+        const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).queryByText(/You are viewing/)).toBeNull();
     });
 });

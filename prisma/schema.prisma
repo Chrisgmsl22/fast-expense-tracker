@@ -142,10 +142,8 @@ model Expense {
   isShared          Boolean @default(false)
   yourPercentage    Float   @default(1.0) // 1.0 = 100% mine; 0.68 = my 68% share
   actualExpenditure Float // stored, not computed: isShared ? amount * yourPercentage : amount
-  // DEPRECATED (ADR-0020): always "you". "I owe {partner}" debts moved to
-  // Movement{type:"gf_fronted"}; no expense is fronted by the partner anymore.
-  // Column retained until the CHORE-4 prod migration converts existing rows; a
-  // later chore can drop it. All reads treat expenses as the user's own.
+  // DEPRECATED (ADR-0020): always "you". Column retained until a later chore
+  // drops it; all reads treat expenses as the user's own.
   paidBy            String  @default("you")
 
   // Which month's money funded this purchase (spec 0007 §3.1):
@@ -156,6 +154,20 @@ model Expense {
   // The card never reads this: a card payment stays source-agnostic (ADR-0020
   // §6), so spend-by-card still sees the full amount.
   fundedFrom        String  @default("income")
+
+  // Money you SENT the partner (spec 0007 §6b). Paying her is the moment the
+  // money is really spent, so this is an expense like any other: it carries a
+  // category and counts in the buckets. A debt she fronted is NOT — it is
+  // provisional, and stays a Movement{type:"gf_fronted"} until a payment settles
+  // it, because something she owes you can cancel it before any money moves.
+  //
+  // `amount` is what you sent, so `isShared` is false and `actualExpenditure`
+  // equals `amount`. One read excludes it: spend-by-card, because a payment
+  // usually has no card, and a cardless row read as "Cash" is BUG-1's symptom.
+  // The settlement layer reads this flag as the "you paid her" side of the
+  // balance — the side that draws the balance DOWN, the opposite sign to what
+  // you owe her.
+  isPartnerPayment  Boolean @default(false)
 
   // Forward-compat fields (UI ships in later phases — spec §3)
   isRecurring      Boolean @default(false) // Phase 3
@@ -227,8 +239,17 @@ model Movement {
   date   DateTime
   amount Float // always positive; direction comes from `type`
   // gf_received | gf_paid | card_payment | gf_fronted | income | other.
-  // `gf_fronted` (ADR-0020): a thing the partner fronted that you owe her — a
-  // settlement-only debt, no card, never in the cash feed or budget.
+  //
+  // `gf_fronted` is a debt the partner fronted. It is settlement-only and is
+  // NOT an expense (spec 0007 §6b): it is provisional, because something she
+  // owes you can shrink or cancel it before any money moves.
+  //
+  // `gf_paid` is LEGACY. Money you send her is an `Expense{isPartnerPayment}`
+  // now — that transfer is the moment real money leaves — so nothing writes
+  // this type anymore. NO migration converts the existing rows: the conversion
+  // is data, and data is deferred to its own PR. Until it runs, every read that
+  // counts payments must count these too (settlement's balance and the feed
+  // footer both do), or the money silently disappears from a screen.
   type   String
 
   cardId String? // set when type = "card_payment"
@@ -247,8 +268,21 @@ model Movement {
   // transfer has no category. A String, not a DB enum, to match `type`.
   fundedFrom String @default("income")
 
+  // Settlement-cycle marker (spec 0007 §3.5). Non-null says both "this transfer
+  // closed a cycle" AND "the cycle ended at this instant" — one column, so the
+  // fact and the boundary can never disagree. There is no cycle table: cycles
+  // are DERIVED from the sequence of markers (spec 0005 §2: store atomic facts,
+  // derive every view). The boundary is the CLOSE instant, not the transfer's
+  // own `createdAt`, so a row entered between that transfer and the user's
+  // confirmation is filed under the cycle whose balance already counted it.
+  // Valid only on gf_paid/gf_received; a CHECK in the migration enforces that
+  // on insert AND update.
+  closedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, date])
+  // Serves the marker scan that derives the cycle boundaries.
+  @@index([userId, closedAt])
 }

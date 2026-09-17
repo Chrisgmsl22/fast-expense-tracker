@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    canCloseCycle,
     computeCoupleBalance,
+    cycleCloseAtOrAfter,
     isBalanceSettled,
 } from "@/lib/domain/settlement";
 
@@ -131,6 +133,16 @@ describe("isBalanceSettled", () => {
         expect(isBalanceSettled(r)).toBe(false);
     });
 
+    it("only a transfer may carry the cycle marker", () => {
+        expect(canCloseCycle("gf_paid")).toBe(true);
+        expect(canCloseCycle("gf_received")).toBe(true);
+        // A debt or a card payment never closes a cycle — real money squares it.
+        expect(canCloseCycle("gf_fronted")).toBe(false);
+        expect(canCloseCycle("card_payment")).toBe(false);
+        expect(canCloseCycle("income")).toBe(false);
+        expect(canCloseCycle("other")).toBe(false);
+    });
+
     it("treats sub-cent Float drift as settled", () => {
         // 0.1 - 0.1 rounds to exactly 0, but a synthetic drift under half a cent
         // must still read as settled.
@@ -142,5 +154,55 @@ describe("isBalanceSettled", () => {
                 breakdown: [],
             }),
         ).toBe(true);
+    });
+});
+
+/**
+ * The choice this makes IS the closed-cycle freeze. It used to live inside a Prisma
+ * query, where none of it could be tested.
+ */
+describe("cycleCloseAtOrAfter", () => {
+    const early = new Date("2026-07-01T00:00:00Z");
+    const mid = new Date("2026-08-01T00:00:00Z");
+    const late = new Date("2026-09-01T00:00:00Z");
+
+    it("returns nothing when no cycle has ever closed", () => {
+        expect(cycleCloseAtOrAfter([], mid)).toBeNull();
+    });
+
+    it("returns nothing for a row entered after the last close — that cycle is open", () => {
+        expect(
+            cycleCloseAtOrAfter([early, mid], new Date("2026-08-02T00:00:00Z")),
+        ).toBeNull();
+    });
+
+    it("picks the FIRST close after the row, not just any later one", () => {
+        // Picking `late` would freeze the row against a settlement two cycles
+        // after the one it was actually counted in.
+        expect(
+            cycleCloseAtOrAfter(
+                [late, early, mid],
+                new Date("2026-07-15T00:00:00Z"),
+            ),
+        ).toBe(mid);
+    });
+
+    it("does not depend on the order it receives the closes in", () => {
+        const entered = new Date("2026-07-15T00:00:00Z");
+        expect(cycleCloseAtOrAfter([mid, late], entered)).toBe(
+            cycleCloseAtOrAfter([late, mid], entered),
+        );
+    });
+
+    it("includes a row entered at the exact close instant", () => {
+        // The boundary is `>=`: a cycle runs up to AND INCLUDING its own close,
+        // so the transfer that closes it belongs to it, not to the next one.
+        expect(cycleCloseAtOrAfter([mid, late], mid)).toBe(mid);
+    });
+
+    it("excludes a row entered one millisecond after the close", () => {
+        const justAfter = new Date(mid.getTime() + 1);
+        expect(cycleCloseAtOrAfter([mid], justAfter)).toBeNull();
+        expect(cycleCloseAtOrAfter([mid, late], justAfter)).toBe(late);
     });
 });

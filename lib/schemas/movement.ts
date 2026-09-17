@@ -46,10 +46,9 @@ export const transferInputSchema = z
 export type TransferInput = z.infer<typeof transferInputSchema>;
 
 /**
- * An "I owe {partner}" debt — something she fronted that you owe her back
- * (ADR-0020). Stored as a `Movement{type:"gf_fronted"}`: settlement-only, no
- * category, no card, never consumption or budget. Just amount / date / optional
- * note. Logged only from the settlement page.
+ * An "I owe {partner}" debt — something she fronted. Stored as a
+ * `Movement{type:"gf_fronted"}`: settlement only, never consumption (spec 0007 §6b).
+ * It is provisional; the payment that settles it is the expense.
  */
 export const partnerDebtInputSchema = z.object({
     date: z.coerce.date(),

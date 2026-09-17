@@ -96,9 +96,95 @@ mocked unit test to make a number move. If you add a new source file, add its
 test (unit or integration per the rule above); don't rely on the advisory report
 to catch a missing one.
 
+## The browser pass — required for any FE slice
+
+A green suite is not evidence that a screen is right. Every defect listed under
+"What tests keep missing" shipped with its own tests passing. For any slice that
+changes what a screen shows, **load the page and read it**.
+
+**Setup, per PR.** Run one dev server per branch on its own port, so two PRs can
+be checked side by side: `pnpm -C <worktree> dev --port 3002`.
+
+**Worktree traps that cost an hour if you do not know them:**
+
+- **A worktree has no `.env.local`.** Git does not carry gitignored files into a
+  worktree, so a fresh one starts with no `AUTH_SECRET` and no `DATABASE_URL`,
+  and every sign-in returns 500. Copy it in:
+  `cp -n <primary>/.env.local <worktree>/.env.local`. Copy it — never read,
+  print, or commit it. It stays gitignored.
+- **Restart the server after that copy.** Next reads env at boot, so a running
+  server keeps the broken state.
+- **`AUTH_URL` pins the redirect to port 3000.** Signing in on 3002 succeeds and
+  then bounces to a dead 3000. The session cookie is host-scoped, not
+  port-scoped, so navigate to `localhost:<your port>/dashboard` afterwards.
+- **Never point a browser at a worktree another agent is editing** — you are
+  looking at a half-written tree.
+
+**Read the whole screen, not the figure you changed.** Check that every number,
+label and empty state on the page tells one story. Most defects here are one
+element contradicting another, not one element wrong on its own.
+
+## What tests keep missing
+
+Four classes have each produced a real defect **while the suite was green**.
+Write the assertion that catches them.
+
+**1. A predicate that does not mirror its read path.** A guard, filter or badge
+condition written wider or narrower than the query it must match. Symptoms: a row
+counted in one figure and not another; a control that refuses rows the feature
+never touched; money in a total with no row to point at.
+
+> Assert that the two sides describe the **same set**, not that they agree on the
+> three values you happened to test. If a Prisma `where` says
+> `fundedFrom: "income"`, the code-side complement must test the **raw** column,
+> not a narrowed enum that collapses unknown values to a valid one.
+
+**2. A screen whose elements contradict each other.** A header reading "shown
+below" above a section reading "nothing here"; "1 expense across 0
+subcategories"; a `$0` label directly above the row holding the money.
+
+> A test that renders one component proves nothing about the page. Assert across
+> the composed page, and assert on the elements you did **not** change — that is
+> where the contradiction lives. A test that checks only what it fixed passes
+> over the bug still on screen.
+
+**3. A fixture builder that discards the field under test.** A builder that
+hardcodes `fundedFrom: "income"` and ignores the caller's override makes every
+test on that component structurally blind to the case under test.
+
+> Builders spread the override **last**, or read `over.x ?? default` for every
+> field. When you add a field to a type, grep the builders before writing tests
+> against it.
+
+**4. A control fixed on one view while its siblings still offer it.** The same
+"control that only fails" defect was found on three surfaces in three consecutive
+review rounds — an expense row, a movement row, then the settlement Month
+journal. Each round fixed the surface in front of it and left the others live.
+
+> When you gate a control or fix a predicate on one view, list every view that
+> renders the same row and check each one. A row that carries its own
+> locked/disabled fact is safer than a view that remembers to pass a flag — but
+> only if every producer of that row actually derives the fact. A hardcoded
+> `false` on one producer makes the row lie about itself, and every view that
+> trusts it renders a button the server will refuse.
+
+**And: a test that compares a function to itself proves nothing.** Calling a
+helper twice with the same input and asserting the two results match passes for
+any implementation, correct or broken. Pin real values.
+
+## What a targeted run does and does not prove
+
+`pnpm vitest run <one file>` is fine while iterating. It is **not** evidence for
+a PR: it cannot catch a change that breaks a consumer in another file, and it
+never touches the DB layer. Report a targeted run as a targeted run, and name the
+gates you did not run. Never call a branch green on one.
+
 ## Before opening a PR
 
-1. `pnpm test` green (unit).
+1. `pnpm test` green (unit) — the **full** suite, not a targeted run.
 2. `pnpm test:integration` green (if you touched the DB layer).
 3. `pnpm typecheck` + `pnpm lint` clean.
 4. New/changed code has tests covering its branches (error paths included).
+5. **A browser pass on every screen the slice changes**, per the section above.
+6. Any gate you could not run is named in the PR description. An unrun gate is
+   not a passing gate.

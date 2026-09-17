@@ -130,6 +130,9 @@ export const CATEGORY_SEED: readonly CategorySeed[] = [
         slug: "combined-expenses",
         name: "Combined Expenses",
         isRelevant: true,
+        // "Purchases made by girlfriend" is the name live databases hold, and this seed
+        // matches BY NAME — seeding the new name before the rows are renamed creates a
+        // duplicate. Flip both together in the data migration.
         subcategories: [
             "Purchases made by girlfriend",
             "Purchases made between the two",
@@ -189,7 +192,7 @@ export const CATEGORY_SEED: readonly CategorySeed[] = [
 // which store semantic color names. Palette is inspired by the design system's
 // category colors (illustrative in docs/designs-screens/README.md; the per-slug
 // values here are authoritative).
-const CATEGORY_COLORS: Record<string, string> = {
+export const CATEGORY_COLORS: Record<string, string> = {
     housing: "#4f46e5",
     groceries: "#65a30d",
     charity: "#db2777",

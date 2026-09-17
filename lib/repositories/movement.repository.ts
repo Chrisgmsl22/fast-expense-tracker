@@ -6,6 +6,8 @@ import {
     type TransferFundingSource,
 } from "@/lib/domain/funding";
 import type { MovementType } from "@/lib/domain/movement";
+import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
+import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 
 /** One movement as the feed renders it. */
 export type MovementListItem = {
@@ -17,6 +19,16 @@ export type MovementListItem = {
     note: string | null;
     /** Meaningful on `gf_paid` only; every other type keeps the default. */
     fundedFrom: TransferFundingSource;
+    /**
+     * Set when this transfer closed a settlement cycle. It travels with the LIST row,
+     * so a feed can hide the controls the server will refuse.
+     */
+    closedAt: Date | null;
+    /**
+     * The close instant of the cycle this row belongs to, null while it is open. This —
+     * not `closedAt` — freezes a row: `closedAt` names one transfer per cycle.
+     */
+    cycleClosedAt: Date | null;
 };
 
 /** Server-owned fields written on create/update (the owner is passed separately). */
@@ -39,6 +51,17 @@ export type MovementEditable = {
     cardId: string | null;
     note: string | null;
     fundedFrom: TransferFundingSource;
+    /**
+     * Set when this transfer closed a settlement cycle (spec 0007 §3.5). Editing it
+     * rewrites what that cycle settled; deleting it dissolves the boundary.
+     */
+    closedAt: Date | null;
+    /**
+     * The close instant of the cycle this row BELONGS to — mirrors
+     * `ExpenseEditable.cycleClosedAt`. The DB CHECK allows `closedAt` only on a transfer,
+     * so a debt never has one; pair this with `movementMovesSettlementBalance`.
+     */
+    cycleClosedAt: Date | null;
 };
 
 /**
@@ -70,28 +93,39 @@ export class PrismaMovementRepository implements MovementRepository {
         month: string,
     ): Promise<MovementListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
-        const rows = await this.db.movement.findMany({
-            // `gf_fronted` included: the feed shows a debt she fronted, but the
-            // totals sum expenses plus `gf_paid` only, so it changes no figure
-            // (ADR-0020).
-            where: { userId, date: { gte: start, lt: end } },
-            orderBy: { date: "desc" },
-            select: {
-                id: true,
-                date: true,
-                amount: true,
-                type: true,
-                note: true,
-                fundedFrom: true,
-                card: { select: { name: true, color: true } },
-            },
-        });
-        // `type` and `fundedFrom` are free-form string columns; narrow both to
-        // their domain unions at the boundary so callers get the typed shape.
-        return rows.map((r) => ({
+        const [rows, closes] = await Promise.all([
+            this.db.movement.findMany({
+                // `gf_fronted` is EXCLUDED: a debt she fronted is settlement-only and
+                // provisional (spec 0007 §6b). Filtered at the QUERY, not at render —
+                // a row that never arrives cannot be forgotten by a view written later.
+                where: {
+                    userId,
+                    date: { gte: start, lt: end },
+                    type: { not: "gf_fronted" },
+                },
+                orderBy: { date: "desc" },
+                select: {
+                    id: true,
+                    date: true,
+                    amount: true,
+                    type: true,
+                    note: true,
+                    fundedFrom: true,
+                    closedAt: true,
+                    createdAt: true,
+                    card: { select: { name: true, color: true } },
+                },
+            }),
+            getCycleCloses(this.db, userId),
+        ]);
+        // `type` and `fundedFrom` are free-form string columns; narrow both at the
+        // boundary. `createdAt` is consumed here — it places the row in a cycle,
+        // it is never rendered.
+        return rows.map(({ createdAt, ...r }) => ({
             ...r,
             type: r.type as MovementType,
             fundedFrom: toTransferFundingSource(r.fundedFrom),
+            cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
         }));
     }
 
@@ -109,15 +143,21 @@ export class PrismaMovementRepository implements MovementRepository {
                 cardId: true,
                 note: true,
                 fundedFrom: true,
+                closedAt: true,
+                createdAt: true,
             },
         });
-        return row
-            ? {
-                  ...row,
-                  type: row.type as MovementType,
-                  fundedFrom: toTransferFundingSource(row.fundedFrom),
-              }
-            : null;
+        if (!row) return null;
+        const { createdAt, ...editable } = row;
+        return {
+            ...editable,
+            type: editable.type as MovementType,
+            fundedFrom: toTransferFundingSource(editable.fundedFrom),
+            cycleClosedAt: cycleCloseAtOrAfter(
+                await getCycleCloses(this.db, userId),
+                createdAt,
+            ),
+        };
     }
 
     insert(userId: string, data: MovementWriteData): Promise<{ id: string }> {
@@ -132,6 +172,10 @@ export class PrismaMovementRepository implements MovementRepository {
      * `id`: a row that isn't the user's matches nothing, the count stays 0, and
      * the caller reports not-found instead of mutating another user's row (IDOR
      * guard) — mirrors the expense repository.
+     *
+     * `closedAt: null` freezes a cycle MARKER here, at the data boundary. It is a
+     * backstop for one row: every OTHER row a closed cycle counted is frozen by the
+     * actions, since membership is a `createdAt` comparison, not a column.
      */
     async updateForUser(
         id: string,
@@ -139,7 +183,7 @@ export class PrismaMovementRepository implements MovementRepository {
         data: MovementWriteData,
     ): Promise<number> {
         const result = await this.db.movement.updateMany({
-            where: { id, userId },
+            where: { id, userId, closedAt: null },
             data,
         });
         return result.count;
@@ -150,10 +194,13 @@ export class PrismaMovementRepository implements MovementRepository {
      * `id`: a row that isn't the user's matches nothing and the count stays 0,
      * so the caller reports not-found instead of deleting another user's row
      * (IDOR guard).
+     *
+     * `closedAt: null` also protects a cycle marker: deleting it would dissolve the
+     * boundary and merge a closed settlement into the open one.
      */
     async deleteForUser(userId: string, id: string): Promise<number> {
         const result = await this.db.movement.deleteMany({
-            where: { id, userId },
+            where: { id, userId, closedAt: null },
         });
         return result.count;
     }

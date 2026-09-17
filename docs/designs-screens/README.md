@@ -41,6 +41,7 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 - `Confirmed designs V1.standalone.html` — self-contained, current/approved version. **The authoritative source** for the V1 screens (login, add, expenses, income, dashboard, category detail, settlement).
 - `Confirmed designs V1.dc.html` — source of the above (depends on the project runtime; prefer the standalone).
 - `Settings.html` — **new, standalone** design for the **Settings screen** (not part of V1). Covers budget/monthly-income + the 68/32 split, card management, per-category budgets, privacy toggle, and currency. Authoritative for the Settings screen; grep it for exact values (no PNG — HTML only, per the protocol above). Feeds slices 2.7 (cards), 2.8 (privacy), and budget-editing.
+- `Summary breakdown modal.html` — **new, standalone** design for the summary-strip breakdown modal, desktop and mobile, plus the two strips that open it (Dashboard right-rail footer, Expenses sticky footer bar). Authoritative for **CHORE-14**. Its figures are real September 2026 values, so it doubles as a reconciliation reference — the yellow note at the bottom states how each total is derived. **One figure needs a decision before it is built:** "Total out of this month's income" subtracts cash the partner sent you from consumption, which spec 0007 §6a currently forbids. See CHORE-14.
 - `Rough mockups.dc.html` — earlier exploration (two dashboard directions + login). Historical reference only.
 
 ---
@@ -122,11 +123,19 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 | 6   | Savings           | `savings`           | yes        | Emergency fund · Open savings · Future purchases                                                          |
 | 7   | Services          | `services`          | yes        | Electricity · Gas · Water · Trash · Phone plan · Internet                                                 |
 | 8   | Health            | `health`            | yes        | Medicine · Doctors appt · Dentist · Additional medication · Therapy · Other expenses                      |
-| 9   | Combined Expenses | `combined-expenses` | yes        | Purchases made by girlfriend · Purchases made between the two · Cats                                      |
+| 9   | Combined Expenses | `combined-expenses` | yes        | Purchases made by girlfriend[^1] · Purchases made between the two · Cats                                  |
 | 10  | Personal          | `personal`          | no         | Courses · Education · Books · Subscriptions · Cash withdrawals · Technology · Accountant · Other          |
 | 11  | Debt              | `debt`              | yes        | Car loan · Credit card balance · Personal loans · Monthly installments                                    |
 | 12  | Disposable Income | `disposable-income` | no         | Entertainment · Hobbies · Dining out · Social events · Tech gadgets · Ecommerce expenses                  |
 | 13  | Unassigned        | `unassigned`        | no         | (none — sentinel for orphaned expenses)                                                                   |
+
+[^1]:
+    **This name is transitional.** Spec 0007 §6b renames it to "Covered for me"
+    — the row is his share of a payment he sent, not a purchase she made. The
+    rename is data, not schema: the seed matches subcategories BY NAME, so
+    renaming before the existing rows are renamed creates a duplicate. Both flip
+    together in CHORE-12, and this table is updated with them. Until then, the
+    name above is what live databases hold.
 
 - In **Add expense**, the **Subcategory** options are driven by the chosen **Category** (e.g. Category = Health → subcategory choices = Medicine, Doctors appt, Dentist, …).
 - `isRelevant: yes` → counts toward **Essentials (50%)**; `isRelevant: no` → **Discretionary (25%)**; `Savings` category feeds the **Savings (25%)** bucket.

@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
+import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
 import {
@@ -21,6 +22,8 @@ export type UpdateTransferCode =
     | "validation"
     | "unauthenticated"
     | "not_found"
+    /** The row closed a settlement cycle, so it is frozen (spec 0007 §3.5). */
+    | "cycle_closed"
     | "db_error";
 
 export type UpdateTransferResult = ActionResult<
@@ -76,6 +79,21 @@ export async function updateTransfer(
                 ok: false,
                 code: "not_found",
                 message: "Transfer not found.",
+            };
+        }
+
+        // A transfer a closed cycle COUNTED is frozen, not only the one carrying its
+        // marker: editing either rewrites what a filed settlement settled.
+        if (
+            existing.cycleClosedAt &&
+            movementMovesSettlementBalance(existing.type)
+        ) {
+            return {
+                ok: false,
+                code: "cycle_closed",
+                message: existing.closedAt
+                    ? "This transfer closed a settlement and can't be edited."
+                    : "This transfer counts in a settlement you already closed, so it can't be edited.",
             };
         }
 
