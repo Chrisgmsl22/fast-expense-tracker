@@ -177,12 +177,20 @@ describe("PrismaSettlementRepository cycles (integration)", () => {
         });
 
         const closedAt = new Date("2026-07-06T18:30:00Z");
-        expect(await repo.markCycleClose(user.id, transfer.id, closedAt)).toBe(
-            1,
-        );
+        expect(
+            await repo.markCycleClose(
+                user.id,
+                { id: transfer.id, kind: "movement" },
+                closedAt,
+            ),
+        ).toBe(1);
         // A double submit matches nothing the second time — no second marker.
         expect(
-            await repo.markCycleClose(user.id, transfer.id, new Date()),
+            await repo.markCycleClose(
+                user.id,
+                { id: transfer.id, kind: "movement" },
+                new Date(),
+            ),
         ).toBe(0);
 
         const markers = await repo.getCycleMarkers(user.id);
@@ -191,6 +199,7 @@ describe("PrismaSettlementRepository cycles (integration)", () => {
         // or entry time.
         expect(markers[0]).toMatchObject({
             id: transfer.id,
+            kind: "movement",
             amount: 320,
             closedAt,
         });
@@ -206,7 +215,11 @@ describe("PrismaSettlementRepository cycles (integration)", () => {
                 type: "gf_received",
             },
         });
-        await repo.markCycleClose(user.id, transfer.id, new Date());
+        await repo.markCycleClose(
+            user.id,
+            { id: transfer.id, kind: "movement" },
+            new Date(),
+        );
 
         const movements = new PrismaMovementRepository(db);
         expect(
@@ -236,7 +249,13 @@ describe("PrismaSettlementRepository cycles (integration)", () => {
             },
         });
 
-        expect(await repo.markCycleClose(user.id, debt.id, new Date())).toBe(0);
+        expect(
+            await repo.markCycleClose(
+                user.id,
+                { id: debt.id, kind: "movement" },
+                new Date(),
+            ),
+        ).toBe(0);
         expect(await repo.getCycleMarkers(user.id)).toEqual([]);
         // The DB CHECK backs the query guard on create AND update.
         await expect(
@@ -260,8 +279,139 @@ describe("PrismaSettlementRepository cycles (integration)", () => {
         });
 
         expect(
-            await repo.markCycleClose(other.id, transfer.id, new Date()),
+            await repo.markCycleClose(
+                other.id,
+                { id: transfer.id, kind: "movement" },
+                new Date(),
+            ),
         ).toBe(0);
         expect(await repo.getCycleMarkers(user.id)).toEqual([]);
+    });
+});
+
+/**
+ * The marker's other home: a cycle squared by PAYING the partner holds no transfer,
+ * so the payment-expense carries the boundary (spec 0007 §6b).
+ */
+describe("PrismaSettlementRepository cycles — the expense marker (integration)", () => {
+    async function seedPayment(
+        userId: string,
+        over: { isPartnerPayment?: boolean; amount?: number } = {},
+    ) {
+        const cat = await seedCategory(userId, "combined-expenses");
+        const amount = over.amount ?? 300;
+        return db.expense.create({
+            data: {
+                userId,
+                categoryId: cat.id,
+                date: new Date("2026-07-05T06:00:00Z"),
+                description: "Transfer — you paid Brenda",
+                amount,
+                actualExpenditure: amount,
+                isPartnerPayment: over.isPartnerPayment ?? true,
+            },
+        });
+    }
+
+    it("marks a payment-expense as the cycle close, once, and lists it as a marker", async () => {
+        const user = await seedUser("payment-marker@example.com");
+        const payment = await seedPayment(user.id);
+
+        const closedAt = new Date("2026-07-06T18:30:00Z");
+        expect(
+            await repo.markCycleClose(
+                user.id,
+                { id: payment.id, kind: "expense" },
+                closedAt,
+            ),
+        ).toBe(1);
+        expect(
+            await repo.markCycleClose(
+                user.id,
+                { id: payment.id, kind: "expense" },
+                new Date(),
+            ),
+        ).toBe(0);
+
+        const markers = await repo.getCycleMarkers(user.id);
+        expect(markers).toHaveLength(1);
+        expect(markers[0]).toMatchObject({
+            id: payment.id,
+            kind: "expense",
+            // What reached her, the figure the balance counts for a payment row.
+            amount: 300,
+            closedAt,
+        });
+    });
+
+    it("refuses the marker on an expense that isn't a payment", async () => {
+        const user = await seedUser("nonpayment@example.com");
+        const purchase = await seedPayment(user.id, {
+            isPartnerPayment: false,
+        });
+
+        expect(
+            await repo.markCycleClose(
+                user.id,
+                { id: purchase.id, kind: "expense" },
+                new Date(),
+            ),
+        ).toBe(0);
+        expect(await repo.getCycleMarkers(user.id)).toEqual([]);
+        // The DB CHECK backs the query guard on create AND update.
+        await expect(
+            db.expense.update({
+                where: { id: purchase.id },
+                data: { closedAt: new Date() },
+            }),
+        ).rejects.toThrow();
+    });
+
+    it("never marks another user's payment", async () => {
+        const user = await seedUser("payment-owner@example.com");
+        const other = await seedUser("payment-intruder@example.com");
+        const payment = await seedPayment(user.id);
+
+        expect(
+            await repo.markCycleClose(
+                other.id,
+                { id: payment.id, kind: "expense" },
+                new Date(),
+            ),
+        ).toBe(0);
+        expect(await repo.getCycleMarkers(user.id)).toEqual([]);
+    });
+
+    it("lists markers from both tables, oldest close first", async () => {
+        const user = await seedUser("both-tables@example.com");
+        const payment = await seedPayment(user.id);
+        const transfer = await db.movement.create({
+            data: {
+                userId: user.id,
+                date: new Date("2026-06-05T06:00:00Z"),
+                amount: 320,
+                type: "gf_received",
+            },
+        });
+
+        const juneClose = new Date("2026-06-06T18:30:00Z");
+        const julyClose = new Date("2026-07-06T18:30:00Z");
+        // Written newest-first, to prove the ORDER comes from `closedAt`.
+        await repo.markCycleClose(
+            user.id,
+            { id: payment.id, kind: "expense" },
+            julyClose,
+        );
+        await repo.markCycleClose(
+            user.id,
+            { id: transfer.id, kind: "movement" },
+            juneClose,
+        );
+
+        const markers = await repo.getCycleMarkers(user.id);
+        expect(markers.map((m) => [m.id, m.kind])).toEqual([
+            [transfer.id, "movement"],
+            [payment.id, "expense"],
+        ]);
     });
 });

@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
-import { isBalanceSettled } from "@/lib/domain/settlement";
+import {
+    isBalanceSettled,
+    type SettlementRowRef,
+} from "@/lib/domain/settlement";
 import { settlementRepository } from "@/lib/repositories";
 import {
     getSettlement,
@@ -15,23 +18,22 @@ export type CloseSettlementCycleCode =
     | "unauthenticated"
     | "not_settled"
     /**
-     * Square, but nothing in the open cycle can carry the boundary: `closedAt` lives
-     * on `Movement`, and a cycle settled only by a payment-expense has no movement
-     * to mark (spec 0007 §6b).
+     * Square, but the open cycle holds neither a transfer nor a payment to the partner,
+     * so no row can carry the boundary (spec 0007 §3.5).
      */
     | "no_marker"
     /**
-     * The transfer the close would have marked was deleted between the read that
-     * picked it and the write that would mark it. It matches zero rows, exactly as a
-     * double submit does — but here nothing was closed.
+     * The row the close would have marked was deleted between the read that picked it
+     * and the write that would mark it. It matches zero rows, exactly as a double
+     * submit does — but here nothing was closed.
      */
     | "marker_gone"
     | "db_error";
 
 export type CloseSettlementCycleResult = ActionResult<
     {
-        /** The transfer now carrying the marker; null when it was already closed. */
-        markedMovementId: string | null;
+        /** The row now carrying the marker; null when the cycle was already closed. */
+        marked: SettlementRowRef | null;
         alreadyClosed: boolean;
     },
     Record<string, never>,
@@ -73,30 +75,30 @@ export async function closeSettlementCycle(
             };
         }
 
-        const movementId = settlement.closableMovementId;
-        if (!movementId) {
+        const marker = settlement.closableMarker;
+        if (!marker) {
             // An EMPTY cycle really is already closed — a second submit lands
             // here after the first one marked it.
             if (settlement.journal.length === 0) {
                 return {
                     ok: true,
-                    data: { markedMovementId: null, alreadyClosed: true },
+                    data: { marked: null, alreadyClosed: true },
                 };
             }
-            // A cycle with rows but no markable movement is NOT closed — answering "ok"
+            // A cycle with rows but nothing markable is NOT closed — answering "ok"
             // would report success for work not done.
             return {
                 ok: false,
                 code: "no_marker",
                 message:
-                    "This settlement can't be closed yet: closing marks a transfer " +
-                    "with your partner, and this one holds none.",
+                    "This settlement can't be closed yet: closing marks a payment or " +
+                    "transfer with your partner, and this one holds neither.",
             };
         }
 
         const count = await settlementRepo.markCycleClose(
             userId,
-            movementId,
+            marker,
             deps.now ?? new Date(),
         );
 
@@ -105,29 +107,32 @@ export async function closeSettlementCycle(
             // double submit), or it was deleted since the read. Only the first leaves a
             // marker behind, so ask which.
             const markers = await settlementRepo.getCycleMarkers(userId);
-            if (!markers.some((m) => m.id === movementId)) {
-                // The page is showing a transfer that is gone, so refresh here rather than
+            const survived = markers.some(
+                (m) => m.id === marker.id && m.kind === marker.kind,
+            );
+            if (!survived) {
+                // The page is showing a row that is gone, so refresh here rather than
                 // leave a stale journal behind our own "refresh" advice.
                 revalidatePath("/settlement");
                 return {
                     ok: false,
                     code: "marker_gone",
                     message:
-                        "The transfer that would close this settlement is no longer there. " +
+                        "The row that would close this settlement is no longer there. " +
                         "Refresh the page and try again.",
                 };
             }
             revalidatePath("/settlement");
             return {
                 ok: true,
-                data: { markedMovementId: null, alreadyClosed: true },
+                data: { marked: null, alreadyClosed: true },
             };
         }
 
         revalidatePath("/settlement");
         return {
             ok: true,
-            data: { markedMovementId: movementId, alreadyClosed: false },
+            data: { marked: marker, alreadyClosed: false },
         };
     } catch (e) {
         console.error("closeSettlementCycle: db write failed", e);

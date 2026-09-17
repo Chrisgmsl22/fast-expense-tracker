@@ -127,8 +127,8 @@ describe("CATEGORY_SEED data", () => {
     });
 
     /**
-     * The seed, `getPartnerPaymentDefaults` and `subcategoryLabel` all match this
-     * subcategory BY NAME. If the seed drifts from the constant, a payment files with
+     * The seed and `getPartnerPaymentDefaults` both match this subcategory BY NAME.
+     * If the seed drifts from the constant, a payment files with
      * `subcategoryId: null` and nothing says so.
      */
     it("seeds the partner-payment subcategory under the name the code looks up", () => {
@@ -243,11 +243,12 @@ describe("runSeed", () => {
     });
 
     /**
-     * Re-seeding an UNMIGRATED database: the rows still carry "Purchases made by
-     * girlfriend" and the seed matches by name, so a seed carrying the new name would
-     * create a SECOND subcategory beside the old one.
+     * Re-seeding after `20260916230000_convert_partner_payments` renamed the rows:
+     * the seed matches by name, so it must find the renamed row and add nothing.
+     * The old spelling must not come back either — two names for one thing is the
+     * duplicate the rename exists to avoid.
      */
-    it("creates no duplicate partner-payment subcategory on an unmigrated database", async () => {
+    it("creates no duplicate partner-payment subcategory on a renamed database", async () => {
         const { db, subcategory } = makeDb({
             existingSubNames: new Set([PARTNER_PAYMENT_SUBCATEGORY_NAME]),
         });
@@ -257,8 +258,8 @@ describe("runSeed", () => {
             (c) => c[0].data.name,
         );
         expect(createdNames).not.toContain(PARTNER_PAYMENT_SUBCATEGORY_NAME);
-        // And no second name for the same thing, under any spelling.
-        expect(createdNames).not.toContain("Covered for me");
+        // And no second name for the same thing, under the pre-rename spelling.
+        expect(createdNames).not.toContain("Purchases made by girlfriend");
     });
 
     it("creates the 5 cards for the admin user on a fresh DB", async () => {

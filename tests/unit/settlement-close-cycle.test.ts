@@ -74,7 +74,9 @@ describe("closeSettlementCycle", () => {
         const res = await closeSettlementCycle(deps);
 
         expect(res.ok).toBe(true);
-        if (res.ok) expect(res.data.markedMovementId).toBe("m1");
+        if (res.ok) {
+            expect(res.data.marked).toEqual({ id: "m1", kind: "movement" });
+        }
         expect(await settlementRepo.getCycleMarkers()).toHaveLength(1);
     });
 
@@ -185,10 +187,124 @@ describe("closeSettlementCycle", () => {
 
         expect(res.ok).toBe(true);
         if (res.ok) {
-            expect(res.data.markedMovementId).toBeNull();
+            expect(res.data.marked).toBeNull();
             expect(res.data.alreadyClosed).toBe(true);
         }
         expect(await settlementRepo.getCycleMarkers()).toHaveLength(0);
+    });
+});
+
+/** The owner's normal settle: she fronts something, he pays her, the payment is an Expense. */
+const payment = (
+    over: Partial<SettlementExpenseRow> = {},
+): SettlementExpenseRow =>
+    expense({
+        id: "ePayment",
+        description: "Transfer — you paid Brenda",
+        isPartnerPayment: true,
+        amount: 300,
+        actualExpenditure: 300,
+        isShared: false,
+        ...over,
+    });
+
+describe("closeSettlementCycle — a cycle squared by PAYING the partner", () => {
+    beforeEach(() => {
+        authMock.mockReset();
+        authMock.mockResolvedValue({ user: { id: "u1" } });
+    });
+
+    it("marks the payment-expense, because no movement is there to carry it", async () => {
+        const { settlementRepo, deps } = setup(
+            [payment()],
+            [movement({ id: "mDebt", type: "gf_fronted", amount: 300 })],
+        );
+
+        const res = await closeSettlementCycle(deps);
+
+        expect(res.ok).toBe(true);
+        if (res.ok) {
+            expect(res.data.marked).toEqual({
+                id: "ePayment",
+                kind: "expense",
+            });
+        }
+        const markers = await settlementRepo.getCycleMarkers();
+        expect(markers).toHaveLength(1);
+        // The boundary is the close instant, and the settled figure is what reached her.
+        expect(markers[0]).toMatchObject({
+            id: "ePayment",
+            kind: "expense",
+            closedAt: NOW,
+            amount: 300,
+        });
+    });
+
+    it("files the cycle in History with every row it counted, and opens the next one empty", async () => {
+        const { deps } = setup(
+            [payment()],
+            [movement({ id: "mDebt", type: "gf_fronted", amount: 300 })],
+        );
+
+        expect((await closeSettlementCycle(deps)).ok).toBe(true);
+
+        const after = await getSettlement("u1", deps);
+        expect(after.journal).toEqual([]);
+        expect(after.balance.amount).toBe(0);
+        expect(after.closableMarker).toBeNull();
+        expect(after.history).toHaveLength(1);
+        expect(after.history[0]!.id).toBe("ePayment");
+        expect(after.history[0]!.settledAmount).toBe(300);
+        expect(after.history[0]!.journal.map((j) => j.id).sort()).toEqual([
+            "ePayment",
+            "mDebt",
+        ]);
+        // Both rows are inside a closed cycle now, so both are frozen.
+        expect(after.history[0]!.journal.every((j) => j.locked)).toBe(true);
+    });
+
+    it("a double submit never writes a second marker", async () => {
+        const { settlementRepo, deps } = setup(
+            [payment()],
+            [movement({ id: "mDebt", type: "gf_fronted", amount: 300 })],
+        );
+
+        const first = await closeSettlementCycle(deps);
+        const second = await closeSettlementCycle(deps);
+
+        expect(first.ok).toBe(true);
+        expect(second.ok).toBe(true);
+        if (second.ok) expect(second.data.alreadyClosed).toBe(true);
+        expect(await settlementRepo.getCycleMarkers()).toHaveLength(1);
+    });
+
+    it("prefers the most recently entered row, whichever table it is in", async () => {
+        // Her share of his expense (320) cancels the transfer she sent (320); the debt
+        // he owes (300) cancels the payment he sent (300). Square, with a markable row
+        // in each table — and the payment is the one entered last.
+        const later = new Date("2026-07-13T00:00:00Z");
+        const { deps } = setup(
+            [expense(), payment({ createdAt: later })],
+            [
+                movement({ id: "mDebt", type: "gf_fronted", amount: 300 }),
+                movement({
+                    id: "mTransfer",
+                    type: "gf_received",
+                    amount: 320,
+                    createdAt: JULY,
+                }),
+            ],
+        );
+
+        const res = await closeSettlementCycle(deps);
+
+        expect(res.ok).toBe(true);
+        if (res.ok) {
+            expect(res.data.marked).toEqual({
+                id: "ePayment",
+                kind: "expense",
+            });
+        }
     });
 });
 
@@ -198,26 +314,21 @@ describe("closeSettlementCycle — the direction the tests never covered", () =>
         authMock.mockResolvedValue({ user: { id: "u1" } });
     });
 
-    it("refuses, loudly, when the cycle was squared without a transfer", async () => {
-        // She fronted $300, he paid her $300 — and the payment is an EXPENSE now, so the
-        // open cycle holds no movement to carry the boundary.
+    it("refuses, loudly, when the squared cycle holds neither a payment nor a transfer", async () => {
+        // A shared expense she owes 320 on, cancelled by a 320 debt he owes her: square,
+        // and settled by no money at all, so nothing can carry the boundary.
         const { settlementRepo, deps } = setup(
-            [
-                expense({
-                    id: "ePayment",
-                    isPartnerPayment: true,
-                    amount: 300,
-                    actualExpenditure: 300,
-                    isShared: false,
-                }),
-            ],
-            [movement({ id: "mDebt", type: "gf_fronted", amount: 300 })],
+            [expense()],
+            [movement({ id: "mDebt", type: "gf_fronted", amount: 320 })],
         );
 
         const res = await closeSettlementCycle(deps);
 
         expect(res.ok).toBe(false);
-        if (!res.ok) expect(res.code).toBe("no_marker");
+        if (!res.ok) {
+            expect(res.code).toBe("no_marker");
+            expect(res.message).toMatch(/payment or transfer/i);
+        }
         expect(await settlementRepo.getCycleMarkers()).toHaveLength(0);
     });
 
@@ -254,7 +365,15 @@ describe("closeSettlementCycle — a zero-count write", () => {
                 settlementRepo.getForCreatedRange(userId, after, through),
             getCycleMarkers: async () =>
                 markerSurvives
-                    ? [{ id: "m1", date: JULY, closedAt: NOW, amount: 320 }]
+                    ? [
+                          {
+                              id: "m1",
+                              kind: "movement" as const,
+                              date: JULY,
+                              closedAt: NOW,
+                              amount: 320,
+                          },
+                      ]
                     : [],
             markCycleClose: async () => 0,
         };
@@ -267,7 +386,7 @@ describe("closeSettlementCycle — a zero-count write", () => {
         expect(res.ok).toBe(true);
         if (res.ok) {
             expect(res.data.alreadyClosed).toBe(true);
-            expect(res.data.markedMovementId).toBeNull();
+            expect(res.data.marked).toBeNull();
         }
     });
 

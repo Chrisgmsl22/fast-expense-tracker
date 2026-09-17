@@ -4,18 +4,30 @@ import { join } from "node:path";
 import { db } from "@/lib/db";
 
 /**
- * Replay a migration file against the test database, statement by statement, the way
- * `prisma migrate deploy` does. The file is READ FROM DISK: a re-typed copy could not
- * notice the deployed statement changing underneath it.
+ * Replay a migration file against the test database the way `prisma migrate deploy`
+ * does: every statement in the file inside ONE transaction, so a failure part-way
+ * through leaves nothing behind. Running each statement on its own would give each an
+ * implicit transaction of its own, and no test could then prove that an aborted
+ * migration rolls the earlier statements back.
+ *
+ * The file is READ FROM DISK: a re-typed copy could not notice the deployed statement
+ * changing underneath it.
  */
 export async function replayMigration(name: string): Promise<void> {
     const sql = readFileSync(
         join(process.cwd(), "prisma/migrations", name, "migration.sql"),
         "utf8",
     );
-    for (const statement of splitStatements(sql)) {
-        await db.$executeRawUnsafe(statement);
-    }
+    const statements = splitStatements(sql);
+    await db.$transaction(
+        async (tx) => {
+            for (const statement of statements) {
+                await tx.$executeRawUnsafe(statement);
+            }
+        },
+        // A data migration over a seeded table outruns the 5s default.
+        { maxWait: 10_000, timeout: 60_000 },
+    );
 }
 
 /**

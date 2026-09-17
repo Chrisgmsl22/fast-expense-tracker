@@ -69,11 +69,12 @@ export function movesSettlementBalance(e: SettlementRelevance): boolean {
 export const PARTNER_PAYMENT_CATEGORY_SLUG = "combined-expenses";
 
 /**
- * The name live rows still hold — the "Covered for me" rename is deferred to the
- * data PR. The seed, `getPartnerPaymentDefaults` and `subcategoryLabel` all match BY
- * NAME, so changing this before the rows creates a duplicate on the next re-seed.
+ * Where a payment to the partner is filed (spec 0007 §6a). The seed and
+ * `getPartnerPaymentDefaults` both match BY NAME, so this constant, `prisma/seed.ts`
+ * and the row rename in `20260916230000_convert_partner_payments` flip together —
+ * apart, the next re-seed creates a duplicate instead of finding the renamed row.
  */
-export const PARTNER_PAYMENT_SUBCATEGORY_NAME = "Purchases made by girlfriend";
+export const PARTNER_PAYMENT_SUBCATEGORY_NAME = "Covered for me";
 
 /** The fixed part of the auto-label — only the partner's name follows it. */
 const PARTNER_PAYMENT_LABEL_PREFIX = "Transfer — you paid ";

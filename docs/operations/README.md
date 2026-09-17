@@ -17,10 +17,12 @@ decisions, working conventions, or agent-led code work.
 
 ## Index
 
-| Topic                                                              | When needed                                                                                                                                                                   |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [setup.md](./setup.md)                                             | Initial external setup (Neon, Vercel, env vars, GitHub branch protection). Some sections deferred until specific slices.                                                      |
-| [owner-shared-mode-migration.md](./owner-shared-mode-migration.md) | After deploying CHORE-6.a: switch the owner account to Shared mode + the BUG-2 rider (re-seed prod category colors, drop the retired Amex Gold card). Manual prod data steps. |
+| Topic                                                                                | When needed                                                                                                                                                                   |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [setup.md](./setup.md)                                                               | Initial external setup (Neon, Vercel, env vars, GitHub branch protection). Some sections deferred until specific slices.                                                      |
+| [owner-shared-mode-migration.md](./owner-shared-mode-migration.md)                   | After deploying CHORE-6.a: switch the owner account to Shared mode + the BUG-2 rider (re-seed prod category colors, drop the retired Amex Gold card). Manual prod data steps. |
+| [per-user-categories-migration.md](./per-user-categories-migration.md)               | Before and after deploying CHORE-8.a (ADR-0022): confirm the single-owner precondition, then verify every category row was re-homed.                                          |
+| [partner-payment-conversion-migration.md](./partner-payment-conversion-migration.md) | Before merging CHORE-12: read-only survey of the `gf_paid` conversion, the subcategory rename and the cents backfill, plus the balance check to repeat afterwards.            |
 
 Future docs will land here as operational needs surface — recovery
 procedures, secret rotation, the eventual MoneyFlow data migration.

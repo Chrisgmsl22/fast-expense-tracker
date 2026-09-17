@@ -11,6 +11,8 @@ import {
     type CoupleBalance,
     type SettlementBreakdownKey,
     type SettlementInputs,
+    type SettlementRowRef,
+    type SettlementRowSource,
 } from "@/lib/domain/settlement";
 import type { TransferFundingSource } from "@/lib/domain/funding";
 import {
@@ -33,7 +35,7 @@ import type {
 import type { SettingsRepository } from "@/lib/repositories/settings.repository";
 
 /** Where a debt row is stored — see `SettlementJournalItem`'s `partner_debt`. */
-export type RowSource = "expense" | "movement";
+export type RowSource = SettlementRowSource;
 
 /** One balance-affecting row for the settlement journal. */
 export type SettlementJournalItem = {
@@ -129,11 +131,11 @@ export type ClosedCycleSummary = {
 
 /** One closed settlement cycle, as the History view reads it (spec 0007 §3.5). */
 export type ClosedSettlementCycle = {
-    /** The marker movement's id — the transfer that closed this cycle. */
+    /** The marker row's id — the transfer or payment that closed this cycle. */
     id: string;
-    /** The closing transfer's own date, for display. */
+    /** The closing row's own date, for display. */
     closedOn: Date;
-    /** The closing transfer's amount — what it took to square the cycle. */
+    /** The closing row's amount — what it took to square the cycle. */
     settledAmount: number;
     journal: SettlementJournalItem[];
     /** The footer figures, derived from the SAME rows the journal shows. */
@@ -151,10 +153,10 @@ export type Settlement = {
     /** Entry time the open cycle began; null when nothing has ever been closed. */
     openedAt: Date | null;
     /**
-     * The transfer a close would mark, or null when there is nothing to close. The close
-     * action re-derives it, so the client never picks the marker.
+     * The row a close would mark, in whichever table it lives, or null when there is
+     * nothing to close. The close action re-derives it, so the client never picks it.
      */
-    closableMovementId: string | null;
+    closableMarker: SettlementRowRef | null;
     /** The VIEWED calendar month's rows — the Month view. */
     month: {
         /** `YYYY-MM` of the month being viewed. */
@@ -223,8 +225,9 @@ function inputsFrom(
         // A debt she fronted: settlement only (spec 0007 §6b).
         if (m.type === "gf_fronted") yourDebtToPartner += m.amount;
         else if (m.type === "gf_received") moneyPartnerPaidYou += m.amount;
-        // LEGACY `gf_paid`: the conversion is deferred, so existing rows are still
-        // counted here and no balance loses one before or after it runs.
+        // LEGACY `gf_paid`: the conversion migration leaves this row behind on an
+        // account with no `combined-expenses` category, so it is still counted here
+        // and no balance loses one before or after the conversion runs.
         else if (m.type === "gf_paid") moneyYouPaidPartner += m.amount;
     }
 
@@ -343,7 +346,7 @@ export async function getSettlement(
             amount: prevBalance.amount,
         },
         openedAt,
-        closableMovementId: findClosableMovementId(movements),
+        closableMarker: findClosableMarker(expenses, movements),
         month: {
             label: viewedMonth,
             isCurrent: viewedMonth === currentMonth,
@@ -361,16 +364,35 @@ export async function getSettlement(
 }
 
 /**
- * The transfer a close would mark: the most recently ENTERED transfer in the open
- * cycle — the movement that squared the balance. Null when the cycle holds none.
+ * The row a close would mark: the most recently ENTERED row in the open cycle that can
+ * carry the boundary — a transfer, or the payment-expense that squared the balance
+ * (spec 0007 §6b). Null when the cycle holds neither.
  */
-function findClosableMovementId(
+function findClosableMarker(
+    expenses: SettlementExpenseRow[],
     movements: SettlementMovementRow[],
-): string | null {
-    const transfers = movements
-        .filter((m) => canCloseCycle(m.type))
-        .sort((a, b) => entryTime(b) - entryTime(a));
-    return transfers[0]?.id ?? null;
+): SettlementRowRef | null {
+    const candidates: (SettlementRowRef & { createdAt: Date })[] = [
+        ...expenses
+            .filter((e) => e.isPartnerPayment)
+            .map((e) => ({
+                id: e.id,
+                kind: "expense" as const,
+                createdAt: e.createdAt,
+            })),
+        // A converted twin is the SAME payment as its expense (ADR-0024), so marking
+        // the movement would file the boundary on the row no balance reads.
+        ...withoutConvertedTwins(movements, expenses)
+            .filter((m) => canCloseCycle(m.type))
+            .map((m) => ({
+                id: m.id,
+                kind: "movement" as const,
+                createdAt: m.createdAt,
+            })),
+    ].sort((a, b) => entryTime(b) - entryTime(a));
+
+    const closable = candidates[0];
+    return closable ? { id: closable.id, kind: closable.kind } : null;
 }
 
 /**

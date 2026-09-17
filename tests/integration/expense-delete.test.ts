@@ -93,6 +93,45 @@ describe("deleteExpense (integration)", () => {
         if (!res.ok) expect(res.code).toBe("not_found");
     });
 
+    /**
+     * The row that carries the boundary must not be deletable, or the cycle silently
+     * reopens. No guard was added for it: once `getCycleCloses` reads both tables, the
+     * marker's own close sits at or after its entry time, so the row falls inside the
+     * cycle it closed and the existing `cycle_closed` refusal covers it.
+     */
+    it("refuses to delete the payment-expense that carries a cycle marker", async () => {
+        const { user, category } = await seed();
+        const closedAt = new Date(Date.UTC(2026, 4, 20, 18));
+        const payment = await db.expense.create({
+            data: {
+                userId: user.id,
+                categoryId: category.id,
+                date: new Date(Date.UTC(2026, 4, 15, 6)),
+                description: "Transfer — you paid Brenda",
+                amount: 300,
+                actualExpenditure: 300,
+                isPartnerPayment: true,
+                createdAt: new Date(Date.UTC(2026, 4, 15, 6)),
+                closedAt,
+            },
+            select: { id: true },
+        });
+
+        const res = await deleteExpense({ id: payment.id });
+
+        expect(res.ok).toBe(false);
+        if (!res.ok) {
+            expect(res.code).toBe("cycle_closed");
+            expect(res.message).toMatch(/payment counts in a settlement/i);
+        }
+        expect(await db.expense.count({ where: { id: payment.id } })).toBe(1);
+        const still = await db.expense.findUnique({
+            where: { id: payment.id },
+            select: { closedAt: true },
+        });
+        expect(still?.closedAt?.toISOString()).toBe(closedAt.toISOString());
+    });
+
     it("returns db_error when the delete throws", async () => {
         const { user, category } = await seed();
         const { id } = await makeExpense(user.id, category.id);

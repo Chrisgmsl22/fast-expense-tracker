@@ -1,4 +1,4 @@
-import { canCloseCycle } from "@/lib/domain/settlement";
+import { canCloseCycle, type SettlementRowRef } from "@/lib/domain/settlement";
 import type {
     SettlementCycleMarker,
     SettlementExpenseRow,
@@ -80,16 +80,37 @@ export class FakeSettlementRepository implements SettlementRepository {
 
     async markCycleClose(
         _userId: string,
-        movementId: string,
+        marker: SettlementRowRef,
         closedAt: Date,
     ): Promise<number> {
-        const movement = this.movements.find((m) => m.id === movementId);
-        // Same preconditions the Prisma where-clause carries: the row exists, is
-        // a transfer, and isn't already a marker. Anything else affects 0 rows.
+        // Same preconditions the Prisma where-clauses carry: the row exists, may carry
+        // the marker, and isn't already one. Anything else affects 0 rows.
+        if (
+            this.markers.some(
+                (m) => m.id === marker.id && m.kind === marker.kind,
+            )
+        ) {
+            return 0;
+        }
+
+        if (marker.kind === "expense") {
+            const expense = this.expenses.find((e) => e.id === marker.id);
+            if (!expense?.isPartnerPayment) return 0;
+            this.markers.push({
+                id: expense.id,
+                kind: "expense",
+                date: expense.date,
+                closedAt,
+                amount: expense.actualExpenditure,
+            });
+            return 1;
+        }
+
+        const movement = this.movements.find((m) => m.id === marker.id);
         if (!movement || !canCloseCycle(movement.type)) return 0;
-        if (this.markers.some((m) => m.id === movementId)) return 0;
         this.markers.push({
             id: movement.id,
+            kind: "movement",
             date: movement.date,
             closedAt,
             amount: movement.amount,

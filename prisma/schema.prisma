@@ -174,11 +174,18 @@ model Expense {
   originalAmount   Float? // Phase 5 (multi-currency reference)
   originalCurrency String? // Phase 5
 
+  // Settlement-cycle marker, the twin of `Movement.closedAt` (spec 0007 §3.5): a
+  // cycle squared by PAYING the partner holds no transfer to mark. Valid only on a
+  // payment — a CHECK in the migration enforces that on insert AND update.
+  closedAt DateTime?
+
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, date])
+  // Serves the marker scan that derives the cycle boundaries.
+  @@index([userId, closedAt])
 }
 
 model Settings {
@@ -246,10 +253,11 @@ model Movement {
   //
   // `gf_paid` is LEGACY. Money you send her is an `Expense{isPartnerPayment}`
   // now — that transfer is the moment real money leaves — so nothing writes
-  // this type anymore. NO migration converts the existing rows: the conversion
-  // is data, and data is deferred to its own PR. Until it runs, every read that
-  // counts payments must count these too (settlement's balance and the feed
-  // footer both do), or the money silently disappears from a screen.
+  // this type anymore. `20260916230000_convert_partner_payments` converts the
+  // existing rows, but only for an account that has a `combined-expenses`
+  // category to file them under; the rest stay here by design. Every read that
+  // counts payments must therefore still count these (settlement's balance and
+  // the feed footer both do), or the money silently disappears from a screen.
   type   String
 
   cardId String? // set when type = "card_payment"
