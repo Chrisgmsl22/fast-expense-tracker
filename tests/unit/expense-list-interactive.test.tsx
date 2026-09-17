@@ -75,6 +75,7 @@ const expenses = [
         description: "Tacos",
         amount: 200,
         actualExpenditure: 136,
+        fundedFrom: "income" as const,
         isShared: true,
         isPartnerPayment: false,
         cycleClosedAt: null,
@@ -88,6 +89,7 @@ const expenses = [
         description: "Uber",
         amount: 1000,
         actualExpenditure: 1000,
+        fundedFrom: "income" as const,
         isShared: false,
         isPartnerPayment: false,
         cycleClosedAt: null,
@@ -110,6 +112,7 @@ const movements: MovementListItem[] = [
         type: "card_payment",
         card: { name: "Amex", color: "#ca8a04" },
         note: null,
+        fundedFrom: "income",
         closedAt: null,
         cycleClosedAt: null,
     },
@@ -120,6 +123,7 @@ const movements: MovementListItem[] = [
         type: "gf_paid",
         card: null,
         note: "netted",
+        fundedFrom: "income",
         closedAt: null,
         cycleClosedAt: null,
     },
@@ -133,6 +137,7 @@ const debt: MovementListItem = {
     type: "gf_fronted",
     card: null,
     note: "she covered the vet",
+    fundedFrom: "income",
     closedAt: null,
     cycleClosedAt: null,
 };
@@ -313,6 +318,7 @@ describe("ExpenseListInteractive", () => {
                 description: "Emergency fund",
                 amount: 5000,
                 actualExpenditure: 5000,
+                fundedFrom: "income" as const,
                 isShared: false,
                 isPartnerPayment: false,
                 cycleClosedAt: null,
@@ -476,6 +482,91 @@ describe("ExpenseListInteractive", () => {
         expect(within(totals).getByText("$1,736.00")).toBeDefined();
     });
 
+    it("badges a savings-funded transfer and drops it from 'Paid to Brenda'", () => {
+        // The same rule as the dashboard feed, on the same helper: out of the
+        // cash figure, still a visible row (spec 0007 §6a decision 5).
+        const fromSavings: MovementListItem[] = [
+            {
+                ...movements[1]!,
+                id: "mv9",
+                amount: 8000,
+                fundedFrom: "savings",
+            },
+        ];
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements: fromSavings }}
+            />,
+        );
+
+        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        expect(screen.getAllByText("from savings").length).toBeGreaterThan(0);
+        const totals = screen.getByTestId("totals-desktop");
+        expect(within(totals).queryByText("Paid to Brenda")).toBeNull();
+        // Its own cash line — the consumption line stays out of it.
+        expect(
+            within(totals).getByText("of which paid to Brenda"),
+        ).toBeDefined();
+        expect(within(totals).getByText("$8,000.00")).toBeDefined();
+        expect(
+            within(totals).queryByText("Not from this month's income"),
+        ).toBeNull();
+        // The mobile bar carries the short form of the same line.
+        const mobile = screen.getByTestId("totals-mobile");
+        expect(within(mobile).getByText("of which to partner")).toBeDefined();
+    });
+
+    it("names savings-funded PAYMENTS on that same line (BUG-5)", () => {
+        // Two payments tagged "from savings" printed no line at all before the
+        // fix: only a legacy movement reached the figure the footer read.
+        const pay = (id: string, amount: number) => ({
+            ...expenses[0]!,
+            id,
+            description: "Settled up",
+            amount,
+            actualExpenditure: amount,
+            isShared: false,
+            isPartnerPayment: true,
+            fundedFrom: "savings" as const,
+            card: null,
+        });
+        render(
+            <ExpenseListInteractive
+                expenses={[pay("p1", 300), pay("p2", 230)]}
+                {...{ ...props, movements: [] }}
+            />,
+        );
+
+        const totals = screen.getByTestId("totals-desktop");
+        expect(
+            within(totals).getByText("of which paid to Brenda"),
+        ).toBeDefined();
+        expect(within(totals).getAllByText("$530.00").length).toBeGreaterThan(
+            0,
+        );
+        // A breakdown: no income-funded money reached her this month.
+        expect(within(totals).queryByText("Paid to Brenda")).toBeNull();
+        const mobile = screen.getByTestId("totals-mobile");
+        expect(within(mobile).getByText("of which to partner")).toBeDefined();
+    });
+
+    it("omits the savings line when no money reached her that way", () => {
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements: [] }}
+            />,
+        );
+
+        const totals = screen.getByTestId("totals-desktop");
+        expect(
+            within(totals).queryByText("of which paid to Brenda"),
+        ).toBeNull();
+        const mobile = screen.getByTestId("totals-mobile");
+        expect(within(mobile).queryByText("of which to partner")).toBeNull();
+    });
+
     it("hides movements when a category filter is active (they have no category)", () => {
         render(
             <ExpenseListInteractive
@@ -512,6 +603,7 @@ describe("ExpenseListInteractive", () => {
             type: "card_payment",
             cardId: "card1",
             note: null,
+            fundedFrom: "income",
         });
         render(
             <ExpenseListInteractive
@@ -537,6 +629,7 @@ describe("ExpenseListInteractive", () => {
             type: "gf_paid",
             cardId: null,
             note: "netted",
+            fundedFrom: "income",
         });
         render(
             <ExpenseListInteractive
@@ -630,5 +723,72 @@ describe("ExpenseListInteractive", () => {
         );
         // No cash left the account, so no figure may move (ADR-0020).
         expect(screen.getByTestId("totals-desktop").textContent).toBe(without);
+    });
+
+    describe("funding-source badges (spec 0007 §3.1)", () => {
+        const fundedRows = [
+            {
+                id: "f1",
+                date: new Date("2026-05-15T06:00:00Z"),
+                description: "Shoes",
+                amount: 200,
+                actualExpenditure: 200,
+                fundedFrom: "savings" as const,
+                isShared: false,
+                isPartnerPayment: false,
+                cycleClosedAt: null,
+                category: {
+                    id: "c1",
+                    slug: "shopping",
+                    name: "Shopping",
+                    color: "#ef4444",
+                },
+                subcategory: null,
+                card: { name: "Amex", color: "#ca8a04" },
+            },
+            {
+                id: "f2",
+                date: new Date("2026-05-12T06:00:00Z"),
+                description: "Medicine",
+                amount: 800,
+                actualExpenditure: 800,
+                fundedFrom: "reimbursed" as const,
+                isShared: false,
+                isPartnerPayment: false,
+                cycleClosedAt: null,
+                category: {
+                    id: "c4",
+                    slug: "health",
+                    name: "Health",
+                    color: "#14b8a6",
+                },
+                subcategory: null,
+                card: { name: "Amex", color: "#ca8a04" },
+            },
+        ];
+
+        it("badges a savings-funded row and a reimbursed row distinctly", () => {
+            render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
+
+            const savingsBadge = screen.getByText("from savings");
+            const reimbursedBadge = screen.getByText("reimbursed");
+            expect(savingsBadge).toBeDefined();
+            expect(reimbursedBadge).toBeDefined();
+            // Distinct per value, and reusing existing tokens (no new colours).
+            expect(savingsBadge.className).toContain("bg-transfer-tint");
+            expect(reimbursedBadge.className).toContain("bg-payment-tint");
+        });
+
+        it("shows the row at its full amount — the badge explains, it doesn't discount", () => {
+            render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
+            expect(screen.getByText("Shoes")).toBeDefined();
+            expect(screen.getByText("$200.00")).toBeDefined();
+        });
+
+        it("leaves an income-funded row unbadged", () => {
+            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            expect(screen.queryByText("from savings")).toBeNull();
+            expect(screen.queryByText("reimbursed")).toBeNull();
+        });
     });
 });

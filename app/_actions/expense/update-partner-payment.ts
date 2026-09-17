@@ -116,6 +116,9 @@ export async function updatePartnerPayment(
             yourPercentage: 1,
             actualExpenditure: v.amount,
             paidBy: "you",
+            // Re-asserted from the form, so an edit cannot reset a savings-funded
+            // payment back to income (spec 0007 §6a decision 5).
+            fundedFrom: v.fundedFrom,
             // Preserved, not cleared: this form has no notes field, and a field
             // it never showed must not be wiped by a save it did not make.
             notes: existing.notes,

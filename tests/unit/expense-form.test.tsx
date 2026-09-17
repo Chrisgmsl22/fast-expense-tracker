@@ -40,6 +40,7 @@ const editable = {
     yourPercentage: 0.68,
     actualExpenditure: 170,
     paidBy: "you",
+    fundedFrom: "income" as const,
     cycleClosedAt: null,
 };
 
@@ -340,5 +341,142 @@ describe("ExpenseForm", () => {
                 expect.objectContaining({ id: "e1", cardId: undefined }),
             ),
         );
+    });
+    describe("funding source (spec 0007 §3.1/§3.3)", () => {
+        it("has no control for the ordinary case — both boxes unchecked = income", async () => {
+            (createExpense as unknown as Mock).mockResolvedValue({
+                ok: true,
+                data: { id: "new1" },
+            });
+            renderForm();
+
+            // No "Funded from" picker at all: this month's income is what
+            // almost every expense is, so it isn't a decision to make.
+            expect(screen.queryByLabelText("Funded from")).toBeNull();
+            const savings = screen.getByRole("checkbox", {
+                name: /paid with money i already had/i,
+            });
+            expect(savings.getAttribute("aria-checked")).toBe("false");
+
+            fireEvent.change(screen.getByLabelText(/description/i), {
+                target: { value: "Coffee" },
+            });
+            fireEvent.change(screen.getByLabelText(/amount/i), {
+                target: { value: "45" },
+            });
+            fireEvent.submit(
+                screen.getByRole("form", { name: /add expense/i }),
+            );
+
+            await waitFor(() =>
+                expect(createExpense).toHaveBeenCalledWith(
+                    expect.objectContaining({ fundedFrom: "income" }),
+                ),
+            );
+        });
+
+        it("maps the savings checkbox onto the stored `savings` value", async () => {
+            (createExpense as unknown as Mock).mockResolvedValue({
+                ok: true,
+                data: { id: "new1" },
+            });
+            renderForm();
+
+            fireEvent.click(
+                screen.getByRole("checkbox", {
+                    name: /paid with money i already had/i,
+                }),
+            );
+            fireEvent.change(screen.getByLabelText(/description/i), {
+                target: { value: "Shoes" },
+            });
+            fireEvent.change(screen.getByLabelText(/amount/i), {
+                target: { value: "3000" },
+            });
+            fireEvent.submit(
+                screen.getByRole("form", { name: /add expense/i }),
+            );
+
+            await waitFor(() =>
+                expect(createExpense).toHaveBeenCalledWith(
+                    expect.objectContaining({ fundedFrom: "savings" }),
+                ),
+            );
+        });
+
+        it("hides the reimbursed checkbox off health, and shows it on health", () => {
+            const { unmount } = renderForm();
+            expect(
+                screen.queryByRole("checkbox", { name: /fully reimbursed/i }),
+            ).toBeNull();
+            unmount();
+
+            // `editable` is category c2 = health.
+            renderForm({ expense: editable });
+            expect(
+                screen.getByRole("checkbox", { name: /fully reimbursed/i }),
+            ).toBeDefined();
+        });
+
+        it("keeps the two mutually exclusive — checking one clears the other", async () => {
+            (updateExpense as unknown as Mock).mockResolvedValue({
+                ok: true,
+                data: { id: "e1" },
+            });
+            renderForm({ expense: editable });
+
+            const savings = screen.getByRole("checkbox", {
+                name: /paid with money i already had/i,
+            });
+            const reimbursed = screen.getByRole("checkbox", {
+                name: /fully reimbursed/i,
+            });
+
+            fireEvent.click(savings);
+            expect(savings.getAttribute("aria-checked")).toBe("true");
+
+            fireEvent.click(reimbursed);
+            expect(reimbursed.getAttribute("aria-checked")).toBe("true");
+            expect(savings.getAttribute("aria-checked")).toBe("false");
+
+            fireEvent.submit(
+                screen.getByRole("form", { name: /edit expense/i }),
+            );
+            await waitFor(() =>
+                expect(updateExpense).toHaveBeenCalledWith(
+                    expect.objectContaining({ fundedFrom: "reimbursed" }),
+                ),
+            );
+        });
+
+        it("shows an existing reimbursed row's checkbox even off health, so the value isn't lost silently", () => {
+            // The server rejects this pair, but a legacy row must still be
+            // visible and un-tickable rather than quietly dropped.
+            renderForm({
+                expense: {
+                    ...editable,
+                    categoryId: "c1",
+                    fundedFrom: "reimbursed" as const,
+                },
+            });
+
+            const reimbursed = screen.getByRole("checkbox", {
+                name: /fully reimbursed/i,
+            });
+            expect(reimbursed.getAttribute("aria-checked")).toBe("true");
+        });
+
+        it("prefills a savings-funded row and warns it sits outside the budget", () => {
+            renderForm({
+                expense: { ...editable, fundedFrom: "savings" as const },
+            });
+
+            expect(
+                screen.getByText("Paid with money I already had"),
+            ).toBeDefined();
+            expect(
+                screen.getByText(/doesn't count toward this month's budget/i),
+            ).toBeDefined();
+        });
     });
 });

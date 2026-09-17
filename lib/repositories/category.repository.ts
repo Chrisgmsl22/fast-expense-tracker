@@ -6,6 +6,11 @@ import {
     PARTNER_PAYMENT_CATEGORY_SLUG,
     PARTNER_PAYMENT_SUBCATEGORY_NAME,
 } from "@/lib/domain/expense";
+import {
+    BUDGET_FUNDING_FILTER,
+    isBudgetFunded,
+    toFundingSource,
+} from "@/lib/domain/funding";
 import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
 import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
@@ -19,6 +24,20 @@ export type CategoryMeta = {
     isRelevant: boolean;
     /** null = no budget set. */
     monthlyBudget: number | null;
+};
+
+/**
+ * The row plus the budget filter's verdict, read from the RAW column:
+ * `fundedFrom` maps an out-of-band value to `income` while SQL drops it, so a
+ * predicate over it would miss the rows that most need explaining.
+ */
+export type CategoryExpenseListItem = Omit<ExpenseListItem, "subcategory"> & {
+    /**
+     * Subcategory names are not unique — `schema.prisma` has no constraint on
+     * `(userId, categoryId, name)` — so "across M subcategories" must count ids.
+     */
+    subcategory: { id: string; name: string } | null;
+    countedInBudget: boolean;
 };
 
 /** Null-subcategory expenses roll up under this label ("Other" bucket). */
@@ -52,7 +71,7 @@ export interface CategoryRepository {
         userId: string,
         categoryId: string,
         month: string,
-    ): Promise<ExpenseListItem[]>;
+    ): Promise<CategoryExpenseListItem[]>;
     /**
      * Where a payment to the partner lands when the user picks nothing (spec 0007 §6a);
      * null when the user has no `combined-expenses` category. The lookup is BY NAME, so
@@ -95,7 +114,14 @@ export class PrismaCategoryRepository implements CategoryRepository {
         const [grouped, subcategories] = await Promise.all([
             this.db.expense.groupBy({
                 by: ["subcategoryId"],
-                where: { userId, categoryId, date: { gte: start, lt: end } },
+                // Budget figures count only income-funded rows (spec 0007 §2),
+                // same filter the dashboard reads use.
+                where: {
+                    userId,
+                    categoryId,
+                    date: { gte: start, lt: end },
+                    ...BUDGET_FUNDING_FILTER,
+                },
                 _sum: { actualExpenditure: true },
             }),
             this.db.subcategory.findMany({
@@ -156,8 +182,10 @@ export class PrismaCategoryRepository implements CategoryRepository {
         userId: string,
         categoryId: string,
         month: string,
-    ): Promise<ExpenseListItem[]> {
+    ): Promise<CategoryExpenseListItem[]> {
         const { start, end } = getMonthRangeUtc(month);
+        // No funding filter: this is the LIST, not a total. A savings-funded row
+        // still belongs on screen (badged); only the aggregates above skip it.
         const [rows, closes] = await Promise.all([
             this.db.expense.findMany({
                 where: { userId, categoryId, date: { gte: start, lt: end } },
@@ -169,6 +197,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
                     amount: true,
                     actualExpenditure: true,
                     isShared: true,
+                    fundedFrom: true,
                     isPartnerPayment: true,
                     createdAt: true,
                     category: {
@@ -179,7 +208,7 @@ export class PrismaCategoryRepository implements CategoryRepository {
                             color: true,
                         },
                     },
-                    subcategory: { select: { name: true } },
+                    subcategory: { select: { id: true, name: true } },
                     card: { select: { name: true, color: true } },
                 },
             }),
@@ -187,6 +216,10 @@ export class PrismaCategoryRepository implements CategoryRepository {
         ]);
         return rows.map(({ createdAt, ...item }) => ({
             ...item,
+            fundedFrom: toFundingSource(item.fundedFrom),
+            // Read before the narrowing above, which would hide an out-of-band
+            // value behind `income` and take the row out of both figures.
+            countedInBudget: isBudgetFunded(item.fundedFrom),
             cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
         }));
     }

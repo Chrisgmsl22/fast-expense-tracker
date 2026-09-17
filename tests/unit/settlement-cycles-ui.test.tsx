@@ -77,6 +77,7 @@ const lockedTransfer: SettlementJournalItem = {
     direction: "gf_received",
     amount: 320,
     note: null,
+    fundedFrom: "income",
     source: "movement",
 };
 
@@ -294,6 +295,7 @@ describe("a locked row", () => {
             direction: "gf_paid",
             amount: 320,
             note: null,
+            fundedFrom: "income",
             // A payment you sent is an EXPENSE now (spec 0007 §6b) — the row
             // type whose `locked` the service hardcoded.
             source: "expense",

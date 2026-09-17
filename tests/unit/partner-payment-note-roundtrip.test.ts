@@ -37,6 +37,7 @@ const paymentRow = (description: string): SettlementExpenseRow => ({
     actualExpenditure: 380,
     isShared: false,
     isPartnerPayment: true,
+    fundedFrom: "income",
     createdAt: DAY,
 });
 

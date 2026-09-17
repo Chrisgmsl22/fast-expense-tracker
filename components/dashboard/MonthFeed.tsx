@@ -1,5 +1,10 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals } from "@/lib/domain/movement";
+import {
+    NON_INCOME_FUNDED_LABEL,
+    nonIncomeFundedTransferLabel,
+} from "@/lib/domain/funding";
+import { FundingBadge } from "@/components/expense/FundingBadge";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
@@ -15,9 +20,9 @@ import { SettlementChip } from "./SettlementChip";
 /**
  * Right-rail month feed — a read-only list of the month's expenses **and money
  * movements** (card payments, transfers to the partner), newest first, with a
- * pinned footer.
- * A debt she fronted never reaches this list: it is settlement-only and
- * provisional (spec 0007 §6b).
+ * pinned footer. A debt she fronted never reaches this list: it is
+ * settlement-only and provisional (spec 0007 §6b). The footer keeps the
+ * consumption and cash lines apart, never summed (spec 0007 §6a).
  */
 export function MonthFeed({
     expenses,
@@ -131,6 +136,16 @@ export function MonthFeed({
                             </span>
                         </div>
                     )}
+                    {totals.notFromIncome > 0 && (
+                        <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                                {NON_INCOME_FUNDED_LABEL}
+                            </span>
+                            <span className="px-2 tabular-nums text-muted-foreground">
+                                {formatMxn(totals.notFromIncome)}
+                            </span>
+                        </div>
+                    )}
                     {totals.paidToPartner > 0 && (
                         <div className="flex items-center justify-between">
                             <span className="font-medium text-foreground">
@@ -141,10 +156,23 @@ export function MonthFeed({
                             </span>
                         </div>
                     )}
-                    {/* Total only when it says something beyond "what I really
-                        spent" — i.e. savings or a transfer added to it. Dark band
-                        (flush to the card bottom) so it's easy to spot. */}
-                    {(totals.setAside > 0 || totals.paidToPartner > 0) && (
+                    {/* Every peso that reached her from another month's money —
+                        transfer or payment-expense alike (spec 0007 §6a). */}
+                    {totals.paidToPartnerFromSavings > 0 && (
+                        <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                                {nonIncomeFundedTransferLabel(partnerName)}
+                            </span>
+                            <span className="px-2 tabular-nums text-muted-foreground">
+                                {formatMxn(totals.paidToPartnerFromSavings)}
+                            </span>
+                        </div>
+                    )}
+                    {/* Gated on the two figures that ADD to it. `paidToPartner` is a
+                        breakdown of "what I really spent", so gating on it would print
+                        a Total restating the line above (spec 0007 §6a). */}
+                    {(totals.setAside > 0 ||
+                        totals.legacyPaidToPartner > 0) && (
                         <div className="-mx-4 -mb-4 mt-1 flex items-center justify-between rounded-b-lg bg-foreground px-4 py-2.5 text-background">
                             <span className="font-medium">Total</span>
                             <span className="px-2 font-semibold tabular-nums">
@@ -194,8 +222,13 @@ function ExpenseRow({
                 />
             )}
             <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                    {e.description}
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-medium">
+                        {e.description}
+                    </span>
+                    {e.fundedFrom === "income" ? null : (
+                        <FundingBadge source={e.fundedFrom} />
+                    )}
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                     {formatExpenseDate(e.date)}
@@ -253,8 +286,13 @@ function MovementRow({
             className={`flex items-center gap-3 border-l-[3px] py-2.5 pr-4 pl-4 ${rowTint}`}
         >
             <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                    {title}
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-medium">
+                        {title}
+                    </span>
+                    {m.fundedFrom === "income" ? null : (
+                        <FundingBadge source={m.fundedFrom} />
+                    )}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {formatExpenseDate(m.date)}

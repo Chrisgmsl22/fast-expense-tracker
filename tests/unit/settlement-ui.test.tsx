@@ -193,6 +193,7 @@ describe("SettlementJournal", () => {
             locked: false,
             direction: "gf_received",
             amount: 320,
+            fundedFrom: "income",
             note: "rent",
             source: "movement",
         },
@@ -227,6 +228,63 @@ describe("SettlementJournal", () => {
     it("shows an empty state when there is nothing to settle", () => {
         render(<SettlementJournal journal={[]} partnerName="Brenda" />);
         expect(screen.getByText("Nothing to settle yet.")).toBeDefined();
+    });
+
+    describe("the funding badge on a transfer", () => {
+        const transferRow = (
+            fundedFrom: "income" | "savings",
+            direction: "gf_paid" | "gf_received" = "gf_paid",
+        ): SettlementJournalItem[] => [
+            {
+                kind: "transfer",
+                id: "m2",
+                date: july,
+                carriedOver: false,
+                locked: false,
+                direction,
+                amount: 700,
+                fundedFrom,
+                note: null,
+                // A LEGACY transfer: the badge case that still lives on a movement.
+                source: "movement",
+            },
+        ];
+
+        it("badges a savings-funded payment, which still counts in the balance", () => {
+            render(
+                <SettlementJournal
+                    journal={transferRow("savings")}
+                    partnerName="Brenda"
+                />,
+            );
+            expect(screen.getByText("from savings")).toBeDefined();
+            // The amount is unreduced: this page is the settlement ledger, and
+            // savings money reached her all the same (spec 0007 §6a).
+            expect(screen.getByText("$700.00")).toBeDefined();
+        });
+
+        it("leaves an income-funded payment unbadged", () => {
+            render(
+                <SettlementJournal
+                    journal={transferRow("income")}
+                    partnerName="Brenda"
+                />,
+            );
+            expect(screen.queryByText("from savings")).toBeNull();
+        });
+
+        it("never badges money she sent you — her funding isn't yours", () => {
+            render(
+                <SettlementJournal
+                    journal={transferRow("savings", "gf_received")}
+                    partnerName="Brenda"
+                />,
+            );
+            expect(
+                screen.getByText(/Transfer — Brenda paid you/),
+            ).toBeDefined();
+            expect(screen.queryByText("from savings")).toBeNull();
+        });
     });
 
     it("shows edit + delete on the debt and transfer rows, not a shared expense", () => {
@@ -375,6 +433,7 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
         direction: "gf_paid",
         amount: 150,
         note: null,
+        fundedFrom: "income",
         source: "expense",
     };
 

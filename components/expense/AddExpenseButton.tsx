@@ -53,10 +53,8 @@ const titlesFor = (partnerName: string): Record<Mode, string> => ({
 
 /**
  * Money movements are logged here alongside expenses, so there is one place to
- * record everything (ADR-0018).
- *
- * An "I owe {partner}" debt is NOT offered here: it is created on the settlement
- * page, where the balance it moves is in view. It still SHOWS in this feed.
+ * record everything (ADR-0018). An "I owe {partner}" debt is NOT offered here:
+ * it is created on the settlement page, where the balance it moves is in view.
  */
 export function AddExpenseButton({
     categories,

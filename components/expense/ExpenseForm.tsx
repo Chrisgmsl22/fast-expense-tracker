@@ -20,6 +20,15 @@ import {
     type UpdateExpenseResult,
 } from "@/app/_actions/expense/update";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
+import {
+    FUNDING_TOGGLE_HINT,
+    FUNDING_TOGGLE_LABEL,
+    allowsReimbursed,
+    fundingSourceAfterCategoryChange,
+    fundingSourceFromToggles,
+    togglesFromFundingSource,
+    type FundingSource,
+} from "@/lib/domain/funding";
 import { toDateInputValue } from "@/lib/dates";
 import { formatMxn } from "@/lib/format";
 import type { FieldErrors } from "@/lib/actions/result";
@@ -38,6 +47,12 @@ export type SubcategoryOption = {
     categoryId: string;
 };
 export type CardOption = { id: string; name: string; color: string };
+
+/** Static ids: one expense form is mounted at a time. */
+const SAVINGS_LABEL_ID = "funding-savings-label";
+const SAVINGS_HINT_ID = "funding-savings-hint";
+const REIMBURSED_LABEL_ID = "funding-reimbursed-label";
+const REIMBURSED_HINT_ID = "funding-reimbursed-hint";
 
 type Props = {
     categories: CategoryOption[];
@@ -105,6 +120,14 @@ export function ExpenseForm({
     const [description, setDescription] = useState(expense?.description ?? "");
     const [notes, setNotes] = useState(expense?.notes ?? "");
     const [isShared, setIsShared] = useState(expense?.isShared ?? false);
+    const [fundedFrom, setFundedFrom] = useState<FundingSource>(
+        expense?.fundedFrom ?? "income",
+    );
+    // Set when a category change drops `reimbursed`, so the form can explain
+    // where the choice went instead of silently changing it.
+    const [reimbursedClearedBy, setReimbursedClearedBy] = useState<
+        string | null
+    >(null);
     // An already-shared row keeps its stored split so historical splits stay
     // correct (CLAUDE.md domain note + immutable history, ADR-0021) — even in
     // Solo mode, editing a historical shared row must not rewrite its split.
@@ -139,6 +162,15 @@ export function ExpenseForm({
         (s) => s.id === subcategoryId,
     );
     const selectedCard = cards.find((c) => c.id === cardId);
+    // `reimbursed` is offered only on Health (spec 0007 §3.3).
+    const canReimburse = allowsReimbursed(selectedCategory?.slug ?? null);
+    const toggles = togglesFromFundingSource(fundedFrom);
+    function setFunding(paidFromSavings: boolean, fullyReimbursed: boolean) {
+        setFundedFrom(
+            fundingSourceFromToggles(paidFromSavings, fullyReimbursed),
+        );
+        setReimbursedClearedBy(null);
+    }
 
     const amountNumber = Number.parseFloat(amount);
     const yourShare = Number.isFinite(amountNumber)
@@ -149,13 +181,22 @@ export function ExpenseForm({
 
     function handleCategoryChange(value: string) {
         setCategoryId(value);
+        // Carrying `reimbursed` onto another category would only fail server-side (spec 0007 §3.3).
+        const next = categories.find((c) => c.id === value);
+        const nextFunding = fundingSourceAfterCategoryChange(
+            fundedFrom,
+            next?.slug ?? null,
+        );
+        setFundedFrom(nextFunding);
+        setReimbursedClearedBy(
+            nextFunding === fundedFrom ? null : (next?.name ?? null),
+        );
         // A subcategory belongs to one category; drop it when it no longer fits.
         const stillValid = subcategories.some(
             (s) => s.id === subcategoryId && s.categoryId === value,
         );
         if (!stillValid) setSubcategoryId("");
         // Savings has no card — clear any selected card when switching to it.
-        const next = categories.find((c) => c.id === value);
         if (next?.slug === SAVINGS_SLUG) setCardId("");
     }
 
@@ -176,6 +217,7 @@ export function ExpenseForm({
             isShared: isPartnerPayment ? false : isShared,
             // A payment is never split: the figure entered IS what you sent.
             yourPercentage: isPartnerPayment ? "1" : String(yourPercentage),
+            fundedFrom,
             // Every expense is the user's (ADR-0018); `paidBy` defaults "you"
             // in the schema, so the form no longer sends it.
         };
@@ -197,6 +239,7 @@ export function ExpenseForm({
                         setDescription("");
                         setNotes("");
                         setIsShared(false);
+                        setFundedFrom("income");
                     }
                     onSuccess?.();
                 } else {
@@ -301,15 +344,7 @@ export function ExpenseForm({
                 </div>
 
                 <div>
-                    <Label htmlFor="subcategoryId">
-                        Subcategory
-                        {selectedCategory ? (
-                            <span className="font-normal text-muted-foreground">
-                                {" "}
-                                (from {selectedCategory.name})
-                            </span>
-                        ) : null}
-                    </Label>
+                    <Label htmlFor="subcategoryId">Subcategory</Label>
                     <Select
                         value={subcategoryId}
                         onValueChange={(value) => setSubcategoryId(value ?? "")}
@@ -336,6 +371,14 @@ export function ExpenseForm({
                             ))}
                         </SelectContent>
                     </Select>
+                    {/* Below the select, not in the label: a long category name
+                        wraps the label onto a second line and pushes this
+                        select out of line with Category and Card. */}
+                    {selectedCategory ? (
+                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                            from {selectedCategory.name}
+                        </p>
+                    ) : null}
                 </div>
 
                 <div>
@@ -421,6 +464,91 @@ export function ExpenseForm({
                     onChange={(e) => setNotes(e.target.value)}
                     className="mt-1.5 flex w-full rounded-lg border border-input bg-background px-3 py-2 text-base shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:text-sm"
                 />
+            </div>
+
+            {/* Two checkboxes, not a dropdown: this month's income is what
+                almost every expense is, so the ordinary case needs no control.
+                Both unchecked = income. */}
+            {/* Named by the visible text, described by the hint outside the
+                label: an `aria-label` would override the visible text and leave
+                the hint unannounced. The description is pointed at only while
+                the hint renders. */}
+            <div className="flex flex-col gap-2.5">
+                <div>
+                    <label className="flex items-start gap-2.5">
+                        <Checkbox
+                            checked={toggles.paidFromSavings}
+                            onCheckedChange={(checked) =>
+                                setFunding(checked === true, false)
+                            }
+                            aria-labelledby={SAVINGS_LABEL_ID}
+                            aria-describedby={
+                                toggles.paidFromSavings
+                                    ? SAVINGS_HINT_ID
+                                    : undefined
+                            }
+                            className="mt-0.5"
+                        />
+                        <span
+                            id={SAVINGS_LABEL_ID}
+                            className="text-sm font-medium"
+                        >
+                            {FUNDING_TOGGLE_LABEL.savings}
+                        </span>
+                    </label>
+                    {toggles.paidFromSavings ? (
+                        <p
+                            id={SAVINGS_HINT_ID}
+                            className="pl-[1.625rem] text-sm text-muted-foreground"
+                        >
+                            {FUNDING_TOGGLE_HINT}
+                        </p>
+                    ) : null}
+                </div>
+
+                {/* Also shown when the row already carries the value on another
+                    category, so an existing `reimbursed` expense never loses it
+                    silently. */}
+                {canReimburse || fundedFrom === "reimbursed" ? (
+                    <div>
+                        <label className="flex items-start gap-2.5">
+                            <Checkbox
+                                checked={toggles.fullyReimbursed}
+                                onCheckedChange={(checked) =>
+                                    setFunding(false, checked === true)
+                                }
+                                aria-labelledby={REIMBURSED_LABEL_ID}
+                                aria-describedby={
+                                    toggles.fullyReimbursed
+                                        ? REIMBURSED_HINT_ID
+                                        : undefined
+                                }
+                                className="mt-0.5"
+                            />
+                            <span
+                                id={REIMBURSED_LABEL_ID}
+                                className="text-sm font-medium"
+                            >
+                                {FUNDING_TOGGLE_LABEL.reimbursed}
+                            </span>
+                        </label>
+                        {toggles.fullyReimbursed ? (
+                            <p
+                                id={REIMBURSED_HINT_ID}
+                                className="pl-[1.625rem] text-sm text-muted-foreground"
+                            >
+                                {FUNDING_TOGGLE_HINT}
+                            </p>
+                        ) : null}
+                    </div>
+                ) : null}
+
+                {reimbursedClearedBy ? (
+                    <p className="text-xs text-muted-foreground">
+                        {`"${FUNDING_TOGGLE_LABEL.reimbursed}" isn't available for ${reimbursedClearedBy}, so it's unchecked.`}
+                    </p>
+                ) : null}
+                {fieldError("fundedFrom")}
             </div>
 
             {/* Solo mode (Settings.sharesExpenses = false) has no split — the

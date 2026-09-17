@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
 import { formatMxn } from "@/lib/format";
 import { CategoryLimitEditor } from "@/components/category/CategoryLimitEditor";
 
@@ -11,6 +12,10 @@ const DANGER = "#dc2626";
  * big my-share amount + a "$X left of your $Y limit" subtitle + progress bar
  * (per `category-detail-mobile.png`). A pencil on the limit (both layouts) opens
  * the per-month limit editor. A null effective limit reads "No limit".
+ *
+ * When the filter held money back, one shared line names what `spent` left out
+ * (spec 0007 §2). It points at the LIST, not at the subcategory bars between
+ * them — those are funding-filtered too.
  */
 export function CategoryStats({
     slug,
@@ -19,6 +24,7 @@ export function CategoryStats({
     categoryName,
     color,
     spent,
+    spentNotFromIncome,
     limit,
     defaultBudget,
     thisMonthOverride,
@@ -36,6 +42,8 @@ export function CategoryStats({
     categoryName: string;
     color: string;
     spent: number;
+    /** My-share the budget left out this month — savings-funded or reimbursed. */
+    spentNotFromIncome: number;
     /** Effective limit for the month (override ?? default), or null. */
     limit: number | null;
     defaultBudget: number | null;
@@ -155,6 +163,15 @@ export function CategoryStats({
                 </p>
                 <div className="mt-3">{bar}</div>
             </div>
+
+            {spentNotFromIncome > 0 && (
+                <p
+                    data-testid="category-non-income"
+                    className="mt-2 text-center text-xs text-muted-foreground sm:text-left"
+                >
+                    {`${NON_INCOME_FUNDED_LABEL}: ${formatMxn(spentNotFromIncome)} — in the list below, outside the budget.`}
+                </p>
+            )}
         </div>
     );
 }

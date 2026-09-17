@@ -1,5 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
 
+import {
+    toTransferFundingSource,
+    type TransferFundingSource,
+} from "@/lib/domain/funding";
 import type { MovementType } from "@/lib/domain/movement";
 import { CYCLE_CLOSING_TYPES } from "@/lib/domain/settlement";
 
@@ -16,6 +20,11 @@ export type SettlementExpenseRow = {
      * DOWN. An ordinary expense contributes her share and pushes it up: opposite signs.
      */
     isPartnerPayment: boolean;
+    /**
+     * Payment rows only: which money funded it, for the badge and the edit prefill.
+     * Never read for the balance — a payment from savings still reached her.
+     */
+    fundedFrom: TransferFundingSource;
     /** Entry time: what cycle membership compares, and the same-`date` tie-break. */
     createdAt: Date;
 };
@@ -28,6 +37,12 @@ export type SettlementMovementRow = {
     type: MovementType;
     /** Free-text label — the "I owe {partner}" debt's description, if any. */
     note: string | null;
+    /**
+     * Read for the badge and the edit prefill, **never** for the balance: paying
+     * her from savings still reached her, so `inputsFrom` nets on `amount` alone
+     * (spec 0007 §3.1).
+     */
+    fundedFrom: TransferFundingSource;
     /** Entry time: what cycle membership compares, and the same-`date` tie-break. */
     createdAt: Date;
     /** Set when this transfer closed a settlement cycle, so the row is frozen (spec 0007 §3.5). */
@@ -111,6 +126,7 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     actualExpenditure: true,
                     isShared: true,
                     isPartnerPayment: true,
+                    fundedFrom: true,
                     createdAt: true,
                 },
             }),
@@ -123,17 +139,21 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     amount: true,
                     type: true,
                     note: true,
+                    fundedFrom: true,
                     createdAt: true,
                     closedAt: true,
                 },
             }),
         ]);
-        // `type` is a free-form string column; narrow to the domain union here.
         return {
-            expenses,
+            expenses: expenses.map((e) => ({
+                ...e,
+                fundedFrom: toTransferFundingSource(e.fundedFrom),
+            })),
             movements: movements.map((m) => ({
                 ...m,
                 type: m.type as MovementType,
+                fundedFrom: toTransferFundingSource(m.fundedFrom),
             })),
         };
     }
@@ -165,6 +185,7 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     actualExpenditure: true,
                     isShared: true,
                     isPartnerPayment: true,
+                    fundedFrom: true,
                     createdAt: true,
                 },
             }),
@@ -177,16 +198,21 @@ export class PrismaSettlementRepository implements SettlementRepository {
                     amount: true,
                     type: true,
                     note: true,
+                    fundedFrom: true,
                     createdAt: true,
                     closedAt: true,
                 },
             }),
         ]);
         return {
-            expenses,
+            expenses: expenses.map((e) => ({
+                ...e,
+                fundedFrom: toTransferFundingSource(e.fundedFrom),
+            })),
             movements: movements.map((m) => ({
                 ...m,
                 type: m.type as MovementType,
+                fundedFrom: toTransferFundingSource(m.fundedFrom),
             })),
         };
     }

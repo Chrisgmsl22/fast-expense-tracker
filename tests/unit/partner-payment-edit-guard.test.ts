@@ -84,6 +84,7 @@ describe("editing a partner payment through the ordinary expense form", () => {
             actualExpenditure: PAYMENT,
             isShared: false,
             isPartnerPayment: true,
+            fundedFrom: "income",
             createdAt: DAY,
         });
         // A payment draws the balance the other way now (spec 0007 §6b).

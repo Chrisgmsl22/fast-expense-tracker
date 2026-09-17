@@ -7,6 +7,7 @@ import { ArrowLeftRight, BarChart3, Check, Pencil, Trash2 } from "lucide-react";
 
 import { deleteExpense } from "@/app/_actions/expense/delete";
 import { deleteMovement } from "@/app/_actions/movement/delete";
+import { FundingBadge } from "@/components/expense/FundingBadge";
 import {
     PartnerDebtForm,
     type PartnerDebtEditable,
@@ -25,6 +26,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { toDateInputValue } from "@/lib/dates";
+import { BUDGET_FUNDING_SOURCE } from "@/lib/domain/funding";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
 
@@ -153,6 +155,9 @@ export function SettlementJournal({
         date: toDateInputValue(editingTransfer.date),
         amount: String(editingTransfer.amount),
         note: editingTransfer.note ?? "",
+        // Carried from the row so saving an edit here re-asserts the funding
+        // source instead of resetting a savings-funded transfer to income.
+        fundedFrom: editingTransfer.fundedFrom ?? "income",
     };
 
     function confirmDelete() {
@@ -453,6 +458,15 @@ function JournalRow({
     const inbound = item.direction === "gf_received";
     return (
         <Row
+            // This page counts every transfer at full value; the badge says
+            // where the money came from, not that the row was skipped (spec 0007 §6a).
+            badge={
+                inbound ||
+                !item.fundedFrom ||
+                item.fundedFrom === BUDGET_FUNDING_SOURCE ? null : (
+                    <FundingBadge source={item.fundedFrom} />
+                )
+            }
             icon={<ArrowLeftRight className="size-4" />}
             iconClass={
                 inbound
@@ -482,6 +496,7 @@ function Row({
     iconClass,
     rowTint,
     title,
+    badge,
     subtitle,
     amount,
     amountClass,
@@ -492,6 +507,7 @@ function Row({
     /** Colour-coded left border + tint, bled to the card edges. Omit for a plain row. */
     rowTint?: string;
     title: string;
+    badge?: ReactNode;
     subtitle: string;
     amount: string;
     amountClass: string;
@@ -512,8 +528,11 @@ function Row({
                 {icon}
             </span>
             <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                    {title}
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-medium">
+                        {title}
+                    </span>
+                    {badge}
                 </span>
                 <span className="block truncate text-xs text-muted-foreground">
                     {subtitle}

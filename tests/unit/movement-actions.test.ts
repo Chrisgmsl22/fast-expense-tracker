@@ -121,6 +121,44 @@ describe("movement actions (unit, injected fake repo)", () => {
             expect(res.code).toBe("validation");
             expect(repo.inserts).toHaveLength(0);
         });
+
+        it("defaults the funding source to income", async () => {
+            const repo = new FakeMovementRepository();
+            await addTransfer({ date: "2026-06-20", amount: "300" }, repo);
+            expect(repo.inserts[0]!.fundedFrom).toBe("income");
+        });
+
+        it("persists a savings-funded transfer (spec 0007 §6a decision 5)", async () => {
+            const repo = new FakeMovementRepository();
+            const res = await addTransfer(
+                {
+                    date: "2026-06-20",
+                    amount: "8000",
+                    fundedFrom: "savings",
+                },
+                repo,
+            );
+
+            expect(res.ok).toBe(true);
+            expect(repo.inserts[0]!.fundedFrom).toBe("savings");
+        });
+
+        it("refuses `reimbursed` — Health-only, and a transfer has no category", async () => {
+            const repo = new FakeMovementRepository();
+            const res = await addTransfer(
+                {
+                    date: "2026-06-20",
+                    amount: "300",
+                    fundedFrom: "reimbursed",
+                },
+                repo,
+            );
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.code).toBe("validation");
+            expect(repo.inserts).toHaveLength(0);
+        });
     });
 
     describe("deleteMovement", () => {

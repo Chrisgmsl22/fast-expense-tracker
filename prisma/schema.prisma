@@ -146,6 +146,15 @@ model Expense {
   // drops it; all reads treat expenses as the user's own.
   paidBy            String  @default("you")
 
+  // Which month's money funded this purchase (spec 0007 §3.1):
+  // income | savings | reimbursed. Only "income" counts toward the 50/25/25
+  // budget — savings was already counted in the month it was set aside, and a
+  // reimbursed purchase was paid back by a third party. A String (not a DB
+  // enum) to match `Movement.type` and `paidBy`; the Zod enum is the guard.
+  // The card never reads this: a card payment stays source-agnostic (ADR-0020
+  // §6), so spend-by-card still sees the full amount.
+  fundedFrom        String  @default("income")
+
   // Money you SENT the partner (spec 0007 §6b). Paying her is the moment the
   // money is really spent, so this is an expense like any other: it carries a
   // category and counts in the buckets. A debt she fronted is NOT — it is
@@ -249,6 +258,15 @@ model Movement {
   card   Card?   @relation(fields: [cardId], references: [id], onDelete: Restrict)
 
   note String?
+
+  // Which month's money funded a transfer to the partner (spec 0007 §3.1):
+  // income | savings. Meaningful for `gf_paid` only — the one movement type
+  // that is an outflow of the user's own money. A card payment stays
+  // source-agnostic (§3.2, ADR-0020 §6) and a `gf_fronted` debt moved no cash,
+  // so both keep the "income" default and no read consults this for them.
+  // `reimbursed` is deliberately absent: it is Health-only (§3.3) and a
+  // transfer has no category. A String, not a DB enum, to match `type`.
+  fundedFrom String @default("income")
 
   // Settlement-cycle marker (spec 0007 §3.5). Non-null says both "this transfer
   // closed a cycle" AND "the cycle ended at this instant" — one column, so the

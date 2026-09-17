@@ -27,6 +27,7 @@ const DEFAULT_WRITE: ExpenseInsertData = {
     yourPercentage: 1,
     actualExpenditure: 100,
     paidBy: "you",
+    fundedFrom: "income",
     notes: null,
     isPartnerPayment: false,
 };
@@ -40,6 +41,7 @@ const DEFAULT_WRITE: ExpenseInsertData = {
 export class FakeExpenseRepository implements ExpenseRepository {
     private readonly rows = new Map<string, StoredExpense>();
     private readonly subcategoryToCategory = new Map<string, string>();
+    private readonly categoryToSlug = new Map<string, string>();
     private seq = 0;
 
     /** Flip on to make the next write throw, simulating a DB failure. */
@@ -59,6 +61,11 @@ export class FakeExpenseRepository implements ExpenseRepository {
 
     setSubcategory(subcategoryId: string, categoryId: string): void {
         this.subcategoryToCategory.set(subcategoryId, categoryId);
+    }
+
+    /** Give a category a slug, so the Health rule can be exercised. */
+    setCategorySlug(categoryId: string, slug: string): void {
+        this.categoryToSlug.set(categoryId, slug);
     }
 
     seedExpense(
@@ -94,6 +101,7 @@ export class FakeExpenseRepository implements ExpenseRepository {
             // The STORED share, as the Prisma adapter returns it — never a recomputation.
             actualExpenditure: row.actualExpenditure,
             paidBy: row.paidBy,
+            fundedFrom: row.fundedFrom,
             isPartnerPayment: row.isPartnerPayment,
             cycleClosedAt: row.cycleClosedAt,
         };
@@ -109,6 +117,13 @@ export class FakeExpenseRepository implements ExpenseRepository {
         subcategoryId: string,
     ): Promise<string | null> {
         return this.subcategoryToCategory.get(subcategoryId) ?? null;
+    }
+
+    async getCategorySlug(
+        _userId: string,
+        categoryId: string,
+    ): Promise<string | null> {
+        return this.categoryToSlug.get(categoryId) ?? null;
     }
 
     async insert(

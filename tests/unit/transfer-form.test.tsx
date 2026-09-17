@@ -120,6 +120,7 @@ describe("TransferForm", () => {
                     date: "2026-07-01",
                     amount: "350",
                     note: "dinner",
+                    fundedFrom: "savings",
                 }}
                 partnerName="Brenda"
                 onSuccess={onSuccess}
@@ -140,10 +141,117 @@ describe("TransferForm", () => {
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
         expect(updatePaymentMock).toHaveBeenCalledWith(
-            expect.objectContaining({ id: "m9", amount: "400" }),
+            expect.objectContaining({
+                id: "m9",
+                amount: "400",
+                // Re-asserted from the row, not reset: editing the amount of a
+                // savings-funded payment must not quietly move it back into
+                // the budget.
+                fundedFrom: "savings",
+            }),
         );
         expect(updateTransferMock).not.toHaveBeenCalled();
         expect(addPaymentMock).not.toHaveBeenCalled();
+    });
+
+    describe("the funding-source control (spec 0007 §6a decision 5)", () => {
+        it("is a single checkbox — never a reimbursed option, which is Health-only", () => {
+            render(<TransferForm partnerName="Brenda" />);
+
+            // A payment reads like a purchase: one box you tick, no picker.
+            expect(screen.queryByLabelText("Funded from")).toBeNull();
+            expect(
+                screen.getByRole("checkbox", {
+                    name: /paid with money i already had/i,
+                }),
+            ).toBeDefined();
+            expect(
+                screen.queryByRole("checkbox", { name: /fully reimbursed/i }),
+            ).toBeNull();
+        });
+
+        it("defaults to income, so ignoring the control changes nothing", async () => {
+            const onSuccess = vi.fn();
+            render(<TransferForm partnerName="Brenda" onSuccess={onSuccess} />);
+
+            fireEvent.change(screen.getByLabelText("Date"), {
+                target: { value: "2026-07-10" },
+            });
+            fireEvent.change(screen.getByLabelText(/Amount/), {
+                target: { value: "300" },
+            });
+            fireEvent.click(
+                screen.getByRole("button", { name: /Log payment to Brenda/ }),
+            );
+
+            await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+            // An outbound payment is an EXPENSE now (spec 0007 §6b), and it
+            // carries the funding source like any other purchase.
+            expect(addPaymentMock).toHaveBeenCalledWith(
+                expect.objectContaining({ fundedFrom: "income" }),
+            );
+            expect(
+                screen.queryByText(/still settles what you owe/i),
+            ).toBeNull();
+        });
+
+        it("says what a savings-funded transfer leaves and what it still does", () => {
+            render(
+                <TransferForm
+                    partnerName="Brenda"
+                    transfer={{
+                        id: "m9",
+                        date: "2026-07-01",
+                        amount: "8000",
+                        note: "",
+                        fundedFrom: "savings",
+                    }}
+                />,
+            );
+
+            expect(
+                screen.getByText("Paid with money I already had"),
+            ).toBeDefined();
+            // Both halves of the rule, in the user's face: out of the budget,
+            // still in the settlement.
+            expect(
+                screen.getByText(
+                    /Doesn't count toward this month's budget or what you really spent\. It still settles what you owe Brenda\./,
+                ),
+            ).toBeDefined();
+        });
+
+        it("is hidden on money she sent you, which your money never funded", () => {
+            render(
+                <TransferForm direction="gf_received" partnerName="Brenda" />,
+            );
+            expect(screen.queryByLabelText("Funded from")).toBeNull();
+        });
+
+        it("sends income on an inbound transfer", async () => {
+            const onSuccess = vi.fn();
+            render(
+                <TransferForm
+                    direction="gf_received"
+                    partnerName="Brenda"
+                    onSuccess={onSuccess}
+                />,
+            );
+            fireEvent.change(screen.getByLabelText("Date"), {
+                target: { value: "2026-07-10" },
+            });
+            fireEvent.change(screen.getByLabelText(/Amount/), {
+                target: { value: "320" },
+            });
+            fireEvent.click(
+                screen.getByRole("button", { name: /Log Brenda's payment/ }),
+            );
+
+            await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+            expect(addTransferMock).toHaveBeenCalledWith(
+                expect.objectContaining({ fundedFrom: "income" }),
+            );
+        });
     });
 
     it("shows the field error and does not call onSuccess on a validation failure", async () => {

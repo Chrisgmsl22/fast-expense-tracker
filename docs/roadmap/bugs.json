@@ -30,6 +30,46 @@
             "spec": null,
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "BUG-4",
+            "title": "Dashboard reads categories and subcategories with no userId — cross-user leak into the Add-expense picker",
+            "description": "app/(dashboard)/dashboard/page.tsx calls db.category.findMany and db.subcategory.findMany with no userId filter, although Category.userId has existed since CHORE-8.a made categories per-user. Every user's categories therefore feed the Add-expense picker, so one account can see another account's category names and file an expense against a foreign categoryId. Found during the PR #73 review; it predates that PR and neither #73 nor #74 introduced or worsened it. Severity is bounded today because the app has one real user, but it becomes a live data-isolation bug the moment CHORE-8.d opens public signup — file it before that ships. The page also violates docs/conventions/architecture.md by importing db directly: a page must not query.",
+            "proposedSolution": "Move both reads behind the repository layer, scoped by userId, and have the page call a service instead of db. Then close the write side: createExpense currently user-scopes only the reimbursed path (getCategorySlug), so a foreign categoryId passes validation for every other funding source — validate that the categoryId and subcategoryId belong to the session user on every create and update, not just one branch. Tests: a second user's category is absent from the picker; a create naming a foreign categoryId is rejected; the same for subcategoryId. Blocks CHORE-8.d.",
+            "status": "open",
+            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "BUG-5",
+            "title": "A savings-funded payment to the partner appears in no line of the expenses chin",
+            "description": "Reported from manual testing on October 2026: two 'Transfer — you paid Brenda' rows, $300 and $230, both tagged 'from savings', and the chin showed only Charged $10,380.00 / Not from this month's income $8,788.00 / What I really spent $680.00. Neither 'Paid to Brenda' nor 'Paid to Brenda from savings' rendered. Verified in ExpenseListInteractive.tsx: the 'Paid to {partner}' line is gated on totals.paidToPartner > 0, and after the #74 merge paidToPartner counts only INCOME-funded payment-expenses plus income-funded legacy movements. notFromIncomeTransfers is gated the same way and holds only savings-funded legacy gf_paid MOVEMENTS — but a payment is an Expense now, so it is 0 too. The money is therefore folded silently into 'Not from this month's income' beside every unrelated savings purchase, and nothing says how much of it reached the partner. Introduced by the #74/#73 merge: neither branch had this gap alone, because before the inversion a payment was a movement and landed in notFromIncomeTransfers.",
+            "proposedSolution": "Fixed in PR #73 by paidToPartnerFromSavings in lib/domain/movement.ts: savings-funded payment-expenses plus the savings-funded legacy gf_paid movements, deduplicated by id. It is a BREAKDOWN of notFromIncome, never an addend — total, whatIReallySpent, setAside and charged are unchanged, pinned by a mutation-resistant test. It matches fundedFrom === 'savings' rather than !== 'income', so a reimbursed payment never prints 'from savings'. NOTE, correcting this entry's original wording: summing the payment-expense half with the legacy-movement half is NOT the cross-ledger sum spec 0007 §6a bans. §6a bans adding a fronted expense to the transfer settling it — two moments in one pesos' life. This is one payment stored in two tables while the CHORE-12 conversion is outstanding, and it reduces to the expense-only case once that runs. The carve-out is now written into spec 0007 §6a and rests on ADR-0024 decision 4. Presentation follow-up in CHORE-14: the savings line still renders as a sibling of 'Not from this month's income' rather than nested under it.",
+            "status": "fixed",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/73",
+            "issue": null
+        },
+        {
+            "id": "BUG-6",
+            "title": "A future month is called 'a past month', and the open settlement tab disappears on any month but this one",
+            "description": "Two faults in one place, both reported from manual testing. (1) SettlementViews.tsx:126 renders '{month} is a past month. The open settlement is always the current one — switch back to this month to see it.' It is gated on isCurrentMonth being false, so a FUTURE month gets the same sentence: viewing October 2026 on 16 September 2026 states that October is past. (2) The 'Open settlement' tab itself is removed for any non-current month (SettlementViews.tsx:49), so after closing a cycle he switched to October, could not see the open settlement at all, and had no way back to it except changing the month. The tab list silently changes shape depending on which month is selected, which is why it read as the tab having vanished.",
+            "proposedSolution": "(1) Split the copy: 'past' only when the month is genuinely before the current one; a future month needs its own sentence, and neither should claim the open settlement is unreachable. (2) Decide whether the open settlement belongs in the tab list at all times — it is one cycle, not a property of the selected month, so removing it makes the page inconsistent with itself. Preferred: always render the tab and let it stay selectable, since 'the open settlement is always the current one' is exactly the reason it should not disappear when the month changes. Tests: a future month, the current month and a past month each render the tab list and the correct notice.",
+            "status": "open",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "BUG-7",
+            "title": "The expense edit dialog can retype a partner payment's category and funding, and a reimbursed payment is silently rewritten to income",
+            "description": "Two reachable holes found in the PR #73 review, same family as the lesson-1.4 silent save. (1) app/_actions/expense/update.ts refuses isShared and cardId on an isPartnerPayment row but NOT categoryId or fundedFrom, and ExpenseForm leaves both controls live for a payment. Through the /expenses edit dialog: set category 'health' plus 'Fully reimbursed' and the payment lands only in notFromIncome, vanishing from both partner lines — BUG-5's exact symptom wearing 'reimbursed'; or set category 'savings' and it lands in setAside and leaves 'charged' entirely. (2) lib/repositories/settlement.repository.ts narrows expense rows with toTransferFundingSource, which maps reimbursed to income. Chained to (1): a reimbursed payment opened from the settlement journal prefills TransferForm as income, and saving persists income — pulling the payment back into the budget without the user touching that field. Neither is reachable without the edit dialog, so no figure is wrong today unless a payment is edited.",
+            "proposedSolution": "One guard closes the first: extend the isPartnerPayment refusal in update.ts to categoryId and fundedFrom, and disable both controls in ExpenseForm for a payment row the way isShared and cardId already are. Decide deliberately whether a payment may be reimbursed at all — spec 0007 §3.3 restricts reimbursed to Health, and a payment has no meaningful category, which argues for refusing it outright. For the second, stop narrowing a payment's funding with the TRANSFER narrower: a payment is an Expense and carries the full FundingSource, so the settlement read should use toFundingSource, or carry the raw value and let the form decide. Tests: an edit payload naming a different categoryId on a payment is refused; the same for fundedFrom; a reimbursed payment round-trips through the settlement journal's edit dialog without changing its funding.",
+            "status": "open",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
+            "pr": null,
+            "issue": null
         }
     ]
 }

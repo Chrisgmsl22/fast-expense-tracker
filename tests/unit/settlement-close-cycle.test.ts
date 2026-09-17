@@ -28,6 +28,7 @@ const expense = (
     actualExpenditure: 680,
     isShared: true,
     isPartnerPayment: false,
+    fundedFrom: "income",
     createdAt: JULY,
     ...over,
 });
@@ -40,6 +41,7 @@ const movement = (
     amount: 320,
     type: "gf_received",
     note: null,
+    fundedFrom: "income",
     createdAt: JULY,
     closedAt: null,
     ...over,

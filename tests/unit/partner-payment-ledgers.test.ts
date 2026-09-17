@@ -20,6 +20,7 @@ const paymentExpense: FeedTotalExpense = {
     actualExpenditure: PAYMENT,
     isPartnerPayment: true,
     category: { slug: "combined-expenses" },
+    fundedFrom: "income",
 };
 
 /** The dashboard reads per-category spend, which includes the payment row. */
@@ -62,6 +63,7 @@ describe("a payment to the partner is an ordinary expense", () => {
             actualExpenditure: 680,
             isPartnerPayment: false,
             category: { slug: "groceries" },
+            fundedFrom: "income",
         };
         const totals = computeFeedTotals([groceries, paymentExpense]);
 
@@ -83,6 +85,7 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
         id: "mv1",
         amount: 8011.2,
         type: "gf_paid",
+        fundedFrom: "income",
     };
     const groceries: FeedTotalExpense = {
         id: "e1",
@@ -90,6 +93,7 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
         actualExpenditure: 680,
         isPartnerPayment: false,
         category: { slug: "groceries" },
+        fundedFrom: "income",
     };
 
     it("still reaches the footer when nothing has been converted", () => {
@@ -119,6 +123,7 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
             actualExpenditure: 8011.2,
             isPartnerPayment: true,
             category: { slug: "combined-expenses" },
+            fundedFrom: "income",
         };
         const totals = computeFeedTotals([converted], [legacyTransfer]);
 
@@ -133,9 +138,24 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
         const totals = computeFeedTotals(
             [groceries],
             [
-                { id: "m2", amount: 5000, type: "card_payment" },
-                { id: "m3", amount: 300, type: "gf_received" },
-                { id: "m4", amount: 900, type: "gf_fronted" },
+                {
+                    id: "m2",
+                    amount: 5000,
+                    type: "card_payment",
+                    fundedFrom: "income",
+                },
+                {
+                    id: "m3",
+                    amount: 300,
+                    type: "gf_received",
+                    fundedFrom: "income",
+                },
+                {
+                    id: "m4",
+                    amount: 900,
+                    type: "gf_fronted",
+                    fundedFrom: "income",
+                },
             ],
         );
 

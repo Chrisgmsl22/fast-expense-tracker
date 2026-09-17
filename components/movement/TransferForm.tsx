@@ -4,6 +4,11 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    FUNDING_TOGGLE_LABEL,
+    type TransferFundingSource,
+} from "@/lib/domain/funding";
 import { addTransfer } from "@/app/_actions/movement/add-transfer";
 import { updateTransfer } from "@/app/_actions/movement/update-transfer";
 import { addPartnerPayment } from "@/app/_actions/expense/add-partner-payment";
@@ -13,12 +18,17 @@ import type { TransferInput } from "@/lib/schemas/movement";
 
 type Direction = "gf_paid" | "gf_received";
 
+/** Static ids: one transfer form is mounted at a time. */
+const SAVINGS_LABEL_ID = "transfer-savings-label";
+const SAVINGS_HINT_ID = "transfer-savings-hint";
+
 /** Prefilled fields when the form edits an existing transfer (strings for inputs). */
 export type TransferEditable = {
     id: string;
     date: string;
     amount: string;
     note: string;
+    fundedFrom: TransferFundingSource;
 };
 
 type Props = {
@@ -56,6 +66,9 @@ export function TransferForm({
     const [date, setDate] = useState(transfer?.date ?? "");
     const [amount, setAmount] = useState(transfer?.amount ?? initialAmount);
     const [note, setNote] = useState(transfer?.note ?? "");
+    const [fundedFrom, setFundedFrom] = useState<TransferFundingSource>(
+        transfer?.fundedFrom ?? "income",
+    );
 
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<TransferInput>>({});
@@ -72,6 +85,13 @@ export function TransferForm({
           ? `Log ${partnerName}'s payment`
           : `Log payment to ${partnerName}`;
 
+    // Inbound money is funded by nothing of yours, so the control is hidden and
+    // `income` is sent — which also clears the tag when an outbound transfer is
+    // flipped inbound.
+    const outboundFundedFrom: TransferFundingSource = inbound
+        ? "income"
+        : fundedFrom;
+
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         const form = e.currentTarget;
@@ -85,11 +105,13 @@ export function TransferForm({
                                   date,
                                   amount,
                                   note: note || undefined,
+                                  fundedFrom: outboundFundedFrom,
                               })
                             : await addPartnerPayment({
                                   date,
                                   amount,
                                   note: note || undefined,
+                                  fundedFrom: outboundFundedFrom,
                               })
                         : transfer
                           ? await updateTransfer({
@@ -98,12 +120,14 @@ export function TransferForm({
                                 amount,
                                 direction,
                                 note: note || undefined,
+                                fundedFrom: outboundFundedFrom,
                             })
                           : await addTransfer({
                                 date,
                                 amount,
                                 direction,
                                 note: note || undefined,
+                                fundedFrom: outboundFundedFrom,
                             });
                 if (res.ok) {
                     setErrors({});
@@ -112,6 +136,9 @@ export function TransferForm({
                     setDate("");
                     setAmount("");
                     setNote("");
+                    // Only when creating: an edit form that stayed mounted would
+                    // show `income` over a row it just saved as savings-funded.
+                    if (!transfer) setFundedFrom("income");
                     onSuccess?.();
                 } else {
                     setErrors(res.fieldErrors ?? {});
@@ -201,6 +228,53 @@ export function TransferForm({
                     className="mt-1.5"
                 />
             </div>
+
+            {/* Outbound only, and no `reimbursed`: that is Health-only and a
+                transfer has no category (spec 0007 §3.1, §3.3). */}
+            {/* Named by the visible text, described by the hint outside the
+                label; the description is pointed at only while the hint renders. */}
+            {inbound ? null : (
+                <div>
+                    <label className="flex items-start gap-2.5">
+                        <Checkbox
+                            checked={fundedFrom === "savings"}
+                            onCheckedChange={(checked) =>
+                                setFundedFrom(
+                                    checked === true ? "savings" : "income",
+                                )
+                            }
+                            aria-labelledby={SAVINGS_LABEL_ID}
+                            aria-describedby={
+                                fundedFrom === "savings"
+                                    ? SAVINGS_HINT_ID
+                                    : undefined
+                            }
+                            className="mt-0.5"
+                        />
+                        <span
+                            id={SAVINGS_LABEL_ID}
+                            className="text-sm font-medium"
+                        >
+                            {FUNDING_TOGGLE_LABEL.savings}
+                        </span>
+                    </label>
+                    {fundedFrom === "savings" ? (
+                        <p
+                            id={SAVINGS_HINT_ID}
+                            className="pl-[1.625rem] text-sm text-muted-foreground"
+                        >
+                            Doesn&apos;t count toward this month&apos;s budget
+                            or what you really spent. It still settles what you
+                            owe {partnerName}.
+                        </p>
+                    ) : null}
+                </div>
+            )}
+
+            {/* Outside the branch above: an inbound transfer hides the control
+                but can still be rejected for its funding source, and that
+                message has to land somewhere the user can see it. */}
+            {fieldError("fundedFrom")}
 
             {formError && (
                 <p className="text-sm text-destructive" role="alert">

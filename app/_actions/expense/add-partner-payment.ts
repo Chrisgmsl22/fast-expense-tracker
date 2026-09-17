@@ -123,6 +123,9 @@ export async function addPartnerPayment(
             yourPercentage: 1,
             actualExpenditure: v.amount,
             paidBy: "you",
+            // Paying her from savings leaves the budget, like any other purchase
+            // funded by an earlier month (spec 0007 §6a decision 2).
+            fundedFrom: v.fundedFrom,
             notes: null,
             isPartnerPayment: true,
         });

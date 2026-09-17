@@ -1,19 +1,19 @@
+import { FundingBadge } from "@/components/expense/FundingBadge";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { subcategoryLabel } from "@/lib/expense-display";
-import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
+import type { CategoryExpenseListItem } from "@/lib/repositories/category.repository";
 
 /**
- * Read-only list of the category's expenses this month. Each row shows the
- * description, its subcategory (in the category color), the charged amount, and
- * — on shared rows — the my-share subtext. The date · card meta is desktop-only
- * to keep mobile rows compact (matches the design). Editing lives on /expenses.
+ * Badges on `countedInBudget` (the SQL filter's verdict on the raw column), not
+ * on `fundedFrom` — which reads an out-of-band value back as `income` and would
+ * leave the one row that most needs a badge bare. Hence the `"unknown"` mapping.
  */
 export function CategoryExpenses({
     expenses,
     color,
     partnerName = null,
 }: {
-    expenses: ExpenseListItem[];
+    expenses: CategoryExpenseListItem[];
     color: string;
     partnerName?: string | null;
 }) {
@@ -38,8 +38,19 @@ export function CategoryExpenses({
                             className="flex items-center gap-3 px-4 py-3"
                         >
                             <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-medium">
-                                    {e.description}
+                                <span className="flex min-w-0 items-center gap-2">
+                                    <span className="truncate text-sm font-medium">
+                                        {e.description}
+                                    </span>
+                                    {!e.countedInBudget && (
+                                        <FundingBadge
+                                            source={
+                                                e.fundedFrom === "income"
+                                                    ? "unknown"
+                                                    : e.fundedFrom
+                                            }
+                                        />
+                                    )}
                                 </span>
                                 {e.subcategory && (
                                     <span

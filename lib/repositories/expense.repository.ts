@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
+import { toFundingSource, type FundingSource } from "@/lib/domain/funding";
 import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
 import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 
@@ -11,6 +12,8 @@ export type ExpenseListItem = {
     amount: number;
     actualExpenditure: number;
     isShared: boolean;
+    /** Which month's money funded it (spec 0007 §3.1) — drives the row badge. */
+    fundedFrom: FundingSource;
     /** Money you SENT the partner — both consumption and cash out, one row. */
     isPartnerPayment: boolean;
     /**
@@ -41,6 +44,7 @@ export type ExpenseEditable = {
      */
     actualExpenditure: number;
     paidBy: string;
+    fundedFrom: FundingSource;
     /** Whether this row is money you sent the partner (spec 0007 §6b). */
     isPartnerPayment: boolean;
     /**
@@ -71,6 +75,7 @@ export type ExpenseWriteData = {
     yourPercentage: number;
     actualExpenditure: number;
     paidBy: "you" | "gf";
+    fundedFrom: FundingSource;
     notes: string | null;
 };
 
@@ -91,6 +96,8 @@ export interface ExpenseRepository {
     getById(userId: string, id: string): Promise<ExpenseEditable | null>;
     getForMonth(userId: string, month: string): Promise<ExpenseListItem[]>;
     getSubcategoryCategoryId(subcategoryId: string): Promise<string | null>;
+    /** Scoped by user: a category the user doesn't own resolves to null, which is not Health, so the rule fails closed. */
+    getCategorySlug(userId: string, categoryId: string): Promise<string | null>;
     insert(userId: string, data: ExpenseInsertData): Promise<{ id: string }>;
     updateForUser(
         id: string,
@@ -125,6 +132,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                 yourPercentage: true,
                 actualExpenditure: true,
                 paidBy: true,
+                fundedFrom: true,
                 isPartnerPayment: true,
                 createdAt: true,
             },
@@ -133,6 +141,8 @@ export class PrismaExpenseRepository implements ExpenseRepository {
         const { createdAt, ...editable } = row;
         return {
             ...editable,
+            // The column is a plain String, so narrow it here rather than casting.
+            fundedFrom: toFundingSource(editable.fundedFrom),
             cycleClosedAt: cycleCloseAtOrAfter(
                 await getCycleCloses(this.db, userId),
                 createdAt,
@@ -156,6 +166,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
                     amount: true,
                     actualExpenditure: true,
                     isShared: true,
+                    fundedFrom: true,
                     isPartnerPayment: true,
                     createdAt: true,
                     category: {
@@ -174,6 +185,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
         ]);
         return rows.map(({ createdAt, ...item }) => ({
             ...item,
+            fundedFrom: toFundingSource(item.fundedFrom),
             cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
         }));
     }
@@ -186,6 +198,17 @@ export class PrismaExpenseRepository implements ExpenseRepository {
             select: { categoryId: true },
         });
         return sub?.categoryId ?? null;
+    }
+
+    async getCategorySlug(
+        userId: string,
+        categoryId: string,
+    ): Promise<string | null> {
+        const category = await this.db.category.findFirst({
+            where: { id: categoryId, userId },
+            select: { slug: true },
+        });
+        return category?.slug ?? null;
     }
 
     insert(userId: string, data: ExpenseInsertData): Promise<{ id: string }> {

@@ -3,6 +3,10 @@ import type { PrismaClient } from "@prisma/client";
 import { getMonthRangeUtc } from "@/lib/dates";
 import { budgetForMonth } from "@/lib/domain/category";
 import { SAVINGS_SLUG, type CategorySpend } from "@/lib/domain/dashboard";
+import {
+    BUDGET_FUNDING_FILTER,
+    BUDGET_FUNDING_SOURCE,
+} from "@/lib/domain/funding";
 import { CASH_COLOR } from "@/lib/palette";
 
 /** One card's my-share spend for the month (the spend-by-card bar/legend). */
@@ -61,6 +65,8 @@ export interface DashboardRepository {
         userId: string,
         month: string,
     ): Promise<CategoryBudgetItem[]>;
+    /** My-share total the budget filter excludes — surfaced so the spend stays visible (spec 0007 §3.1). */
+    getNonIncomeFundedTotal(userId: string, month: string): Promise<number>;
 }
 
 export class PrismaDashboardRepository implements DashboardRepository {
@@ -71,9 +77,16 @@ export class PrismaDashboardRepository implements DashboardRepository {
         month: string,
     ): Promise<CategorySpend[]> {
         const { start, end } = getMonthRangeUtc(month);
+        // Reimbursing an expense changes ITS month, not the month the refund
+        // arrived (spec 0007 §6): a closed month's spend can drop after the
+        // fact. Intended — that month's income funded nothing here.
         const grouped = await this.db.expense.groupBy({
             by: ["categoryId"],
-            where: { userId, date: { gte: start, lt: end } },
+            where: {
+                userId,
+                date: { gte: start, lt: end },
+                ...BUDGET_FUNDING_FILTER,
+            },
             _sum: { actualExpenditure: true },
         });
         if (grouped.length === 0) return [];
@@ -113,9 +126,9 @@ export class PrismaDashboardRepository implements DashboardRepository {
         const { start, end } = getMonthRangeUtc(month);
         const grouped = await this.db.expense.groupBy({
             by: ["cardId"],
-            // Savings and partner payments are excluded HERE, in the query, so the
-            // grouping never sees them. Both have a null `cardId`, which this query
-            // reads as cash — that phantom "Cash" segment is BUG-1.
+            // Savings and partner payments are excluded HERE, in the query: both have
+            // a null `cardId`, which this query reads as cash — BUG-1's phantom segment.
+            // No funding filter (spec 0007 §3.2): the card saw the full charge anyway.
             where: {
                 userId,
                 date: { gte: start, lt: end },
@@ -151,6 +164,22 @@ export class PrismaDashboardRepository implements DashboardRepository {
             .sort((a, b) => b.spent - a.spent);
     }
 
+    async getNonIncomeFundedTotal(
+        userId: string,
+        month: string,
+    ): Promise<number> {
+        const { start, end } = getMonthRangeUtc(month);
+        const total = await this.db.expense.aggregate({
+            where: {
+                userId,
+                date: { gte: start, lt: end },
+                fundedFrom: { not: BUDGET_FUNDING_SOURCE },
+            },
+            _sum: { actualExpenditure: true },
+        });
+        return total._sum.actualExpenditure ?? 0;
+    }
+
     async getCategoryBreakdown(
         userId: string,
         month: string,
@@ -160,7 +189,11 @@ export class PrismaDashboardRepository implements DashboardRepository {
         // and distinct non-null subcategoryIds give "N subcats with spend".
         const grouped = await this.db.expense.groupBy({
             by: ["categoryId", "subcategoryId"],
-            where: { userId, date: { gte: start, lt: end } },
+            where: {
+                userId,
+                date: { gte: start, lt: end },
+                ...BUDGET_FUNDING_FILTER,
+            },
             _sum: { actualExpenditure: true },
         });
         if (grouped.length === 0) return [];

@@ -22,6 +22,7 @@ const partnerPayment: ExpenseListItem = {
     description: "Settled up",
     amount: 200,
     actualExpenditure: 200,
+    fundedFrom: "income" as const,
     isShared: false,
     isPartnerPayment: true,
     cycleClosedAt: null,
@@ -42,6 +43,7 @@ const expenses: ExpenseListItem[] = [
         description: "Soriana",
         amount: 1820,
         actualExpenditure: 1237,
+        fundedFrom: "income" as const,
         isShared: true,
         isPartnerPayment: false,
         cycleClosedAt: null,
@@ -60,6 +62,7 @@ const expenses: ExpenseListItem[] = [
         description: "Uber",
         amount: 185,
         actualExpenditure: 185,
+        fundedFrom: "income" as const,
         isShared: false,
         isPartnerPayment: false,
         cycleClosedAt: null,
@@ -82,6 +85,7 @@ const debt: MovementListItem = {
     type: "gf_fronted",
     card: null,
     note: "she covered the vet",
+    fundedFrom: "income",
     closedAt: null,
     cycleClosedAt: null,
 };
@@ -172,6 +176,7 @@ describe("MonthFeed", () => {
                 type: "gf_received",
                 card: null,
                 note: null,
+                fundedFrom: "income",
                 closedAt: null,
                 cycleClosedAt: null,
             },
@@ -197,6 +202,7 @@ describe("MonthFeed", () => {
                 description: "Groceries",
                 amount: 1000,
                 actualExpenditure: 680,
+                fundedFrom: "income" as const,
                 isShared: true,
                 isPartnerPayment: false,
                 cycleClosedAt: null,
@@ -215,6 +221,7 @@ describe("MonthFeed", () => {
                 description: "Emergency fund",
                 amount: 5000,
                 actualExpenditure: 5000,
+                fundedFrom: "income" as const,
                 isShared: false,
                 isPartnerPayment: false,
                 cycleClosedAt: null,
@@ -271,6 +278,7 @@ describe("MonthFeed", () => {
                 type: "card_payment",
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
+                fundedFrom: "income",
                 closedAt: null,
                 cycleClosedAt: null,
             },
@@ -291,6 +299,178 @@ describe("MonthFeed", () => {
         const totals = within(screen.getByTestId("feed-totals"));
         expect(totals.getByText("Paid to Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
+    });
+
+    it("keeps a savings-funded transfer out of 'Paid to Brenda' but badged in the list", () => {
+        // Spec 0007 §6a decision 5: it used no part of this month's income, so
+        // it leaves the cash figures — while staying visible as a row, and
+        // still counting in full toward the settlement balance elsewhere.
+        const movements: MovementListItem[] = [
+            {
+                id: "m1",
+                date: new Date("2026-06-22T06:00:00Z"),
+                amount: 8000,
+                type: "gf_paid",
+                card: null,
+                note: "settled from savings",
+                fundedFrom: "savings",
+                closedAt: null,
+                cycleClosedAt: null,
+            },
+            {
+                id: "m2",
+                date: new Date("2026-06-23T06:00:00Z"),
+                amount: 200,
+                type: "gf_paid",
+                card: null,
+                note: "netted week",
+                fundedFrom: "income",
+                closedAt: null,
+                cycleClosedAt: null,
+            },
+        ];
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={movements}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+
+        expect(screen.getByText("from savings")).toBeDefined();
+        const totals = within(screen.getByTestId("feed-totals"));
+        // Only the income-funded 200 reaches the figure.
+        expect(totals.getByText("$200.00")).toBeDefined();
+        expect(totals.queryByText("$8,200.00")).toBeNull();
+        // The excluded money is surfaced under its OWN cash line, named for the
+        // partner — never merged into the consumption line (spec 0007 §6a).
+        expect(totals.getByText("of which paid to Brenda")).toBeDefined();
+        expect(totals.getByText("$8,000.00")).toBeDefined();
+        expect(totals.queryByText("Not from this month's income")).toBeNull();
+    });
+
+    it("badges no ordinary row — income money is never 'not from income'", () => {
+        // `FundingBadge` cannot represent `income`, so a dropped guard is a type
+        // error first; this is the behavioural half. Without either, every
+        // ordinary row grows a false "not from income" chip.
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[
+                    {
+                        id: "m1",
+                        date: new Date("2026-06-22T06:00:00Z"),
+                        amount: 200,
+                        type: "gf_paid",
+                        card: null,
+                        note: "netted week",
+                        fundedFrom: "income",
+                        closedAt: null,
+                        cycleClosedAt: null,
+                    },
+                ]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+        // Both rows really are on screen, so this isn't a vacuous pass.
+        expect(screen.getByText("Soriana")).toBeDefined();
+        expect(screen.getByText("Paid Brenda")).toBeDefined();
+        // …and neither carries any of the three badge wordings. `queryAll` so
+        // two bad rows read as two, not as a "multiple elements" crash.
+        expect(screen.queryAllByText("not from income")).toHaveLength(0);
+        expect(screen.queryAllByText("from savings")).toHaveLength(0);
+        expect(screen.queryAllByText("reimbursed")).toHaveLength(0);
+    });
+
+    it("prints the consumption and cash exclusions as two lines, never one sum", () => {
+        // The §6a flow: a $680 dinner she fronted (consumption, savings-funded)
+        // and the $680 transfer settling it (cash, savings-funded). One line
+        // reading $1,360 would bill the same dinner twice.
+        render(
+            <MonthFeed
+                expenses={[
+                    {
+                        ...expenses[0]!,
+                        id: "fronted",
+                        description: "Dinner she fronted",
+                        amount: 680,
+                        actualExpenditure: 680,
+                        fundedFrom: "savings",
+                    },
+                ]}
+                movements={[
+                    {
+                        id: "m1",
+                        date: new Date("2026-06-22T06:00:00Z"),
+                        amount: 680,
+                        type: "gf_paid",
+                        card: null,
+                        note: "settling the dinner",
+                        fundedFrom: "savings",
+                        closedAt: null,
+                        cycleClosedAt: null,
+                    },
+                ]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+
+        const totals = within(screen.getByTestId("feed-totals"));
+        expect(totals.getByText("Not from this month's income")).toBeDefined();
+        expect(totals.getByText("of which paid to Brenda")).toBeDefined();
+        // Three times $680, never once $1,360: Charged (source-agnostic), the
+        // consumption exclusion, and the cash exclusion. Each is one ledger's
+        // view of the money; no line adds two of them together.
+        expect(totals.getAllByText("$680.00")).toHaveLength(3);
+        expect(totals.queryByText("$1,360.00")).toBeNull();
+    });
+
+    it("names a savings-funded PAYMENT on the same line as a transfer (BUG-5)", () => {
+        // Before the fix the two $265 payments printed no line at all: only a
+        // legacy movement reached the figure the footer read.
+        const pay = (id: string, amount: number): ExpenseListItem => ({
+            ...partnerPayment,
+            id,
+            amount,
+            actualExpenditure: amount,
+            fundedFrom: "savings",
+        });
+        render(
+            <MonthFeed
+                expenses={[pay("p1", 300), pay("p2", 230)]}
+                movements={[]}
+                monthLabel="October 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+
+        const totals = within(screen.getByTestId("feed-totals"));
+        const line = totals.getByText("of which paid to Brenda").parentElement!;
+        expect(within(line).getByText("$530.00")).toBeDefined();
+        // A breakdown only: nothing income-funded happened this month.
+        expect(totals.queryByText("Paid to Brenda")).toBeNull();
+    });
+
+    it("omits the savings line when no money reached her that way", () => {
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+            />,
+        );
+
+        const totals = within(screen.getByTestId("feed-totals"));
+        expect(totals.queryByText("of which paid to Brenda")).toBeNull();
     });
 
     it("renders the settlement chip in Shared mode when a balance is passed", () => {
@@ -319,6 +499,7 @@ describe("MonthFeed", () => {
                 type: "card_payment",
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
+                fundedFrom: "income",
                 closedAt: null,
                 cycleClosedAt: null,
             },
@@ -404,6 +585,7 @@ describe("MonthFeed", () => {
                 description: "Emergency fund",
                 amount: 5000,
                 actualExpenditure: 5000,
+                fundedFrom: "income" as const,
                 isShared: false,
                 isPartnerPayment: false,
                 cycleClosedAt: null,

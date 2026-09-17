@@ -43,6 +43,8 @@ export type DashboardSummary = {
     topCategories: TopCategory[];
     /** Per-category budget status, high→low (categories grid). */
     categoryBudgets: CategoryBudgetItem[];
+    /** My-share spend the repository's funding filter excluded from every figure above; reported so it doesn't vanish (spec 0007 §3.1). */
+    nonIncomeFundedTotal: number;
 };
 
 /** Injectable seams so the assembly is unit-testable without a DB or the clock. */
@@ -71,12 +73,14 @@ export async function getDashboardSummary(
     const incomeRepo = deps.incomeRepo ?? incomeRepository;
     const now = deps.now ?? new Date();
 
-    const [income, categorySpends, cards, categoryBudgets] = await Promise.all([
-        incomeRepo.getMonthlySummary(userId, month),
-        dashboardRepo.getCategorySpends(userId, month),
-        dashboardRepo.getCardSpends(userId, month),
-        dashboardRepo.getCategoryBreakdown(userId, month),
-    ]);
+    const [income, categorySpends, cards, categoryBudgets, nonIncomeFunded] =
+        await Promise.all([
+            incomeRepo.getMonthlySummary(userId, month),
+            dashboardRepo.getCategorySpends(userId, month),
+            dashboardRepo.getCardSpends(userId, month),
+            dashboardRepo.getCategoryBreakdown(userId, month),
+            dashboardRepo.getNonIncomeFundedTotal(userId, month),
+        ]);
 
     const buckets = computeBuckets(categorySpends, income.total);
     const totalOutflow = categorySpends.reduce((sum, c) => sum + c.spent, 0);
@@ -96,5 +100,6 @@ export async function getDashboardSummary(
         cards,
         topCategories: topCategories(categorySpends),
         categoryBudgets,
+        nonIncomeFundedTotal: nonIncomeFunded,
     };
 }

@@ -6,7 +6,14 @@ import { Lock, Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { movesSettlementBalance } from "@/lib/domain/expense";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
+import {
+    NON_INCOME_FUNDED_LABEL,
+    NON_INCOME_FUNDED_SHORT_LABEL,
+    NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL,
+    nonIncomeFundedTransferLabel,
+} from "@/lib/domain/funding";
 import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
+import { FundingBadge } from "./FundingBadge";
 import { buildFeed } from "@/lib/feed";
 import { expenseCardLabel } from "@/lib/expense-display";
 import {
@@ -99,12 +106,10 @@ function movementEditTitle(type: MovementType | undefined): string {
 
 /**
  * Client list, re-skinned to Confirmed designs V1 + money movements
- * (ADR-0018). Expenses keep category filter chips, pills, and
- * edit/delete. Money movements (card payment blue, "{partner} paid me" green)
- * interleave by date in the unfiltered ("All") view — they have no category, so
- * a category filter hides them — and are editable + deletable (CHORE-5).
- * A debt she fronted does NOT appear here — it is settlement-only (spec 0007
- * §6b). Money you SENT her does, as an ordinary expense.
+ * (ADR-0018). Expenses keep category filter chips, pills, and edit/delete.
+ * Movements interleave by date only in the unfiltered ("All") view — they have
+ * no category, so a filter hides them. A debt she fronted does NOT appear here:
+ * it is settlement-only (spec 0007 §6b). Money you SENT her does, as an expense.
  */
 export function ExpenseListInteractive({
     expenses,
@@ -361,12 +366,36 @@ export function ExpenseListInteractive({
                               },
                           ]
                         : []),
+                    ...(totals.notFromIncome > 0
+                        ? [
+                              {
+                                  label: NON_INCOME_FUNDED_LABEL,
+                                  value: formatMxn(totals.notFromIncome),
+                              },
+                          ]
+                        : []),
+                    // Every peso that reached her from another month's money —
+                    // transfer or payment-expense alike (spec 0007 §6a).
+                    ...(totals.paidToPartnerFromSavings > 0
+                        ? [
+                              {
+                                  label: nonIncomeFundedTransferLabel(
+                                      partnerName,
+                                  ),
+                                  value: formatMxn(
+                                      totals.paidToPartnerFromSavings,
+                                  ),
+                              },
+                          ]
+                        : []),
                     {
                         label: "What I really spent",
                         value: formatMxn(totals.whatIReallySpent),
                         tone: "highlight" as const,
                     },
-                    ...(totals.setAside > 0 || totals.paidToPartner > 0
+                    // Gated on what ADDS to it: `paidToPartner` is a breakdown of
+                    // the line above, so it would restate it (spec 0007 §6a).
+                    ...(totals.setAside > 0 || totals.legacyPaidToPartner > 0
                         ? [
                               {
                                   label: "Total",
@@ -398,6 +427,22 @@ export function ExpenseListInteractive({
                             </span>
                         </span>
                     )}
+                    {totals.notFromIncome > 0 && (
+                        <span>
+                            {NON_INCOME_FUNDED_SHORT_LABEL}{" "}
+                            <span className="font-medium text-background">
+                                {formatMxn(totals.notFromIncome)}
+                            </span>
+                        </span>
+                    )}
+                    {totals.paidToPartnerFromSavings > 0 && (
+                        <span>
+                            {NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL}{" "}
+                            <span className="font-medium text-background">
+                                {formatMxn(totals.paidToPartnerFromSavings)}
+                            </span>
+                        </span>
+                    )}
                     {totals.paidToPartner > 0 && (
                         <span>
                             Paid{" "}
@@ -414,7 +459,8 @@ export function ExpenseListInteractive({
                             {formatMxn(totals.whatIReallySpent)}
                         </span>
                     </span>
-                    {(totals.setAside > 0 || totals.paidToPartner > 0) && (
+                    {(totals.setAside > 0 ||
+                        totals.legacyPaidToPartner > 0) && (
                         <span className="text-right text-xs text-background/70">
                             Total
                             <span className="mt-0.5 block text-lg font-semibold text-background">
@@ -504,6 +550,7 @@ export function ExpenseListInteractive({
                                     ),
                                     amount: String(editingMovement.amount),
                                     note: editingMovement.note ?? "",
+                                    fundedFrom: editingMovement.fundedFrom,
                                 }}
                                 partnerName={partnerName}
                                 onCancel={() => setEditingMovement(null)}
@@ -663,8 +710,13 @@ function ExpenseRow({
 
             {/* Description (+ mobile date · card subline) */}
             <span className="min-w-0">
-                <span className="block truncate font-medium sm:font-normal">
-                    {expense.description}
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium sm:font-normal">
+                        {expense.description}
+                    </span>
+                    {expense.fundedFrom === "income" ? null : (
+                        <FundingBadge source={expense.fundedFrom} />
+                    )}
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground sm:hidden">
                     {formatExpenseDate(expense.date)}
@@ -816,7 +868,12 @@ function MovementRow({
             className={`group flex items-center gap-3 border-l-[3px] py-3 pr-1 pl-4 sm:py-2.5 ${rowTint}`}
         >
             <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{title}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium">{title}</span>
+                    {m.fundedFrom === "income" ? null : (
+                        <FundingBadge source={m.fundedFrom} />
+                    )}
+                </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {formatExpenseDate(m.date)}
                     {subline ? ` · ${subline}` : ""}

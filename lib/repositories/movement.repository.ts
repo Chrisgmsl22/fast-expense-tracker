@@ -1,6 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
+import {
+    toTransferFundingSource,
+    type TransferFundingSource,
+} from "@/lib/domain/funding";
 import type { MovementType } from "@/lib/domain/movement";
 import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
 import { getCycleCloses } from "@/lib/repositories/cycle-closes";
@@ -13,6 +17,8 @@ export type MovementListItem = {
     type: MovementType;
     card: { name: string; color: string } | null;
     note: string | null;
+    /** Meaningful on `gf_paid` only; every other type keeps the default. */
+    fundedFrom: TransferFundingSource;
     /**
      * Set when this transfer closed a settlement cycle. It travels with the LIST row,
      * so a feed can hide the controls the server will refuse.
@@ -32,6 +38,8 @@ export type MovementWriteData = {
     type: MovementType;
     cardId: string | null;
     note: string | null;
+    /** Only a transfer sets it; other types omit it and take the column default (spec 0007 §3.2). */
+    fundedFrom?: TransferFundingSource;
 };
 
 /** One movement's editable fields — what an edit re-asserts / prefills. */
@@ -42,6 +50,7 @@ export type MovementEditable = {
     type: MovementType;
     cardId: string | null;
     note: string | null;
+    fundedFrom: TransferFundingSource;
     /**
      * Set when this transfer closed a settlement cycle (spec 0007 §3.5). Editing it
      * rewrites what that cycle settled; deleting it dissolves the boundary.
@@ -101,6 +110,7 @@ export class PrismaMovementRepository implements MovementRepository {
                     amount: true,
                     type: true,
                     note: true,
+                    fundedFrom: true,
                     closedAt: true,
                     createdAt: true,
                     card: { select: { name: true, color: true } },
@@ -108,12 +118,13 @@ export class PrismaMovementRepository implements MovementRepository {
             }),
             getCycleCloses(this.db, userId),
         ]);
-        // `type` is a free-form string column; narrow it to the domain union at
-        // the boundary so callers get the typed shape. `createdAt` is consumed
-        // here — it exists to place the row in a cycle, not to be rendered.
+        // `type` and `fundedFrom` are free-form string columns; narrow both at the
+        // boundary. `createdAt` is consumed here — it places the row in a cycle,
+        // it is never rendered.
         return rows.map(({ createdAt, ...r }) => ({
             ...r,
             type: r.type as MovementType,
+            fundedFrom: toTransferFundingSource(r.fundedFrom),
             cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
         }));
     }
@@ -131,6 +142,7 @@ export class PrismaMovementRepository implements MovementRepository {
                 type: true,
                 cardId: true,
                 note: true,
+                fundedFrom: true,
                 closedAt: true,
                 createdAt: true,
             },
@@ -140,6 +152,7 @@ export class PrismaMovementRepository implements MovementRepository {
         return {
             ...editable,
             type: editable.type as MovementType,
+            fundedFrom: toTransferFundingSource(editable.fundedFrom),
             cycleClosedAt: cycleCloseAtOrAfter(
                 await getCycleCloses(this.db, userId),
                 createdAt,

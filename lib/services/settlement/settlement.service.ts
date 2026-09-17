@@ -12,6 +12,7 @@ import {
     type SettlementBreakdownKey,
     type SettlementInputs,
 } from "@/lib/domain/settlement";
+import type { TransferFundingSource } from "@/lib/domain/funding";
 import {
     isPartnerPaymentAutoLabel,
     isZeroCents,
@@ -71,6 +72,12 @@ export type SettlementJournalItem = {
           amount: number;
           /** Free-text label ("what it was toward"); null when none. */
           note: string | null;
+          /**
+           * Carried for the edit-form prefill only, and null on an expense-sourced
+           * payment. It changes no figure: the balance counts every transfer at full
+           * value (spec 0007 §3.1).
+           */
+          fundedFrom: TransferFundingSource | null;
           /**
            * Which table this row lives in. A payment you SENT is an `Expense` now (spec
            * 0007 §6b); money she sent you, and any legacy `gf_paid`, are still movements.
@@ -506,6 +513,11 @@ type SettlementRow = SettlementBreakdownItem & {
     locked: boolean;
     /** Debt rows only: which table the row lives in. Null on every other line. */
     source: RowSource | null;
+    /**
+     * Legacy `gf_paid`/`gf_received` movements only — a payment-expense keeps its
+     * funding on the expense row, which its own edit path reads. Null = no claim.
+     */
+    fundedFrom: TransferFundingSource | null;
 };
 
 type SettlementRowsByLine = Record<SettlementBreakdownKey, SettlementRow[]>;
@@ -544,6 +556,7 @@ function buildSettlementRows(
             rows.you_paid.push({
                 line: "you_paid",
                 source: "expense",
+                fundedFrom: e.fundedFrom,
                 id: e.id,
                 date: e.date,
                 description: e.description,
@@ -563,6 +576,7 @@ function buildSettlementRows(
         rows.partner_share.push({
             line: "partner_share",
             source: null,
+            fundedFrom: null,
             id: e.id,
             date: e.date,
             description: e.description,
@@ -593,6 +607,7 @@ function buildSettlementRows(
                 ...base,
                 line: "your_debt",
                 source: "movement",
+                fundedFrom: null,
                 description: debtDescription(m.note, partnerName),
                 note: m.note?.trim() || null,
             });
@@ -607,6 +622,7 @@ function buildSettlementRows(
                 source: null,
                 description: transferDescription(m.note, m.type, partnerName),
                 note: m.note?.trim() || null,
+                fundedFrom: m.fundedFrom,
             });
         }
         // A card payment (or any other movement) never enters the balance.
@@ -698,6 +714,7 @@ function buildJournal(
                 direction: line === "partner_paid" ? "gf_received" : "gf_paid",
                 amount: row.amount,
                 note: row.note,
+                fundedFrom: row.fundedFrom,
                 // A payment you sent is an expense now, so the journal's controls must
                 // reach the expense actions. `gf_received` and legacy `gf_paid` do not.
                 source: row.source ?? "movement",

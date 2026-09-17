@@ -109,6 +109,30 @@ describe("PrismaSettlementRepository.getForWindow (integration)", () => {
         const rows = await repo.getForWindow(user.id, WINDOW_START, WINDOW_END);
         expect(rows).toEqual({ expenses: [], movements: [] });
     });
+
+    it("returns a savings-funded transfer at full value (spec 0007 §6a)", async () => {
+        // The other ledger. The feed drops this transfer from the budget and
+        // cash figures, but the money really did reach her, so the settlement
+        // read must still see it — and see it whole, not reduced.
+        const user = await seedUser();
+        await db.movement.create({
+            data: {
+                userId: user.id,
+                date: new Date("2026-07-05T06:00:00Z"),
+                amount: 8000,
+                type: "gf_paid",
+                fundedFrom: "savings",
+            },
+        });
+
+        const rows = await repo.getForWindow(user.id, WINDOW_START, WINDOW_END);
+        expect(rows.movements).toHaveLength(1);
+        expect(rows.movements[0]).toMatchObject({
+            type: "gf_paid",
+            amount: 8000,
+            fundedFrom: "savings",
+        });
+    });
 });
 
 describe("PrismaSettlementRepository cycles (integration)", () => {

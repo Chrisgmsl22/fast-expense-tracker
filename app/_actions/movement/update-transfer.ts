@@ -103,6 +103,10 @@ export async function updateTransfer(
             type: v.direction,
             cardId: null,
             note: v.note?.trim() || null,
+            // Always re-asserted: flipping a savings-funded `gf_paid` to
+            // `gf_received` must clear the tag. The schema only REJECTS
+            // `savings` inbound; it never rewrites one.
+            fundedFrom: v.fundedFrom,
         });
         if (count === 0) {
             return {

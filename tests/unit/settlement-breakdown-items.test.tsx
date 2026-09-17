@@ -36,6 +36,7 @@ const EXPENSES: SettlementExpenseRow[] = [
         actualExpenditure: 680,
         isShared: true,
         isPartnerPayment: false,
+        fundedFrom: "income",
         createdAt: JULY,
     },
     {
@@ -46,6 +47,7 @@ const EXPENSES: SettlementExpenseRow[] = [
         actualExpenditure: 306.34,
         isShared: true,
         isPartnerPayment: false,
+        fundedFrom: "income",
         createdAt: JUNE,
     },
     {
@@ -56,6 +58,7 @@ const EXPENSES: SettlementExpenseRow[] = [
         actualExpenditure: 500,
         isShared: false,
         isPartnerPayment: false,
+        fundedFrom: "income",
         createdAt: JULY,
     },
 ];
@@ -67,6 +70,7 @@ const MOVEMENTS: SettlementMovementRow[] = [
         amount: 300,
         type: "gf_fronted",
         note: "Uber home",
+        fundedFrom: "income",
         createdAt: JULY,
         closedAt: null,
     },
@@ -76,6 +80,7 @@ const MOVEMENTS: SettlementMovementRow[] = [
         amount: 120,
         type: "gf_fronted",
         note: null,
+        fundedFrom: "income",
         createdAt: JUNE,
         closedAt: null,
     },
@@ -85,6 +90,7 @@ const MOVEMENTS: SettlementMovementRow[] = [
         amount: 20.25,
         type: "gf_received",
         note: null,
+        fundedFrom: "income",
         createdAt: JULY,
         closedAt: null,
     },
@@ -94,6 +100,7 @@ const MOVEMENTS: SettlementMovementRow[] = [
         amount: 100,
         type: "gf_paid",
         note: "rent",
+        fundedFrom: "income",
         createdAt: JUNE,
         closedAt: null,
     },
@@ -104,6 +111,7 @@ const MOVEMENTS: SettlementMovementRow[] = [
         amount: 999,
         type: "card_payment",
         note: null,
+        fundedFrom: "income",
         createdAt: JULY,
         closedAt: null,
     },
@@ -167,6 +175,7 @@ describe("getSettlement breakdown items", () => {
             }),
             isShared: true,
             isPartnerPayment: false,
+            fundedFrom: "income",
             createdAt: JULY,
         }));
         const s = await run(thirds, []);
@@ -197,6 +206,7 @@ describe("getSettlement breakdown items", () => {
             }),
             isShared: true,
             isPartnerPayment: false,
+            fundedFrom: "income",
             createdAt: JULY,
         }));
         const s = await run(thirds, MOVEMENTS);
@@ -292,6 +302,7 @@ describe("getSettlement breakdown items", () => {
             amount: 10,
             type: "gf_paid",
             note: id,
+            fundedFrom: "income",
             createdAt: new Date(createdAt),
             closedAt: null,
         });

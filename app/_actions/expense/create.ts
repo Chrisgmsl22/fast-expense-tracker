@@ -7,7 +7,11 @@ import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { computeActualExpenditure } from "@/lib/domain/expense";
 import { expenseRepository } from "@/lib/repositories";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
-import { expenseInputSchema, type ExpenseInput } from "@/lib/schemas/expense";
+import {
+    expenseFundingSchema,
+    expenseInputSchema,
+    type ExpenseInput,
+} from "@/lib/schemas/expense";
 
 /** Failure modes the caller can branch on. */
 export type CreateExpenseCode = "validation" | "unauthenticated" | "db_error";
@@ -58,6 +62,21 @@ export async function createExpense(
     // One try around every DB touch: a failure in the FK check or the insert
     // returns a typed error instead of throwing (no silent failure).
     try {
+        // The slug is resolved from the DB, never taken from the client (spec 0007 §3.3).
+        const categorySlug = await repo.getCategorySlug(userId, v.categoryId);
+        const funding = expenseFundingSchema.safeParse({
+            fundedFrom: v.fundedFrom,
+            categorySlug,
+        });
+        if (!funding.success) {
+            return {
+                ok: false,
+                code: "validation",
+                message: "Invalid expense",
+                fieldErrors: toFieldErrors<ExpenseInput>(funding.error),
+            };
+        }
+
         // A subcategory must belong to the chosen category — both FKs are valid
         // individually, so without this check a mismatched pair would persist as
         // silently-wrong data. A missing subcategory returns null and fails too.
@@ -90,6 +109,7 @@ export async function createExpense(
             yourPercentage: v.yourPercentage,
             actualExpenditure: computeActualExpenditure(v),
             paidBy: v.paidBy,
+            fundedFrom: v.fundedFrom,
             notes: v.notes ?? null,
             // `addPartnerPayment` is the only writer of a payment row.
             isPartnerPayment: false,

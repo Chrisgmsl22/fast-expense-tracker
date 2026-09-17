@@ -11,10 +11,10 @@ import {
 } from "@/lib/repositories";
 import type { CategoryBudgetRepository } from "@/lib/repositories/category-budget.repository";
 import type {
+    CategoryExpenseListItem,
     CategoryMeta,
     CategoryRepository,
 } from "@/lib/repositories/category.repository";
-import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /** Everything the category-detail screen renders. */
 export type CategoryDetail = {
@@ -23,6 +23,12 @@ export type CategoryDetail = {
     bucket: BucketKey | null;
     /** Total my-share spend for the category this month. */
     spent: number;
+    /**
+     * My-share of every row `spent` left out — the exact complement of the
+     * budget's funding filter (spec 0007 §2), so the header can say why it shows
+     * less money than the list below it.
+     */
+    spentNotFromIncome: number;
     /** Effective limit for this month: the month override, else the default. */
     limit: number | null;
     /** The category default (`Category.monthlyBudget`) — editor prefill. */
@@ -39,14 +45,17 @@ export type CategoryDetail = {
     pctOfLimit: number;
     /** Calendar days remaining in the viewed month. */
     daysLeft: number;
-    /** Number of the category's expenses this month. */
+    /** Number of the category's expenses this month — every visible row. */
     expenseCount: number;
-    /** Distinct real subcategories with spend (excludes the "Other" rollup). */
+    /**
+     * Distinct named subcategories among those same visible rows (the "Other"
+     * rollup — a null subcategory — is not one, so it never counts).
+     */
     subcatWithSpend: number;
     /** "Spend by subcategory" bars, high→low. */
     breakdown: SubcategoryBar[];
     /** The category's expenses this month, date desc. */
-    expenses: ExpenseListItem[];
+    expenses: CategoryExpenseListItem[];
 };
 
 /** Injectable seams so the assembly is unit-testable without a DB or the clock. */
@@ -83,6 +92,13 @@ export async function getCategoryDetail(
     ]);
 
     const spent = subSpends.reduce((sum, r) => sum + r.spent, 0);
+    // Derived from the LIST: `subSpends` is already funding-filtered and cannot
+    // see these rows. The test is `countedInBudget`, not `fundedFrom !== "income"` —
+    // the latter misses an out-of-band stored value.
+    const spentNotFromIncome = expenses.reduce(
+        (sum, e) => (e.countedInBudget ? sum : sum + e.actualExpenditure),
+        0,
+    );
     // Effective limit for this month = override ?? default; 0/null → "no limit".
     const limit = budgetForMonth(meta.monthlyBudget, override);
     const hasLimit = limit !== null && limit > 0;
@@ -93,6 +109,7 @@ export async function getCategoryDetail(
         meta,
         bucket: bucketOf(meta),
         spent,
+        spentNotFromIncome,
         limit,
         defaultBudget: meta.monthlyBudget,
         thisMonthOverride: override,
@@ -101,9 +118,12 @@ export async function getCategoryDetail(
         over: hasLimit && spent > limit!,
         pctOfLimit: hasLimit ? (spent / limit!) * 100 : 0,
         daysLeft,
+        // "N expenses across M subcategories" labels the LIST, so both halves
+        // count every visible row — unlike `spent`. Keyed on id: names are not unique.
         expenseCount: expenses.length,
-        subcatWithSpend: subSpends.filter((r) => r.id !== null && r.spent > 0)
-            .length,
+        subcatWithSpend: new Set(
+            expenses.flatMap((e) => (e.subcategory ? [e.subcategory.id] : [])),
+        ).size,
         breakdown: subcategoryBreakdown(subSpends, spent),
         expenses,
     };

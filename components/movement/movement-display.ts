@@ -42,7 +42,6 @@ export function movementDisplay(
     }
 }
 
-/** The minimum a feed row needs to write its two lines. */
 type MovementRowSource = {
     type: MovementType;
     note: string | null;

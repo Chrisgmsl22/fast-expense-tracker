@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
-import { expenseInputSchema } from "@/lib/schemas/expense";
+import {
+    expenseFundingSchema,
+    expenseInputSchema,
+} from "@/lib/schemas/expense";
 
 const valid = {
     date: "2026-06-15",
@@ -73,5 +76,72 @@ describe("expenseInputSchema", () => {
             yourPercentage: "0.7",
         });
         expect(r.success).toBe(true);
+    });
+    describe("fundedFrom (spec 0007 §3.1)", () => {
+        it("defaults to income when the form doesn't send it", () => {
+            const r = expenseInputSchema.safeParse(valid);
+            expect(r.success).toBe(true);
+            if (!r.success) return;
+            expect(r.data.fundedFrom).toBe("income");
+        });
+
+        it("accepts the three known values", () => {
+            for (const fundedFrom of ["income", "savings", "reimbursed"]) {
+                expect(
+                    expenseInputSchema.safeParse({ ...valid, fundedFrom })
+                        .success,
+                ).toBe(true);
+            }
+        });
+
+        it("rejects an unknown value", () => {
+            expect(
+                expenseInputSchema.safeParse({ ...valid, fundedFrom: "gift" })
+                    .success,
+            ).toBe(false);
+        });
+    });
+
+    describe("expenseFundingSchema — reimbursed is health-only (§3.3)", () => {
+        it("allows reimbursed on health", () => {
+            const r = expenseFundingSchema.safeParse({
+                fundedFrom: "reimbursed",
+                categorySlug: "health",
+            });
+            expect(r.success).toBe(true);
+        });
+
+        it("rejects reimbursed on any other category", () => {
+            const r = expenseFundingSchema.safeParse({
+                fundedFrom: "reimbursed",
+                categorySlug: "shopping",
+            });
+            expect(r.success).toBe(false);
+            if (r.success) return;
+            // The error must land on the funding field, so the form shows it
+            // next to the control the user has to change.
+            expect(r.error.issues[0]?.path).toEqual(["fundedFrom"]);
+            expect(r.error.issues[0]?.message).toContain("health");
+        });
+
+        it("fails closed when the category didn't resolve", () => {
+            expect(
+                expenseFundingSchema.safeParse({
+                    fundedFrom: "reimbursed",
+                    categorySlug: null,
+                }).success,
+            ).toBe(false);
+        });
+
+        it("leaves income and savings unrestricted by category", () => {
+            for (const fundedFrom of ["income", "savings"]) {
+                expect(
+                    expenseFundingSchema.safeParse({
+                        fundedFrom,
+                        categorySlug: "shopping",
+                    }).success,
+                ).toBe(true);
+            }
+        });
     });
 });
