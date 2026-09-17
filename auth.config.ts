@@ -20,6 +20,14 @@ export const authConfig = {
         signIn: LOGIN_PATH,
     },
     providers: [], // Credentials provider added in auth.ts
+    // Lives here, not in auth.ts, for the same reason as `callbacks`: a second
+    // `session` key there would shallow-override this one. 7-day rolling
+    // window, refreshed once a day of activity.
+    session: {
+        strategy: "jwt",
+        maxAge: 7 * 24 * 60 * 60,
+        updateAge: 24 * 60 * 60,
+    },
     callbacks: {
         // Route gate, evaluated by the proxy on every matched request.
         // `/api/auth/*` never reaches here — it's excluded by the proxy matcher.
