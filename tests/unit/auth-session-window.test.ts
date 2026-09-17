@@ -23,11 +23,8 @@ import NextAuth, { type NextAuthConfig } from "next-auth";
 
 import { authOptions } from "@/auth";
 
-/**
- * Asserts the composed `authOptions` passed to `NextAuth(...)` in `auth.ts` —
- * a second `session` key there would shallow-override `authConfig`'s, and
- * only the composed object catches that.
- */
+/** Asserts the composed object — a second `session` key in `auth.ts`
+ * would shallow-override `authConfig`'s. */
 describe("authOptions.session", () => {
     it("expires after a 7-day rolling window, refreshed once a day", () => {
         expect(authOptions.session.strategy).toBe("jwt");
