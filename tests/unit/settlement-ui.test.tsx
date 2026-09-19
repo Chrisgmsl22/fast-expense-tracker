@@ -47,6 +47,7 @@ import { SettlementBalanceCard } from "@/components/settlement/SettlementBalance
 import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown";
 import { SettlementJournal } from "@/components/settlement/SettlementJournal";
 import { SettlementChip } from "@/components/dashboard/SettlementChip";
+import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
 import { computeCoupleBalance } from "@/lib/domain/settlement";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
 
@@ -134,11 +135,12 @@ describe("SettlementChip", () => {
 });
 
 describe("SettlementBreakdown", () => {
-    it("renders the four lines and the net", () => {
+    it("renders the five lines and the net", () => {
         render(
             <SettlementBreakdown
                 balance={sheOwes}
                 breakdownItems={{
+                    partner_debt: [],
                     partner_share: [
                         {
                             id: "e1",
@@ -158,7 +160,12 @@ describe("SettlementBreakdown", () => {
         expect(
             screen.getByText(/32% of shared expenses you logged/),
         ).toBeDefined();
-        expect(screen.getByText(/Debts you logged/)).toBeDefined();
+        expect(
+            screen.getByText(/Debts you logged as "I owe Brenda"/),
+        ).toBeDefined();
+        expect(
+            screen.getByText(/Debts you logged as "Brenda owes me"/),
+        ).toBeDefined();
         expect(screen.getByText(/Money Brenda paid you/)).toBeDefined();
         expect(screen.getByText(/Money you paid Brenda/)).toBeDefined();
         expect(screen.getByText("Brenda owes you $700.00")).toBeDefined();
@@ -166,6 +173,57 @@ describe("SettlementBreakdown", () => {
 });
 
 describe("SettlementJournal", () => {
+    it("shows a partner debt as positive and preserves its direction through edit", async () => {
+        vi.mocked(updatePartnerDebt).mockResolvedValue({
+            ok: true,
+            data: { id: "partner-debt" },
+        });
+        render(
+            <SettlementJournal
+                partnerName="Alex"
+                journal={[
+                    {
+                        id: "partner-debt",
+                        kind: "partner_debt",
+                        direction: "partner_debt",
+                        date: new Date("2026-09-10T06:00:00Z"),
+                        carriedOver: false,
+                        locked: false,
+                        description: "Alex owes me",
+                        amount: 100,
+                        source: "movement",
+                    },
+                ]}
+            />,
+        );
+        expect(screen.getByText("+$100.00").className).toContain(
+            "text-positive",
+        );
+        expect(screen.queryByText(/I owe Alex/)).toBeNull();
+        fireEvent.click(screen.getByLabelText("Edit Alex owes me"));
+        const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).getByText('Edit "Alex owes me"')).toBeDefined();
+        expect(
+            (within(dialog).getByLabelText(/Note/) as HTMLInputElement).value,
+        ).toBe("");
+        fireEvent.change(
+            within(dialog).getByLabelText("What Alex owes you (MXN)"),
+            { target: { value: "120" } },
+        );
+        fireEvent.click(
+            within(dialog).getByRole("button", { name: "Save changes" }),
+        );
+        await waitFor(() =>
+            expect(updatePartnerDebt).toHaveBeenCalledWith({
+                id: "partner-debt",
+                direction: "partner_debt",
+                date: "2026-09-10",
+                amount: "120",
+                note: undefined,
+            }),
+        );
+    });
+
     const july = new Date("2026-07-10T06:00:00Z");
     const june = new Date("2026-06-20T06:00:00Z");
 
@@ -199,6 +257,7 @@ describe("SettlementJournal", () => {
         },
         {
             kind: "partner_debt",
+            direction: "gf_fronted",
             id: "e2",
             date: june,
             carriedOver: true,
@@ -323,6 +382,7 @@ describe("SettlementJournal", () => {
         deleteMock.mockResolvedValue({ ok: true, data: { id: "debt1" } });
         const debtRow: SettlementJournalItem = {
             kind: "partner_debt",
+            direction: "gf_fronted",
             id: "debt1",
             date: june,
             carriedOver: true,
@@ -347,6 +407,7 @@ describe("SettlementJournal", () => {
     it("offers edit AND delete on a movement-backed debt", () => {
         const debtRow: SettlementJournalItem = {
             kind: "partner_debt",
+            direction: "gf_fronted",
             id: "debt1",
             date: june,
             carriedOver: true,

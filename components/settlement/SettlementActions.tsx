@@ -14,6 +14,11 @@ import {
 import { PartnerDebtForm } from "@/components/movement/PartnerDebtForm";
 import { TransferForm } from "@/components/movement/TransferForm";
 import type { SettlementDirection } from "@/lib/domain/settlement";
+import {
+    PARTNER_DEBT_TYPES,
+    partnerDebtLabel,
+    type PartnerDebtDirection,
+} from "@/lib/domain/movement";
 
 type Props = {
     /** Drives the transfer form's quick-settle prefill (net amount + side). */
@@ -22,17 +27,18 @@ type Props = {
     netAmount: number;
     partnerName: string;
     /**
-     * Shown inside BOTH dialogs while the screen is on a past month: a modal covers
+     * Shown inside every dialog while the screen is on a past month: a modal covers
      * the page, so the page's own warning is invisible when it matters most.
      */
     pastMonthNotice?: string;
 };
 
 /**
- * The two settlement actions (spec 0004 §3.3). "Log a transfer" opens the
+ * The settlement actions (spec 0007). "Record payment" opens the
  * transfer form **prefilled** with the net amount + the side that settles the
  * current balance (she owes → she pays you; you owe → you pay her). "+ I owe
- * {partner}" opens the debt form. Both refresh the server-rendered page on success.
+ * {partner}" and "+ {partner} owes me" open the debt form in opposite directions.
+ * A zero balance hides the payment action; both debt actions remain available.
  */
 export function SettlementActions({
     direction,
@@ -41,7 +47,7 @@ export function SettlementActions({
     pastMonthNotice,
 }: Props) {
     const [transferOpen, setTransferOpen] = useState(false);
-    const [debtOpen, setDebtOpen] = useState(false);
+    const [debtOpen, setDebtOpen] = useState<PartnerDebtDirection | null>(null);
     const router = useRouter();
 
     // Settle toward zero: if she owes you, the settling transfer is her paying
@@ -55,55 +61,68 @@ export function SettlementActions({
         router.refresh();
     }
     function onDebtDone() {
-        setDebtOpen(false);
+        setDebtOpen(null);
         router.refresh();
     }
 
     return (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
-                <DialogTrigger render={<Button>Log a transfer</Button>} />
-                <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Log a transfer</DialogTitle>
-                    </DialogHeader>
-                    {pastMonthNotice && (
-                        <p className="text-sm text-muted-foreground">
-                            {pastMonthNotice}
-                        </p>
-                    )}
-                    <TransferForm
-                        direction={settleDirection}
-                        initialAmount={prefillAmount}
-                        partnerName={partnerName}
-                        onCancel={() => setTransferOpen(false)}
-                        onSuccess={onTransferDone}
-                    />
-                </DialogContent>
-            </Dialog>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            {direction !== "settled" && (
+                <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
+                    <DialogTrigger render={<Button>Record payment</Button>} />
+                    <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>Record payment</DialogTitle>
+                        </DialogHeader>
+                        {pastMonthNotice && (
+                            <p className="text-sm text-muted-foreground">
+                                {pastMonthNotice}
+                            </p>
+                        )}
+                        <TransferForm
+                            direction={settleDirection}
+                            initialAmount={prefillAmount}
+                            partnerName={partnerName}
+                            onCancel={() => setTransferOpen(false)}
+                            onSuccess={onTransferDone}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
 
-            <Dialog open={debtOpen} onOpenChange={setDebtOpen}>
-                <DialogTrigger
-                    render={
-                        <Button variant="outline">{`+ I owe ${partnerName}`}</Button>
+            {PARTNER_DEBT_TYPES.map((debtDirection) => (
+                <Dialog
+                    key={debtDirection}
+                    open={debtOpen === debtDirection}
+                    onOpenChange={(open) =>
+                        setDebtOpen(open ? debtDirection : null)
                     }
-                />
-                <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>{`I owe ${partnerName}`}</DialogTitle>
-                    </DialogHeader>
-                    {pastMonthNotice && (
-                        <p className="text-sm text-muted-foreground">
-                            {pastMonthNotice}
-                        </p>
-                    )}
-                    <PartnerDebtForm
-                        partnerName={partnerName}
-                        onCancel={() => setDebtOpen(false)}
-                        onSuccess={onDebtDone}
+                >
+                    <DialogTrigger
+                        render={
+                            <Button variant="outline">{`+ ${partnerDebtLabel(debtDirection, partnerName)}`}</Button>
+                        }
                     />
-                </DialogContent>
-            </Dialog>
+                    <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>
+                                {partnerDebtLabel(debtDirection, partnerName)}
+                            </DialogTitle>
+                        </DialogHeader>
+                        {pastMonthNotice && (
+                            <p className="text-sm text-muted-foreground">
+                                {pastMonthNotice}
+                            </p>
+                        )}
+                        <PartnerDebtForm
+                            direction={debtDirection}
+                            partnerName={partnerName}
+                            onCancel={() => setDebtOpen(null)}
+                            onSuccess={onDebtDone}
+                        />
+                    </DialogContent>
+                </Dialog>
+            ))}
         </div>
     );
 }

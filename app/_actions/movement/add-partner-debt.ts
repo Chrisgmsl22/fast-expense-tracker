@@ -21,11 +21,9 @@ export type AddPartnerDebtResult = ActionResult<
 >;
 
 /**
- * Log an "I owe {partner}" debt — something she fronted that you owe her back
- * (ADR-0020). It's settlement-only, not consumption, so it's stored as a
- * `Movement{type:"gf_fronted"}` (no card, no category): it never enters
- * expenses, categories, the budget, or spend-by-card. The settlement balance
- * reads it as the "you owe her" side; a real `gf_paid` transfer then clears it.
+ * Record a settlement-only debt in either direction (spec 0007). Both types have
+ * no card or category and never enter expense, income, or budget totals.
+ * Omitted direction preserves the original `gf_fronted` (you owe her) behavior.
  */
 export async function addPartnerDebt(
     input: unknown,
@@ -56,7 +54,7 @@ export async function addPartnerDebt(
         const created = await repo.insert(userId, {
             date: cdmxCalendarDateToUtc(v.date),
             amount: v.amount,
-            type: "gf_fronted",
+            type: v.direction ?? "gf_fronted",
             cardId: null,
             note: v.note?.trim() || null,
         });

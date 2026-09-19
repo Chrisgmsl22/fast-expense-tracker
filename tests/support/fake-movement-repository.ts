@@ -75,7 +75,9 @@ export class FakeMovementRepository implements MovementRepository {
                 .filter((r) => r.userId === userId)
                 // Mirror the Prisma adapter: `gf_fronted` is settlement-only and
                 // never appears in the month feed (ADR-0020).
-                .filter((r) => r.type !== "gf_fronted")
+                .filter(
+                    (r) => r.type !== "gf_fronted" && r.type !== "partner_debt",
+                )
                 .map((r) => ({
                     id: r.id,
                     date: r.date,

@@ -1,5 +1,6 @@
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
+import { isPartnerDebt } from "@/lib/domain/movement";
 
 /**
  * A single row in a month feed — an expense or a money movement — so both
@@ -11,9 +12,9 @@ export type FeedItem =
     | { kind: "movement"; date: Date; movement: MovementListItem };
 
 /**
- * Merge expenses + movements into one list, newest first. A `gf_fronted` debt is
- * dropped: it is settlement-only (spec 0007 §6b). The month query already excludes
- * it; this second guard covers a caller assembling its own movement list.
+ * Merge expenses + movements into one list, newest first. Both debt types are
+ * settlement-only (spec 0007). The month query already excludes them; this second
+ * guard covers a caller assembling its own movement list.
  */
 export function buildFeed(
     expenses: ExpenseListItem[],
@@ -24,7 +25,7 @@ export function buildFeed(
             (e): FeedItem => ({ kind: "expense", date: e.date, expense: e }),
         ),
         ...movements
-            .filter((m) => m.type !== "gf_fronted")
+            .filter((m) => !isPartnerDebt(m.type))
             .map(
                 (m): FeedItem => ({
                     kind: "movement",

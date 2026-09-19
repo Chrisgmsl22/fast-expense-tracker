@@ -80,6 +80,73 @@ function run(
 }
 
 describe("getSettlement", () => {
+    it("counts a partner debt in full, then clears it with her payment", async () => {
+        const debt = movement({
+            id: "debt",
+            type: "partner_debt",
+            amount: 100,
+        });
+        const s = await run([], [debt]);
+        expect(s.balance.balance).toBe(100);
+        expect(s.journal[0]).toMatchObject({
+            kind: "partner_debt",
+            direction: "partner_debt",
+            description: "Brenda owes me",
+            amount: 100,
+        });
+        expect(s.month.journal).toEqual(s.journal);
+        expect(s.breakdownItems.partner_debt).toEqual([
+            expect.objectContaining({ amount: 100, gross: null }),
+        ]);
+        expect(s.closableMarker).toBeNull();
+        const paid = await run(
+            [],
+            [debt, movement({ id: "paid", type: "gf_received", amount: 100 })],
+        );
+        expect(paid.balance.balance).toBe(0);
+        const offset = await run(
+            [],
+            [
+                debt,
+                movement({ id: "opposite", type: "gf_fronted", amount: 40 }),
+            ],
+        );
+        expect(offset.balance.balance).toBe(60);
+    });
+
+    it("keeps a partner debt out of historical gross spend", async () => {
+        const closedAt = new Date("2026-07-11T12:00:00Z");
+        const s = await run(
+            [],
+            [
+                movement({ id: "debt", type: "partner_debt", amount: 100 }),
+                movement({
+                    id: "paid",
+                    type: "gf_received",
+                    amount: 100,
+                    closedAt,
+                }),
+            ],
+            [
+                {
+                    id: "paid",
+                    kind: "movement",
+                    date: JULY,
+                    closedAt,
+                    amount: 100,
+                },
+            ],
+        );
+        expect(s.history[0]?.summary).toMatchObject({
+            spentUnsplit: 0,
+            youOwed: 0,
+            sheOwed: 100,
+        });
+        expect(
+            s.history[0]?.journal.find((r) => r.id === "debt"),
+        ).toMatchObject({ locked: true, direction: "partner_debt" });
+    });
+
     it("she owes you her 32% share of a shared expense you paid", async () => {
         const s = await run([expense()]);
         expect(s.balance.direction).toBe("she_owes");

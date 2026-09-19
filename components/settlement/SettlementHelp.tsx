@@ -20,7 +20,7 @@ const operationsFor = (
     },
     {
         when: `${partnerName} sends you money / pays you back`,
-        then: `Add → "${partnerName} paid me" (or "Log a transfer" here). It lowers what she owes you — whatever you do with the money after is separate.`,
+        then: `Add → "${partnerName} paid me" (or "Record payment" here). It lowers what she owes you — whatever you do with the money after is separate.`,
     },
     {
         when: `${partnerName} paid for shared things`,
@@ -28,11 +28,19 @@ const operationsFor = (
     },
     {
         when: `You end up owing ${partnerName}, so you pay her`,
-        then: `"Log a transfer" here (it'll say "I paid ${partnerName}").`,
+        then: `"Record payment" here (it will say "I paid ${partnerName}").`,
     },
     {
         when: "You pay off a credit card",
         then: `Add → Card payment. It just records the payment — it doesn't touch the settlement balance.`,
+    },
+    {
+        when: `${partnerName} owes you money without a shared expense`,
+        then: `"+ ${partnerName} owes me" records the full debt. It adds no expense, income, or payment.`,
+    },
+    {
+        when: "The balance is zero",
+        then: "Both debt actions remain available. Record payment appears only when a balance remains.",
     },
 ];
 

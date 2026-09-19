@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
+import { isPartnerDebt } from "@/lib/domain/movement";
 import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
@@ -33,9 +34,9 @@ export type UpdatePartnerDebtResult = ActionResult<
 >;
 
 /**
- * Edit an existing "I owe {partner}" debt (ADR-0020). Mirrors `addPartnerDebt`
+ * Edit an existing debt in either direction (spec 0007). Mirrors `addPartnerDebt`
  * but the write is **scoped by `userId`** (IDOR guard — a mismatch matches zero
- * rows → `not_found`). Only a `gf_fronted` movement is editable here: refusing
+ * rows → `not_found`). Only debt movements are editable here: refusing
  * any other type stops a card payment or transfer being retyped into a debt via
  * this action (the action is the enforcement seam, not just the UI).
  *
@@ -73,11 +74,23 @@ export async function updatePartnerDebt(
     const v = parsed.data;
     try {
         const existing = await repo.getById(userId, id);
-        if (!existing || existing.type !== "gf_fronted") {
+        if (!existing || !isPartnerDebt(existing.type)) {
             return {
                 ok: false,
                 code: "not_found",
                 message: "Debt not found.",
+            };
+        }
+
+        if (v.direction !== undefined && v.direction !== existing.type) {
+            return {
+                ok: false,
+                code: "validation",
+                message:
+                    "A debt's direction cannot change. Delete it and add a new debt.",
+                fieldErrors: {
+                    direction: ["The direction must match the original debt."],
+                },
             };
         }
 
@@ -98,7 +111,7 @@ export async function updatePartnerDebt(
         const count = await repo.updateForUser(id, userId, {
             date: cdmxCalendarDateToUtc(v.date),
             amount: v.amount,
-            type: "gf_fronted",
+            type: existing.type,
             cardId: null,
             note: v.note?.trim() || null,
         });

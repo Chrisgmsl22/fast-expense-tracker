@@ -1,14 +1,15 @@
 /**
  * Pure couple-balance domain logic — no DB, no Date, no env, no framework
- * (spec 0004). The service feeds it four pre-summed figures (each already scoped
- * to the current+previous-month window and to the right `paidBy`/movement type),
+ * (spec 0007). The service feeds it five pre-summed figures scoped to the open cycle,
  * and it returns the signed running balance + its direction + the breakdown the
  * settlement screen renders. Keeping it pure means the balance math is tested
  * without Postgres and never contaminates the spend/consumption totals.
  */
 
-/** The four figures the balance nets, all positive, all in the 2-month window. */
+/** The five figures the balance nets, all positive, all in the open cycle. */
 export type SettlementInputs = {
+    /** Standalone debts your partner owes you, with no expense or split. */
+    partnerDebtToYou?: number;
     /** Your partner's 32% share of shared expenses YOU paid — Σ(amount − actualExpenditure). */
     partnerShareOfYourExpenses: number;
     /** Stuff she fronted that you owe her — Σ `gf_fronted` movement amounts (ADR-0020). */
@@ -23,6 +24,7 @@ export type SettlementDirection = "she_owes" | "you_owe" | "settled";
 
 export type SettlementBreakdownKey =
     | "partner_share"
+    | "partner_debt"
     | "your_debt"
     | "partner_paid"
     | "you_paid";
@@ -48,12 +50,13 @@ const roundCents = (n: number): number => Math.round(n * 100) / 100;
 
 /**
  * Net the couple balance (spec 0004 §2.4):
- * `+ partner's share of your expenses − your logged debt − money she paid you
+ * `+ partner's share of your expenses + her logged debt − your logged debt − money she paid you
  *  + money you paid her`.
  */
 export function computeCoupleBalance(inputs: SettlementInputs): CoupleBalance {
     const balance = roundCents(
-        inputs.partnerShareOfYourExpenses -
+        inputs.partnerShareOfYourExpenses +
+            (inputs.partnerDebtToYou ?? 0) -
             inputs.yourDebtToPartner -
             inputs.moneyPartnerPaidYou +
             inputs.moneyYouPaidPartner,
@@ -72,6 +75,11 @@ export function computeCoupleBalance(inputs: SettlementInputs): CoupleBalance {
                 amount: inputs.partnerShareOfYourExpenses,
             },
             { key: "your_debt", sign: "-", amount: inputs.yourDebtToPartner },
+            {
+                key: "partner_debt",
+                sign: "+",
+                amount: inputs.partnerDebtToYou ?? 0,
+            },
             {
                 key: "partner_paid",
                 sign: "-",
@@ -125,6 +133,7 @@ export function canCloseCycle(type: string): type is CycleClosingType {
  */
 export const SETTLEMENT_MOVEMENT_TYPES = [
     "gf_fronted",
+    "partner_debt",
     ...CYCLE_CLOSING_TYPES,
 ] as const;
 
