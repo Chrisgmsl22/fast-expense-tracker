@@ -76,7 +76,7 @@ One PR. None of it touches money logic, and no two items share a file.
 
 | Item                     | What                                                                                                 |
 | ------------------------ | ---------------------------------------------------------------------------------------------------- |
-| **BUG-3**                | Session never expires — set `maxAge` and `updateAge`                                                 |
+| **BUG-3**                | Expire sessions after 30 minutes of inactivity and show the login notice                             |
 | **BUG-6**                | A future month labelled "a past month", and the open-settlement tab vanishing on any other month     |
 | **CHORE-16** (code half) | The duplicated close-set query, the untested `updateTransfer` guard, the serial `await` in `getById` |
 

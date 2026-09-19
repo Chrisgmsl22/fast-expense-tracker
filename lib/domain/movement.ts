@@ -25,8 +25,26 @@ export type MovementType =
     | "gf_received"
     // A debt she fronted — settlement only, provisional until money moves (spec 0007 §6b).
     | "gf_fronted"
+    | "partner_debt"
     | "income"
     | "other";
+
+/** Settlement-only debts, with positive amounts in either direction. */
+export const PARTNER_DEBT_TYPES = ["gf_fronted", "partner_debt"] as const;
+export type PartnerDebtDirection = (typeof PARTNER_DEBT_TYPES)[number];
+
+export function isPartnerDebt(type: string): type is PartnerDebtDirection {
+    return (PARTNER_DEBT_TYPES as readonly string[]).includes(type);
+}
+
+export function partnerDebtLabel(
+    direction: PartnerDebtDirection,
+    partnerName: string,
+): string {
+    return direction === "partner_debt"
+        ? `${partnerName} owes me`
+        : `I owe ${partnerName}`;
+}
 
 /** Minimal shape the couple-balance math needs from a shared expense. */
 export type ExpenseShare = { amount: number; actualExpenditure: number };

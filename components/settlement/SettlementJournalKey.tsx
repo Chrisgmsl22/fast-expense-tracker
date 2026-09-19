@@ -1,6 +1,7 @@
 /** One swatch + label; the swatch matches the journal row's left-border colour. */
 const rowsFor = (partnerName: string): { swatch: string; label: string }[] => [
     { swatch: "bg-positive", label: `${partnerName} paid you` },
+    { swatch: "bg-positive", label: `${partnerName} owes you` },
     { swatch: "bg-transfer", label: `You paid ${partnerName}` },
     { swatch: "bg-debt", label: `You owe ${partnerName}` },
 ];

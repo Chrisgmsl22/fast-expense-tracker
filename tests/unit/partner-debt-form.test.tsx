@@ -33,6 +33,25 @@ beforeEach(() => {
 });
 
 describe("PartnerDebtForm", () => {
+    it("submits the full amount that the partner owes", async () => {
+        render(<PartnerDebtForm partnerName="Alex" direction="partner_debt" />);
+        fireEvent.change(screen.getByLabelText("Date"), {
+            target: { value: "2026-09-10" },
+        });
+        fireEvent.change(screen.getByLabelText("What Alex owes you (MXN)"), {
+            target: { value: "100" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Log debt" }));
+        await waitFor(() =>
+            expect(addDebtMock).toHaveBeenCalledWith({
+                direction: "partner_debt",
+                amount: "100",
+                date: "2026-09-10",
+                note: undefined,
+            }),
+        );
+        expect(screen.queryByText(/What you owe Alex/)).toBeNull();
+    });
     it("submits the debt (amount + date, no category)", async () => {
         const onSuccess = vi.fn();
         render(<PartnerDebtForm partnerName="Brenda" onSuccess={onSuccess} />);
@@ -47,12 +66,12 @@ describe("PartnerDebtForm", () => {
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
         expect(addDebtMock).toHaveBeenCalledWith({
+            direction: "gf_fronted",
             amount: "500",
             date: "2026-07-10",
             note: undefined,
         });
-        // The form takes no category: a debt files itself under the
-        // `combined-expenses` default, editable from the expense row after.
+        // A settlement-only debt has no expense category.
         expect(screen.queryByRole("combobox", { name: "Category" })).toBeNull();
     });
 
@@ -109,6 +128,7 @@ describe("PartnerDebtForm", () => {
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
         expect(updateDebtMock).toHaveBeenCalledWith({
+            direction: "gf_fronted",
             id: "mv9",
             amount: "700",
             date: "2026-07-10",

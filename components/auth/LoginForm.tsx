@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,17 +9,16 @@ import { Label } from "@/components/ui/label";
 import { loginAction, type LoginResult } from "@/app/_actions/auth/login";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { LoginInput } from "@/lib/schemas/auth";
+import { withSessionLock } from "@/lib/auth/session-lock";
+import { SessionExpiredNotice } from "./SessionExpiredNotice";
 
-/**
- * Uncontrolled inputs read via FormData on submit; validation lives server-side
- * in `loginAction`. A successful login redirects server-side (the action never
- * returns), so a returned result is always a failure to surface.
- *
- * The form renders once but appears on two surfaces: a dark column on mobile and
- * the white right panel on desktop (see the login page). The `md:` overrides
- * below re-theme the shared light primitives for the dark mobile surface.
- */
-export function LoginForm() {
+/** Submit credentials and navigate after the server confirms success. */
+export function LoginForm({
+    sessionExpired = false,
+}: {
+    sessionExpired?: boolean;
+}) {
+    const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<LoginInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
@@ -35,9 +35,12 @@ export function LoginForm() {
         setFormError(null);
         startTransition(async () => {
             try {
-                const res: LoginResult = await loginAction(input);
-                // Only failures return; success redirects before resolving.
-                if (!res.ok) {
+                const res: LoginResult = await withSessionLock(() =>
+                    loginAction(input),
+                );
+                if (res.ok) {
+                    router.replace("/dashboard");
+                } else {
                     setErrors(res.fieldErrors ?? {});
                     setFormError(res.message);
                 }
@@ -70,6 +73,7 @@ export function LoginForm() {
             className="flex w-full flex-col gap-5"
             aria-label="Log in"
         >
+            {sessionExpired && <SessionExpiredNotice />}
             <div>
                 <Label htmlFor="email" className={labelClass}>
                     Email

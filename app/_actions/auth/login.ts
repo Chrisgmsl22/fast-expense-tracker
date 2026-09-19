@@ -11,15 +11,7 @@ export type LoginCode = "validation" | "invalid_credentials" | "error";
 
 export type LoginResult = ActionResult<void, LoginInput, LoginCode>;
 
-/**
- * Authenticate with email + password.
- *
- * On success `signIn` throws a redirect to `/dashboard` — Next propagates it to
- * the browser, so the success branch below is effectively unreachable and only
- * exists to satisfy the return type. On bad credentials `authorize` returns
- * `null`, which Auth.js surfaces as a `CredentialsSignin` `AuthError`; any other
- * thrown value (including the redirect) is re-thrown untouched.
- */
+/** Authenticate credentials and return a result without a redirect. */
 export async function loginAction(input: unknown): Promise<LoginResult> {
     const parsed = loginSchema.safeParse(input);
     if (!parsed.success) {
@@ -44,6 +36,7 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
             email: parsed.data.email,
             password: parsed.data.password,
             redirectTo: "/dashboard",
+            redirect: false,
         });
     } catch (error) {
         if (error instanceof AuthError) {
@@ -69,11 +62,8 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
                 message: "Something went wrong. Please try again.",
             };
         }
-        // The success redirect (NEXT_REDIRECT, not an AuthError) and anything
-        // else unexpected must propagate.
         throw error;
     }
 
-    // Unreachable: a successful signIn always throws the redirect above.
     return { ok: true, data: undefined };
 }

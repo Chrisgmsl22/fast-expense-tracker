@@ -66,6 +66,34 @@ const movements: FeedTotalMovement[] = [
 ];
 
 describe("computeSavingsSpend", () => {
+    it.each(["gf_fronted", "partner_debt"] as const)(
+        "excludes %s from savings spend with and without a purchase",
+        (type) => {
+            const debts: FeedTotalMovement[] = [
+                { id: "debt", type, amount: 900, fundedFrom: "savings" },
+            ];
+            expect(computeSavingsSpend([], debts)).toEqual({
+                amount: 0,
+                of: { ownPurchases: 0, paidToPartner: 0 },
+            });
+            expect(
+                computeSavingsSpend(
+                    [
+                        expense({
+                            id: "purchase",
+                            amount: 200,
+                            actualExpenditure: 200,
+                        }),
+                    ],
+                    debts,
+                ),
+            ).toEqual({
+                amount: 200,
+                of: { ownPurchases: 200, paidToPartner: 0 },
+            });
+        },
+    );
+
     it("excludes a savings allocation from purchases without changing the feed total", () => {
         const rows = [
             allocation,

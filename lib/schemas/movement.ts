@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { TRANSFER_FUNDING_SOURCES } from "@/lib/domain/funding";
+import { PARTNER_DEBT_TYPES } from "@/lib/domain/movement";
 
 /**
  * Validation for logging money movements (ADR-0018). Form inputs
@@ -46,13 +47,14 @@ export const transferInputSchema = z
 export type TransferInput = z.infer<typeof transferInputSchema>;
 
 /**
- * An "I owe {partner}" debt — something she fronted. Stored as a
- * `Movement{type:"gf_fronted"}`: settlement only, never consumption (spec 0007 §6b).
- * It is provisional; the payment that settles it is the expense.
+ * A debt in either direction, stored as a movement. Both types are settlement-only
+ * and use the full positive amount without a percentage split (spec 0007).
  */
 export const partnerDebtInputSchema = z.object({
     date: z.coerce.date(),
     amount: z.coerce.number().positive("Amount must be greater than 0"),
+    // Omission means the legacy direction on create, or the stored direction on edit.
+    direction: z.enum(PARTNER_DEBT_TYPES).optional(),
     note: z.string().max(200).optional(),
 });
 

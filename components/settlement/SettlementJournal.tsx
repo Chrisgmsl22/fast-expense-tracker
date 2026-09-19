@@ -27,12 +27,18 @@ import {
 } from "@/components/ui/dialog";
 import { toDateInputValue } from "@/lib/dates";
 import { BUDGET_FUNDING_SOURCE } from "@/lib/domain/funding";
+import {
+    partnerDebtLabel,
+    type PartnerDebtDirection,
+} from "@/lib/domain/movement";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
 
 /** The auto-generated description when a debt is logged without a note. */
-const defaultDebtDescription = (partnerName: string): string =>
-    `I owe ${partnerName}`;
+const defaultDebtDescription = (
+    partnerName: string,
+    direction: PartnerDebtDirection = "gf_fronted",
+): string => partnerDebtLabel(direction, partnerName);
 
 type PartnerDebtRow = Extract<SettlementJournalItem, { kind: "partner_debt" }>;
 type TransferRow = Extract<SettlementJournalItem, { kind: "transfer" }>;
@@ -61,7 +67,7 @@ const LOCKED_REASON = "in a closed settlement · locked";
  * a locked row has no delete either, so "delete to change" names a way out that is not there.
  */
 function debtSubtitle(row: PartnerDebtRow, partnerName: string): string {
-    const label = defaultDebtDescription(partnerName);
+    const label = defaultDebtDescription(partnerName, row.direction);
     return [
         formatExpenseDate(row.date),
         row.description === label ? null : label,
@@ -133,10 +139,12 @@ export function SettlementJournal({
         // the default label, so surface an empty field for that case.
         setEditing({
             id: item.id,
+            direction: item.direction,
             date: toDateInputValue(item.date),
             amount: String(item.amount),
             note:
-                item.description === defaultDebtDescription(partnerName)
+                item.description ===
+                defaultDebtDescription(partnerName, item.direction)
                     ? ""
                     : item.description,
         });
@@ -275,7 +283,7 @@ export function SettlementJournal({
             >
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>{`Edit "I owe ${partnerName}"`}</DialogTitle>
+                        <DialogTitle>{`Edit "${defaultDebtDescription(partnerName, editing?.direction)}"`}</DialogTitle>
                     </DialogHeader>
                     {editing && (
                         <PartnerDebtForm
@@ -442,15 +450,24 @@ function JournalRow({
         );
     }
     if (item.kind === "partner_debt") {
+        const partnerOwes = item.direction === "partner_debt";
         return (
             <Row
                 icon={<BarChart3 className="size-4" />}
-                iconClass="bg-debt-tint text-debt"
-                rowTint="border-debt bg-debt-tint"
+                iconClass={
+                    partnerOwes
+                        ? "bg-positive-tint text-positive"
+                        : "bg-debt-tint text-debt"
+                }
+                rowTint={
+                    partnerOwes
+                        ? "border-positive bg-positive-tint"
+                        : "border-debt bg-debt-tint"
+                }
                 title={item.description}
                 subtitle={debtSubtitle(item, partnerName)}
-                amount={`−${formatMxn(item.amount)}`}
-                amountClass="text-debt"
+                amount={`${partnerOwes ? "+" : "−"}${formatMxn(item.amount)}`}
+                amountClass={partnerOwes ? "text-positive" : "text-debt"}
                 actions={actions}
             />
         );

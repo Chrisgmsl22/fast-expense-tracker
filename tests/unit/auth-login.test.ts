@@ -70,25 +70,29 @@ describe("loginAction", () => {
         }
     });
 
-    it("signs in with the dashboard as the post-login landing", async () => {
-        // signIn throws the redirect on success; swallow it and assert the target.
-        signInMock.mockRejectedValue(new Error("NEXT_REDIRECT"));
-        await loginAction({
+    it("Should return success without a server redirect", async () => {
+        signInMock.mockResolvedValue("http://localhost/dashboard");
+
+        const result = await loginAction({
             email: "admin@example.com",
             password: "hunter2",
-        }).catch(() => {});
-        expect(signInMock).toHaveBeenCalledWith(
-            "credentials",
-            expect.objectContaining({ redirectTo: "/dashboard" }),
-        );
+        });
+
+        expect(result).toEqual({ ok: true, data: undefined });
+        expect(signInMock).toHaveBeenCalledWith("credentials", {
+            email: "admin@example.com",
+            password: "hunter2",
+            redirectTo: "/dashboard",
+            redirect: false,
+        });
     });
 
-    it("re-throws the success redirect (non-AuthError) so Next can navigate", async () => {
-        const redirect = new Error("NEXT_REDIRECT");
-        signInMock.mockRejectedValue(redirect);
+    it("Should propagate an unknown failure to the form", async () => {
+        const failure = new Error("network down");
+        signInMock.mockRejectedValue(failure);
 
         await expect(
             loginAction({ email: "admin@example.com", password: "hunter2" }),
-        ).rejects.toBe(redirect);
+        ).rejects.toBe(failure);
     });
 });
