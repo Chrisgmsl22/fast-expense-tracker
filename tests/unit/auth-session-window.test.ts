@@ -26,7 +26,7 @@ import { authOptions } from "@/auth";
 /** Asserts the composed object — a second `session` key in `auth.ts`
  * would shallow-override `authConfig`'s. */
 describe("authOptions.session", () => {
-    it("expires after a 7-day rolling window, refreshed once a day", () => {
+    it("Should retain the JWT session configuration when authOptions composes the shared config", () => {
         expect(authOptions.session.strategy).toBe("jwt");
         expect(authOptions.session.maxAge).toBe(7 * 24 * 60 * 60);
         expect(authOptions.session.updateAge).toBe(24 * 60 * 60);
@@ -34,7 +34,7 @@ describe("authOptions.session", () => {
 
     // Guards against a second `session` key at the `NextAuth(...)` call site
     // itself, not just on the exported `authOptions` object.
-    it("passes the same session window to the NextAuth(...) call", () => {
+    it("Should pass the same session configuration when NextAuth receives authOptions", () => {
         const passedConfig = vi.mocked(NextAuth).mock.calls[0]?.[0] as
             | NextAuthConfig
             | undefined;

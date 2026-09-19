@@ -23,9 +23,9 @@
         },
         {
             "id": "BUG-3",
-            "title": "Auth session never expires",
-            "description": "Still signed in after several days of inactivity — no session maxAge configured, so sessions live indefinitely.",
-            "proposedSolution": "Set session maxAge (+ updateAge) in auth.config.ts; pick a concrete window (e.g. 7-day rolling).",
+            "title": "Auth session defaults to 30 days instead of seven",
+            "description": "Auth.js defaults to a 30-day session window when maxAge is absent. The desired JWT expiry window is seven days.",
+            "proposedSolution": "Set session.maxAge to seven days in auth.config.ts. Auth.js can renew JWT expiry through session responses; updateAge only throttles database sessions.",
             "status": "fixed",
             "spec": null,
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/78",

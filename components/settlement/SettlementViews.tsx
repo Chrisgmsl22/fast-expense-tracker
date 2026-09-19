@@ -25,10 +25,7 @@ type View = "open" | "month" | "history";
 const itemCount = (n: number): string => `${n} ${n === 1 ? "item" : "items"}`;
 
 /**
- * The three settlement views (spec 0007 §3.5), all rendering the same
- * `SettlementJournal` rows. Month and History follow the page's month switcher;
- * the OPEN cycle does not — there is one, and it belongs to no month, so its
- * tab always renders regardless of which month is selected.
+ * The open cycle has no month, so its tab stays visible for every month.
  */
 export function SettlementViews({
     openJournal,

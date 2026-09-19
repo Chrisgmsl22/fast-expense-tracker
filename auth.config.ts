@@ -20,9 +20,9 @@ export const authConfig = {
         signIn: LOGIN_PATH,
     },
     providers: [], // Credentials provider added in auth.ts
-    // Lives here, not in auth.ts, for the same reason as `callbacks`: a second
-    // `session` key there would shallow-override this one. 7-day rolling
-    // window, refreshed once a day of activity.
+    // Keep this shared: a second `session` key in auth.ts would replace it.
+    // JWT maxAge sets a seven-day expiry; session responses can renew it.
+    // updateAge only throttles database sessions; it does not schedule JWT renewal.
     session: {
         strategy: "jwt",
         maxAge: 7 * 24 * 60 * 60,
