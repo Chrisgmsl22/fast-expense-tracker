@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { db } from "@/lib/db";
+import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 import { PrismaExpenseRepository } from "@/lib/repositories/expense.repository";
 import { PrismaMovementRepository } from "@/lib/repositories/movement.repository";
 
@@ -320,6 +321,36 @@ describe("closed-cycle derivation from an expense marker (integration)", () => {
         expect(editable?.cycleClosedAt?.toISOString()).toBe(
             MAY_20.toISOString(),
         );
+    });
+
+    it("returns the expense marker from the close set itself, with no movement marker present", async () => {
+        // The single reader is the only thing keeping this true: query `movement`
+        // alone and every payment-expense close disappears (spec 0007 §6b).
+        const user = await seedUser();
+        const cat = await seedCategory(user.id);
+        await seedPaymentClose(user.id, cat.id, MAY_20, MAY_10);
+
+        const closes = await getCycleCloses(db, user.id);
+
+        expect(closes.map((c) => c.toISOString())).toEqual([
+            MAY_20.toISOString(),
+        ]);
+    });
+
+    it("returns two markers oldest first, though the later one is created first", async () => {
+        const user = await seedUser();
+        const cat = await seedCategory(user.id);
+        // The movement closes LATER but is seeded first — insertion order must not
+        // decide the answer; only `closedAt` may.
+        await seedClose(user.id, MAY_20);
+        await seedPaymentClose(user.id, cat.id, MAY_10, MAY_10);
+
+        const closes = await getCycleCloses(db, user.id);
+
+        expect(closes.map((c) => c.toISOString())).toEqual([
+            MAY_10.toISOString(),
+            MAY_20.toISOString(),
+        ]);
     });
 
     it("takes the earliest close at or after the row, whichever table it is in", async () => {

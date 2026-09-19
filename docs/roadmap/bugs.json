@@ -23,12 +23,12 @@
         },
         {
             "id": "BUG-3",
-            "title": "Auth session never expires",
-            "description": "Still signed in after several days of inactivity — no session maxAge configured, so sessions live indefinitely.",
-            "proposedSolution": "Set session maxAge (+ updateAge) in auth.config.ts; pick a concrete window (e.g. 7-day rolling).",
-            "status": "open",
+            "title": "Auth session stays active after 30 minutes of inactivity",
+            "description": "The app must end a session after 30 minutes without user input. Passive requests must not renew the idle deadline.",
+            "proposedSolution": "Enforce a signed 30-minute idle deadline and renew it only for authenticated user activity. Reject prior tokens without idle claims. At expiry, sign out and show: Your session expired. Please log back in.",
+            "status": "fixed",
             "spec": null,
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/78",
             "issue": null
         },
         {
@@ -56,9 +56,9 @@
             "title": "A future month is called 'a past month', and the open settlement tab disappears on any month but this one",
             "description": "Two faults in one place, both reported from manual testing. (1) SettlementViews.tsx:126 renders '{month} is a past month. The open settlement is always the current one — switch back to this month to see it.' It is gated on isCurrentMonth being false, so a FUTURE month gets the same sentence: viewing October 2026 on 16 September 2026 states that October is past. (2) The 'Open settlement' tab itself is removed for any non-current month (SettlementViews.tsx:49), so after closing a cycle he switched to October, could not see the open settlement at all, and had no way back to it except changing the month. The tab list silently changes shape depending on which month is selected, which is why it read as the tab having vanished.",
             "proposedSolution": "(1) Split the copy: 'past' only when the month is genuinely before the current one; a future month needs its own sentence, and neither should claim the open settlement is unreachable. (2) Decide whether the open settlement belongs in the tab list at all times — it is one cycle, not a property of the selected month, so removing it makes the page inconsistent with itself. Preferred: always render the tab and let it stay selectable, since 'the open settlement is always the current one' is exactly the reason it should not disappear when the month changes. Tests: a future month, the current month and a past month each render the tab list and the correct notice.",
-            "status": "open",
+            "status": "fixed",
             "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/78",
             "issue": null
         },
         {

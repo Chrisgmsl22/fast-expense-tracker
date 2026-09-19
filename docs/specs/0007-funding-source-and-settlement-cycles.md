@@ -421,6 +421,50 @@ he owes**, never her outlay.
 
 E′ before F. G and H are independent.
 
+### Debts in both directions (2026-09-18)
+
+Settlement supports debts independent of an expense or a cash transfer.
+The two actions use the configured partner name:
+
+- **+ I owe Brenda** records your debt as the existing `gf_fronted` movement.
+- **+ Brenda owes me** records her debt as a `partner_debt` movement.
+- Both forms require a positive amount and a date. The note is optional.
+- Both actions remain available when the balance is zero.
+
+Each debt changes settlement by its full amount, with no percentage split.
+Her debt adds to the signed balance. Your debt subtracts from it.
+Her payment subtracts from the balance, as before.
+For example, her debt of $100 and her payment of $100 produce a zero balance.
+
+Neither debt creates an expense, income, a charge, or a budget allocation.
+Both debt types stay outside the expense and dashboard feeds.
+The settlement breakdown has a separate line for her debt.
+The journal names its direction and shows her debt as a positive amount.
+History includes her debt under what she owed, without adding it to gross spend.
+
+An edit preserves the stored direction. It cannot convert one debt into the other.
+Old callers that omit the create direction still create `gf_fronted` rows.
+Existing rows keep their current meaning. No data migration is required.
+Both debt types permit edit and delete until their cycle closes.
+A debt cannot act as the cash-payment marker that closes a cycle.
+
+**Record payment** replaces **Log a transfer** on the settlement page.
+It appears only when a balance remains.
+The form retains the amount and direction that settle that balance.
+Other payment entry points retain their current behavior.
+
+Manual checks:
+
+1. Start with a zero balance. Confirm both debt actions appear and Record payment does not.
+2. Add a $100 partner debt. Confirm the balance and her debt line each show $100.
+3. Confirm expenses, income, card totals, budget totals, and ordinary feeds do not change.
+4. Edit the debt to $120. Confirm the title and direction still identify her debt.
+5. Delete the debt. Confirm the balance returns to zero.
+6. Add a $100 partner debt and record her $100 payment. Confirm the balance returns to zero.
+7. Close the cycle. Confirm Month and History show the debt without edit or delete controls.
+8. Confirm History shows $100 owed by her and no gross spend for that debt.
+9. Add debts in opposite directions. Confirm they offset at their full amounts.
+
 ## 7. Out of scope
 
 - **Partial refunds.** `reimbursed` assumes the full amount. Storing a refunded

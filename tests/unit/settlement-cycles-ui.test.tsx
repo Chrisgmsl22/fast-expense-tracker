@@ -43,6 +43,10 @@ vi.mock("@/app/_actions/movement/update-transfer", () => ({
 import { SettlementCloseCard } from "@/components/settlement/SettlementCloseCard";
 import { SettlementJournal } from "@/components/settlement/SettlementJournal";
 import { SettlementViews } from "@/components/settlement/SettlementViews";
+import {
+    toMonthPosition,
+    type MonthPosition,
+} from "@/components/settlement/month-position";
 import type {
     ClosedSettlementCycle,
     SettlementJournalItem,
@@ -109,13 +113,30 @@ function renderViews(
             openJournal={[openRow]}
             monthJournal={[monthRow]}
             monthLabel="July"
-            isCurrentMonth
+            monthPosition="current"
             history={[closedCycle]}
             partnerName="Brenda"
             {...over}
         />,
     );
 }
+
+describe("toMonthPosition", () => {
+    it("places the viewed month against the current one", () => {
+        expect(toMonthPosition("2026-09", "2026-09")).toBe("current");
+        expect(toMonthPosition("2026-08", "2026-09")).toBe("past");
+        expect(toMonthPosition("2026-10", "2026-09")).toBe("future");
+    });
+
+    it("reads a year boundary correctly, not by comparing month numbers alone", () => {
+        // A naive month-number comparison sees "12" > "09" and calls this
+        // future; it is December of the PRIOR year, so it is past.
+        expect(toMonthPosition("2025-12", "2026-09")).toBe("past");
+        // A naive month-number comparison sees "01" < "09" and calls this
+        // past; it is January of the NEXT year, so it is future.
+        expect(toMonthPosition("2027-01", "2026-09")).toBe("future");
+    });
+});
 
 describe("SettlementViews", () => {
     it("shows the open settlement first", () => {
@@ -200,25 +221,76 @@ describe("SettlementViews", () => {
     });
 
     it("labels the month tab with the selected month, never 'This month'", () => {
-        renderViews({ monthLabel: "August 2026", isCurrentMonth: false });
+        renderViews({ monthLabel: "August 2026", monthPosition: "past" });
         expect(screen.getByRole("tab", { name: "August 2026" })).toBeDefined();
         expect(screen.queryByRole("tab", { name: "This month" })).toBeNull();
     });
 
-    it("drops the open-settlement tab on a past month and lands on the month", () => {
-        // There is exactly one open settlement and it is a "now" concept, so it
-        // is not offered under an August heading.
-        renderViews({ monthLabel: "August 2026", isCurrentMonth: false });
+    it("keeps the Open settlement tab on a past month, lands on the month, and says the month ended", () => {
+        // There is exactly one open cycle and it belongs to no month, so its
+        // tab is not a property of which month is selected.
+        renderViews({ monthLabel: "August 2026", monthPosition: "past" });
         expect(
-            screen.queryByRole("tab", { name: "Open settlement" }),
-        ).toBeNull();
+            screen.getByRole("tab", { name: "Open settlement" }),
+        ).toBeDefined();
         expect(
             screen
                 .getByRole("tab", { name: "August 2026" })
                 .getAttribute("aria-selected"),
         ).toBe("true");
-        expect(screen.getByText(/is a past month/i)).toBeDefined();
+        expect(screen.getByText(/August 2026 has ended/)).toBeDefined();
+        expect(screen.queryByText(/is a past month/i)).toBeNull();
     });
+
+    it("shows no notice and opens on Open settlement at initial mount for the current month", () => {
+        renderViews({ monthLabel: "July", monthPosition: "current" });
+        expect(
+            screen
+                .getByRole("tab", { name: "Open settlement" })
+                .getAttribute("aria-selected"),
+        ).toBe("true");
+        expect(screen.queryByText(/has ended/)).toBeNull();
+        expect(screen.queryByText(/has not started/)).toBeNull();
+    });
+
+    it("keeps the Open settlement tab on a future month, lands on the month, and never says the month is past", () => {
+        renderViews({ monthLabel: "December 2026", monthPosition: "future" });
+        expect(
+            screen.getByRole("tab", { name: "Open settlement" }),
+        ).toBeDefined();
+        expect(
+            screen
+                .getByRole("tab", { name: "December 2026" })
+                .getAttribute("aria-selected"),
+        ).toBe("true");
+        expect(screen.getByText(/December 2026 has not started/)).toBeDefined();
+        expect(screen.queryByText(/is a past month/i)).toBeNull();
+        expect(screen.queryByText(/has ended/)).toBeNull();
+    });
+
+    it("does not call a future month empty when rows are already dated to it", () => {
+        // A user can date an expense forward, so a future month can hold rows
+        // at the very moment its "has not started" notice renders.
+        renderViews({ monthLabel: "October 2026", monthPosition: "future" });
+        expect(
+            screen.getByText(
+                "October 2026 has not started. This is what is already dated to it — the open settlement is on its own tab.",
+            ),
+        ).toBeDefined();
+        expect(screen.getByText("Month groceries")).toBeDefined();
+    });
+
+    it.each<MonthPosition>(["past", "future"])(
+        "opens the Open settlement tab from a %s month to show the open journal rows",
+        (monthPosition) => {
+            renderViews({ monthLabel: "August 2026", monthPosition });
+            fireEvent.click(
+                screen.getByRole("tab", { name: "Open settlement" }),
+            );
+            expect(screen.getByText("Open groceries")).toBeDefined();
+            expect(screen.queryByText("Month groceries")).toBeNull();
+        },
+    );
 
     it("drops the row descriptor beside a settlement count", () => {
         renderViews({ history: [closedCycle] });

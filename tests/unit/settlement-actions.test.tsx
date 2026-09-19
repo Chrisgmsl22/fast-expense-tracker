@@ -25,7 +25,24 @@ import { SettlementActions } from "@/components/settlement/SettlementActions";
 import { pastMonthNotice } from "@/components/settlement/past-month-notice";
 
 describe("SettlementActions", () => {
-    it("renders both actions", () => {
+    it("opens the partner debt form at zero with the configured name", async () => {
+        render(
+            <SettlementActions
+                direction="settled"
+                netAmount={0}
+                partnerName="Alex"
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "+ Alex owes me" }));
+        const dialog = await screen.findByRole("dialog");
+        expect(
+            within(dialog).getByLabelText("What Alex owes you (MXN)"),
+        ).toBeDefined();
+        expect(
+            within(dialog).getByText(/It adds no expense, income, or payment/),
+        ).toBeDefined();
+    });
+    it("shows both debt actions and hides payment at zero", () => {
         render(
             <SettlementActions
                 direction="settled"
@@ -34,10 +51,13 @@ describe("SettlementActions", () => {
             />,
         );
         expect(
-            screen.getByRole("button", { name: "Log a transfer" }),
-        ).toBeDefined();
+            screen.queryByRole("button", { name: "Record payment" }),
+        ).toBeNull();
         expect(
             screen.getByRole("button", { name: /I owe Brenda/ }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: /Brenda owes me/ }),
         ).toBeDefined();
     });
 
@@ -49,7 +69,7 @@ describe("SettlementActions", () => {
                 partnerName="Brenda"
             />,
         );
-        fireEvent.click(screen.getByRole("button", { name: "Log a transfer" }));
+        fireEvent.click(screen.getByRole("button", { name: "Record payment" }));
 
         const dialog = await screen.findByRole("dialog");
         // she_owes → the settling transfer is her paying you (gf_received).
@@ -72,7 +92,7 @@ describe("SettlementActions", () => {
                 partnerName="Brenda"
             />,
         );
-        fireEvent.click(screen.getByRole("button", { name: "Log a transfer" }));
+        fireEvent.click(screen.getByRole("button", { name: "Record payment" }));
 
         const dialog = await screen.findByRole("dialog");
         expect(
@@ -111,7 +131,7 @@ describe("SettlementActions", () => {
                 pastMonthNotice={notice}
             />,
         );
-        fireEvent.click(screen.getByRole("button", { name: "Log a transfer" }));
+        fireEvent.click(screen.getByRole("button", { name: "Record payment" }));
 
         const dialog = await screen.findByRole("dialog");
         expect(within(dialog).getByText(notice)).toBeDefined();
@@ -141,7 +161,7 @@ describe("SettlementActions", () => {
                 partnerName="Brenda"
             />,
         );
-        fireEvent.click(screen.getByRole("button", { name: "Log a transfer" }));
+        fireEvent.click(screen.getByRole("button", { name: "Record payment" }));
 
         const dialog = await screen.findByRole("dialog");
         expect(within(dialog).queryByText(/You are viewing/)).toBeNull();

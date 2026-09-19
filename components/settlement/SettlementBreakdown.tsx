@@ -20,6 +20,7 @@ const labelsFor = (
     partnerName: string,
 ): Record<SettlementBreakdownKey, string> => ({
     partner_share: `${partnerName}'s 32% of shared expenses you logged`,
+    partner_debt: `Debts you logged as "${partnerName} owes me"`,
     your_debt: `Debts you logged as "I owe ${partnerName}"`,
     partner_paid: `Money ${partnerName} paid you`,
     you_paid: `Money you paid ${partnerName}`,
@@ -33,6 +34,7 @@ const SUBLABELS: Partial<Record<SettlementBreakdownKey, string>> = {
 // gold = you paid her, orange = a debt you owe (matches the journal key).
 const AMOUNT_CLASS: Record<SettlementBreakdownKey, string> = {
     partner_share: "text-positive",
+    partner_debt: "text-positive",
     your_debt: "text-debt",
     partner_paid: "text-positive",
     you_paid: "text-transfer",
@@ -42,7 +44,7 @@ const AMOUNT_CLASS: Record<SettlementBreakdownKey, string> = {
 const isZeroCents = (n: number): boolean => Math.abs(n) < 0.005;
 
 /**
- * "How this balance is made" — the four signed lines + the net (spec 0004 §3.1).
+ * "How this balance is made" — the five signed lines + the net (spec 0007).
  * Each line opens to the rows behind it; collapsed by default.
  */
 export function SettlementBreakdown({

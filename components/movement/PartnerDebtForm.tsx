@@ -14,6 +14,10 @@ import {
 } from "@/app/_actions/movement/update-partner-debt";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { PartnerDebtInput } from "@/lib/schemas/movement";
+import {
+    partnerDebtLabel,
+    type PartnerDebtDirection,
+} from "@/lib/domain/movement";
 
 /** Prefilled fields when the form edits an existing debt (strings for inputs). */
 export type PartnerDebtEditable = {
@@ -21,27 +25,31 @@ export type PartnerDebtEditable = {
     date: string;
     amount: string;
     note: string;
+    direction?: PartnerDebtDirection;
 };
 
 type Props = {
     /** When present, the form edits this debt instead of creating a new one. */
     debt?: PartnerDebtEditable;
+    direction?: PartnerDebtDirection;
     partnerName: string;
     onSuccess?: () => void;
     onCancel?: () => void;
 };
 
 /**
- * Log an "I owe {partner}" debt as a `Movement{type:"gf_fronted"}` — settlement
- * only, never in the budget, because a debt is provisional until money moves
- * (spec 0007 §6b). The amount is **what you owe**, not what she paid.
+ * Record a settlement-only debt in either direction (spec 0007). The amount is
+ * the full debt that the named person owes, never a purchase total to split.
  */
 export function PartnerDebtForm({
     debt,
+    direction = debt?.direction ?? "gf_fronted",
     partnerName,
     onSuccess,
     onCancel,
 }: Props) {
+    const partnerOwes = direction === "partner_debt";
+    const debtLabel = partnerDebtLabel(direction, partnerName);
     const [date, setDate] = useState(debt?.date ?? "");
     const [amount, setAmount] = useState(debt?.amount ?? "");
     const [note, setNote] = useState(debt?.note ?? "");
@@ -58,11 +66,13 @@ export function PartnerDebtForm({
                 const res: AddPartnerDebtResult | UpdatePartnerDebtResult = debt
                     ? await updatePartnerDebt({
                           id: debt.id,
+                          direction,
                           date,
                           amount,
                           note: note || undefined,
                       })
                     : await addPartnerDebt({
+                          direction,
                           date,
                           amount,
                           note: note || undefined,
@@ -100,12 +110,14 @@ export function PartnerDebtForm({
             className="flex flex-col gap-4"
             aria-label={
                 debt
-                    ? `Edit a debt you owe ${partnerName}`
-                    : `Log a debt you owe ${partnerName}`
+                    ? `Edit a debt ${partnerOwes ? `${partnerName} owes you` : `you owe ${partnerName}`}`
+                    : `Log a debt ${partnerOwes ? `${partnerName} owes you` : `you owe ${partnerName}`}`
             }
         >
             <p className="text-sm text-muted-foreground">
-                {`Something ${partnerName} fronted that you owe her back. Enter what YOU owe, not what she paid. This is settlement only — it does not touch your budget. The payment you make later is the expense.`}
+                {partnerOwes
+                    ? `Record money ${partnerName} owes you. Enter the full debt amount. This is settlement only. It adds no expense, income, or payment.`
+                    : `Something ${partnerName} fronted that you owe her back. Enter what YOU owe, not what she paid. This is settlement only — it does not touch your budget. The payment you make later is the expense.`}
             </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -124,7 +136,9 @@ export function PartnerDebtForm({
                 </div>
                 <div className="sm:col-span-2">
                     <Label htmlFor="debt-amount">
-                        {`What you owe ${partnerName} (MXN)`}
+                        {partnerOwes
+                            ? `What ${partnerName} owes you (MXN)`
+                            : `What you owe ${partnerName} (MXN)`}
                     </Label>
                     {/* The $500 carwash: he typed what SHE paid because the
                         question was ambiguous. Say whose figure this is, at the
@@ -133,7 +147,9 @@ export function PartnerDebtForm({
                         id="debt-amount-help"
                         className="mt-0.5 text-xs text-muted-foreground"
                     >
-                        Your share only — not what {partnerName} paid.
+                        {partnerOwes
+                            ? "The full debt amount — no split applies."
+                            : `Your share only — not what ${partnerName} paid.`}
                     </p>
                     <div className="relative mt-1.5">
                         <span
@@ -172,7 +188,7 @@ export function PartnerDebtForm({
                     id="debt-note"
                     name="note"
                     type="text"
-                    placeholder={`I owe ${partnerName}`}
+                    placeholder={debtLabel}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     className="mt-1.5"

@@ -22,7 +22,12 @@ import {
     partnerShareOf,
     partnerPaymentDescription,
 } from "@/lib/domain/expense";
-import { partnerShareTotal } from "@/lib/domain/movement";
+import {
+    isPartnerDebt,
+    partnerDebtLabel,
+    partnerShareTotal,
+    type PartnerDebtDirection,
+} from "@/lib/domain/movement";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import { settlementRepository, settingsRepository } from "@/lib/repositories";
 import type {
@@ -59,8 +64,9 @@ export type SettlementJournalItem = {
       }
     | {
           kind: "partner_debt";
+          direction: PartnerDebtDirection;
           description: string;
-          /** What you owe her for this row — the `-` it adds to the balance. */
+          /** Full positive debt amount; direction determines its balance sign. */
           amount: number;
           /**
            * Which table the row lives in. A debt and a payment are edited through
@@ -117,8 +123,8 @@ export type CycleOutcome =
 /** The four figures the closed-cycle footer shows (spec 0007 §6b, slice H). */
 export type ClosedCycleSummary = {
     /**
-     * Everything the cycle bought at full price — NO split applied. A debt contributes
-     * what it recorded, which is already his share.
+     * Everything the cycle bought at full price — NO split applied. Legacy debts
+     * he owes retain their recorded contribution. Her standalone debt adds no spend.
      */
     spentUnsplit: number;
     /** What you owed her across the cycle. */
@@ -144,7 +150,7 @@ export type ClosedSettlementCycle = {
 
 export type Settlement = {
     balance: CoupleBalance;
-    /** The rows behind each of the four breakdown lines (spec 0004 §3.1). */
+    /** The rows behind each of the five breakdown lines. */
     breakdownItems: SettlementBreakdownItems;
     /** The OPEN cycle's rows — everything entered since the last close. */
     journal: SettlementJournalItem[];
@@ -201,7 +207,7 @@ function withoutConvertedTwins(
 }
 
 /**
- * Net the four balance inputs from a set of window rows (spec 0004 §2.4). Spec 0007
+ * Net the five balance inputs from a set of window rows (spec 0007). Spec 0007
  * §6b reversed which table each side reads; the balance itself is unchanged.
  */
 function inputsFrom(
@@ -221,9 +227,11 @@ function inputsFrom(
     );
     let moneyPartnerPaidYou = 0;
     let yourDebtToPartner = 0;
+    let partnerDebtToYou = 0;
     for (const m of withoutConvertedTwins(movements, expenses)) {
         // A debt she fronted: settlement only (spec 0007 §6b).
         if (m.type === "gf_fronted") yourDebtToPartner += m.amount;
+        else if (m.type === "partner_debt") partnerDebtToYou += m.amount;
         else if (m.type === "gf_received") moneyPartnerPaidYou += m.amount;
         // LEGACY `gf_paid`: the conversion migration leaves this row behind on an
         // account with no `combined-expenses` category, so it is still counted here
@@ -234,6 +242,7 @@ function inputsFrom(
     return {
         partnerShareOfYourExpenses,
         yourDebtToPartner,
+        partnerDebtToYou,
         moneyPartnerPaidYou,
         moneyYouPaidPartner,
     };
@@ -460,7 +469,7 @@ function summarizeCycle(rows: SettlementRowsByLine): ClosedCycleSummary {
     return {
         spentUnsplit,
         youOwed: sum(rows.your_debt),
-        sheOwed: sum(rows.partner_share),
+        sheOwed: roundCents(sum(rows.partner_share) + sum(rows.partner_debt)),
         outcome: isZeroCents(net)
             ? { kind: "even" }
             : net > 0
@@ -470,8 +479,11 @@ function summarizeCycle(rows: SettlementRowsByLine): ClosedCycleSummary {
 }
 
 /** The debt row's label when it was logged without a note. */
-const debtDescription = (note: string | null, partnerName: string): string =>
-    note?.trim() || `I owe ${partnerName}`;
+const debtDescription = (
+    note: string | null,
+    partnerName: string,
+    direction: PartnerDebtDirection,
+): string => note?.trim() || partnerDebtLabel(direction, partnerName);
 
 /**
  * The transfer row's label when logged without a note. The outbound side defers to
@@ -564,6 +576,7 @@ function buildSettlementRows(
         movesSettlementBalance(e);
     const rows: SettlementRowsByLine = {
         partner_share: [],
+        partner_debt: [],
         your_debt: [],
         partner_paid: [],
         you_paid: [],
@@ -623,14 +636,16 @@ function buildSettlementRows(
                 cycleCloseAtOrAfter(closes, m.createdAt) !== null &&
                 movementMovesSettlementBalance(m.type),
         };
-        if (m.type === "gf_fronted") {
-            // A thing she fronted that you owe her — settlement's alone (spec 0007 §6b).
-            rows.your_debt.push({
+        if (isPartnerDebt(m.type)) {
+            // A debt in either direction belongs only to settlement (spec 0007).
+            const line =
+                m.type === "partner_debt" ? "partner_debt" : "your_debt";
+            rows[line].push({
                 ...base,
-                line: "your_debt",
+                line,
                 source: "movement",
                 fundedFrom: null,
-                description: debtDescription(m.note, partnerName),
+                description: debtDescription(m.note, partnerName, m.type),
                 note: m.note?.trim() || null,
             });
         } else if (m.type === "gf_received" || m.type === "gf_paid") {
@@ -652,6 +667,7 @@ function buildSettlementRows(
 
     return {
         partner_share: roundRowsToCents(rows.partner_share),
+        partner_debt: roundRowsToCents(rows.partner_debt),
         your_debt: roundRowsToCents(rows.your_debt),
         partner_paid: roundRowsToCents(rows.partner_paid),
         you_paid: roundRowsToCents(rows.you_paid),
@@ -659,7 +675,7 @@ function buildSettlementRows(
 }
 
 /**
- * The rows behind each of the four breakdown lines. Each line's rows sum to that
+ * The rows behind each of the five breakdown lines. Each line's rows sum to that
  * line's total, to the cent (spec 0004 §3.1).
  */
 function buildBreakdownItems(
@@ -680,6 +696,7 @@ function buildBreakdownItems(
     });
     return {
         partner_share: rows.partner_share.map(toItem),
+        partner_debt: rows.partner_debt.map(toItem),
         your_debt: rows.your_debt.map(toItem),
         partner_paid: rows.partner_paid.map(toItem),
         you_paid: rows.you_paid.map(toItem),
@@ -710,9 +727,11 @@ function buildJournal(
         });
     }
 
-    for (const row of rows.your_debt) {
+    for (const row of [...rows.your_debt, ...rows.partner_debt]) {
         items.push({
             kind: "partner_debt",
+            direction:
+                row.line === "partner_debt" ? "partner_debt" : "gf_fronted",
             id: row.id,
             date: row.date,
             carriedOver: isCarried(row.date),

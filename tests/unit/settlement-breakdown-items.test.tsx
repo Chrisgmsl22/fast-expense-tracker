@@ -346,6 +346,7 @@ describe("SettlementBreakdown disclosure", () => {
             },
         ],
         your_debt: [],
+        partner_debt: [],
         partner_paid: [],
         you_paid: [],
     };
@@ -402,7 +403,7 @@ describe("SettlementBreakdown disclosure", () => {
 
     it("shows a short note instead of an expandable region for an empty line", () => {
         renderIt();
-        expect(screen.getAllByText(/nothing this window/)).toHaveLength(3);
+        expect(screen.getAllByText(/nothing this window/)).toHaveLength(4);
         expect(
             screen.queryByRole("button", { name: /Money you paid Brenda/ }),
         ).toBeNull();
@@ -418,7 +419,7 @@ describe("SettlementBreakdown disclosure", () => {
         );
         // A non-zero total with no rows is an inconsistency, not an empty window.
         expect(screen.getByText(/no itemized rows/)).toBeDefined();
-        expect(screen.getAllByText(/nothing this window/)).toHaveLength(3);
+        expect(screen.getAllByText(/nothing this window/)).toHaveLength(4);
     });
 
     it("expands the same way when you owe her and when the balance is settled", () => {

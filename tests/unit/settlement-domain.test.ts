@@ -92,7 +92,7 @@ describe("computeCoupleBalance", () => {
         expect(r.balance).toBe(0.3);
     });
 
-    it("exposes the four signed breakdown lines", () => {
+    it("exposes the five signed breakdown lines", () => {
         const r = computeCoupleBalance(
             inputs({
                 partnerShareOfYourExpenses: 1000,
@@ -104,6 +104,7 @@ describe("computeCoupleBalance", () => {
         expect(r.breakdown).toEqual([
             { key: "partner_share", sign: "+", amount: 1000 },
             { key: "your_debt", sign: "-", amount: 300 },
+            { key: "partner_debt", sign: "+", amount: 0 },
             { key: "partner_paid", sign: "-", amount: 50 },
             { key: "you_paid", sign: "+", amount: 20 },
         ]);

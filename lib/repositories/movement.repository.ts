@@ -5,7 +5,7 @@ import {
     toTransferFundingSource,
     type TransferFundingSource,
 } from "@/lib/domain/funding";
-import type { MovementType } from "@/lib/domain/movement";
+import { PARTNER_DEBT_TYPES, type MovementType } from "@/lib/domain/movement";
 import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
 import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 
@@ -95,13 +95,13 @@ export class PrismaMovementRepository implements MovementRepository {
         const { start, end } = getMonthRangeUtc(month);
         const [rows, closes] = await Promise.all([
             this.db.movement.findMany({
-                // `gf_fronted` is EXCLUDED: a debt she fronted is settlement-only and
+                // Both debt types are EXCLUDED: debts are settlement-only and
                 // provisional (spec 0007 §6b). Filtered at the QUERY, not at render —
                 // a row that never arrives cannot be forgotten by a view written later.
                 where: {
                     userId,
                     date: { gte: start, lt: end },
-                    type: { not: "gf_fronted" },
+                    type: { notIn: [...PARTNER_DEBT_TYPES] },
                 },
                 orderBy: { date: "desc" },
                 select: {
@@ -133,30 +133,30 @@ export class PrismaMovementRepository implements MovementRepository {
         userId: string,
         id: string,
     ): Promise<MovementEditable | null> {
-        const row = await this.db.movement.findFirst({
-            where: { id, userId },
-            select: {
-                id: true,
-                date: true,
-                amount: true,
-                type: true,
-                cardId: true,
-                note: true,
-                fundedFrom: true,
-                closedAt: true,
-                createdAt: true,
-            },
-        });
+        const [row, closes] = await Promise.all([
+            this.db.movement.findFirst({
+                where: { id, userId },
+                select: {
+                    id: true,
+                    date: true,
+                    amount: true,
+                    type: true,
+                    cardId: true,
+                    note: true,
+                    fundedFrom: true,
+                    closedAt: true,
+                    createdAt: true,
+                },
+            }),
+            getCycleCloses(this.db, userId),
+        ]);
         if (!row) return null;
         const { createdAt, ...editable } = row;
         return {
             ...editable,
             type: editable.type as MovementType,
             fundedFrom: toTransferFundingSource(editable.fundedFrom),
-            cycleClosedAt: cycleCloseAtOrAfter(
-                await getCycleCloses(this.db, userId),
-                createdAt,
-            ),
+            cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
         };
     }
 

@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { isBalanceSettled } from "@/lib/domain/settlement";
 import { settingsRepository } from "@/lib/repositories";
 import { getSettlement } from "@/lib/services/settlement/settlement.service";
+import { IdleSessionGuard } from "@/components/auth/IdleSessionGuard";
 import { AppNav } from "@/components/nav/AppNav";
 
 // The proxy route gate guarantees a session here; the email is a "who am I"
@@ -33,14 +34,20 @@ export default async function DashboardLayout({
     }
 
     return (
-        <div className="flex min-h-screen flex-col">
-            <header className="border-b">
-                <AppNav
-                    email={session?.user?.email ?? undefined}
-                    showSettlement={showSettlement}
-                />
-            </header>
-            {children}
-        </div>
+        <IdleSessionGuard
+            key={session?.idleSessionId}
+            idleExpiresAt={session?.idleExpiresAt}
+            idleSessionId={session?.idleSessionId}
+        >
+            <div className="flex min-h-screen flex-col">
+                <header className="border-b">
+                    <AppNav
+                        email={session?.user?.email ?? undefined}
+                        showSettlement={showSettlement}
+                    />
+                </header>
+                {children}
+            </div>
+        </IdleSessionGuard>
     );
 }
