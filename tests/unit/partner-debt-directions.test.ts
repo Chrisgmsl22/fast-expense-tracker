@@ -16,28 +16,35 @@ const input = { date: "2026-09-10", amount: "100", direction: "partner_debt" };
 describe("debts in both directions", () => {
     beforeEach(() => authMock.mockResolvedValue({ user: { id: "u1" } }));
 
-    it("excludes both debts from ordinary feeds, charged totals, and budget totals", () => {
-        const debts = (["gf_fronted", "partner_debt"] as const).map((type) => ({
-            id: type,
-            type,
-            amount: 100,
-            date: new Date("2026-09-10T06:00:00Z"),
-            card: null,
-            note: null,
-            fundedFrom: "income" as const,
-            closedAt: null,
-            cycleClosedAt: null,
-        }));
-        expect(buildFeed([], debts)).toEqual([]);
-        expect(computeFeedTotals([], debts)).toMatchObject({
-            charged: 0,
-            whatIReallySpent: 0,
-            setAside: 0,
-            paidToPartner: 0,
-            total: 0,
-        });
-        expect(canCloseCycle("partner_debt")).toBe(false);
-    });
+    it.each(["income", "savings"] as const)(
+        "excludes both %s-funded debts from ordinary feeds, charged totals, and budget totals",
+        (fundedFrom) => {
+            const debts = (["gf_fronted", "partner_debt"] as const).map(
+                (type) => ({
+                    id: type,
+                    type,
+                    amount: 100,
+                    date: new Date("2026-09-10T06:00:00Z"),
+                    card: null,
+                    note: null,
+                    fundedFrom,
+                    closedAt: null,
+                    cycleClosedAt: null,
+                }),
+            );
+            expect(buildFeed([], debts)).toEqual([]);
+            expect(computeFeedTotals([], debts)).toMatchObject({
+                charged: { amount: 0 },
+                whatIReallySpent: { amount: 0 },
+                setAside: 0,
+                notFromIncome: { amount: 0 },
+                paidToPartner: { amount: 0 },
+                partnerPaidYou: 0,
+                total: 0,
+            });
+            expect(canCloseCycle("partner_debt")).toBe(false);
+        },
+    );
 
     it("rejects edits and deletes after the debt's cycle closes", async () => {
         const repo = new FakeMovementRepository();

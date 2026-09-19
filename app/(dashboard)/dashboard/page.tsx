@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
+import { getCurrentMonthCdmx } from "@/lib/dates";
+import { getScopedMonth } from "@/lib/month-scope.server";
+import { formatMonthLabel } from "@/lib/format";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import {
     expenseRepository,
@@ -16,6 +18,7 @@ import { MonthFeed } from "@/components/dashboard/MonthFeed";
 import { SpendByCard } from "@/components/dashboard/SpendByCard";
 import { SpendRadar } from "@/components/dashboard/SpendRadar";
 import { StatStrip } from "@/components/dashboard/StatStrip";
+import { SavingsSpendCard } from "@/components/dashboard/SavingsSpendCard";
 
 // Per-request, DB-backed data — never prerender at build (no DB in preview builds, ADR-0004).
 export const dynamic = "force-dynamic";
@@ -26,10 +29,8 @@ export default async function DashboardPage({
     searchParams: Promise<{ month?: string }>;
 }) {
     const { month: monthParam } = await searchParams;
-    const month =
-        monthParam && isValidMonth(monthParam)
-            ? monthParam
-            : getCurrentMonthCdmx();
+    const month = await getScopedMonth(monthParam);
+    const currentMonth = getCurrentMonthCdmx();
 
     const session = await auth();
     const userId = session?.user?.id;
@@ -74,17 +75,13 @@ export default async function DashboardPage({
     const partnerName = resolvePartnerName(settings.partnerName);
     const { sharesExpenses } = settings;
 
-    // "2026-06" → "June 2026" (UTC: a calendar month, not a timestamp to shift).
-    const monthLabel = new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-    }).format(new Date(`${month}-01T12:00:00Z`));
+    const monthLabel = formatMonthLabel(month);
 
     return (
         <main className="p-4 sm:p-6 lg:p-8">
             <DashboardTopbar
                 month={month}
+                currentMonth={currentMonth}
                 monthLabel={monthLabel}
                 incomeTotal={summary.income.total}
                 sharePercentage={sharePercentage}
@@ -98,6 +95,13 @@ export default async function DashboardPage({
                 {/* Main column */}
                 <div className="space-y-4">
                     <BucketsHero buckets={summary.buckets} />
+                    <SavingsSpendCard
+                        expenses={expenses}
+                        movements={movements}
+                        monthLabel={monthLabel}
+                        partnerName={partnerName}
+                        incomeTotal={summary.income.total}
+                    />
                     <div className="grid gap-4 lg:grid-cols-3">
                         <div className="lg:col-span-2">
                             <SpendRadar categories={summary.topCategories} />
@@ -127,6 +131,8 @@ export default async function DashboardPage({
                         settlement={settlement.balance}
                         partnerName={partnerName}
                         sharesExpenses={sharesExpenses}
+                        isCurrentMonth={month === currentMonth}
+                        incomeTotal={summary.income.total}
                     />
                 </aside>
             </div>

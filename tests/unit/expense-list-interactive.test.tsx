@@ -58,6 +58,7 @@ import { deleteExpense } from "@/app/_actions/expense/delete";
 import { deleteMovement } from "@/app/_actions/movement/delete";
 import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
 import { getMovementForEdit } from "@/app/_actions/movement/get-for-edit";
+import type { CoupleBalance } from "@/lib/domain/settlement";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
 
 beforeEach(() => {
@@ -150,6 +151,8 @@ const props = {
     defaultSharePercentage: 0.68,
     partnerName: "Brenda",
     sharesExpenses: true,
+    monthLabel: "May 2026",
+    isCurrentMonth: true,
 };
 
 describe("ExpenseListInteractive", () => {
@@ -474,12 +477,40 @@ describe("ExpenseListInteractive", () => {
         expect(screen.getByText("Card payment")).toBeDefined();
         expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = screen.getByTestId("totals-desktop");
-        expect(within(totals).getByText("Paid to Brenda")).toBeDefined();
-        expect(within(totals).getByText("$600.00")).toBeDefined();
+        // Two shapes of the same kind of event, each on its own line: the payment
+        // inside what I really spent, the legacy transfer beside it. $600 would
+        // state one of them twice.
+        expect(
+            within(totals).getByText("of which paid to Brenda"),
+        ).toBeDefined();
+        expect(within(totals).getByText("Transfers to Brenda")).toBeDefined();
+        expect(within(totals).getAllByText("$300.00")).toHaveLength(2);
+        expect(within(totals).queryByText("$600.00")).toBeNull();
         // Consumption ($1,436 = the expenses, payment included) plus the legacy
         // transfer's cash. The legacy $300 never joins a consumption figure.
         expect(within(totals).getByText("$1,436.00")).toBeDefined();
         expect(within(totals).getByText("$1,736.00")).toBeDefined();
+    });
+
+    it("qualifies the Total on BOTH strip surfaces, not just the rail", () => {
+        // The legacy transfer is what makes a Total render at all: without an
+        // addend it would only restate "what I really spent" and is suppressed.
+        // Savings-funded money can be excluded from this figure, so a bare
+        // "Total" would not reconcile with the rows printed above it.
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+
+        const qualified = "Total — out of this month's income";
+        expect(
+            within(screen.getByTestId("totals-desktop")).getByText(qualified),
+        ).toBeDefined();
+        expect(
+            within(screen.getByTestId("totals-mobile")).getByText(qualified),
+        ).toBeDefined();
     });
 
     it("badges a savings-funded transfer and drops it from 'Paid to Brenda'", () => {
@@ -503,18 +534,22 @@ describe("ExpenseListInteractive", () => {
         expect(screen.getByText("Paid Brenda")).toBeDefined();
         expect(screen.getAllByText("from savings").length).toBeGreaterThan(0);
         const totals = screen.getByTestId("totals-desktop");
-        expect(within(totals).queryByText("Paid to Brenda")).toBeNull();
+        expect(within(totals).queryByText("Transfers to Brenda")).toBeNull();
         // Its own cash line — the consumption line stays out of it.
         expect(
-            within(totals).getByText("of which paid to Brenda"),
+            within(totals).getByText("Transfers to Brenda (not from income)"),
         ).toBeDefined();
         expect(within(totals).getByText("$8,000.00")).toBeDefined();
         expect(
             within(totals).queryByText("Not from this month's income"),
         ).toBeNull();
-        // The mobile bar carries the short form of the same line.
+        // The mobile bar carries a short form that claims NO containment: this
+        // money is in no line above it, and "of which" would say it is.
         const mobile = screen.getByTestId("totals-mobile");
-        expect(within(mobile).getByText("of which to partner")).toBeDefined();
+        expect(
+            within(mobile).getByText("To Brenda (other money)"),
+        ).toBeDefined();
+        expect(within(mobile).queryByText("of which to Brenda")).toBeNull();
     });
 
     it("names savings-funded PAYMENTS on that same line (BUG-5)", () => {
@@ -546,9 +581,69 @@ describe("ExpenseListInteractive", () => {
             0,
         );
         // A breakdown: no income-funded money reached her this month.
-        expect(within(totals).queryByText("Paid to Brenda")).toBeNull();
+        expect(within(totals).queryByText("Transfers to Brenda")).toBeNull();
         const mobile = screen.getByTestId("totals-mobile");
-        expect(within(mobile).getByText("of which to partner")).toBeDefined();
+        expect(within(mobile).getByText("of which to Brenda")).toBeDefined();
+    });
+
+    it("gives every 'of which' in the pinned mobile bar a parent above it", () => {
+        // The bar is the narrowest surface and the only one read whole here: a
+        // savings-funded PAYMENT (a breakdown of the line above) beside a
+        // savings-funded TRANSFER (money no line above holds).
+        const payment = {
+            ...expenses[0]!,
+            id: "p1",
+            description: "Settled up",
+            amount: 530,
+            actualExpenditure: 530,
+            isShared: false,
+            isPartnerPayment: true,
+            fundedFrom: "savings" as const,
+            card: null,
+        };
+        const ownSavingsSpend = {
+            ...expenses[1]!,
+            id: "s1",
+            description: "Shoes",
+            amount: 250,
+            actualExpenditure: 250,
+            fundedFrom: "savings" as const,
+        };
+        const transfer: MovementListItem[] = [
+            {
+                ...movements[1]!,
+                id: "mv9",
+                amount: 8000,
+                fundedFrom: "savings",
+            },
+        ];
+        render(
+            <ExpenseListInteractive
+                expenses={[expenses[0]!, payment, ownSavingsSpend]}
+                {...{ ...props, movements: transfer }}
+            />,
+        );
+
+        const mobile = screen.getByTestId("totals-mobile");
+        // One "of which", not two: only the payment is inside a line above.
+        expect(within(mobile).getAllByText("of which to Brenda")).toHaveLength(
+            1,
+        );
+        // The child renders INSIDE its parent's span, so the containment it
+        // claims is the containment the DOM has.
+        const parent = within(mobile)
+            .getByText("Not from income")
+            .closest("span")!;
+        // 780 of other money, of which 530 reached her — a whole and its part.
+        expect(within(parent).getByText("$780.00")).toBeDefined();
+        expect(within(parent).getByText("of which to Brenda")).toBeDefined();
+        expect(within(parent).getByText("$530.00")).toBeDefined();
+        expect(within(parent).queryByText("$8,000.00")).toBeNull();
+        // …and the transfer stands on its own, claiming nothing.
+        expect(
+            within(mobile).getByText("To Brenda (other money)"),
+        ).toBeDefined();
+        expect(within(mobile).getByText("$8,000.00")).toBeDefined();
     });
 
     it("omits the savings line when no money reached her that way", () => {
@@ -563,8 +658,10 @@ describe("ExpenseListInteractive", () => {
         expect(
             within(totals).queryByText("of which paid to Brenda"),
         ).toBeNull();
+        // The live short label, not a string this branch deleted: an absence
+        // assertion against a dead constant can never fail.
         const mobile = screen.getByTestId("totals-mobile");
-        expect(within(mobile).queryByText("of which to partner")).toBeNull();
+        expect(within(mobile).queryByText("of which to Brenda")).toBeNull();
     });
 
     it("hides movements when a category filter is active (they have no category)", () => {
@@ -789,6 +886,130 @@ describe("ExpenseListInteractive", () => {
             render(<ExpenseListInteractive expenses={expenses} {...props} />);
             expect(screen.queryByText("from savings")).toBeNull();
             expect(screen.queryByText("reimbursed")).toBeNull();
+        });
+    });
+
+    describe("the unsettled-balance reminder (CHORE-19)", () => {
+        const balance = (
+            direction: CoupleBalance["direction"],
+            amount: number,
+        ): CoupleBalance => ({
+            balance: direction === "you_owe" ? -amount : amount,
+            amount,
+            direction,
+            breakdown: [],
+        });
+
+        it("says who owes whom, how much, and links to the settlement", () => {
+            render(
+                <ExpenseListInteractive
+                    expenses={expenses}
+                    {...props}
+                    settlement={balance("you_owe", 1250)}
+                />,
+            );
+
+            // One reminder per chin — the desktop bar and the pinned mobile one.
+            const links = screen.getAllByRole("link");
+            expect(links).toHaveLength(2);
+            for (const link of links) {
+                expect(link.getAttribute("href")).toBe("/settlement");
+                expect(within(link).getByText("You owe Brenda")).toBeDefined();
+                expect(within(link).getByText("$1,250.00")).toBeDefined();
+            }
+        });
+
+        it("reads the other way round when she owes you", () => {
+            render(
+                <ExpenseListInteractive
+                    expenses={expenses}
+                    {...props}
+                    settlement={balance("she_owes", 430)}
+                />,
+            );
+
+            const link = screen.getAllByRole("link")[0]!;
+            expect(within(link).getByText("Brenda owes you")).toBeDefined();
+            expect(within(link).getByText("$430.00")).toBeDefined();
+        });
+
+        it("stays calm when nothing is outstanding", () => {
+            render(
+                <ExpenseListInteractive
+                    expenses={expenses}
+                    {...props}
+                    settlement={balance("settled", 0)}
+                />,
+            );
+
+            const link = screen.getAllByRole("link")[0]!;
+            expect(within(link).getByText("All settled")).toBeDefined();
+            expect(within(link).queryByText("$0.00")).toBeNull();
+        });
+
+        it("renders nothing in solo mode — there is nobody to settle with", () => {
+            render(
+                <ExpenseListInteractive
+                    expenses={expenses}
+                    {...props}
+                    sharesExpenses={false}
+                    settlement={balance("you_owe", 1250)}
+                />,
+            );
+
+            expect(screen.queryByRole("link")).toBeNull();
+        });
+
+        it("renders nothing when no balance is passed", () => {
+            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            expect(screen.queryByRole("link")).toBeNull();
+        });
+
+        it("survives an empty month, which has no chin to sit on", () => {
+            render(
+                <ExpenseListInteractive
+                    expenses={[]}
+                    {...props}
+                    settlement={balance("you_owe", 1250)}
+                />,
+            );
+
+            expect(
+                screen.getByText(/nothing logged for this month/i),
+            ).toBeDefined();
+            const link = screen.getByRole("link");
+            expect(link.getAttribute("href")).toBe("/settlement");
+            expect(within(link).getByText("You owe Brenda")).toBeDefined();
+        });
+
+        it("names its scope on any month but the live one", () => {
+            // Every other figure in this chin is the viewed month, and the month
+            // picker sits above it — unqualified, March reads as March's debt.
+            render(
+                <ExpenseListInteractive
+                    expenses={expenses}
+                    {...props}
+                    monthLabel="March 2026"
+                    isCurrentMonth={false}
+                    settlement={balance("you_owe", 1250)}
+                />,
+            );
+
+            expect(
+                screen.getAllByText("The open settlement — not March 2026."),
+            ).toHaveLength(2);
+        });
+
+        it("stays quiet about the scope on the current month", () => {
+            render(
+                <ExpenseListInteractive
+                    expenses={expenses}
+                    {...props}
+                    settlement={balance("you_owe", 1250)}
+                />,
+            );
+
+            expect(screen.queryByText(/The open settlement/)).toBeNull();
         });
     });
 });

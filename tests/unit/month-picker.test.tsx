@@ -66,15 +66,41 @@ describe("MonthPicker", () => {
         expect(document.cookie).not.toContain("fet_scoped_month=2026-08");
     });
 
-    it("offers 'This month' only while looking at another month", () => {
+    it("offers the back-to-current button only while looking at another month", () => {
         const { rerender } = render(
             <MonthPicker month="2026-08" currentMonth="2026-09" />,
         );
-        const back = screen.getByRole("button", { name: "This month" });
+        const back = screen.getByRole("button", {
+            name: "Take me back to the current month",
+        });
         fireEvent.click(back);
         expect(pushMock).toHaveBeenCalledWith("/expenses?month=2026-09");
 
         rerender(<MonthPicker month="2026-09" currentMonth="2026-09" />);
-        expect(screen.queryByRole("button", { name: "This month" })).toBeNull();
+        expect(
+            screen.queryByRole("button", {
+                name: "Take me back to the current month",
+            }),
+        ).toBeNull();
+    });
+
+    it("offers no back-to-current button when the page supplies no clock", () => {
+        render(<MonthPicker month="2026-08" />);
+        expect(
+            screen.queryByRole("button", { name: /take me back/i }),
+        ).toBeNull();
+    });
+
+    it("gives the back-to-current button a filled background, not text styling", () => {
+        // The owner reported it read as a label; ghost has no background.
+        render(<MonthPicker month="2026-08" currentMonth="2026-09" />);
+        const back = screen.getByRole("button", { name: /take me back/i });
+        expect(back.className).toContain("bg-secondary");
+    });
+
+    it("remembers the month when the back-to-current button is used", () => {
+        render(<MonthPicker month="2026-08" remember currentMonth="2026-09" />);
+        fireEvent.click(screen.getByRole("button", { name: /take me back/i }));
+        expect(document.cookie).toContain("fet_scoped_month=2026-09");
     });
 });

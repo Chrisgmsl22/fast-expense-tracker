@@ -6,6 +6,7 @@ import {
     type FeedTotalMovement,
 } from "@/lib/domain/movement";
 import { BUDGET_FUNDING_FILTER } from "@/lib/domain/funding";
+import { otherMoneyThatLeft } from "@/components/money/summary-model";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /**
@@ -129,10 +130,10 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
         expect(expensesTab).toEqual(dashboard);
         // Pinned against the fixtures, so a silently-broken helper can't make
         // both sides equally wrong: only e1 is income-funded consumption.
-        expect(dashboard.whatIReallySpent).toBe(680);
-        expect(dashboard.paidToPartner).toBe(700);
-        expect(dashboard.notFromIncome).toBe(3000 + 800);
-        expect(dashboard.notFromIncomeTransfers).toBe(250);
+        expect(dashboard.whatIReallySpent.amount).toBe(680);
+        expect(dashboard.paidToPartner.of.fromIncome.amount).toBe(700);
+        expect(dashboard.notFromIncome.amount).toBe(3000 + 800);
+        expect(dashboard.paidToPartner.of.notFromIncome.amount).toBe(250);
     });
 
     it("differs under a category chip, and only in the ways the filter implies", () => {
@@ -141,20 +142,19 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
         const shoppingOnly = expensesTabTotals(month, movements, "c1");
 
         // The health row is filtered out of the consumption figures…
-        expect(shoppingOnly.charged).toBe(1000 + 3000);
-        expect(shoppingOnly.whatIReallySpent).toBe(680);
-        expect(shoppingOnly.notFromIncome).toBe(3000);
+        expect(shoppingOnly.charged.amount).toBe(1000 + 3000);
+        expect(shoppingOnly.whatIReallySpent.amount).toBe(680);
+        expect(shoppingOnly.notFromIncome.amount).toBe(3000);
         // …and both transfer figures go to zero, because the chip hides the
         // movements themselves. This is the deliberate difference: the tab is
         // answering "this category", not "this month".
-        expect(shoppingOnly.paidToPartner).toBe(0);
-        expect(shoppingOnly.notFromIncomeTransfers).toBe(0);
+        expect(shoppingOnly.paidToPartner.amount).toBe(0);
         expect(shoppingOnly.total).toBe(680);
 
         expect(shoppingOnly).not.toEqual(dashboard);
         // The dashboard is untouched by the other screen's filter.
-        expect(dashboard.paidToPartner).toBe(700);
-        expect(dashboard.notFromIncome).toBe(3800);
+        expect(dashboard.paidToPartner.of.fromIncome.amount).toBe(700);
+        expect(dashboard.notFromIncome.amount).toBe(3800);
     });
 
     it("keeps the two ledgers apart on both screens", () => {
@@ -164,9 +164,9 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
             dashboardTotals(month, movements),
             expensesTabTotals(month, movements, null),
         ]) {
-            expect(totals.paidToPartner).toBe(700);
-            expect(totals.notFromIncomeTransfers).toBe(250);
-            expect(totals.notFromIncome).toBe(3800);
+            expect(totals.paidToPartner.of.fromIncome.amount).toBe(700);
+            expect(totals.paidToPartner.of.notFromIncome.amount).toBe(250);
+            expect(totals.notFromIncome.amount).toBe(3800);
         }
     });
 
@@ -178,21 +178,21 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
             0,
         );
 
-        expect(totals.whatIReallySpent).toBe(680);
-        expect(totals.whatIReallySpent).toBe(bucketSum);
+        expect(totals.whatIReallySpent.amount).toBe(680);
+        expect(totals.whatIReallySpent.amount).toBe(bucketSum);
     });
 
     it("keeps the excluded money visible and reconcilable", () => {
         const totals = computeFeedTotals(month, []);
 
         // Charged stays source-agnostic — every charge, at full value.
-        expect(totals.charged).toBe(1000 + 3000 + 800);
+        expect(totals.charged.amount).toBe(1000 + 3000 + 800);
         // The excluded my-share is surfaced, not hidden.
-        expect(totals.notFromIncome).toBe(3000 + 800);
+        expect(totals.notFromIncome.amount).toBe(3000 + 800);
         // And the three reconcile: nothing fell off the edge.
-        expect(totals.whatIReallySpent + totals.notFromIncome).toBe(
-            680 + 3000 + 800,
-        );
+        expect(
+            totals.whatIReallySpent.amount + totals.notFromIncome.amount,
+        ).toBe(680 + 3000 + 800);
     });
 
     describe("a savings-CATEGORY expense funded from savings", () => {
@@ -217,9 +217,9 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
             const totals = computeFeedTotals([savingsRow], []);
 
             expect(totals.setAside).toBe(0);
-            expect(totals.notFromIncome).toBe(5000);
+            expect(totals.notFromIncome.amount).toBe(5000);
             // It is a transfer, so it never enters `charged` either.
-            expect(totals.charged).toBe(0);
+            expect(totals.charged.amount).toBe(0);
             expect(totals.total).toBe(0);
         });
 
@@ -230,7 +230,7 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
             );
 
             expect(totals.setAside).toBe(5000);
-            expect(totals.notFromIncome).toBe(0);
+            expect(totals.notFromIncome.amount).toBe(0);
         });
     });
 
@@ -242,7 +242,7 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
             { id: "m2", type: "gf_fronted", amount: 450, fundedFrom: "income" },
         ]);
 
-        expect(totals.paidToPartner).toBe(700);
+        expect(totals.paidToPartner.amount).toBe(700);
         expect(totals.total).toBe(680 + 0 + 700);
     });
 
@@ -253,54 +253,94 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
             { id: "m1", type: "gf_paid", amount: 700, fundedFrom: "savings" },
         ]);
 
-        expect(totals.paidToPartner).toBe(0);
+        expect(totals.paidToPartner.of.fromIncome.amount).toBe(0);
         expect(totals.total).toBe(680);
         // Two excluded figures, each in its own ledger, reported separately.
-        expect(totals.notFromIncome).toBe(3000 + 800); // consumption
-        expect(totals.notFromIncomeTransfers).toBe(700); // cash
+        expect(totals.notFromIncome.amount).toBe(3000 + 800); // consumption
+        expect(
+            totals.paidToPartner.of.notFromIncome.of.fromLegacyTransfers,
+        ).toBe(700); // cash
     });
 
     describe("the two ledgers are never summed (spec 0007 §6a)", () => {
-        // The §6a flow: she fronts a $680 dinner, he settles it later with a
-        // $680 transfer, both from savings. Any single figure showing $1,360
-        // double-counts.
-        const fronted = expense({
+        // A $680 savings-funded purchase and a $680 savings-funded transfer, the
+        // shape §6a was written about. No FIELD may merge them: they belong to
+        // different ledgers, and one figure showing $1,360 would read as a double
+        // count of a single event.
+        const savingsPurchase = expense({
             id: "f1",
-            description: "Dinner she fronted",
+            description: "Shoes, from savings",
             amount: 680,
             actualExpenditure: 680,
             fundedFrom: "savings",
         });
-        const settling = {
+        const savingsTransfer = {
             id: "m1",
             type: "gf_paid" as const,
             amount: 680,
             fundedFrom: "savings" as const,
         };
 
-        it("reports the dinner and the transfer as two separate figures", () => {
-            const totals = computeFeedTotals([fronted], [settling]);
+        it("reports the purchase and the transfer as two separate figures", () => {
+            const totals = computeFeedTotals(
+                [savingsPurchase],
+                [savingsTransfer],
+            );
 
-            expect(totals.notFromIncome).toBe(680);
-            expect(totals.notFromIncomeTransfers).toBe(680);
+            expect(totals.notFromIncome.amount).toBe(680);
+            expect(
+                totals.paidToPartner.of.notFromIncome.of.fromLegacyTransfers,
+            ).toBe(680);
         });
 
-        it("shows $680 twice as two lines, and $1,360 nowhere", () => {
-            const totals = computeFeedTotals([fronted], [settling]);
+        it("shows $680 twice as two lines, and $1,360 in no field", () => {
+            const totals = computeFeedTotals(
+                [savingsPurchase],
+                [savingsTransfer],
+            );
 
-            // Every figure the footer can print, checked against the sum that
-            // would mean one dinner got billed twice.
-            for (const figure of Object.values(totals)) {
-                expect(figure).not.toBe(1360);
-            }
+            // EVERY figure the footer can print, parents and parts alike, checked
+            // against the sum that would merge the two ledgers.
+            const figures = everyFigure(totals);
+            expect(figures.length).toBeGreaterThan(9);
+            for (const figure of figures) expect(figure).not.toBe(1360);
         });
 
-        it("keeps both out of the cash total", () => {
-            const totals = computeFeedTotals([fronted], [settling]);
+        it("lets the savings POT hold both, because they are different money", () => {
+            // The one figure that deliberately spans them (spec 0007 §6a
+            // carve-out): a fronted debt is never an expense, so these $680s can
+            // only be two separate outflows — a purchase and a transfer. The modal
+            // prints this headline itemised into both halves, never bare; see
+            // month-breakdown.test.tsx, "names both halves of a savings pot".
+            const totals = computeFeedTotals(
+                [savingsPurchase],
+                [savingsTransfer],
+            );
 
-            expect(totals.whatIReallySpent).toBe(0);
-            expect(totals.paidToPartner).toBe(0);
+            expect(otherMoneyThatLeft(totals)).toBe(1360);
+            // …and it is the ONLY figure of the two that may: the income pot,
+            // asking the same question of this month's income, stays at zero.
+            expect(totals.total).toBe(0);
+        });
+
+        it("keeps both out of the income figures and the total", () => {
+            const totals = computeFeedTotals(
+                [savingsPurchase],
+                [savingsTransfer],
+            );
+
+            expect(totals.whatIReallySpent.amount).toBe(0);
+            expect(totals.paidToPartner.of.fromIncome.amount).toBe(0);
             expect(totals.total).toBe(0);
         });
     });
 });
+
+/** Every number in the nested totals, so a new field joins the guard by default. */
+function everyFigure(value: unknown): number[] {
+    if (typeof value === "number") return [value];
+    if (value && typeof value === "object") {
+        return Object.values(value).flatMap(everyFigure);
+    }
+    return [];
+}

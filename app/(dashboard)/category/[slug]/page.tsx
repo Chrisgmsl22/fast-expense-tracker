@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
-import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
+import { getScopedMonth } from "@/lib/month-scope.server";
+import { formatMonthLabel } from "@/lib/format";
 import { getCategoryDetail } from "@/lib/services/category/category.service";
 import { CategoryDetailHeader } from "@/components/category/CategoryDetailHeader";
 import { CategoryExpenses } from "@/components/category/CategoryExpenses";
@@ -20,10 +21,7 @@ export default async function CategoryDetailPage({
 }) {
     const { slug } = await params;
     const { month: monthParam } = await searchParams;
-    const month =
-        monthParam && isValidMonth(monthParam)
-            ? monthParam
-            : getCurrentMonthCdmx();
+    const month = await getScopedMonth(monthParam);
 
     const session = await auth();
     const userId = session?.user?.id;
@@ -38,12 +36,7 @@ export default async function CategoryDetailPage({
         notFound();
     }
 
-    // "2026-06" → "June 2026" (UTC: a calendar month, not a timestamp to shift).
-    const monthLabel = new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-    }).format(new Date(`${month}-01T12:00:00Z`));
+    const monthLabel = formatMonthLabel(month);
 
     return (
         <main className="mx-auto max-w-3xl p-6 lg:p-8">

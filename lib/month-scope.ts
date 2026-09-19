@@ -30,9 +30,11 @@ export function resolveMonth({ param, stored, now }: MonthSources): string {
 }
 
 /**
- * The `document.cookie` string that remembers a month. `SameSite=Lax` because this is
- * a navigation preference, not a credential.
+ * The `document.cookie` string that remembers a month, or null for anything that is
+ * not one: the value is interpolated into a cookie, so it is checked where it is
+ * WRITTEN, not only where it is read back. `SameSite=Lax` — a preference, not a credential.
  */
-export function monthCookieString(month: string): string {
+export function monthCookieString(month: string): string | null {
+    if (!isValidMonth(month)) return null;
     return `${MONTH_COOKIE}=${month}; path=/; SameSite=Lax`;
 }

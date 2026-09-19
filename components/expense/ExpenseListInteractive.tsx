@@ -7,12 +7,9 @@ import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { movesSettlementBalance } from "@/lib/domain/expense";
 import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
 import {
-    NON_INCOME_FUNDED_LABEL,
-    NON_INCOME_FUNDED_SHORT_LABEL,
-    NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL,
-    nonIncomeFundedTransferLabel,
-} from "@/lib/domain/funding";
-import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
+    movementMovesSettlementBalance,
+    type CoupleBalance,
+} from "@/lib/domain/settlement";
 import { FundingBadge } from "./FundingBadge";
 import { buildFeed } from "@/lib/feed";
 import { expenseCardLabel } from "@/lib/expense-display";
@@ -21,7 +18,8 @@ import {
     movementRowText,
 } from "@/components/movement/movement-display";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
-import { TotalsBar } from "@/components/money/TotalsBar";
+import { SettlementReminder } from "@/components/money/SettlementReminder";
+import { SummaryStrip } from "@/components/money/SummaryStrip";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -63,6 +61,16 @@ type Props = {
     partnerName: string;
     /** Shared-expense mode — threaded to the edit form's split control. */
     sharesExpenses: boolean;
+    /** The month on screen, for the breakdown modal's heading. */
+    monthLabel: string;
+    /** Whether that month is the live one — the reminder names its scope when not. */
+    isCurrentMonth: boolean;
+    /**
+     * The OPEN cycle's balance, shown as a reminder above the chin. It belongs to a
+     * cycle, not to the month being viewed (spec 0007 §3.5).
+     */
+    settlement?: CoupleBalance;
+    incomeTotal?: number;
 };
 
 function Dot({ color }: { color: string }) {
@@ -120,6 +128,10 @@ export function ExpenseListInteractive({
     defaultSharePercentage,
     partnerName,
     sharesExpenses,
+    monthLabel,
+    isCurrentMonth,
+    settlement,
+    incomeTotal,
 }: Props) {
     const router = useRouter();
     const [editing, setEditing] = useState<ExpenseEditable | null>(null);
@@ -232,9 +244,19 @@ export function ExpenseListInteractive({
 
     if (expenses.length === 0 && movements.length === 0) {
         return (
-            <p className="py-12 text-center text-sm text-muted-foreground">
-                Nothing logged for this month yet.
-            </p>
+            <>
+                <p className="py-12 text-center text-sm text-muted-foreground">
+                    Nothing logged for this month yet.
+                </p>
+                {/* An empty month has no chin, and money can still be owed. */}
+                <SettlementReminder
+                    settlement={settlement}
+                    partnerName={partnerName}
+                    sharesExpenses={sharesExpenses}
+                    isCurrentMonth={isCurrentMonth}
+                    monthLabel={monthLabel}
+                />
+            </>
         );
     }
 
@@ -342,134 +364,15 @@ export function ExpenseListInteractive({
                 </p>
             )}
 
-            {/* Totals — desktop footer sits just below the bounded list and
-                stays put; sticky bottom-4 keeps it visible if the page itself
-                still scrolls on shorter viewports. */}
-            <TotalsBar
-                testId="totals-desktop"
-                className="sticky bottom-4 z-30 mt-4 hidden shadow-lg sm:flex"
-                items={[
-                    { label: "Charged", value: formatMxn(totals.charged) },
-                    ...(totals.setAside > 0
-                        ? [
-                              {
-                                  label: "Set aside",
-                                  value: formatMxn(totals.setAside),
-                              },
-                          ]
-                        : []),
-                    ...(totals.paidToPartner > 0
-                        ? [
-                              {
-                                  label: `Paid to ${partnerName}`,
-                                  value: formatMxn(totals.paidToPartner),
-                              },
-                          ]
-                        : []),
-                    ...(totals.notFromIncome > 0
-                        ? [
-                              {
-                                  label: NON_INCOME_FUNDED_LABEL,
-                                  value: formatMxn(totals.notFromIncome),
-                              },
-                          ]
-                        : []),
-                    // Every peso that reached her from another month's money —
-                    // transfer or payment-expense alike (spec 0007 §6a).
-                    ...(totals.paidToPartnerFromSavings > 0
-                        ? [
-                              {
-                                  label: nonIncomeFundedTransferLabel(
-                                      partnerName,
-                                  ),
-                                  value: formatMxn(
-                                      totals.paidToPartnerFromSavings,
-                                  ),
-                              },
-                          ]
-                        : []),
-                    {
-                        label: "What I really spent",
-                        value: formatMxn(totals.whatIReallySpent),
-                        tone: "highlight" as const,
-                    },
-                    // Gated on what ADDS to it: `paidToPartner` is a breakdown of
-                    // the line above, so it would restate it (spec 0007 §6a).
-                    ...(totals.setAside > 0 || totals.legacyPaidToPartner > 0
-                        ? [
-                              {
-                                  label: "Total",
-                                  value: formatMxn(totals.total),
-                                  tone: "strong" as const,
-                              },
-                          ]
-                        : []),
-                ]}
+            <SummaryStrip
+                totals={totals}
+                monthLabel={monthLabel}
+                partnerName={partnerName}
+                settlement={settlement}
+                sharesExpenses={sharesExpenses}
+                isCurrentMonth={isCurrentMonth}
+                incomeTotal={incomeTotal}
             />
-
-            {/* Totals — mobile pinned bar */}
-            <div
-                data-testid="totals-mobile"
-                className="fixed inset-x-0 bottom-0 z-40 space-y-1.5 bg-foreground px-5 py-2.5 text-background sm:hidden"
-            >
-                <div className="flex items-center justify-between gap-3 text-xs text-background/70">
-                    <span>
-                        Charged{" "}
-                        <span className="font-medium text-background">
-                            {formatMxn(totals.charged)}
-                        </span>
-                    </span>
-                    {totals.setAside > 0 && (
-                        <span>
-                            Set aside{" "}
-                            <span className="font-medium text-background">
-                                {formatMxn(totals.setAside)}
-                            </span>
-                        </span>
-                    )}
-                    {totals.notFromIncome > 0 && (
-                        <span>
-                            {NON_INCOME_FUNDED_SHORT_LABEL}{" "}
-                            <span className="font-medium text-background">
-                                {formatMxn(totals.notFromIncome)}
-                            </span>
-                        </span>
-                    )}
-                    {totals.paidToPartnerFromSavings > 0 && (
-                        <span>
-                            {NON_INCOME_FUNDED_TRANSFER_SHORT_LABEL}{" "}
-                            <span className="font-medium text-background">
-                                {formatMxn(totals.paidToPartnerFromSavings)}
-                            </span>
-                        </span>
-                    )}
-                    {totals.paidToPartner > 0 && (
-                        <span>
-                            Paid{" "}
-                            <span className="font-medium text-background">
-                                {formatMxn(totals.paidToPartner)}
-                            </span>
-                        </span>
-                    )}
-                </div>
-                <div className="flex items-end justify-between">
-                    <span className="text-xs text-background/70">
-                        What I really spent
-                        <span className="mt-0.5 block text-base font-semibold text-background">
-                            {formatMxn(totals.whatIReallySpent)}
-                        </span>
-                    </span>
-                    {(totals.setAside > 0 ||
-                        totals.legacyPaidToPartner > 0) && (
-                        <span className="text-right text-xs text-background/70">
-                            Total
-                            <span className="mt-0.5 block text-lg font-semibold text-background">
-                                {formatMxn(totals.total)}
-                            </span>
-                        </span>
-                    )}
-                </div>
-            </div>
 
             <Dialog
                 open={editing !== null}

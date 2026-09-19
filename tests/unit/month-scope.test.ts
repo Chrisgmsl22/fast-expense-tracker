@@ -33,15 +33,35 @@ describe("resolveMonth — URL, then store, then now", () => {
     it("ignores a malformed cookie — it is user-editable input", () => {
         expect(resolveMonth({ stored: "2026-13", now: NOW })).toBe("2026-09");
     });
+
+    it("treats an empty ?month= as absent, so the memory still applies", () => {
+        expect(resolveMonth({ param: "", stored: "2026-06", now: NOW })).toBe(
+            "2026-06",
+        );
+    });
+
+    it("falls back to today when both the param and the cookie are junk", () => {
+        expect(
+            resolveMonth({ param: "2026-99", stored: "june", now: NOW }),
+        ).toBe("2026-09");
+    });
 });
 
 describe("monthCookieString", () => {
     it("is a session cookie: no Max-Age, so it dies with the browser", () => {
-        const cookie = monthCookieString("2026-08");
+        const cookie = monthCookieString("2026-08")!;
         expect(cookie).toContain(`${MONTH_COOKIE}=2026-08`);
         expect(cookie).toContain("path=/");
         expect(cookie).toContain("SameSite=Lax");
         expect(cookie.toLowerCase()).not.toContain("max-age");
         expect(cookie.toLowerCase()).not.toContain("expires");
+    });
+
+    it("refuses a value that is not a month", () => {
+        // The value lands in `document.cookie`, so it is checked where it is
+        // WRITTEN — a later caller cannot make the read-side guard the only one.
+        expect(monthCookieString("2026-13")).toBeNull();
+        expect(monthCookieString("")).toBeNull();
+        expect(monthCookieString("2026-08; Domain=evil.example")).toBeNull();
     });
 });

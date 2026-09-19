@@ -28,6 +28,8 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 
 ## Reading the designs (source of truth = the HTML, not the PNGs)
 
+**For the CHORE-20 navigation sidebar, use [newSidebar.html](./newSidebar.html) as the official design source.** It supersedes the sidebar reference in Option A. All other screen design authorities remain unchanged. The export shows desktop and mobile variants. Its display data uses invented amounts and fictional identities; these values do not define financial calculations.
+
 **Always read `Confirmed designs V1.standalone.html` for a screen before building it — it is authoritative for exact values.** The PNG screenshots are a lossy, downscaled render: they're reliable for **layout, hierarchy, and flow**, but they hide exact colors, borders, spacing, and radii. Reading the PNG alone has caused wrong-value mistakes (e.g. a border read as "black" that the HTML defines as `#e6e8eb`). Use **both**, in this order:
 
 1. **HTML first, for exact values.** `Grep` the standalone HTML for the screen's section, then read the matched block to get the real CSS — colors (`#…`), `border` / `border-top`, `padding`/`gap`, `border-radius`, font sizes. When a value matters (any color, border, spacing), quote it from the HTML, don't eyeball the PNG.
@@ -38,6 +40,8 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 
 ### Files
 
+- [newSidebar.html](./newSidebar.html) — official **CHORE-20 navigation sidebar** layout with anonymized, invented display data. It preserves the export's structure, styles, assets, and behavior. It shows the dark grouped rail, bucket-bar logo, settlement pill, monthly balance widget, over-budget alerts, account/sign-out area, and mobile drawer. Use it for sidebar structure and visual details only; preserve the other screens' design sources and existing financial calculations.
+- [chore-20-left-sidebar-option-a.html](./chore-20-left-sidebar-option-a.html) — historical Option A context. `newSidebar.html` supersedes its sidebar reference. Keep this file as the original dashboard-placement exploration.
 - `Confirmed designs V1.standalone.html` — self-contained, current/approved version. **The authoritative source** for the V1 screens (login, add, expenses, income, dashboard, category detail, settlement).
 - `Confirmed designs V1.dc.html` — source of the above (depends on the project runtime; prefer the standalone).
 - `Settings.html` — **new, standalone** design for the **Settings screen** (not part of V1). Covers budget/monthly-income + the 68/32 split, card management, per-category budgets, privacy toggle, and currency. Authoritative for the Settings screen; grep it for exact values (no PNG — HTML only, per the protocol above). Feeds slices 2.7 (cards), 2.8 (privacy), and budget-editing.

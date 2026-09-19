@@ -1,12 +1,16 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
+import { getCurrentMonthCdmx } from "@/lib/dates";
+import { getScopedMonth } from "@/lib/month-scope.server";
+import { formatMonthLabel } from "@/lib/format";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import {
     expenseRepository,
+    incomeRepository,
     movementRepository,
     settingsRepository,
 } from "@/lib/repositories";
+import { getSettlement } from "@/lib/services/settlement/settlement.service";
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
 import { ExpenseListInteractive } from "@/components/expense/ExpenseListInteractive";
 import { MonthPicker } from "@/components/expense/MonthPicker";
@@ -20,10 +24,8 @@ export default async function ExpensesPage({
     searchParams: Promise<{ month?: string }>;
 }) {
     const { month: monthParam } = await searchParams;
-    const month =
-        monthParam && isValidMonth(monthParam)
-            ? monthParam
-            : getCurrentMonthCdmx();
+    const month = await getScopedMonth(monthParam);
+    const currentMonth = getCurrentMonthCdmx();
 
     const session = await auth();
     const userId = session?.user?.id;
@@ -33,26 +35,38 @@ export default async function ExpensesPage({
         return null;
     }
 
-    const [categories, subcategories, cards, expenses, movements, settings] =
-        await Promise.all([
-            db.category.findMany({
-                orderBy: { name: "asc" },
-                select: { id: true, slug: true, name: true, color: true },
-            }),
-            db.subcategory.findMany({
-                select: { id: true, name: true, categoryId: true },
-            }),
-            // Archived cards drop out of the picker (spec 0006 §6); history reads
-            // stay unfiltered so old expenses still resolve their card.
-            db.card.findMany({
-                where: { userId, archivedAt: null },
-                orderBy: { name: "asc" },
-                select: { id: true, name: true, color: true },
-            }),
-            expenseRepository.getForMonth(userId, month),
-            movementRepository.getForMonth(userId, month),
-            settingsRepository.getSettings(userId),
-        ]);
+    const [
+        categories,
+        subcategories,
+        cards,
+        expenses,
+        movements,
+        settings,
+        settlement,
+        income,
+    ] = await Promise.all([
+        db.category.findMany({
+            orderBy: { name: "asc" },
+            select: { id: true, slug: true, name: true, color: true },
+        }),
+        db.subcategory.findMany({
+            select: { id: true, name: true, categoryId: true },
+        }),
+        // Archived cards drop out of the picker (spec 0006 §6); history reads
+        // stay unfiltered so old expenses still resolve their card.
+        db.card.findMany({
+            where: { userId, archivedAt: null },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, color: true },
+        }),
+        expenseRepository.getForMonth(userId, month),
+        movementRepository.getForMonth(userId, month),
+        settingsRepository.getSettings(userId),
+        // No month argument: the balance belongs to the OPEN cycle, so viewing
+        // March must not imply March's balance (spec 0007 §3.5).
+        getSettlement(userId),
+        incomeRepository.getMonthlySummary(userId, month),
+    ]);
 
     // `getSettings` applies the schema default when the user has no row yet; the
     // form reads this for new shared expenses.
@@ -61,8 +75,9 @@ export default async function ExpensesPage({
     const { sharesExpenses } = settings;
 
     return (
-        // Bottom padding on mobile so the pinned total bar never covers rows.
-        <main className="p-8 pb-24 sm:pb-8">
+        // Bottom padding on mobile so the pinned chin — reminder row included —
+        // never covers the last rows.
+        <main className="p-8 pb-40 sm:pb-8">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-semibold">Expenses</h1>
                 <AddExpenseButton
@@ -75,7 +90,11 @@ export default async function ExpensesPage({
                 />
             </div>
             <div className="mt-6">
-                <MonthPicker month={month} />
+                <MonthPicker
+                    month={month}
+                    remember
+                    currentMonth={currentMonth}
+                />
             </div>
             <div className="mt-4">
                 <ExpenseListInteractive
@@ -87,6 +106,10 @@ export default async function ExpensesPage({
                     defaultSharePercentage={defaultSharePercentage}
                     partnerName={partnerName}
                     sharesExpenses={sharesExpenses}
+                    monthLabel={formatMonthLabel(month)}
+                    isCurrentMonth={month === currentMonth}
+                    settlement={settlement.balance}
+                    incomeTotal={income.total}
                 />
             </div>
         </main>

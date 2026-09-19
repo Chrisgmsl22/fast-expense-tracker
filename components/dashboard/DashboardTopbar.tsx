@@ -15,6 +15,7 @@ import { formatMxn } from "@/lib/format";
  */
 export function DashboardTopbar({
     month,
+    currentMonth,
     monthLabel,
     incomeTotal,
     sharePercentage,
@@ -25,6 +26,8 @@ export function DashboardTopbar({
     sharesExpenses,
 }: {
     month: string;
+    /** The server render's clock, forwarded to the picker (`lib/month-scope.ts`). */
+    currentMonth: string;
     monthLabel: string;
     incomeTotal: number;
     sharePercentage: number;
@@ -37,11 +40,15 @@ export function DashboardTopbar({
 }) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                 <h1 className="text-xl font-semibold whitespace-nowrap sm:text-2xl">
                     {monthLabel}
                 </h1>
-                <MonthPicker month={month} />
+                <MonthPicker
+                    month={month}
+                    remember
+                    currentMonth={currentMonth}
+                />
             </div>
             <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-full border px-3 py-1 text-sm">
