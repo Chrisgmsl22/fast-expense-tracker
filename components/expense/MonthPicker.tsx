@@ -28,9 +28,12 @@ export function MonthPicker({
     const pathname = usePathname();
 
     function go(next: string) {
-        // Write the store and the URL together, so the two can never disagree.
-        if (remember) document.cookie = monthCookieString(next);
-        router.push(`${pathname}?month=${next}`);
+        // The helper refuses anything that is not a month, so the store and the
+        // URL are written together only for a value both can hold.
+        const cookie = monthCookieString(next);
+        if (!cookie) return;
+        if (remember) document.cookie = cookie;
+        router.push(`${pathname}?month=${encodeURIComponent(next)}`);
     }
 
     function handleChange(event: ChangeEvent<HTMLInputElement>) {

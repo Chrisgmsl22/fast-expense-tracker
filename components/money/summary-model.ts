@@ -53,9 +53,21 @@ export type SummaryLine = SummaryPart & {
     of: SummaryPart[];
 };
 
-/** What a re-cut figure says about itself, so it never reads as extra money. */
+/**
+ * What a re-cut figure says about itself, so it never reads as extra money. ALL of
+ * it, not part: whichever table a payment sits in, the pot that funded it is on the
+ * same screen — which is why the note needs no condition.
+ */
 export const ALSO_COUNTED_ABOVE =
-    "part of this is already inside the figures above";
+    "all of this is already inside the figures above";
+
+/**
+ * The closing figure's name, in one place so no surface can qualify it differently.
+ * The qualifier is load-bearing: savings-funded spend sits in the rows above and is
+ * NOT in this number, so a bare "Total" would not reconcile with them.
+ */
+export const TOTAL_LABEL = "Total";
+export const TOTAL_QUALIFIER = "— out of this month's income";
 
 /**
  * The month's figures as one hierarchy, shared by the dashboard rail and the
@@ -74,6 +86,9 @@ export function summaryLines(
             label: "Charged",
             amount: totals.charged.amount,
             tone: "plain",
+            // No parts, though `charged.of.myIncome` equals the line below: the
+            // charge INCLUDES her share and "what I really spent" excludes it, so
+            // nesting one under the other would put the wrong whole around it.
             of: [],
         },
         {
@@ -150,7 +165,10 @@ export function summaryLines(
         lines.push({
             key: "transfers-not-from-income",
             label: `Transfers to ${partnerName} (not from income)`,
-            shortLabel: ofWhichPaidShort,
+            // Never "of which": no line above holds this money, because
+            // `notFromIncome` is consumption only. A short form that claimed
+            // otherwise would be BUG-5 mirrored, on the narrowest surface.
+            shortLabel: `To ${partnerName} (other money)`,
             amount: paid.of.notFromIncome.of.fromLegacyTransfers,
             tone: "plain",
             of: [],

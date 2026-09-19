@@ -18,6 +18,7 @@ import { MonthFeed } from "@/components/dashboard/MonthFeed";
 import { SpendByCard } from "@/components/dashboard/SpendByCard";
 import { SpendRadar } from "@/components/dashboard/SpendRadar";
 import { StatStrip } from "@/components/dashboard/StatStrip";
+import { SavingsSpendCard } from "@/components/dashboard/SavingsSpendCard";
 
 // Per-request, DB-backed data — never prerender at build (no DB in preview builds, ADR-0004).
 export const dynamic = "force-dynamic";
@@ -94,6 +95,13 @@ export default async function DashboardPage({
                 {/* Main column */}
                 <div className="space-y-4">
                     <BucketsHero buckets={summary.buckets} />
+                    <SavingsSpendCard
+                        expenses={expenses}
+                        movements={movements}
+                        monthLabel={monthLabel}
+                        partnerName={partnerName}
+                        incomeTotal={summary.income.total}
+                    />
                     <div className="grid gap-4 lg:grid-cols-3">
                         <div className="lg:col-span-2">
                             <SpendRadar categories={summary.topCategories} />

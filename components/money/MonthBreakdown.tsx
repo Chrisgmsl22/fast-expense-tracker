@@ -19,9 +19,8 @@ export type MonthBreakdownProps = {
 };
 
 /**
- * The full month breakdown behind the summary chin — every figure grouped by which
- * pot it came from. Each section answers one question, and a figure that re-cuts
- * money from another section says so instead of standing beside it.
+ * Each section answers one question, and a figure that re-cuts money from another
+ * section says so (`ALSO_COUNTED_ABOVE`) instead of standing beside it.
  */
 export function MonthBreakdown({
     totals,
@@ -41,8 +40,6 @@ export function MonthBreakdown({
     // which counts them (spec 0007 §6a carve-out).
     const incomeThatLeft = totals.total;
     const legacyFromIncome = paidToPartner.of.fromIncome.of.fromLegacyTransfers;
-    const legacyNotFromIncome =
-        paidToPartner.of.notFromIncome.of.fromLegacyTransfers;
     const incomeShare = incomeShareLine(incomeThatLeft, incomeTotal);
     const otherMoney = otherMoneyThatLeft(totals);
     const paidNotFromIncome = paidToPartner.of.notFromIncome.amount;
@@ -65,8 +62,10 @@ export function MonthBreakdown({
             tone: "spent",
         },
         {
+            // NOT the pot's label: this is the slice of the CHARGE that other
+            // money funded, and the pot also holds rows nothing ever charged.
             key: "my-other-money",
-            label: NON_INCOME_FUNDED_LABEL,
+            label: "My other money",
             amount: charged.of.myNonIncome,
             tone: "otherMoney",
         },
@@ -136,6 +135,9 @@ export function MonthBreakdown({
                             amount={otherMoney}
                             caption="outside the budget"
                         >
+                            {/* One row for her, not two near-synonyms: which
+                                table a payment sits in is not a distinction the
+                                reader has (spec 0007 §6a carve-out). */}
                             <PotParts
                                 headline={otherMoney}
                                 parts={[
@@ -145,11 +147,7 @@ export function MonthBreakdown({
                                     },
                                     {
                                         label: `Paid to ${partnerName}`,
-                                        amount: notFromIncome.of.sentToPartner,
-                                    },
-                                    {
-                                        label: `Transfers to ${partnerName}`,
-                                        amount: legacyNotFromIncome,
+                                        amount: paidNotFromIncome,
                                     },
                                 ]}
                             />

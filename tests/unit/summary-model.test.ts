@@ -118,7 +118,8 @@ const TOKEN_HEX = new Map(
  */
 const NEUTRAL_TONES: MoneyTone[] = ["plain"];
 
-function hueOf(tone: MoneyTone): number {
+/** A tone's hue, or null when its token is a grey and has none. */
+function hueOf(tone: MoneyTone): number | null {
     const token = TONE_COLOR[tone].replace(/^var\(|\)$/g, "");
     const hex = TOKEN_HEX.get(token);
     if (!hex) throw new Error(`no hex for ${token}`);
@@ -128,7 +129,7 @@ function hueOf(tone: MoneyTone): number {
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
     const span = max - min;
-    if (span === 0) return 0;
+    if (span === 0) return null;
     const hue =
         max === r
             ? ((g - b) / span) % 6
@@ -138,10 +139,14 @@ function hueOf(tone: MoneyTone): number {
     return (((hue * 60) % 360) + 360) % 360;
 }
 
-/** Circular hue distance, or null when either tone is the neutral one. */
+/** Circular hue distance, or null when either tone is an allowlisted neutral. */
 function hueGap(a: MoneyTone, b: MoneyTone): number | null {
     if (NEUTRAL_TONES.includes(a) || NEUTRAL_TONES.includes(b)) return null;
-    const raw = Math.abs(hueOf(a) - hueOf(b));
+    const [x, y] = [hueOf(a), hueOf(b)];
+    // A grey that is NOT on the allowlist is indistinguishable from every other
+    // grey: report the worst case, so the guard fails instead of throwing.
+    if (x === null || y === null) return 0;
+    const raw = Math.abs(x - y);
     return Math.min(raw, 360 - raw);
 }
 

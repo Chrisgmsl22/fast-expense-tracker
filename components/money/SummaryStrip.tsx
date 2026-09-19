@@ -7,6 +7,8 @@ import { SettlementReminder } from "@/components/money/SettlementReminder";
 import { MonthBreakdownDialog } from "@/components/money/MonthBreakdownDialog";
 import {
     TONE_TEXT_CLASS,
+    TOTAL_LABEL,
+    TOTAL_QUALIFIER,
     closingTotal,
     summaryLines,
     type SummaryLine,
@@ -29,11 +31,6 @@ type Props = {
 const TRIGGER_CLASS =
     "flex items-center gap-1.5 rounded-md border border-background/20 px-3 py-1.5 text-xs font-semibold text-background transition-colors hover:bg-background/10";
 
-/**
- * The expenses chin: one dark bar holding the month's figures as a hierarchy, the
- * unsettled-balance reminder above it, and the way into the full breakdown.
- * Desktop sits under the list; mobile is pinned to the bottom of the viewport.
- */
 export function SummaryStrip({
     totals,
     monthLabel,
@@ -87,7 +84,9 @@ export function SummaryStrip({
                     ))}
                     {total !== null && (
                         <div className="border-background/20 sm:border-l sm:pl-6">
-                            <p className="text-xs text-background/70">Total</p>
+                            <p className="text-xs text-background/70">
+                                {TOTAL_LABEL} {TOTAL_QUALIFIER}
+                            </p>
                             <p className="text-base font-semibold tabular-nums">
                                 {formatMxn(total)}
                             </p>
@@ -141,8 +140,8 @@ export function SummaryStrip({
                             </span>
                         )}
                         {total !== null && (
-                            <span className="text-right text-xs text-background/70">
-                                Total
+                            <span className="max-w-[9rem] text-right text-xs text-background/70">
+                                {TOTAL_LABEL} {TOTAL_QUALIFIER}
                                 <span className="mt-0.5 block text-lg font-semibold text-background">
                                     {formatMxn(total)}
                                 </span>

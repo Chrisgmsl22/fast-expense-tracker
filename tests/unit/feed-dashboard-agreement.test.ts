@@ -6,6 +6,7 @@ import {
     type FeedTotalMovement,
 } from "@/lib/domain/movement";
 import { BUDGET_FUNDING_FILTER } from "@/lib/domain/funding";
+import { otherMoneyThatLeft } from "@/components/money/summary-model";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /**
@@ -262,25 +263,29 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
     });
 
     describe("the two ledgers are never summed (spec 0007 §6a)", () => {
-        // The §6a flow: she fronts a $680 dinner, he settles it later with a
-        // $680 transfer, both from savings. Any single figure showing $1,360
-        // double-counts.
-        const fronted = expense({
+        // A $680 savings-funded purchase and a $680 savings-funded transfer, the
+        // shape §6a was written about. No FIELD may merge them: they belong to
+        // different ledgers, and one figure showing $1,360 would read as a double
+        // count of a single event.
+        const savingsPurchase = expense({
             id: "f1",
-            description: "Dinner she fronted",
+            description: "Shoes, from savings",
             amount: 680,
             actualExpenditure: 680,
             fundedFrom: "savings",
         });
-        const settling = {
+        const savingsTransfer = {
             id: "m1",
             type: "gf_paid" as const,
             amount: 680,
             fundedFrom: "savings" as const,
         };
 
-        it("reports the dinner and the transfer as two separate figures", () => {
-            const totals = computeFeedTotals([fronted], [settling]);
+        it("reports the purchase and the transfer as two separate figures", () => {
+            const totals = computeFeedTotals(
+                [savingsPurchase],
+                [savingsTransfer],
+            );
 
             expect(totals.notFromIncome.amount).toBe(680);
             expect(
@@ -288,18 +293,41 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
             ).toBe(680);
         });
 
-        it("shows $680 twice as two lines, and $1,360 nowhere", () => {
-            const totals = computeFeedTotals([fronted], [settling]);
+        it("shows $680 twice as two lines, and $1,360 in no field", () => {
+            const totals = computeFeedTotals(
+                [savingsPurchase],
+                [savingsTransfer],
+            );
 
             // EVERY figure the footer can print, parents and parts alike, checked
-            // against the sum that would mean one dinner got billed twice.
+            // against the sum that would merge the two ledgers.
             const figures = everyFigure(totals);
             expect(figures.length).toBeGreaterThan(9);
             for (const figure of figures) expect(figure).not.toBe(1360);
         });
 
+        it("lets the savings POT hold both, because they are different money", () => {
+            // The one figure that deliberately spans them (spec 0007 §6a
+            // carve-out): a fronted debt is never an expense, so these $680s can
+            // only be two separate outflows — a purchase and a transfer. The modal
+            // prints this headline itemised into both halves, never bare; see
+            // month-breakdown.test.tsx, "names both halves of a savings pot".
+            const totals = computeFeedTotals(
+                [savingsPurchase],
+                [savingsTransfer],
+            );
+
+            expect(otherMoneyThatLeft(totals)).toBe(1360);
+            // …and it is the ONLY figure of the two that may: the income pot,
+            // asking the same question of this month's income, stays at zero.
+            expect(totals.total).toBe(0);
+        });
+
         it("keeps both out of the income figures and the total", () => {
-            const totals = computeFeedTotals([fronted], [settling]);
+            const totals = computeFeedTotals(
+                [savingsPurchase],
+                [savingsTransfer],
+            );
 
             expect(totals.whatIReallySpent.amount).toBe(0);
             expect(totals.paidToPartner.of.fromIncome.amount).toBe(0);

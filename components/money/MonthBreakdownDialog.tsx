@@ -15,11 +15,7 @@ import {
     type MonthBreakdownProps,
 } from "@/components/money/MonthBreakdown";
 
-/**
- * The summary chin's modal — a full-screen sheet on mobile, a wide card from `sm`
- * up (both come from `DialogContent`). The strip that opens it passes its own
- * trigger, so each chin keeps its own shape.
- */
+/** The strip that opens it passes its own trigger, so each chin keeps its shape. */
 export function MonthBreakdownDialog({
     trigger,
     triggerClassName,

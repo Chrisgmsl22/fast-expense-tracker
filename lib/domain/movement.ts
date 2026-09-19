@@ -59,9 +59,10 @@ export type FeedTotalExpense = {
 export type Breakdown<Parts> = { amount: number; of: Parts };
 
 /**
- * The two tables one payment to the partner can live in. Until the CHORE-12
- * conversion runs the same payment exists as either, so a figure naming money that
- * reached her reads both, deduplicated by id (spec 0007 §6a carve-out).
+ * The two tables a payment to the partner can live in. A legacy `gf_paid` the
+ * conversion could not file — an account with no `combined-expenses` category —
+ * survives, so a figure naming money that reached her reads both, deduplicated
+ * by id (spec 0007 §6a carve-out).
  */
 export type PartnerPaymentSources = {
     /** Payment-expenses — already inside the consumption figure this sits under. */
@@ -102,8 +103,9 @@ export type FeedTotals = {
     setAside: number;
     /**
      * CONSUMPTION ledger: non-income-funded expenses, payments to the partner
-     * included. Transfers stay out — one line summing both ledgers prints $1,360
-     * for a $680 dinner she fronted and he later settled (spec 0007 §6a).
+     * included. Transfers stay out, so this field alone can never merge the two
+     * ledgers: a $680 savings purchase and a $680 savings transfer read as two
+     * figures here (spec 0007 §6a).
      */
     notFromIncome: Breakdown<{
         ownSpending: number;
@@ -252,5 +254,36 @@ export function computeFeedTotals(
         // A legacy transfer is the only addend: every other partner figure is a
         // breakdown of a line already counted (spec 0007 §6a).
         total: whatIReallySpent + setAside + legacyFromIncome,
+    };
+}
+
+export function computeSavingsSpend(
+    expenses: FeedTotalExpense[],
+    movements: FeedTotalMovement[] = [],
+): Breakdown<{ ownPurchases: number; paidToPartner: number }> {
+    // A converted expense owns its id even when its funding source changed.
+    const paymentExpenseIds = new Set(
+        expenses
+            .filter((expense) => expense.isPartnerPayment)
+            .map((expense) => expense.id),
+    );
+    const totals = computeFeedTotals(
+        expenses.filter(
+            (expense) =>
+                expense.fundedFrom === "savings" &&
+                (expense.isPartnerPayment ||
+                    expense.category.slug !== SAVINGS_SLUG),
+        ),
+        movements.filter(
+            (movement) =>
+                movement.fundedFrom === "savings" &&
+                !paymentExpenseIds.has(movement.id),
+        ),
+    );
+    const ownPurchases = totals.notFromIncome.of.ownSpending;
+    const paidToPartner = totals.paidToPartner.of.notFromIncome.amount;
+    return {
+        amount: ownPurchases + paidToPartner,
+        of: { ownPurchases, paidToPartner },
     };
 }

@@ -153,12 +153,13 @@ describe("MonthBreakdown", () => {
             );
 
             // The savings pot the reconciliation test pins: 11,700 of card spend
-            // plus the 1,000 that reached her out of savings.
+            // plus the 1,000 that reached her out of savings — which is a legacy
+            // transfer here, and says so in no way the reader has to decode.
             const pot = screen.getByText("outside the budget").parentElement!;
             expect(within(pot).getByText("$12,700.00")).toBeDefined();
             expect(within(pot).getByText("Own spending")).toBeDefined();
             expect(within(pot).getByText("$11,700.00")).toBeDefined();
-            expect(within(pot).getByText("Transfers to Brenda")).toBeDefined();
+            expect(within(pot).getByText("Paid to Brenda")).toBeDefined();
             expect(within(pot).getByText("$1,000.00")).toBeDefined();
         });
     });
@@ -382,9 +383,11 @@ describe("MonthBreakdown", () => {
             ).toBeNull();
             expect(within(bottom).queryByText("Spent on myself")).toBeNull();
             expect(within(bottom).queryByText("$0.00")).toBeNull();
-            // What DID leave is still there, and closes the block.
+            // What DID leave is still there — once. A Total over a single row
+            // restates it, the same rule `PotParts` applies to an itemisation.
             expect(within(bottom).getByText("Sent to Brenda")).toBeDefined();
-            expect(within(bottom).getAllByText("$700.00")).toHaveLength(2);
+            expect(within(bottom).getAllByText("$700.00")).toHaveLength(1);
+            expect(within(bottom).queryByText(/^Total/)).toBeNull();
         });
 
         it("draws no charge donut and no other-money pot", () => {
@@ -503,6 +506,44 @@ describe("MonthBreakdown", () => {
         expect(within(pot).getByText("$250.00")).toBeDefined();
         expect(within(pot).getByText("Paid to Brenda")).toBeDefined();
         expect(within(pot).getByText("$530.00")).toBeDefined();
+    });
+
+    it("names both halves of a savings pot whose parts are equal", () => {
+        // The §6a fixture from feed-dashboard-agreement.test.ts: $680 of savings
+        // spend beside a $680 savings-funded transfer. The pot legitimately holds
+        // both, so it must SHOW both — a bare $1,360 is what §6a fears.
+        const bothHalves = computeFeedTotals(
+            [
+                expense({
+                    id: "f1",
+                    amount: 680,
+                    actualExpenditure: 680,
+                    fundedFrom: "savings",
+                    category: { slug: "shopping" },
+                }),
+            ],
+            [
+                {
+                    id: "m1",
+                    type: "gf_paid",
+                    amount: 680,
+                    fundedFrom: "savings",
+                },
+            ],
+        );
+        render(
+            <MonthBreakdown
+                totals={bothHalves}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+            />,
+        );
+
+        const pot = screen.getByText("outside the budget").parentElement!;
+        expect(within(pot).getByText("$1,360.00")).toBeDefined();
+        expect(within(pot).getByText("Own spending")).toBeDefined();
+        expect(within(pot).getByText("Paid to Brenda")).toBeDefined();
+        expect(within(pot).getAllByText("$680.00")).toHaveLength(2);
     });
 
     it("leaves the pot unitemised when ALL of it reached her (BUG-5's month)", () => {
@@ -633,5 +674,46 @@ describe("the chin that opens it", () => {
         // …and the legacy transfer, which no other line holds, is its own row.
         expect(within(chin).getByText("Transfers to Brenda")).toBeDefined();
         expect(within(chin).getAllByText("$700.00")).toHaveLength(1);
+    });
+
+    it("qualifies its Total exactly as the modal's bottom line does", () => {
+        // A month whose rows do NOT all reach the total: 680 of spend and a 700
+        // transfer are in it, a 250 savings-funded transfer is not. A bare
+        // "Total" would not reconcile with the rows printed above it.
+        const mixed = computeFeedTotals(
+            [expense({ id: "e1", amount: 1000, actualExpenditure: 680 })],
+            [
+                {
+                    id: "m1",
+                    type: "gf_paid",
+                    amount: 700,
+                    fundedFrom: "income",
+                },
+                {
+                    id: "m2",
+                    type: "gf_paid",
+                    amount: 250,
+                    fundedFrom: "savings",
+                },
+            ],
+        );
+        render(
+            <SummaryRail
+                totals={mixed}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth
+            />,
+        );
+
+        const chin = screen.getByTestId("feed-totals");
+        expect(
+            within(chin).getByText("— out of this month's income"),
+        ).toBeDefined();
+        expect(within(chin).getByText("$1,380.00")).toBeDefined();
+        // The money the qualifier excludes is on screen, two rows above it.
+        expect(within(chin).getByText("$250.00")).toBeDefined();
+        expect(mixed.total).toBe(1380);
     });
 });

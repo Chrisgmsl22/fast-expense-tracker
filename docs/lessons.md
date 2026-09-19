@@ -27,6 +27,15 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-09-18 — A spend card reused a broader financial total
+
+- **Symptom:** The "Spent from savings" card counted Savings-category allocations as "Your purchases".
+- **Root cause:** The helper reused `notFromIncome`, which includes those allocations. Its scope exceeds the card's purchase scope.
+- **Fix / decision:** Exclude non-payment Savings-category allocations only in the new helper. Preserve actual partner payments and duplicate-ID checks.
+- **Lesson for next time:** Test category and funding-source combinations before reuse of a financial aggregate. Check that its rows match the new label.
+
+---
+
 ### 2026-09-16 — A new meaning borrowed a colour token, and two arcs became one
 
 - **Symptom:** CHORE-14's breakdown modal drew "not from this month's income" in

@@ -7,15 +7,13 @@ import { SettlementReminder } from "@/components/money/SettlementReminder";
 import { MonthBreakdownDialog } from "@/components/money/MonthBreakdownDialog";
 import {
     TONE_TEXT_CLASS,
+    TOTAL_LABEL,
+    TOTAL_QUALIFIER,
     closingTotal,
     summaryLines,
     type SummaryLine,
 } from "@/components/money/summary-model";
 
-/**
- * The dashboard rail's summary chin: the month's figures as a hierarchy, closed by
- * the total and a way into the full breakdown.
- */
 export function SummaryRail({
     totals,
     monthLabel,
@@ -57,8 +55,13 @@ export function SummaryRail({
             ))}
 
             {total !== null && (
-                <div className="-mx-4 mt-1 flex items-center justify-between bg-foreground px-4 py-2.5 text-background">
-                    <span className="font-medium">Total</span>
+                <div className="-mx-4 mt-1 flex items-center justify-between gap-2 bg-foreground px-4 py-2.5 text-background">
+                    <span className="font-medium">
+                        {TOTAL_LABEL}{" "}
+                        <span className="font-normal text-background/70">
+                            {TOTAL_QUALIFIER}
+                        </span>
+                    </span>
                     <span className="px-2 font-semibold tabular-nums">
                         {formatMxn(total)}
                     </span>

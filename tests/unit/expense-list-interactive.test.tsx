@@ -492,6 +492,27 @@ describe("ExpenseListInteractive", () => {
         expect(within(totals).getByText("$1,736.00")).toBeDefined();
     });
 
+    it("qualifies the Total on BOTH strip surfaces, not just the rail", () => {
+        // The legacy transfer is what makes a Total render at all: without an
+        // addend it would only restate "what I really spent" and is suppressed.
+        // Savings-funded money can be excluded from this figure, so a bare
+        // "Total" would not reconcile with the rows printed above it.
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+
+        const qualified = "Total — out of this month's income";
+        expect(
+            within(screen.getByTestId("totals-desktop")).getByText(qualified),
+        ).toBeDefined();
+        expect(
+            within(screen.getByTestId("totals-mobile")).getByText(qualified),
+        ).toBeDefined();
+    });
+
     it("badges a savings-funded transfer and drops it from 'Paid to Brenda'", () => {
         // The same rule as the dashboard feed, on the same helper: out of the
         // cash figure, still a visible row (spec 0007 §6a decision 5).
@@ -522,9 +543,13 @@ describe("ExpenseListInteractive", () => {
         expect(
             within(totals).queryByText("Not from this month's income"),
         ).toBeNull();
-        // The mobile bar carries the short form of the same line.
+        // The mobile bar carries a short form that claims NO containment: this
+        // money is in no line above it, and "of which" would say it is.
         const mobile = screen.getByTestId("totals-mobile");
-        expect(within(mobile).getByText("of which to Brenda")).toBeDefined();
+        expect(
+            within(mobile).getByText("To Brenda (other money)"),
+        ).toBeDefined();
+        expect(within(mobile).queryByText("of which to Brenda")).toBeNull();
     });
 
     it("names savings-funded PAYMENTS on that same line (BUG-5)", () => {
@@ -561,6 +586,66 @@ describe("ExpenseListInteractive", () => {
         expect(within(mobile).getByText("of which to Brenda")).toBeDefined();
     });
 
+    it("gives every 'of which' in the pinned mobile bar a parent above it", () => {
+        // The bar is the narrowest surface and the only one read whole here: a
+        // savings-funded PAYMENT (a breakdown of the line above) beside a
+        // savings-funded TRANSFER (money no line above holds).
+        const payment = {
+            ...expenses[0]!,
+            id: "p1",
+            description: "Settled up",
+            amount: 530,
+            actualExpenditure: 530,
+            isShared: false,
+            isPartnerPayment: true,
+            fundedFrom: "savings" as const,
+            card: null,
+        };
+        const ownSavingsSpend = {
+            ...expenses[1]!,
+            id: "s1",
+            description: "Shoes",
+            amount: 250,
+            actualExpenditure: 250,
+            fundedFrom: "savings" as const,
+        };
+        const transfer: MovementListItem[] = [
+            {
+                ...movements[1]!,
+                id: "mv9",
+                amount: 8000,
+                fundedFrom: "savings",
+            },
+        ];
+        render(
+            <ExpenseListInteractive
+                expenses={[expenses[0]!, payment, ownSavingsSpend]}
+                {...{ ...props, movements: transfer }}
+            />,
+        );
+
+        const mobile = screen.getByTestId("totals-mobile");
+        // One "of which", not two: only the payment is inside a line above.
+        expect(within(mobile).getAllByText("of which to Brenda")).toHaveLength(
+            1,
+        );
+        // The child renders INSIDE its parent's span, so the containment it
+        // claims is the containment the DOM has.
+        const parent = within(mobile)
+            .getByText("Not from income")
+            .closest("span")!;
+        // 780 of other money, of which 530 reached her — a whole and its part.
+        expect(within(parent).getByText("$780.00")).toBeDefined();
+        expect(within(parent).getByText("of which to Brenda")).toBeDefined();
+        expect(within(parent).getByText("$530.00")).toBeDefined();
+        expect(within(parent).queryByText("$8,000.00")).toBeNull();
+        // …and the transfer stands on its own, claiming nothing.
+        expect(
+            within(mobile).getByText("To Brenda (other money)"),
+        ).toBeDefined();
+        expect(within(mobile).getByText("$8,000.00")).toBeDefined();
+    });
+
     it("omits the savings line when no money reached her that way", () => {
         render(
             <ExpenseListInteractive
@@ -573,8 +658,10 @@ describe("ExpenseListInteractive", () => {
         expect(
             within(totals).queryByText("of which paid to Brenda"),
         ).toBeNull();
+        // The live short label, not a string this branch deleted: an absence
+        // assertion against a dead constant can never fail.
         const mobile = screen.getByTestId("totals-mobile");
-        expect(within(mobile).queryByText("of which to partner")).toBeNull();
+        expect(within(mobile).queryByText("of which to Brenda")).toBeNull();
     });
 
     it("hides movements when a category filter is active (they have no category)", () => {
