@@ -6,6 +6,10 @@ import { render, screen } from "@testing-library/react";
 // the shell render stays a pure UI check.
 vi.mock("@/app/_actions/auth/login", () => ({ loginAction: vi.fn() }));
 
+vi.mock("next/navigation", () => ({
+    useRouter: () => ({ replace: vi.fn() }),
+}));
+
 import LoginPage from "@/app/(auth)/login/page";
 
 // The expenses page became a data-backed async server component in 1.4 (capture),

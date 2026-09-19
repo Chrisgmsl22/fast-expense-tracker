@@ -1,8 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+    render,
+    screen,
+    fireEvent,
+    waitFor,
+    act,
+} from "@testing-library/react";
 
 // Isolate the component from the server action (and its auth/db imports).
-const loginActionMock = vi.fn();
+const { loginActionMock, replaceMock } = vi.hoisted(() => ({
+    loginActionMock: vi.fn(),
+    replaceMock: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({
+    useRouter: () => ({ replace: replaceMock }),
+}));
 vi.mock("@/app/_actions/auth/login", () => ({
     loginAction: (...args: unknown[]) => loginActionMock(...args),
 }));
@@ -11,6 +23,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 
 beforeEach(() => {
     loginActionMock.mockReset();
+    replaceMock.mockReset();
 });
 
 function fillAndSubmit(email = "user@example.com", password = "hunter2") {
@@ -84,13 +97,11 @@ describe("LoginForm", () => {
         expect(alert.textContent).toMatch(/something went wrong/i);
     });
 
-    it("disables the submit button and shows a pending label while submitting", async () => {
-        // A never-resolving action keeps the transition pending so the UI state
-        // is observable.
-        let release: () => void = () => {};
+    it("Should keep a delayed success pending and navigate without an error", async () => {
+        let release!: (value: { ok: true; data: undefined }) => void;
         loginActionMock.mockReturnValue(
-            new Promise<never>(() => {
-                release = () => {};
+            new Promise((resolve) => {
+                release = resolve;
             }),
         );
         render(<LoginForm />);
@@ -101,7 +112,46 @@ describe("LoginForm", () => {
             name: /signing in/i,
         });
         expect((pendingButton as HTMLButtonElement).disabled).toBe(true);
-        release();
+        expect(replaceMock).not.toHaveBeenCalled();
+        expect(screen.queryByRole("alert")).toBeNull();
+
+        await act(async () => release({ ok: true, data: undefined }));
+
+        expect(replaceMock).toHaveBeenCalledExactlyOnceWith("/dashboard");
+        expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("Should clear a failed attempt before a successful retry", async () => {
+        loginActionMock
+            .mockResolvedValueOnce({
+                ok: false,
+                code: "invalid_credentials",
+                message: "Invalid email or password.",
+            })
+            .mockResolvedValueOnce({ ok: true, data: undefined });
+        render(<LoginForm />);
+
+        fillAndSubmit();
+        expect((await screen.findByRole("alert")).textContent).toBe(
+            "Invalid email or password.",
+        );
+        expect(replaceMock).not.toHaveBeenCalled();
+        await waitFor(() =>
+            expect(
+                (
+                    screen.getByRole("button", {
+                        name: /sign in/i,
+                    }) as HTMLButtonElement
+                ).disabled,
+            ).toBe(false),
+        );
+
+        fillAndSubmit();
+
+        await waitFor(() =>
+            expect(replaceMock).toHaveBeenCalledExactlyOnceWith("/dashboard"),
+        );
+        expect(screen.queryByRole("alert")).toBeNull();
     });
 });
 
