@@ -104,3 +104,18 @@ describe("LoginForm", () => {
         release();
     });
 });
+
+describe("expired login notice", () => {
+    it("Should show the exact notice when the session expired", () => {
+        render(<LoginForm sessionExpired />);
+        expect(screen.getByRole("status").textContent).toBe(
+            "Your session expired. Please log back in.",
+        );
+    });
+    it("Should omit the notice when login has no expiry reason", () => {
+        render(<LoginForm />);
+        expect(
+            screen.queryByText("Your session expired. Please log back in."),
+        ).toBeNull();
+    });
+});

@@ -46,7 +46,12 @@ function SignUpComingSoon() {
 // The route gate in auth.config.ts bounces an already-signed-in visitor to
 // /expenses, so this only renders when logged out. Two-panel layout: a dark
 // brand panel + the form. Mobile collapses to a single dark column.
-export default function LoginPage() {
+export default async function LoginPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ reason?: string | string[] }>;
+}) {
+    const { reason } = await searchParams;
     return (
         <main className="flex min-h-screen flex-col bg-foreground">
             <div className="flex min-h-screen flex-1 flex-col md:flex-row">
@@ -87,7 +92,9 @@ export default function LoginPage() {
                         <h1 className="hidden text-2xl font-semibold md:block">
                             Log in
                         </h1>
-                        <LoginForm />
+                        <LoginForm
+                            sessionExpired={reason === "session-expired"}
+                        />
                         <p className="text-center text-sm text-white/60 md:text-muted-foreground">
                             No account? <SignUpComingSoon />
                         </p>

@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { loginAction, type LoginResult } from "@/app/_actions/auth/login";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { LoginInput } from "@/lib/schemas/auth";
+import { withSessionLock } from "@/lib/auth/session-lock";
+import { SessionExpiredNotice } from "./SessionExpiredNotice";
 
 /**
  * Uncontrolled inputs read via FormData on submit; validation lives server-side
@@ -18,7 +20,11 @@ import type { LoginInput } from "@/lib/schemas/auth";
  * the white right panel on desktop (see the login page). The `md:` overrides
  * below re-theme the shared light primitives for the dark mobile surface.
  */
-export function LoginForm() {
+export function LoginForm({
+    sessionExpired = false,
+}: {
+    sessionExpired?: boolean;
+}) {
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<LoginInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
@@ -35,7 +41,9 @@ export function LoginForm() {
         setFormError(null);
         startTransition(async () => {
             try {
-                const res: LoginResult = await loginAction(input);
+                const res: LoginResult = await withSessionLock(() =>
+                    loginAction(input),
+                );
                 // Only failures return; success redirects before resolving.
                 if (!res.ok) {
                     setErrors(res.fieldErrors ?? {});
@@ -70,6 +78,7 @@ export function LoginForm() {
             className="flex w-full flex-col gap-5"
             aria-label="Log in"
         >
+            {sessionExpired && <SessionExpiredNotice />}
             <div>
                 <Label htmlFor="email" className={labelClass}>
                     Email

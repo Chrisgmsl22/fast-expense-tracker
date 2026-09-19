@@ -35,6 +35,6 @@ matching + wording stay human-in-the-loop, run on request.
 | ----- | ------ | ------------------------------------------------------------------------ | ----- | --------------------------------------------------- | ----------------------------------------------------------- |
 | BUG-1 | merged | Partner-debt ('I owe') logged as a phantom Cash expense on the dashboard | #47   | docs/specs/0005-cash-basis-money-model.md           | https://github.com/Chrisgmsl22/fast-expense-tracker/pull/53 |
 | BUG-2 | fixed  | Category colors render gray in production                                | —     | docs/specs/0006-settings-standalone-shared-modes.md | —                                                           |
-| BUG-3 | fixed  | Auth session defaults to 30 days instead of seven                        | —     | —                                                   | https://github.com/Chrisgmsl22/fast-expense-tracker/pull/78 |
+| BUG-3 | fixed  | Auth session stays active after 30 minutes of inactivity                 | —     | —                                                   | https://github.com/Chrisgmsl22/fast-expense-tracker/pull/78 |
 
 <!-- bugs:status:end -->
