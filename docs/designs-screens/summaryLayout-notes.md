@@ -1,6 +1,6 @@
 # CHORE-21: Summary layout redesign
 
-Status: CHORE-21 implementation and local validation are complete on `feat/CHORE-21-summary-layout` in the main checkout. The user approved the commit, branch push, and PR.
+Status: CHORE-21 implementation and local validation are complete on `feat/CHORE-21-summary-layout` in the main checkout. [PR #82](https://github.com/Chrisgmsl22/fast-expense-tracker/pull/82) is open for review.
 
 Reflects plan revision 2.
 

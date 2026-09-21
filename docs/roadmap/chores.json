@@ -248,7 +248,7 @@
             "plan": "",
             "status": "shipped",
             "spec": "docs/designs-screens/summaryLayout-notes.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/82",
             "issue": null
         }
     ]
