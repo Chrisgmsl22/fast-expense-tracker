@@ -105,6 +105,14 @@ Found a secret already committed? Stop, rotate it at the source, tell Christian
 before touching history, and write an ADR covering what changed in the process
 so it cannot recur.
 
+## PR and task titles
+
+- Use `fet-<type>-<short-name>` for every PR title. `fet` means Fast Expense Tracker.
+- Choose `chore`, `bug`, `feat`, `docs`, or another appropriate task type.
+- Use lowercase words and hyphens, for example, `fet-chore-summary-layout` or `fet-bug-settlement-balance`.
+- Set the Codex task or session title to the planned PR title when the scope is known.
+- Keep the task or session title identical to the final PR title. Update it whenever the PR title changes.
+
 ## GitHub access
 
 GitHub MCP is not required. Use the token in the repository root `.mcp.json` for direct GitHub REST API access.
