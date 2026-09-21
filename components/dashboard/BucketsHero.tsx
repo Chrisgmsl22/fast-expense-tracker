@@ -70,17 +70,21 @@ export function BucketsHero({ buckets }: { buckets: Bucket[] }) {
                 return (
                     <div
                         key={bucket.key}
-                        className={`rounded-lg border border-t-4 ${d.border} p-4`}
+                        className={`rounded-lg border border-t-4 ${status.danger ? "border-danger border-t-danger bg-danger-tint" : d.border} p-4`}
                     >
                         <div className="flex items-baseline justify-between">
-                            <span className="text-sm font-medium">
+                            <span
+                                className={`text-sm font-medium${status.danger ? " text-danger" : ""}`}
+                            >
                                 {d.label}
                             </span>
                             <span className="text-xs text-muted-foreground">
                                 {d.pct}
                             </span>
                         </div>
-                        <p className={`mt-1 text-2xl font-bold ${d.text}`}>
+                        <p
+                            className={`mt-1 text-2xl font-bold ${status.danger ? "text-danger" : d.text}`}
+                        >
                             {formatMxn(bucket.spent)}
                         </p>
                         <p className="text-xs text-muted-foreground">

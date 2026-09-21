@@ -1,169 +1,356 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, Settings } from "lucide-react";
-
+import { usePathname, useSearchParams } from "next/navigation";
+import {
+    ArrowDownLeft,
+    ArrowUpRight,
+    Check,
+    CircleDollarSign,
+    LayoutDashboard,
+    Menu,
+    PiggyBank,
+    ReceiptText,
+    Settings,
+    Wallet,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isValidMonth } from "@/lib/dates";
+import { formatMxn, formatMxnWhole } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
     Sheet,
     SheetContent,
-    SheetHeader,
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { isSidebarLinkActive, type SidebarModel } from "./sidebar-model";
 
-const LINKS = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/expenses", label: "Expenses" },
-    { href: "/income", label: "Income" },
-    { href: "/settlement", label: "Settlement" },
-] as const;
-
-/**
- * App header nav. Desktop (≥md): inline link row + email + Sign out. Mobile: a
- * hamburger opens a Sheet drawer with the links + email + Sign out, so the
- * header stays a compact burger + brand and never overflows the viewport width.
- *
- * The Settlement link shows when `showSettlement` is true (Shared mode, or Solo
- * with an unsettled balance still to wind down); otherwise it's dropped and its
- * route is guarded server-side. The layout computes the flag.
- */
-export function AppNav({
-    email,
-    showSettlement,
-}: {
+type Props = {
     email?: string;
-    showSettlement: boolean;
-}) {
-    const pathname = usePathname();
-    const [open, setOpen] = useState(false);
-    const isActive = (href: string) =>
-        pathname === href || pathname.startsWith(`${href}/`);
-    const links = showSettlement
-        ? LINKS
-        : LINKS.filter((l) => l.href !== "/settlement");
+    name?: string;
+    model: SidebarModel;
+};
 
+function Brand() {
     return (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-8">
-            <div className="flex items-center gap-5">
+        <Link
+            href="/dashboard"
+            aria-label="Fast Expense home"
+            className="flex shrink-0 items-center gap-2.5 px-2 py-1 text-[15px] font-bold tracking-tight"
+        >
+            <span
+                aria-hidden="true"
+                className="flex size-8 items-end justify-center gap-[3px] rounded-[9px] bg-white pb-[8px]"
+            >
+                <span className="h-[17px] w-1 rounded-sm bg-bucket-essentials" />
+                <span className="h-[11px] w-1 rounded-sm bg-bucket-discretionary" />
+                <span className="h-2 w-1 rounded-sm bg-positive" />
+            </span>
+            Fast Expense
+        </Link>
+    );
+}
+
+function SidebarContents({
+    email,
+    name,
+    model,
+    pathname,
+    savingsHref,
+    explicitMonth,
+    onNavigate,
+}: Props & {
+    pathname: string;
+    savingsHref: string;
+    explicitMonth?: string;
+    onNavigate?: () => void;
+}) {
+    const groups = [
+        {
+            title: "Overview",
+            links: [
+                {
+                    href: "/dashboard",
+                    label: "Dashboard",
+                    Icon: LayoutDashboard,
+                },
+                { href: "/expenses", label: "Expenses", Icon: ReceiptText },
+            ],
+        },
+        {
+            title: "Money",
+            links: [
+                { href: "/income", label: "Income", Icon: Wallet },
+                ...(model.settlement
+                    ? [
+                          {
+                              href: "/settlement",
+                              label: "Settlement",
+                              Icon: CircleDollarSign,
+                          },
+                      ]
+                    : []),
+                { href: savingsHref, label: "Savings", Icon: PiggyBank },
+            ],
+        },
+        {
+            title: "Setup",
+            links: [{ href: "/settings", label: "Settings", Icon: Settings }],
+        },
+    ];
+    const settlement = model.settlement;
+    const SettlementIcon =
+        settlement?.direction === "she_owes"
+            ? ArrowUpRight
+            : settlement?.direction === "you_owe"
+              ? ArrowDownLeft
+              : Check;
+    return (
+        <div className="flex min-h-full flex-col px-[14px] py-[18px]">
+            <div onClick={onNavigate}>
+                <Brand />
+            </div>
+            <nav aria-label="Main navigation" className="mt-5">
+                {groups.map((group) => (
+                    <div key={group.title} className="mb-4">
+                        <p className="mb-2 px-3 text-[10px] font-semibold tracking-[0.12em] text-sidebar-muted uppercase">
+                            {group.title}
+                        </p>
+                        <div className="space-y-[3px]">
+                            {group.links.map(({ href, label, Icon }) => (
+                                <Link
+                                    key={href}
+                                    href={
+                                        explicitMonth &&
+                                        href !== "/settings" &&
+                                        !href.includes("?")
+                                            ? `${href}?month=${explicitMonth}`
+                                            : href
+                                    }
+                                    onClick={onNavigate}
+                                    aria-current={
+                                        isSidebarLinkActive(pathname, href)
+                                            ? "page"
+                                            : undefined
+                                    }
+                                    aria-label={
+                                        label === "Settlement" && settlement
+                                            ? `Settlement, open cycle: ${settlement.label}, ${formatMxn(settlement.amount)}`
+                                            : undefined
+                                    }
+                                    className={cn(
+                                        "flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[9px] px-3 py-[9px] text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-panel hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
+                                        isSidebarLinkActive(pathname, href) &&
+                                            "bg-sidebar-panel font-semibold text-white",
+                                    )}
+                                >
+                                    <span className="flex items-center gap-[11px]">
+                                        <Icon
+                                            aria-hidden="true"
+                                            className="size-[18px] shrink-0"
+                                        />
+                                        {label}
+                                    </span>
+                                    {label === "Settlement" && settlement && (
+                                        <span
+                                            className={cn(
+                                                "ml-auto flex shrink-0 items-center gap-1 rounded-full px-1.5 py-1 text-[10px] leading-tight",
+                                                settlement.direction ===
+                                                    "she_owes"
+                                                    ? "bg-sidebar-positive-tint text-sidebar-positive"
+                                                    : settlement.direction ===
+                                                        "you_owe"
+                                                      ? "bg-sidebar-owed-tint text-sidebar-owed"
+                                                      : "bg-sidebar-neutral text-sidebar-muted",
+                                            )}
+                                        >
+                                            <SettlementIcon
+                                                aria-hidden="true"
+                                                className="size-3 shrink-0"
+                                            />
+                                            <span>
+                                                {settlement.direction ===
+                                                "settled"
+                                                    ? "Settled"
+                                                    : formatMxn(
+                                                          settlement.amount,
+                                                      )}
+                                            </span>
+                                        </span>
+                                    )}
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </nav>
+            <section
+                aria-label="This month"
+                className="rounded-[11px] bg-sidebar-panel p-[14px]"
+            >
+                <div className="flex items-center justify-between text-[10px] text-sidebar-muted">
+                    <span className="font-semibold uppercase">This month</span>
+                    <span>
+                        day {model.period.day} / {model.period.daysInMonth}
+                    </span>
+                </div>
+                <p className="mt-1 text-[10px] text-sidebar-muted">
+                    {model.period.monthLabel}
+                </p>
+                <div
+                    aria-hidden="true"
+                    className="mt-[7px] mb-[13px] h-[3px] overflow-hidden rounded-full bg-sidebar-neutral"
+                >
+                    <div
+                        className="h-full bg-sidebar-progress"
+                        style={{ width: `${model.period.progress}%` }}
+                    />
+                </div>
+                <dl className="space-y-[9px] text-xs">
+                    <div className="flex justify-between gap-2">
+                        <dt className="text-sidebar-muted">Really spent</dt>
+                        <dd className="font-semibold tabular-nums text-sidebar-spent">
+                            {formatMxnWhole(model.totals.spent)}
+                        </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                        <dt className="text-sidebar-muted">Saved</dt>
+                        <dd className="font-semibold tabular-nums text-sidebar-saved">
+                            {formatMxnWhole(model.totals.saved)}
+                        </dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                        <dt className="text-sidebar-muted">Net so far</dt>
+                        <dd
+                            className={cn(
+                                "font-semibold tabular-nums",
+                                model.totals.net < 0
+                                    ? "text-sidebar-danger"
+                                    : "text-sidebar-positive",
+                            )}
+                        >
+                            {formatMxnWhole(model.totals.net)}
+                        </dd>
+                    </div>
+                </dl>
+                {model.alerts.length > 0 && (
+                    <section
+                        aria-label="Over budget"
+                        className="mt-3 border-t border-sidebar-neutral pt-3"
+                    >
+                        <div className="mb-2 flex items-center justify-between text-[10px]">
+                            <span className="font-semibold text-sidebar-muted uppercase">
+                                Over budget
+                            </span>
+                            <span className="rounded bg-sidebar-danger-tint px-1.5 py-0.5 text-sidebar-danger">
+                                {model.alerts.length}
+                            </span>
+                        </div>
+                        <ul className="space-y-1.5">
+                            {model.alerts.map((alert) => (
+                                <li key={`${alert.kind}-${alert.key}`}>
+                                    <Link
+                                        href={alert.href}
+                                        onClick={onNavigate}
+                                        aria-label={`${alert.label}, ${alert.kind}, ${formatMxn(alert.amount)} over budget for ${model.period.monthLabel}`}
+                                        className="flex items-center gap-1.5 rounded-md bg-sidebar-alert px-2 py-1.5 text-[10px] text-sidebar-alert-text hover:brightness-125"
+                                    >
+                                        <span
+                                            aria-hidden="true"
+                                            className="size-1 shrink-0 rounded-full bg-sidebar-danger"
+                                        />
+                                        <span className="min-w-0 flex-1 truncate">
+                                            {alert.label} · {alert.kind}
+                                        </span>
+                                        <span className="shrink-0 font-semibold tabular-nums text-sidebar-danger">
+                                            +{formatMxn(alert.amount)}
+                                        </span>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
+            </section>
+            <div className="mt-auto pt-5">
+                <div className="flex items-center gap-2.5 border-t border-sidebar-panel px-1 pt-4">
+                    <span
+                        aria-hidden="true"
+                        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sidebar-neutral text-[10px] font-semibold"
+                    >
+                        {(name || email || "Account").slice(0, 2).toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium">
+                            {name || "Account"}
+                        </p>
+                        {email && (
+                            <p
+                                className="truncate text-[10px] text-sidebar-muted"
+                                title={email}
+                            >
+                                {email}
+                            </p>
+                        )}
+                    </div>
+                    <LogoutButton iconOnly />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export function AppNav(props: Props) {
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const [open, setOpen] = useState(false);
+    const selectedMonth = searchParams.get("month");
+    const contentProps = {
+        explicitMonth:
+            selectedMonth && isValidMonth(selectedMonth)
+                ? selectedMonth
+                : undefined,
+        ...props,
+        pathname,
+        savingsHref: "/category/savings",
+    };
+    return (
+        <>
+            <aside
+                aria-label="Sidebar"
+                className="sidebar-theme fixed inset-y-0 left-0 z-40 hidden w-[252px] overflow-x-hidden overflow-y-auto bg-sidebar text-sidebar-foreground lg:block"
+            >
+                <SidebarContents {...contentProps} />
+            </aside>
+            <header className="sidebar-theme flex h-16 items-center gap-2 bg-sidebar px-3 text-sidebar-foreground lg:hidden">
                 <Sheet open={open} onOpenChange={setOpen}>
                     <SheetTrigger
                         render={
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                className="md:hidden"
+                                className="text-white hover:bg-sidebar-panel hover:text-white"
                                 aria-label="Open menu"
                             >
                                 <Menu />
                             </Button>
                         }
                     />
-                    <SheetContent>
-                        <SheetHeader>
-                            <SheetTitle>Expense Tracker</SheetTitle>
-                        </SheetHeader>
-                        <nav className="flex flex-col gap-1">
-                            {links.map((l) => (
-                                // Plain links (role "link", not a Close button)
-                                // that close the drawer on tap — keeps correct
-                                // nav semantics for screen readers.
-                                <Link
-                                    key={l.href}
-                                    href={l.href}
-                                    onClick={() => setOpen(false)}
-                                    aria-current={
-                                        isActive(l.href) ? "page" : undefined
-                                    }
-                                    className={cn(
-                                        "rounded-md px-3 py-2 text-sm transition-colors",
-                                        isActive(l.href)
-                                            ? "bg-muted font-medium text-foreground"
-                                            : "text-muted-foreground hover:text-foreground",
-                                    )}
-                                >
-                                    {l.label}
-                                </Link>
-                            ))}
-                        </nav>
-                        <div className="mt-auto border-t pt-4">
-                            {email && (
-                                <p className="mb-2 truncate px-3 text-xs text-muted-foreground">
-                                    {email}
-                                </p>
-                            )}
-                            <Link
-                                href="/settings"
-                                onClick={() => setOpen(false)}
-                                aria-current={
-                                    isActive("/settings") ? "page" : undefined
-                                }
-                                className={cn(
-                                    "mb-1 flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-                                    isActive("/settings")
-                                        ? "bg-muted font-medium text-foreground"
-                                        : "text-muted-foreground hover:text-foreground",
-                                )}
-                            >
-                                <Settings className="size-4" />
-                                Settings
-                            </Link>
-                            <LogoutButton />
-                        </div>
+                    <SheetContent
+                        className="sidebar-theme w-[252px] max-w-[calc(100vw-2rem)] gap-0 overflow-x-hidden overflow-y-auto border-0 bg-sidebar p-0 text-sidebar-foreground"
+                        showCloseButton={false}
+                    >
+                        <SheetTitle className="sr-only">Navigation</SheetTitle>
+                        <SidebarContents
+                            {...contentProps}
+                            onNavigate={() => setOpen(false)}
+                        />
                     </SheetContent>
                 </Sheet>
-
-                <Link
-                    href="/dashboard"
-                    className="font-medium transition-opacity hover:opacity-70"
-                >
-                    Expense Tracker
-                </Link>
-
-                <nav className="hidden items-center gap-5 text-sm md:flex">
-                    {links.map((l) => (
-                        <Link
-                            key={l.href}
-                            href={l.href}
-                            aria-current={isActive(l.href) ? "page" : undefined}
-                            className={cn(
-                                "transition-colors",
-                                isActive(l.href)
-                                    ? "font-medium text-foreground"
-                                    : "text-muted-foreground hover:text-foreground",
-                            )}
-                        >
-                            {l.label}
-                        </Link>
-                    ))}
-                </nav>
-            </div>
-
-            <div className="hidden items-center gap-4 md:flex">
-                {email && (
-                    <span className="max-w-[16rem] truncate text-sm text-muted-foreground">
-                        {email}
-                    </span>
-                )}
-                <Link
-                    href="/settings"
-                    aria-label="Settings"
-                    aria-current={isActive("/settings") ? "page" : undefined}
-                    className={cn(
-                        "inline-flex size-8 items-center justify-center rounded-md transition-colors",
-                        isActive("/settings")
-                            ? "text-foreground"
-                            : "text-muted-foreground hover:text-foreground",
-                    )}
-                >
-                    <Settings className="size-4" />
-                </Link>
-                <LogoutButton />
-            </div>
-        </div>
+                <Brand />
+            </header>
+        </>
     );
 }

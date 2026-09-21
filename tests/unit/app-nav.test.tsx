@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import {
     render,
     screen,
@@ -6,75 +6,194 @@ import {
     waitFor,
     within,
 } from "@testing-library/react";
-
+const route = vi.hoisted(() => ({ pathname: "/dashboard", month: "2026-04" }));
 vi.mock("next/navigation", () => ({
-    usePathname: () => "/dashboard",
+    usePathname: () => route.pathname,
+    useSearchParams: () =>
+        new URLSearchParams(route.month ? "month=" + route.month : ""),
 }));
-vi.mock("@/app/_actions/auth/logout", () => ({
-    logoutAction: vi.fn(),
-}));
-
+vi.mock("@/app/_actions/auth/logout", () => ({ logoutAction: vi.fn() }));
+import { logoutAction } from "@/app/_actions/auth/logout";
 import { AppNav } from "@/components/nav/AppNav";
+import { buildSidebarModel } from "@/components/nav/sidebar-model";
+import {
+    sidebarSummary,
+    sidebarBalance,
+    sidebarNow,
+} from "@/tests/support/sidebar-fixture";
+
+const model = buildSidebarModel(
+    sidebarSummary,
+    sidebarBalance,
+    true,
+    "Taylor",
+    sidebarNow,
+);
+const props = {
+    email: "alex@example.test",
+    name: "Alex",
+    model,
+};
+beforeEach(() => {
+    route.pathname = "/dashboard";
+    route.month = "2026-04";
+    vi.clearAllMocks();
+});
 
 describe("AppNav", () => {
-    it("renders the nav links and marks the active route", () => {
-        render(<AppNav email="test@email.com" showSettlement />);
-        // Desktop row (drawer is closed, so links appear once).
+    it("shows grouped navigation, the current page, and a selected-month Savings destination", () => {
+        render(<AppNav {...props} />);
         expect(
             screen
                 .getByRole("link", { name: "Dashboard" })
                 .getAttribute("aria-current"),
         ).toBe("page");
-        expect(screen.getByRole("link", { name: "Expenses" })).toBeDefined();
-        expect(screen.getByRole("link", { name: "Income" })).toBeDefined();
-        expect(screen.getByRole("link", { name: "Settlement" })).toBeDefined();
-        // Settings is a separate gear entry point, not part of the primary
-        // LINKS row. Drawer is closed, so only the desktop gear is present.
-        const settings = screen.getByRole("link", { name: "Settings" });
-        expect(settings.getAttribute("href")).toBe("/settings");
-    });
-
-    it("opens a drawer with the links, email, and sign-out", async () => {
-        render(<AppNav email="test@email.com" showSettlement />);
-        fireEvent.click(screen.getByRole("button", { name: /open menu/i }));
-
-        const drawer = await screen.findByRole("dialog");
+        for (const label of ["Overview", "Money", "Setup"])
+            expect(screen.getByText(label)).toBeDefined();
         expect(
-            within(drawer).getByRole("link", { name: "Dashboard" }),
-        ).toBeDefined();
-        expect(within(drawer).getByText("test@email.com")).toBeDefined();
-        const settings = within(drawer).getByRole("link", { name: "Settings" });
-        expect(settings.getAttribute("href")).toBe("/settings");
+            screen.getByRole("link", { name: "Savings" }).getAttribute("href"),
+        ).toBe("/category/savings?month=2026-04");
+        expect(screen.getByText("This month")).toBeDefined();
+        expect(screen.getByText("September 2026")).toBeDefined();
+        expect(screen.getByText("day 18 / 30")).toBeDefined();
         expect(
-            within(drawer).getByRole("button", { name: /sign out/i }),
+            screen.getByRole("link", { name: /Settlement.*Taylor owes you/ }),
         ).toBeDefined();
     });
-
-    it("closes the drawer when a link is tapped", async () => {
-        render(<AppNav email="test@email.com" showSettlement />);
-        fireEvent.click(screen.getByRole("button", { name: /open menu/i }));
-        const drawer = await screen.findByRole("dialog");
-
+    it("keeps a residual sub-peso settlement visible", () => {
+        render(
+            <AppNav
+                {...props}
+                model={{
+                    ...model,
+                    settlement: {
+                        direction: "she_owes",
+                        amount: 0.25,
+                        label: "Taylor owes you",
+                    },
+                }}
+            />,
+        );
+        expect(
+            screen.getByRole("link", { name: /Settlement.*0\.25/ }),
+        ).toBeDefined();
+    });
+    it("preserves explicit valid months across the existing month-scoped links", () => {
+        render(<AppNav {...props} />);
+        for (const label of ["Dashboard", "Expenses", "Income"]) {
+            expect(
+                screen.getByRole("link", { name: label }).getAttribute("href"),
+            ).toBe(`/${label.toLowerCase()}?month=2026-04`);
+        }
+        expect(
+            screen.getByRole("link", { name: "Settings" }).getAttribute("href"),
+        ).toBe("/settings");
+    });
+    it("leaves an invalid URL month to the destination server resolver", () => {
+        route.month = "invalid";
+        render(<AppNav {...props} />);
+        expect(
+            screen.getByRole("link", { name: "Savings" }).getAttribute("href"),
+        ).toBe("/category/savings");
+    });
+    it("does not reuse cached layout month props after a month choice and Settings navigation", () => {
+        const { rerender } = render(<AppNav {...props} />);
+        route.month = "2026-08";
+        rerender(<AppNav {...props} />);
+        expect(
+            screen.getByRole("link", { name: "Savings" }).getAttribute("href"),
+        ).toBe("/category/savings?month=2026-08");
+        route.pathname = "/settings";
+        route.month = "";
+        rerender(<AppNav {...props} />);
+        expect(
+            screen.getByRole("link", { name: "Savings" }).getAttribute("href"),
+        ).toBe("/category/savings");
+    });
+    it("shows cents and visible kinds for same-name bucket and category alerts", () => {
+        const alerts = [
+            {
+                key: "essentials",
+                kind: "bucket" as const,
+                label: "Essentials",
+                amount: 0.25,
+                href: "/dashboard?month=2026-09",
+            },
+            {
+                key: "essentials",
+                kind: "category" as const,
+                label: "Essentials",
+                amount: 0.25,
+                href: "/category/essentials?month=2026-09",
+            },
+        ];
+        render(<AppNav {...props} model={{ ...model, alerts }} />);
+        for (const kind of ["bucket", "category"]) {
+            const link = screen.getByRole("link", {
+                name: `Essentials, ${kind}, $0.25 over budget for September 2026`,
+            });
+            expect(
+                within(link).getByText(`Essentials · ${kind}`),
+            ).toBeDefined();
+            expect(within(link).getByText("+$0.25")).toBeDefined();
+        }
+        expect(screen.queryByText("+$0")).toBeNull();
+    });
+    it("renders refreshed totals and hides the empty warning section", () => {
+        const { rerender } = render(<AppNav {...props} />);
+        expect(
+            screen.getByRole("region", { name: "Over budget" }),
+        ).toBeDefined();
+        rerender(
+            <AppNav
+                {...props}
+                model={{
+                    ...model,
+                    totals: { spent: 1700, saved: 600, net: 1900 },
+                    alerts: [],
+                }}
+            />,
+        );
+        expect(screen.getByText("$1,700")).toBeDefined();
+        expect(
+            screen.queryByRole("region", { name: "Over budget" }),
+        ).toBeNull();
+        expect(screen.queryByText("$1,300")).toBeNull();
+    });
+    it("hides the settlement link and partner name for a settled solo account", () => {
+        render(<AppNav {...props} model={{ ...model, settlement: null }} />);
+        expect(screen.queryByRole("link", { name: /Settlement/ })).toBeNull();
+        expect(screen.queryByText(/Taylor/)).toBeNull();
+    });
+    it("opens the same rail in a drawer and closes it after a link", async () => {
+        render(<AppNav {...props} />);
+        const trigger = screen.getByRole("button", { name: "Open menu" });
+        trigger.focus();
+        fireEvent.click(trigger);
+        const drawer = await screen.findByRole("dialog", {
+            name: "Navigation",
+        });
+        expect(within(drawer).getByText("alex@example.test")).toBeDefined();
+        expect(
+            within(drawer).getByRole("button", { name: "Sign out" }),
+        ).toBeDefined();
         fireEvent.click(within(drawer).getByRole("link", { name: "Income" }));
         await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+        await waitFor(() => expect(document.activeElement).toBe(trigger));
     });
-
-    // showSettlement=false is the Solo + settled case (nothing left to wind
-    // down); the layout hides the link. The others stay.
-    it("drops the Settlement link when showSettlement is false (CHORE-6.b)", () => {
-        render(<AppNav email="test@email.com" showSettlement={false} />);
-        expect(screen.getByRole("link", { name: "Dashboard" })).toBeDefined();
-        expect(screen.getByRole("link", { name: "Expenses" })).toBeDefined();
-        expect(screen.getByRole("link", { name: "Income" })).toBeDefined();
-        expect(screen.queryByRole("link", { name: "Settlement" })).toBeNull();
-        // The Settings gear stays regardless of mode.
-        expect(screen.getByRole("link", { name: "Settings" })).toBeDefined();
+    it("closes the drawer with Escape and restores focus", async () => {
+        render(<AppNav {...props} />);
+        const trigger = screen.getByRole("button", { name: "Open menu" });
+        trigger.focus();
+        fireEvent.click(trigger);
+        const drawer = await screen.findByRole("dialog");
+        fireEvent.keyDown(drawer, { key: "Escape" });
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+        await waitFor(() => expect(document.activeElement).toBe(trigger));
     });
-
-    // showSettlement=true covers both Shared mode and Solo-with-an-unsettled
-    // balance — either way the link is reachable so the balance can be settled.
-    it("shows the Settlement link when showSettlement is true (CHORE-6.b)", () => {
-        render(<AppNav email="test@email.com" showSettlement />);
-        expect(screen.getByRole("link", { name: "Settlement" })).toBeDefined();
+    it("keeps icon sign-out accessible and calls the existing action", async () => {
+        render(<AppNav {...props} />);
+        fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+        await waitFor(() => expect(logoutAction).toHaveBeenCalledTimes(1));
     });
 });

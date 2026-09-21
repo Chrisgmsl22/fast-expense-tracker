@@ -54,7 +54,44 @@
     --bucket-savings: #0d9488;
 }
 
+/* The official sidebar owns a dark palette; page tokens stay unchanged. */
+.sidebar-theme {
+    --sidebar: #0f1115;
+    --sidebar-foreground: #ffffff;
+    --sidebar-muted: #9aa0aa;
+    --sidebar-panel: #1d2027;
+    --sidebar-neutral: #2a2e36;
+    --sidebar-progress: #4b5563;
+    --sidebar-spent: #a5b4fc;
+    --sidebar-saved: #2dd4bf;
+    --sidebar-positive: #4ade80;
+    --sidebar-positive-tint: #14301f;
+    --sidebar-owed: #fbbf24;
+    --sidebar-owed-tint: #3a2a10;
+    --sidebar-danger: #f87171;
+    --sidebar-danger-tint: #3b1418;
+    --sidebar-alert: #2a1215;
+    --sidebar-alert-text: #fca5a5;
+}
+
 @theme inline {
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-muted: var(--sidebar-muted);
+    --color-sidebar-panel: var(--sidebar-panel);
+    --color-sidebar-neutral: var(--sidebar-neutral);
+    --color-sidebar-progress: var(--sidebar-progress);
+    --color-sidebar-spent: var(--sidebar-spent);
+    --color-sidebar-saved: var(--sidebar-saved);
+    --color-sidebar-positive: var(--sidebar-positive);
+    --color-sidebar-positive-tint: var(--sidebar-positive-tint);
+    --color-sidebar-owed: var(--sidebar-owed);
+    --color-sidebar-owed-tint: var(--sidebar-owed-tint);
+    --color-sidebar-danger: var(--sidebar-danger);
+    --color-sidebar-danger-tint: var(--sidebar-danger-tint);
+    --color-sidebar-alert: var(--sidebar-alert);
+    --color-sidebar-alert-text: var(--sidebar-alert-text);
+
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
