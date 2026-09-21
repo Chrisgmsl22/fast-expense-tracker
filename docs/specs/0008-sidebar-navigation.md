@@ -43,7 +43,7 @@ The sidebar implementation is complete in the local branch. The full-card budget
 - Invented unit fixtures cover settlement directions, solo-mode gates, empty alerts, limit overrides, and date boundaries. These alternate data states did not require changes to local account data.
 - The preview runs at http://127.0.0.1:3020/dashboard on the loopback interface.
 
-The implementation passed review and checks. CHORE-20 is shipped and awaits merge through its PR. CHORE-21 remains open as a separate follow-up.
+The implementation passed review and checks. CHORE-20 is shipped and awaits merge through [PR #81](https://github.com/Chrisgmsl22/fast-expense-tracker/pull/81). CHORE-21 remains open as a separate follow-up.
 
 ## Separate follow-up
 
