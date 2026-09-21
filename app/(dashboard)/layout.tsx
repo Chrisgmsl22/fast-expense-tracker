@@ -1,17 +1,15 @@
 import type { ReactNode } from "react";
-
 import { auth } from "@/auth";
-import { isBalanceSettled } from "@/lib/domain/settlement";
 import { settingsRepository } from "@/lib/repositories";
+import { resolvePartnerName } from "@/lib/domain/settings";
+import { getCurrentMonthCdmx } from "@/lib/dates";
+import { getDashboardSummary } from "@/lib/services/dashboard/dashboard.service";
 import { getSettlement } from "@/lib/services/settlement/settlement.service";
 import { IdleSessionGuard } from "@/components/auth/IdleSessionGuard";
 import { AppNav } from "@/components/nav/AppNav";
+import { SidebarDateGuard } from "@/components/nav/SidebarDateGuard";
+import { buildSidebarModel } from "@/components/nav/sidebar-model";
 
-// The proxy route gate guarantees a session here; the email is a "who am I"
-// cue next to the logout control. The nav is responsive (inline row on desktop,
-// a burger + drawer on mobile) — see AppNav. The Settlement link shows for
-// Shared users, and for a Solo user only while an unsettled balance remains to
-// be wound down — matching the route guard in settlement/page.tsx.
 export default async function DashboardLayout({
     children,
 }: {
@@ -19,34 +17,35 @@ export default async function DashboardLayout({
 }) {
     const session = await auth();
     const userId = session?.user?.id;
-    // Solo + settled is the safe default when there's no session/settings row
-    // yet: the partner surfaces stay hidden until the user opts in.
-    let showSettlement = false;
-    if (userId) {
-        // Reuse the same settlement service the page uses so the nav gate and
-        // the route guard agree on the balance (no hand-rolled query).
-        const [{ sharesExpenses }, settlement] = await Promise.all([
-            settingsRepository.getSettings(userId),
-            getSettlement(userId),
-        ]);
-        showSettlement =
-            sharesExpenses || !isBalanceSettled(settlement.balance);
-    }
-
+    if (!userId) return null;
+    // One clock controls both the current-month query and its calendar progress.
+    const now = new Date();
+    const [settings, settlement, summary] = await Promise.all([
+        settingsRepository.getSettings(userId),
+        getSettlement(userId),
+        getDashboardSummary(userId, getCurrentMonthCdmx(now), { now }),
+    ]);
+    const model = buildSidebarModel(
+        summary,
+        settlement.balance,
+        settings.sharesExpenses,
+        resolvePartnerName(settings.partnerName),
+        now,
+    );
     return (
         <IdleSessionGuard
-            key={session?.idleSessionId}
-            idleExpiresAt={session?.idleExpiresAt}
-            idleSessionId={session?.idleSessionId}
+            key={session.idleSessionId}
+            idleExpiresAt={session.idleExpiresAt}
+            idleSessionId={session.idleSessionId}
         >
-            <div className="flex min-h-screen flex-col">
-                <header className="border-b">
-                    <AppNav
-                        email={session?.user?.email ?? undefined}
-                        showSettlement={showSettlement}
-                    />
-                </header>
-                {children}
+            <SidebarDateGuard dayKey={model.period.dayKey} />
+            <div className="min-h-screen lg:pl-[252px]">
+                <AppNav
+                    email={session.user?.email ?? undefined}
+                    name={session.user?.name ?? undefined}
+                    model={model}
+                />
+                <div className="min-w-0">{children}</div>
             </div>
         </IdleSessionGuard>
     );

@@ -91,7 +91,7 @@ export default async function DashboardPage({
                 partnerName={partnerName}
                 sharesExpenses={sharesExpenses}
             />
-            <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem] xl:grid-cols-[1fr_24rem]">
+            <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]">
                 {/* Main column */}
                 <div className="space-y-4">
                     <BucketsHero buckets={summary.buckets} />
@@ -102,8 +102,8 @@ export default async function DashboardPage({
                         partnerName={partnerName}
                         incomeTotal={summary.income.total}
                     />
-                    <div className="grid gap-4 lg:grid-cols-3">
-                        <div className="lg:col-span-2">
+                    <div className="grid gap-4 2xl:grid-cols-3">
+                        <div className="2xl:col-span-2">
                             <SpendRadar categories={summary.topCategories} />
                         </div>
                         <SpendByCard cards={summary.cards} />

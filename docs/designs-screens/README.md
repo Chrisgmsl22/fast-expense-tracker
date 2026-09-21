@@ -40,6 +40,7 @@ Map every visual to shadcn primitives and Tailwind utilities. Do not hand-roll c
 
 ### Files
 
+- [summaryLayout.html](./summaryLayout.html) — **CHORE-21 dashboard summary and Expenses footer** redesign, with desktop and mobile views. The export uses invented amounts and a fictional partner name. Its layout is the new visual reference for this request; implementation belongs in a separate follow-up PR. See [scope and data notes](./summaryLayout-notes.md). Mock labels and arithmetic do not override the existing financial rules.
 - [newSidebar.html](./newSidebar.html) — official **CHORE-20 navigation sidebar** layout with anonymized, invented display data. It preserves the export's structure, styles, assets, and behavior. It shows the dark grouped rail, bucket-bar logo, settlement pill, monthly balance widget, over-budget alerts, account/sign-out area, and mobile drawer. Use it for sidebar structure and visual details only; preserve the other screens' design sources and existing financial calculations.
 - [chore-20-left-sidebar-option-a.html](./chore-20-left-sidebar-option-a.html) — historical Option A context. `newSidebar.html` supersedes its sidebar reference. Keep this file as the original dashboard-placement exploration.
 - `Confirmed designs V1.standalone.html` — self-contained, current/approved version. **The authoritative source** for the V1 screens (login, add, expenses, income, dashboard, category detail, settlement).

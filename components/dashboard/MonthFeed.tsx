@@ -61,7 +61,7 @@ export function MonthFeed({
     const count = feed.length;
 
     return (
-        <div className="flex max-h-[70vh] flex-col rounded-lg border lg:sticky lg:top-6 lg:max-h-[calc(100vh-9rem)]">
+        <div className="flex max-h-[70vh] flex-col rounded-lg border xl:sticky xl:top-6 xl:max-h-[calc(100vh-9rem)]">
             <div className="border-b p-4">
                 <p className="text-sm font-medium">
                     All activity · {monthLabel}
