@@ -18,7 +18,6 @@ import {
     movementRowText,
 } from "@/components/movement/movement-display";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
-import { SettlementReminder } from "@/components/money/SettlementReminder";
 import { SummaryStrip } from "@/components/money/SummaryStrip";
 import { Button } from "@/components/ui/button";
 import {
@@ -242,24 +241,6 @@ export function ExpenseListInteractive({
         });
     }
 
-    if (expenses.length === 0 && movements.length === 0) {
-        return (
-            <>
-                <p className="py-12 text-center text-sm text-muted-foreground">
-                    Nothing logged for this month yet.
-                </p>
-                {/* An empty month has no chin, and money can still be owed. */}
-                <SettlementReminder
-                    settlement={settlement}
-                    partnerName={partnerName}
-                    sharesExpenses={sharesExpenses}
-                    isCurrentMonth={isCurrentMonth}
-                    monthLabel={monthLabel}
-                />
-            </>
-        );
-    }
-
     return (
         <>
             {actionError && !deleting && !deletingMovement && (
@@ -360,11 +341,18 @@ export function ExpenseListInteractive({
 
             {feed.length === 0 && (
                 <p className="py-8 text-center text-sm text-muted-foreground">
-                    No expenses in this category this month.
+                    {expenses.length === 0 && movements.length === 0
+                        ? "Nothing logged for this month yet."
+                        : "No expenses in this category this month."}
                 </p>
             )}
 
             <SummaryStrip
+                visibleCount={feed.length}
+                categoryLabel={
+                    presentCategories.find((c) => c.id === effectiveActiveId)
+                        ?.name ?? "All categories"
+                }
                 totals={totals}
                 monthLabel={monthLabel}
                 partnerName={partnerName}

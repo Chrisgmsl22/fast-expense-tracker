@@ -21,8 +21,8 @@ memory. Refresh with `pnpm roadmap:status` / `bugs:status` / `chores:status`.
 Two verdicts need judgement:
 
 - **"work-in-progress"** — the ancestor check is blind to squash/rebase merges.
-  Confirm PR state via the GitHub MCP (`mcp__github__list_pull_requests` by head
-  branch) before calling a slice unmerged or a dependency missing.
+  Confirm the PR state by its head branch through [GitHub access](#github-access).
+  Do this before you report an unmerged slice or a missing dependency.
 - **"PR merged" + dirty tree** — report the uncommitted changes; Christian
   decides. Clean tree: switch to `main`, pull, delete the local branch.
 
@@ -58,7 +58,7 @@ for each. Target a worktree with `git -C` / `pnpm -C`; install once after adding
 Retire a worktree once its PR merges: `git worktree remove <path>`, then
 `git branch -d <branch>`. **A worktree holding uncommitted changes gets reported,
 never removed** (`docs/lessons.md` 2026-08-05). The `[worktrees]` line flags
-merged ones each session; confirm via the GitHub MCP before acting on it.
+merged ones each session. Confirm the merge through [GitHub access](#github-access) before you remove a worktree.
 
 ## Rules
 
@@ -86,8 +86,8 @@ Ask for sign-off in-conversation before you:
 Always:
 
 - **Land through a PR off `main`.** Every change, docs included.
-- **Use the GitHub MCP** (`mcp__github__*`) for PRs and reviews. `gh` on this
-  machine points at work's GHE.
+- **Use [GitHub access](#github-access)** for PRs, reviews, and merge checks.
+  GitHub MCP is optional. The local `.mcp.json` token supports direct GitHub REST API access.
 - **Read secrets from `process.env`**, reference them by name only, and use
   `.env.example` when you need to know what exists. Mask any value that has to
   appear in output as `<redacted>`.
@@ -104,6 +104,39 @@ Always:
 Found a secret already committed? Stop, rotate it at the source, tell Christian
 before touching history, and write an ADR covering what changed in the process
 so it cannot recur.
+
+## PR and task titles
+
+- Use `fet-<type>-<short-name>` for every PR title. `fet` means Fast Expense Tracker.
+- Choose `chore`, `bug`, `feat`, `docs`, or another appropriate task type.
+- Use lowercase words and hyphens, for example, `fet-chore-summary-layout` or `fet-bug-settlement-balance`.
+- Set the Codex task or session title to the planned PR title when the scope is known.
+- Keep the task or session title identical to the final PR title. Update it whenever the PR title changes.
+
+## GitHub access
+
+GitHub MCP is not required. Use the token in the repository root `.mcp.json` for direct GitHub REST API access.
+
+- Read `.mcp.json` in memory. This read is an explicit exception to the `process.env` rule for secrets.
+- Use `mcpServers.github.headers.Authorization` as the HTTP `Authorization` header for `https://api.github.com`.
+- Confirm access with `GET https://api.github.com/repos/Chrisgmsl22/fast-expense-tracker/pulls/81` or another read-only endpoint for this repository.
+- Try this direct access before you report that GitHub access is unavailable because MCP is absent.
+- Never print the token or the raw configuration. Never copy the token into command arguments, files, logs, or commits.
+- Do not edit `.mcp.json` to access GitHub. Keep the token in memory for the request.
+- Plain `gh` uses the work GHE host. Never use its default credentials for this repository.
+- If you use `gh`, explicitly target `github.com`. Pass the token through `GH_TOKEN` only in that subprocess's environment.
+- Remove the authorization scheme from the header value in memory before you assign its token to `GH_TOKEN`.
+- All commit, push, approval, and merge restrictions above still apply.
+
+## Browser window size
+
+The agent may resize its own current test window when responsive checks require a smaller screen size.
+This exception supersedes the blanket resize prohibition only for that window.
+
+- Do not resize another user's or agent's window. Do not change the shared browser configuration.
+- Prefer native window bounds. Retain `viewport: null` so the page follows the window without persistent device-metrics overrides.
+- Do not call `browser_resize`. This exception does not permit viewport emulation.
+- Record the original window bounds before the test. Restore those bounds after the test.
 
 ## Conventions
 

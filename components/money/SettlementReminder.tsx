@@ -13,6 +13,7 @@ export function SettlementReminder({
     isCurrentMonth,
     monthLabel,
     className = "",
+    variant = "pill",
 }: {
     settlement?: CoupleBalance;
     partnerName: string;
@@ -21,13 +22,29 @@ export function SettlementReminder({
     isCurrentMonth: boolean;
     monthLabel: string;
     className?: string;
+    variant?: "pill" | "band";
 }) {
     if (!sharesExpenses || !settlement) return null;
     return (
         <div className={className}>
-            <SettlementChip balance={settlement} partnerName={partnerName} />
+            <SettlementChip
+                balance={settlement}
+                partnerName={partnerName}
+                variant={variant}
+            />
+            {isCurrentMonth && variant === "band" && (
+                <p className="border-b px-4 py-1 text-[10px] text-muted-foreground">
+                    Open settlement cycle · independent of filters
+                </p>
+            )}
             {!isCurrentMonth && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p
+                    className={
+                        variant === "band"
+                            ? "border-b px-4 py-1 text-[10px] text-muted-foreground"
+                            : "mt-1 text-xs text-muted-foreground"
+                    }
+                >
                     The open settlement — not {monthLabel}.
                 </p>
             )}
