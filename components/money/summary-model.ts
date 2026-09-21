@@ -209,3 +209,41 @@ export function percentLabel(part: number, whole: number): string | null {
 function nonZero<T extends { amount: number }>(lines: T[]): T[] {
     return lines.filter((l) => l.amount > 0);
 }
+
+export function summaryCost(totals: FeedTotals): {
+    amount: number;
+    incomePercent: number;
+    outsideIncomePercent: number;
+} {
+    const amount = totals.whatIReallySpent.amount + totals.notFromIncome.amount;
+    return {
+        amount,
+        incomePercent:
+            amount > 0 ? (totals.whatIReallySpent.amount / amount) * 100 : 0,
+        outsideIncomePercent:
+            amount > 0 ? (totals.notFromIncome.amount / amount) * 100 : 0,
+    };
+}
+
+export function summaryMetrics(
+    totals: FeedTotals,
+    partnerName: string,
+    sharesExpenses: boolean,
+): SummaryPart[] {
+    return [
+        { key: "charged", label: "Charged", amount: totals.charged.amount },
+        { key: "cost", label: "My cost", amount: summaryCost(totals).amount },
+        {
+            key: "outside-income",
+            label: "Outside income",
+            amount: totals.notFromIncome.amount,
+        },
+        sharesExpenses || totals.charged.of.partnerShare > 0
+            ? {
+                  key: "partner",
+                  label: `${partnerName}'s share`,
+                  amount: totals.charged.of.partnerShare,
+              }
+            : { key: "set-aside", label: "Set aside", amount: totals.setAside },
+    ];
+}

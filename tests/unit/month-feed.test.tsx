@@ -150,8 +150,8 @@ describe("MonthFeed", () => {
         );
         // charged = 1820 + 185 = 2005; spent = 1237 + 185 = 1422
         expect(screen.getByText("$2,005.00")).toBeDefined();
-        expect(screen.getByText("What I really spent")).toBeDefined();
-        expect(screen.getByText("$1,422.00")).toBeDefined();
+        expect(screen.getByText("What June 2026 cost me")).toBeDefined();
+        expect(screen.getAllByText("$1,422.00")[0]).toBeDefined();
     });
 
     it("shows an empty state and no footer with nothing logged", () => {
@@ -255,17 +255,19 @@ describe("MonthFeed", () => {
             />,
         );
         const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.getByText("Charged")).toBeDefined();
+        expect(totals.getByText(/charged · my cost/)).toBeDefined();
         expect(totals.getByText("$1,000.00")).toBeDefined();
-        expect(totals.getByText("What I really spent")).toBeDefined();
-        expect(totals.getByText("$680.00")).toBeDefined();
-        expect(totals.getByText("Set aside")).toBeDefined();
+        expect(totals.getByText("From this month's income")).toBeDefined();
+        expect(totals.getAllByText("$680.00")[0]).toBeDefined();
+        expect(totals.getByText("Set aside to savings")).toBeDefined();
         expect(totals.getByText("$5,000.00")).toBeDefined();
-        expect(totals.getByText("Total")).toBeDefined();
+        expect(
+            totals.getByText("Total — out of this month's income"),
+        ).toBeDefined();
         expect(totals.getByText("$5,680.00")).toBeDefined();
     });
 
-    it("omits Set aside / Total when there's no savings or transfer", () => {
+    it("shows zero allocations and an income total without savings or transfers", () => {
         render(
             <MonthFeed
                 expenses={expenses}
@@ -276,8 +278,15 @@ describe("MonthFeed", () => {
                 isCurrentMonth
             />,
         );
-        expect(screen.queryByText("Set aside")).toBeNull();
-        expect(screen.queryByText("Total")).toBeNull();
+        const footer = within(screen.getByTestId("feed-totals"));
+        expect(
+            footer.getByText("Set aside to savings").nextElementSibling
+                ?.textContent,
+        ).toBe("$0.00");
+        expect(
+            footer.getByText("Total — out of this month's income")
+                .nextElementSibling?.textContent,
+        ).toBe("$1,422.00");
     });
 
     it("renders money movements and folds transfers into the footer", () => {
@@ -310,62 +319,52 @@ describe("MonthFeed", () => {
         expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
         // The payment is a breakdown of what I really spent, so it reads as one.
-        expect(totals.getByText("of which paid to Brenda")).toBeDefined();
+        expect(totals.getByText("You paid Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
     });
 
-    it("keeps a savings-funded transfer out of the budget figures but badged in the list", () => {
-        // Spec 0007 §6a decision 5: it used no part of this month's income, so
-        // it leaves the cash figures — while staying visible as a row, and
-        // still counting in full toward the settlement balance elsewhere.
-        const movements: MovementListItem[] = [
-            {
-                id: "m1",
-                date: new Date("2026-06-22T06:00:00Z"),
-                amount: 8000,
-                type: "gf_paid",
-                card: null,
-                note: "settled from savings",
-                fundedFrom: "savings",
-                closedAt: null,
-                cycleClosedAt: null,
-            },
-            {
-                id: "m2",
-                date: new Date("2026-06-23T06:00:00Z"),
-                amount: 200,
-                type: "gf_paid",
-                card: null,
-                note: "netted week",
-                fundedFrom: "income",
-                closedAt: null,
-                cycleClosedAt: null,
-            },
-        ];
+    it("shows both transfer sources as partner details without changing income cost", () => {
+        const base: MovementListItem = {
+            ...debt,
+            type: "gf_paid",
+            id: "legacy",
+            amount: 8000,
+            fundedFrom: "savings",
+        };
         render(
             <MonthFeed
                 expenses={expenses}
-                movements={movements}
+                movements={[
+                    base,
+                    {
+                        ...base,
+                        id: "income",
+                        amount: 200,
+                        fundedFrom: "income",
+                    },
+                ]}
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
                 isCurrentMonth
             />,
         );
-
-        expect(screen.getByText("from savings")).toBeDefined();
-        const totals = within(screen.getByTestId("feed-totals"));
-        // Only the income-funded 200 reaches the figure the Total adds.
-        expect(totals.getByText("Transfers to Brenda")).toBeDefined();
-        expect(totals.getByText("$200.00")).toBeDefined();
-        expect(totals.queryByText("$8,200.00")).toBeNull();
-        // The excluded money is surfaced under its OWN cash line, named for the
-        // partner — never merged into the consumption line (spec 0007 §6a).
+        const footer = within(screen.getByTestId("feed-totals"));
         expect(
-            totals.getByText("Transfers to Brenda (not from income)"),
-        ).toBeDefined();
-        expect(totals.getByText("$8,000.00")).toBeDefined();
-        expect(totals.queryByText("Not from this month's income")).toBeNull();
+            footer.getByText("You paid Brenda").nextElementSibling?.textContent,
+        ).toBe("$8,200.00");
+        expect(
+            footer.getByText("Of that, outside income").nextElementSibling
+                ?.textContent,
+        ).toBe("$8,000.00");
+        expect(
+            footer.getByText("From this month's income").nextElementSibling
+                ?.textContent,
+        ).toBe("$1,422.00");
+        expect(
+            footer.getByText("Total — out of this month's income")
+                .nextElementSibling?.textContent,
+        ).toBe("$1,622.00");
     });
 
     it("badges no ordinary row — income money is never 'not from income'", () => {
@@ -404,86 +403,67 @@ describe("MonthFeed", () => {
         expect(screen.queryAllByText("reimbursed")).toHaveLength(0);
     });
 
-    it("prints the consumption and cash exclusions as two lines, never one sum", () => {
-        // The §6a flow: a $680 dinner she fronted (consumption, savings-funded)
-        // and the $680 transfer settling it (cash, savings-funded). One line
-        // reading $1,360 would bill the same dinner twice.
+    it("keeps outside-income consumption separate from legacy transfer details", () => {
+        const expense = {
+            ...expenses[0]!,
+            amount: 680,
+            actualExpenditure: 680,
+            fundedFrom: "savings" as const,
+        };
+        const movement: MovementListItem = {
+            ...debt,
+            type: "gf_paid",
+            amount: 680,
+            fundedFrom: "savings",
+        };
         render(
             <MonthFeed
-                expenses={[
-                    {
-                        ...expenses[0]!,
-                        id: "fronted",
-                        description: "Dinner she fronted",
-                        amount: 680,
-                        actualExpenditure: 680,
-                        fundedFrom: "savings",
-                    },
-                ]}
-                movements={[
-                    {
-                        id: "m1",
-                        date: new Date("2026-06-22T06:00:00Z"),
-                        amount: 680,
-                        type: "gf_paid",
-                        card: null,
-                        note: "settling the dinner",
-                        fundedFrom: "savings",
-                        closedAt: null,
-                        cycleClosedAt: null,
-                    },
-                ]}
+                expenses={[expense]}
+                movements={[movement]}
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
                 isCurrentMonth
             />,
         );
-
-        const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.getByText("Not from this month's income")).toBeDefined();
+        const footer = within(screen.getByTestId("feed-totals"));
         expect(
-            totals.getByText("Transfers to Brenda (not from income)"),
-        ).toBeDefined();
-        // Three times $680, never once $1,360: Charged (source-agnostic), the
-        // consumption exclusion, and the cash exclusion. Each is one ledger's
-        // view of the money; no line adds two of them together.
-        expect(totals.getAllByText("$680.00")).toHaveLength(3);
-        expect(totals.queryByText("$1,360.00")).toBeNull();
+            footer.getByText("Outside income").nextElementSibling?.textContent,
+        ).toBe("$680.00");
+        expect(
+            footer.getByText("You paid Brenda").nextElementSibling?.textContent,
+        ).toBe("$680.00");
+        expect(footer.queryByText("$1,360.00")).toBeNull();
     });
 
-    it("names a savings-funded PAYMENT on the same line as a transfer (BUG-5)", () => {
-        // Before the fix the two $265 payments printed no line at all: only a
-        // legacy movement reached the figure the footer read.
-        const pay = (id: string, amount: number): ExpenseListItem => ({
+    it("keeps outside-income payments within partner details", () => {
+        const pay = {
             ...partnerPayment,
-            id,
-            amount,
-            actualExpenditure: amount,
-            fundedFrom: "savings",
-        });
+            amount: 530,
+            actualExpenditure: 530,
+            fundedFrom: "savings" as const,
+        };
         render(
             <MonthFeed
-                expenses={[pay("p1", 300), pay("p2", 230)]}
+                expenses={[pay]}
                 movements={[]}
-                monthLabel="October 2026"
+                monthLabel="June 2026"
                 partnerName="Brenda"
                 sharesExpenses
                 isCurrentMonth
             />,
         );
-
-        const totals = within(screen.getByTestId("feed-totals"));
-        // Nested in the DOM, not merely adjacent: the child renders INSIDE its
-        // parent's container, so a flatten-to-siblings regression fails here.
-        const parent = totals.getByTestId("summary-line-not-from-income");
+        const footer = within(screen.getByTestId("feed-totals"));
         expect(
-            within(parent).getByText("Not from this month's income"),
-        ).toBeDefined();
-        const child = within(parent).getByText("of which paid to Brenda");
-        expect(within(child.parentElement!).getByText("$530.00")).toBeDefined();
-        // A breakdown only: nothing income-funded happened this month.
-        expect(totals.queryByText("Transfers to Brenda")).toBeNull();
+            footer.getByText("Outside income").nextElementSibling?.textContent,
+        ).toBe("$530.00");
+        expect(
+            footer.getByText("You paid Brenda").nextElementSibling?.textContent,
+        ).toBe("$530.00");
+        expect(
+            footer.getByText("Of that, outside income").nextElementSibling
+                ?.textContent,
+        ).toBe("$530.00");
     });
 
     it("omits the savings line when no money reached her that way", () => {
@@ -499,7 +479,7 @@ describe("MonthFeed", () => {
         );
 
         const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.queryByText("of which paid to Brenda")).toBeNull();
+        expect(totals.queryByText("You paid Brenda")).toBeNull();
     });
 
     it("keeps the reminder, and its scope, on an empty month", () => {
@@ -595,7 +575,7 @@ describe("MonthFeed", () => {
         // the transfer row + the monthly "Paid to Brenda" footer figure.
         expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.getByText("of which paid to Brenda")).toBeDefined();
+        expect(totals.getByText("You paid Brenda")).toBeDefined();
         expect(totals.getByText("$200.00")).toBeDefined();
         // Only the settlement chip (its link) is hidden on the dashboard — the
         // running balance stays live and settleable via /settlement (ADR-0021,

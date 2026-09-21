@@ -654,7 +654,7 @@ describe("the chin that opens it", () => {
         expect(screen.getByText("Which pot it came from")).toBeDefined();
     });
 
-    it("states no figure twice as an independent fact", () => {
+    it("groups partner payment shapes in one detail total", () => {
         render(
             <SummaryRail
                 totals={totals}
@@ -664,16 +664,14 @@ describe("the chin that opens it", () => {
                 isCurrentMonth
             />,
         );
-
-        const chin = screen.getByTestId("feed-totals");
-        // The payment reaches her AND is inside what I really spent. It prints
-        // once, as a nested "of which" — a second top-level row would read as
-        // $800 of payments (BUG-5).
-        expect(within(chin).getAllByText("$400.00")).toHaveLength(1);
-        expect(within(chin).getByText("of which paid to Brenda")).toBeDefined();
-        // …and the legacy transfer, which no other line holds, is its own row.
-        expect(within(chin).getByText("Transfers to Brenda")).toBeDefined();
-        expect(within(chin).getAllByText("$700.00")).toHaveLength(1);
+        const chin = within(screen.getByTestId("feed-totals"));
+        expect(
+            chin.getByText("You paid Brenda").nextElementSibling?.textContent,
+        ).toBe("$1,100.00");
+        expect(chin.queryByText("Of that, outside income")).toBeNull();
+        expect(
+            chin.getByText("Outside income").nextElementSibling?.textContent,
+        ).toBe("$250.00");
     });
 
     it("qualifies its Total exactly as the modal's bottom line does", () => {
@@ -709,7 +707,7 @@ describe("the chin that opens it", () => {
 
         const chin = screen.getByTestId("feed-totals");
         expect(
-            within(chin).getByText("— out of this month's income"),
+            within(chin).getByText("Total — out of this month's income"),
         ).toBeDefined();
         expect(within(chin).getByText("$1,380.00")).toBeDefined();
         // The money the qualifier excludes is on screen, two rows above it.

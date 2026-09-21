@@ -1,6 +1,19 @@
 # CHORE-21: Summary layout redesign
 
-Status: CHORE-21 is open. The user chose a separate implementation PR. This sidebar change includes the design reference only.
+Status: CHORE-21 implementation and local validation are complete on `feat/CHORE-21-summary-layout` in the main checkout. The user approved the commit, branch push, and PR.
+
+Reflects plan revision 2.
+
+The approved layout uses the existing financial totals. Outside-income labels include savings and reimbursements. The total retains its income-only scope. The footer uses stored partner shares and preserves the open settlement cycle across filters and months.
+
+## Implemented result
+
+- The dashboard rail shows personal cost, source proportions, allocations, the income total, and partner details.
+- The Expenses footer shows the visible count, category context, open settlement, four metrics, and the existing breakdown dialog.
+- The mobile footer uses a two-by-two grid. Its measured height reserves space for the final row.
+- The income total, stored shares, legacy transfers, and converted-payment rules remain unchanged.
+- Independent review found no Critical or Important issues. Desktop and mobile browser checks passed.
+- Validation passed: 1,071 unit tests, 161 integration tests, lint, typecheck, format checks, repository guards, and the production build.
 
 ## Reference
 
@@ -27,8 +40,6 @@ Status: CHORE-21 is open. The user chose a separate implementation PR. This side
 
 This is a medium presentation change. Likely areas: SummaryRail, SummaryStrip, the presentation model, SettlementReminder, ExpenseListInteractive, MonthFeed, and page spacing. A savings-only split may also need a domain aggregation field and its tests. No database migration or new dependency appears necessary.
 
-Allow approximately half to one development day for implementation, focused regression tests, independent review, and desktop/mobile browser checks. This is an estimate, not a delivery commitment.
-
 Regression coverage should include income versus other sources, reimbursements, allocations, mixed and historical splits, legacy transfers, category filters, empty/solo states, negative balances, and modal agreement.
 
-Recommendation: use a separate follow-up PR. The sidebar branch is already reviewed; the summary redesign affects two screens and their financial presentation. The user approved this split. Include the design reference and CHORE-21 record in the sidebar PR; implement the new summary in its own branch.
+The sidebar PR contains the design reference. CHORE-21 remains a separate implementation PR, as the user requested.

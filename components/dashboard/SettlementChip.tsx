@@ -14,9 +14,11 @@ import { formatMxn } from "@/lib/format";
 export function SettlementChip({
     balance,
     partnerName,
+    variant = "pill",
 }: {
     balance: CoupleBalance;
     partnerName: string;
+    variant?: "pill" | "band";
 }) {
     const tone = balanceTone(balance.direction, partnerName);
     const settled = balance.direction === "settled";
@@ -24,7 +26,7 @@ export function SettlementChip({
     return (
         <Link
             href="/settlement"
-            className={`flex items-center gap-2 rounded-md border px-3 py-2 transition-colors hover:brightness-95 ${tone.tintClass} ${tone.borderClass}`}
+            className={`flex items-center gap-2 px-4 py-2.5 transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-ring ${variant === "band" ? "border-b" : "rounded-lg border"} ${tone.tintClass} ${tone.borderClass}`}
         >
             <span
                 aria-hidden

@@ -12,7 +12,6 @@ import {
     movementDisplay,
     movementRowText,
 } from "@/components/movement/movement-display";
-import { SettlementReminder } from "@/components/money/SettlementReminder";
 
 /**
  * Right-rail month feed — a read-only list of the month's expenses **and money
@@ -61,7 +60,7 @@ export function MonthFeed({
     const count = feed.length;
 
     return (
-        <div className="flex max-h-[70vh] flex-col rounded-lg border xl:sticky xl:top-6 xl:max-h-[calc(100vh-9rem)]">
+        <div className="flex flex-col rounded-lg border xl:sticky xl:top-6">
             <div className="border-b p-4">
                 <p className="text-sm font-medium">
                     All activity · {monthLabel}
@@ -77,7 +76,7 @@ export function MonthFeed({
                     Nothing logged this month yet.
                 </p>
             ) : (
-                <ul className="min-h-0 flex-1 divide-y overflow-y-auto">
+                <ul className="max-h-[45vh] min-h-24 flex-1 divide-y overflow-x-hidden overflow-y-auto xl:max-h-[calc(100vh-38rem)]">
                     {feed.map((item) =>
                         item.kind === "expense" ? (
                             <ExpenseRow
@@ -96,28 +95,15 @@ export function MonthFeed({
                 </ul>
             )}
 
-            {count > 0 && (
-                <SummaryRail
-                    totals={totals}
-                    monthLabel={monthLabel}
-                    partnerName={partnerName}
-                    settlement={settlement}
-                    sharesExpenses={sharesExpenses}
-                    isCurrentMonth={isCurrentMonth}
-                    incomeTotal={incomeTotal}
-                />
-            )}
-
-            {count === 0 && (
-                <SettlementReminder
-                    settlement={settlement}
-                    partnerName={partnerName}
-                    sharesExpenses={sharesExpenses}
-                    isCurrentMonth={isCurrentMonth}
-                    monthLabel={monthLabel}
-                    className="border-t p-4"
-                />
-            )}
+            <SummaryRail
+                totals={totals}
+                monthLabel={monthLabel}
+                partnerName={partnerName}
+                settlement={settlement}
+                sharesExpenses={sharesExpenses}
+                isCurrentMonth={isCurrentMonth}
+                incomeTotal={incomeTotal}
+            />
         </div>
     );
 }
