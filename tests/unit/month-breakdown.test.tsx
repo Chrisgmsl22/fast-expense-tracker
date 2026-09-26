@@ -10,6 +10,9 @@ import {
     type FeedTotalExpense,
     type FeedTotalMovement,
 } from "@/lib/domain/movement";
+import { fundingRowsOf } from "@/tests/support/funding-rows";
+
+const NO_ROWS = fundingRowsOf([]);
 
 const expense = (
     over: Partial<FeedTotalExpense> & Pick<FeedTotalExpense, "id">,
@@ -53,6 +56,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={totals}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 incomeTotal={4000}
@@ -69,9 +73,7 @@ describe("MonthBreakdown", () => {
         expect(within(pot).getByText("$1,080.00")).toBeDefined();
         expect(within(pot).getByText("Transfers to Brenda")).toBeDefined();
         expect(within(pot).getByText("$700.00")).toBeDefined();
-        expect(
-            within(pot).getByText("45% of your $4,000.00 income"),
-        ).toBeDefined();
+        expect(within(pot).getByText("45% of your income")).toBeDefined();
         expect(
             screen.getAllByText("Not from this month's income").length,
         ).toBeGreaterThan(0);
@@ -82,43 +84,41 @@ describe("MonthBreakdown", () => {
         // The owner's real September: most of what left his income was a legacy
         // `gf_paid` with no expense row behind it. Localhost cannot show this —
         // its rows are converted — so the fixture is the only place it is visible.
-        const september = computeFeedTotals(
-            [
-                expense({
-                    id: "e1",
-                    amount: 16298.99,
-                    actualExpenditure: 11403.3,
-                }),
-                expense({
-                    id: "e2",
-                    amount: 8047.52,
-                    actualExpenditure: 8047.52,
-                    isPartnerPayment: true,
-                    category: { slug: "combined-expenses" },
-                }),
-                expense({
-                    id: "e3",
-                    amount: 11700,
-                    actualExpenditure: 11700,
-                    fundedFrom: "savings",
-                    category: { slug: "shopping" },
-                }),
-            ],
-            [
-                {
-                    id: "m1",
-                    type: "gf_paid",
-                    amount: 15418.71,
-                    fundedFrom: "income",
-                },
-                {
-                    id: "m2",
-                    type: "gf_paid",
-                    amount: 1000,
-                    fundedFrom: "savings",
-                },
-            ],
-        );
+        const septemberExpenses = [
+            expense({
+                id: "e1",
+                amount: 16298.99,
+                actualExpenditure: 11403.3,
+            }),
+            expense({
+                id: "e2",
+                amount: 8047.52,
+                actualExpenditure: 8047.52,
+                isPartnerPayment: true,
+                category: { slug: "combined-expenses" },
+            }),
+            expense({
+                id: "e3",
+                amount: 11700,
+                actualExpenditure: 11700,
+                fundedFrom: "savings",
+                category: { slug: "shopping" },
+            }),
+        ];
+        const september = computeFeedTotals(septemberExpenses, [
+            {
+                id: "m1",
+                type: "gf_paid",
+                amount: 15418.71,
+                fundedFrom: "income",
+            },
+            {
+                id: "m2",
+                type: "gf_paid",
+                amount: 1000,
+                fundedFrom: "savings",
+            },
+        ]);
 
         it("gives the income pot every peso the bottom line counts", () => {
             // The pot printed 19,450.82 beside a bottom line of 34,869.53 — two
@@ -126,6 +126,7 @@ describe("MonthBreakdown", () => {
             render(
                 <MonthBreakdown
                     totals={september}
+                    fundingRows={NO_ROWS}
                     monthLabel="September 2026"
                     partnerName="Brenda"
                 />,
@@ -147,6 +148,7 @@ describe("MonthBreakdown", () => {
             render(
                 <MonthBreakdown
                     totals={september}
+                    fundingRows={fundingRowsOf(septemberExpenses)}
                     monthLabel="September 2026"
                     partnerName="Brenda"
                 />,
@@ -156,11 +158,23 @@ describe("MonthBreakdown", () => {
             // plus the 1,000 that reached her out of savings — which is a legacy
             // transfer here, and says so in no way the reader has to decode.
             const pot = screen.getByText("outside the budget").parentElement!;
-            expect(within(pot).getByText("$12,700.00")).toBeDefined();
-            expect(within(pot).getByText("Own spending")).toBeDefined();
-            expect(within(pot).getByText("$11,700.00")).toBeDefined();
-            expect(within(pot).getByText("Paid to Brenda")).toBeDefined();
-            expect(within(pot).getByText("$1,000.00")).toBeDefined();
+            expect(within(pot).getAllByText("$12,700.00")).toHaveLength(1);
+            const amountOf = (label: string) =>
+                within(pot).getByText(label).closest("div")!.lastElementChild!
+                    .textContent;
+            // By who it went to…
+            expect(amountOf("Own spending")).toBe("$11,700.00");
+            expect(amountOf("Paid to Brenda")).toBe("$1,000.00");
+            // …and by which money paid. "From savings" is the expense rows
+            // alone — the rail's figure — and its list adds up to it; the
+            // legacy transfer has its own row instead of hiding inside it.
+            const savings = within(pot).getByText("From savings");
+            expect(savings.nextElementSibling!.textContent).toBe("$11,700.00");
+            const list = within(savings.closest("details")!).getByRole("list");
+            expect(within(list).getByText("$11,700.00")).toBeDefined();
+            expect(amountOf("Transfers to Brenda (from savings)")).toBe(
+                "$1,000.00",
+            );
         });
     });
 
@@ -168,6 +182,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={totals}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
             />,
@@ -189,6 +204,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={totals}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
             />,
@@ -211,6 +227,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={totals}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
             />,
@@ -228,6 +245,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={totals}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
             />,
@@ -258,6 +276,7 @@ describe("MonthBreakdown", () => {
             render(
                 <MonthBreakdown
                     totals={withSavings}
+                    fundingRows={NO_ROWS}
                     monthLabel="June 2026"
                     partnerName="Brenda"
                     incomeTotal={20000}
@@ -278,9 +297,7 @@ describe("MonthBreakdown", () => {
             expect(within(pot).getByText("Set aside")).toBeDefined();
             expect(within(pot).getByText("$5,000.00")).toBeDefined();
             // The share is of the income that LEFT, not of the spend alone.
-            expect(
-                within(pot).getByText("30% of your $20,000.00 income"),
-            ).toBeDefined();
+            expect(within(pot).getByText("30% of your income")).toBeDefined();
         });
 
         it("counts it in the bottom line too", () => {
@@ -307,6 +324,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={noAddend}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
             />,
@@ -322,6 +340,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={totals}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
             />,
@@ -355,6 +374,7 @@ describe("MonthBreakdown", () => {
             render(
                 <MonthBreakdown
                     totals={transferOnly}
+                    fundingRows={NO_ROWS}
                     monthLabel="June 2026"
                     partnerName="Brenda"
                 />,
@@ -407,6 +427,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={plain}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
             />,
@@ -434,6 +455,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={savingsOnly}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 incomeTotal={4000}
@@ -463,6 +485,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={paymentOnly}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
             />,
@@ -495,6 +518,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={withSavingsPayment}
+                fundingRows={NO_ROWS}
                 monthLabel="October 2026"
                 partnerName="Brenda"
             />,
@@ -503,7 +527,7 @@ describe("MonthBreakdown", () => {
         // 250 of savings spend and 530 sent to her, inside one $780 pot — never
         // two rows a reader could add to $1,310.
         const pot = screen.getByText("outside the budget").parentElement!;
-        expect(within(pot).getByText("$780.00")).toBeDefined();
+        expect(within(pot).getAllByText("$780.00")).toHaveLength(2);
         expect(within(pot).getByText("Own spending")).toBeDefined();
         expect(within(pot).getByText("$250.00")).toBeDefined();
         expect(within(pot).getByText("Paid to Brenda")).toBeDefined();
@@ -536,16 +560,24 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={bothHalves}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
             />,
         );
 
         const pot = screen.getByText("outside the budget").parentElement!;
-        expect(within(pot).getByText("$1,360.00")).toBeDefined();
+        expect(within(pot).getAllByText("$1,360.00")).toHaveLength(1);
         expect(within(pot).getByText("Own spending")).toBeDefined();
         expect(within(pot).getByText("Paid to Brenda")).toBeDefined();
-        expect(within(pot).getAllByText("$680.00")).toHaveLength(2);
+        // Twice per cut: own/paid, then savings purchase/savings transfer.
+        expect(within(pot).getByText("From savings")).toBeDefined();
+        expect(
+            within(pot).getByText("Transfers to Brenda (from savings)"),
+        ).toBeDefined();
+        expect(within(pot).getAllByText("$680.00")).toHaveLength(4);
+        expect(within(pot).getByText("By who it went to")).toBeDefined();
+        expect(within(pot).getByText("By which money paid")).toBeDefined();
     });
 
     it("leaves the pot unitemised when ALL of it reached her (BUG-5's month)", () => {
@@ -566,13 +598,16 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={october}
+                fundingRows={NO_ROWS}
                 monthLabel="October 2026"
                 partnerName="Brenda"
             />,
         );
 
         const pot = screen.getByText("outside the budget").parentElement!;
-        expect(within(pot).getAllByText("$530.00")).toHaveLength(1);
+        // The headline and its funding sub-row only — no own/partner itemisation.
+        expect(within(pot).getAllByText("$530.00")).toHaveLength(2);
+        expect(within(pot).getByText("From savings")).toBeDefined();
         expect(within(pot).queryByText("Own spending")).toBeNull();
         expect(within(pot).queryByText("$0.00")).toBeNull();
     });
@@ -626,6 +661,7 @@ describe("MonthBreakdown", () => {
         render(
             <MonthBreakdown
                 totals={totals}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
                 partnerName="Brenda"
                 incomeTotal={0}
@@ -634,6 +670,61 @@ describe("MonthBreakdown", () => {
 
         expect(screen.queryByText(/of your .* income/)).toBeNull();
     });
+
+    it("draws no income remainder for a month with neither income nor spend logged (R4-2)", () => {
+        const empty = computeFeedTotals([]);
+        render(
+            <MonthBreakdown
+                totals={empty}
+                fundingRows={NO_ROWS}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                incomeTotal={0}
+            />,
+        );
+
+        expect(screen.queryByText(/left$/)).toBeNull();
+        expect(screen.queryByText(/over income/)).toBeNull();
+    });
+
+    it("reads spend against no logged income as over income (R4-2)", () => {
+        render(
+            <MonthBreakdown
+                totals={totals}
+                fundingRows={NO_ROWS}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                incomeTotal={0}
+            />,
+        );
+
+        expect(screen.getByText("$1,780.00 over income").className).toContain(
+            "text-danger",
+        );
+    });
+
+    it("reads a float sum a hair below income as exactly spent, not over (R4-N1)", () => {
+        // 0.1 + 0.2 sums to 0.30000000000000004 in IEEE 754 — a real artifact,
+        // not a contrived number. Comparing in cents must swallow it.
+        const floatMonth = computeFeedTotals([
+            expense({ id: "f1", amount: 0.1, actualExpenditure: 0.1 }),
+            expense({ id: "f2", amount: 0.2, actualExpenditure: 0.2 }),
+        ]);
+        render(
+            <MonthBreakdown
+                totals={floatMonth}
+                fundingRows={NO_ROWS}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                incomeTotal={0.3}
+            />,
+        );
+
+        expect(screen.getByText("$0.00 left").className).toContain(
+            "text-positive",
+        );
+        expect(screen.queryByText(/over income/)).toBeNull();
+    });
 });
 
 describe("the chin that opens it", () => {
@@ -641,79 +732,156 @@ describe("the chin that opens it", () => {
         render(
             <SummaryRail
                 totals={totals}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
-                partnerName="Brenda"
+                partnerName="Avery"
                 sharesExpenses
                 isCurrentMonth
             />,
         );
 
-        fireEvent.click(
-            screen.getByRole("button", { name: /see full breakdown/i }),
-        );
+        fireEvent.click(screen.getByRole("button", { name: "Full breakdown" }));
 
         expect(await screen.findByText("June 2026 breakdown")).toBeDefined();
         expect(screen.getByText("Which pot it came from")).toBeDefined();
     });
 
-    it("groups partner payment shapes in one detail total", () => {
+    it("shows the partner cash as two named flows and no net", () => {
         render(
             <SummaryRail
                 totals={totals}
+                fundingRows={NO_ROWS}
                 monthLabel="June 2026"
-                partnerName="Brenda"
+                partnerName="Avery"
                 sharesExpenses
                 isCurrentMonth
             />,
         );
         const chin = within(screen.getByTestId("feed-totals"));
+        // 400 payment-expense + 700 transfer out; 900 back from her.
         expect(
-            chin.getByText("You paid Brenda").nextElementSibling?.textContent,
-        ).toBe("$1,100.00");
-        expect(chin.queryByText("Of that, outside income")).toBeNull();
+            chin.getByRole("listitem", { name: "You sent Avery $1,100.00" }),
+        ).toBeDefined();
         expect(
-            chin.getByText("Outside income").nextElementSibling?.textContent,
+            chin.getByRole("listitem", { name: "Avery sent you $900.00" }),
+        ).toBeDefined();
+        expect(chin.queryByText("$200.00")).toBeNull();
+        expect(chin.queryByText("Of that, from savings")).toBeNull();
+        expect(
+            chin.getByText("From savings").nextElementSibling?.textContent,
+        ).toBe("$250.00");
+    });
+});
+
+describe("the figures the rail leaves to Full breakdown", () => {
+    // Invented month holding every figure the rail used to print: a refund, a
+    // savings allocation, a savings-funded transfer, and income left over.
+    const rows = [
+        expense({ id: "e1", amount: 1000, actualExpenditure: 680 }),
+        expense({
+            id: "e2",
+            amount: 300,
+            actualExpenditure: 300,
+            fundedFrom: "savings",
+            category: { slug: "shopping" },
+        }),
+        expense({
+            id: "e3",
+            amount: 450,
+            actualExpenditure: 450,
+            fundedFrom: "reimbursed",
+            category: { slug: "health" },
+        }),
+        expense({
+            id: "e4",
+            amount: 500,
+            actualExpenditure: 500,
+            category: { slug: "savings" },
+        }),
+    ];
+    const moved = computeFeedTotals(rows, [
+        { id: "m1", type: "gf_paid", amount: 700, fundedFrom: "income" },
+        { id: "m2", type: "gf_paid", amount: 250, fundedFrom: "savings" },
+    ]);
+    const props = {
+        totals: moved,
+        fundingRows: fundingRowsOf(rows),
+        monthLabel: "June 2026",
+        partnerName: "Avery",
+        sharesExpenses: true,
+        isCurrentMonth: true,
+        incomeTotal: 3000,
+    };
+
+    it("holds the invented shapes", () => {
+        expect(moved.total).toBe(1880);
+        expect(moved.setAside).toBe(500);
+        expect(moved.notFromIncome.reimbursed.amount).toBe(450);
+        expect(moved.paidToPartner.of.notFromIncome.amount).toBe(250);
+    });
+
+    it("drops them from the rail", () => {
+        render(<SummaryRail {...props} />);
+        const chin = within(screen.getByTestId("feed-totals"));
+
+        for (const gone of [
+            "Reimbursed",
+            "Set aside to savings",
+            "Total — out of this month's income",
+            "Of that, from savings",
+            "$1,880.00",
+            "$1,120.00 left",
+        ]) {
+            expect(chin.queryByText(gone)).toBeNull();
+        }
+        expect(chin.queryByRole("list", { name: /expenses/ })).toBeNull();
+    });
+
+    it("keeps every one of them in the modal", async () => {
+        render(<SummaryRail {...props} />);
+        fireEvent.click(screen.getByRole("button", { name: "Full breakdown" }));
+        const modal = within(await screen.findByRole("dialog"));
+
+        // Reimbursed, with the rows behind it and behind From savings.
+        const pot = modal.getByText("outside the budget").parentElement!;
+        expect(
+            within(pot).getByText("Reimbursed").closest("summary")!
+                .lastElementChild?.textContent,
+        ).toBe("$450.00");
+        expect(
+            within(pot).getByRole("list", { name: "Reimbursed expenses" }),
+        ).toBeDefined();
+        expect(
+            within(pot).getByRole("list", { name: "From savings expenses" }),
+        ).toBeDefined();
+        // Set aside, and the total out of this month's income.
+        const incomePot = modal.getByText(
+            "all but the transfers count toward your budget buckets",
+        ).parentElement!;
+        expect(within(incomePot).getByText("$1,880.00")).toBeDefined();
+        expect(within(incomePot).getByText("Set aside")).toBeDefined();
+        expect(modal.getByText("— out of this month's income")).toBeDefined();
+        // Income and what is left of it.
+        expect(modal.getByText("$3,000.00")).toBeDefined();
+        expect(modal.getByText("$1,120.00 left").className).toContain(
+            "text-positive",
+        );
+        // "Of that, from savings": the savings slice of what I paid her.
+        const paid = within(
+            modal.getByText("Avery — what I paid her").closest("section")!,
+        );
+        expect(
+            paid.getByText("Not from this month's income").nextElementSibling
+                ?.textContent,
         ).toBe("$250.00");
     });
 
-    it("qualifies its Total exactly as the modal's bottom line does", () => {
-        // A month whose rows do NOT all reach the total: 680 of spend and a 700
-        // transfer are in it, a 250 savings-funded transfer is not. A bare
-        // "Total" would not reconcile with the rows printed above it.
-        const mixed = computeFeedTotals(
-            [expense({ id: "e1", amount: 1000, actualExpenditure: 680 })],
-            [
-                {
-                    id: "m1",
-                    type: "gf_paid",
-                    amount: 700,
-                    fundedFrom: "income",
-                },
-                {
-                    id: "m2",
-                    type: "gf_paid",
-                    amount: 250,
-                    fundedFrom: "savings",
-                },
-            ],
+    it("says when the month spent more than its income", async () => {
+        render(<SummaryRail {...props} incomeTotal={1000} />);
+        fireEvent.click(screen.getByRole("button", { name: "Full breakdown" }));
+        const modal = within(await screen.findByRole("dialog"));
+        expect(modal.getByText("$880.00 over income").className).toContain(
+            "text-danger",
         );
-        render(
-            <SummaryRail
-                totals={mixed}
-                monthLabel="June 2026"
-                partnerName="Brenda"
-                sharesExpenses
-                isCurrentMonth
-            />,
-        );
-
-        const chin = screen.getByTestId("feed-totals");
-        expect(
-            within(chin).getByText("Total — out of this month's income"),
-        ).toBeDefined();
-        expect(within(chin).getByText("$1,380.00")).toBeDefined();
-        // The money the qualifier excludes is on screen, two rows above it.
-        expect(within(chin).getByText("$250.00")).toBeDefined();
-        expect(mixed.total).toBe(1380);
     });
 });

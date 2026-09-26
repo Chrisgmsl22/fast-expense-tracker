@@ -1,4 +1,4 @@
-import { beforeEach, describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import {
     render,
     screen,
@@ -190,6 +190,77 @@ describe("AppNav", () => {
         fireEvent.keyDown(drawer, { key: "Escape" });
         await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
         await waitFor(() => expect(document.activeElement).toBe(trigger));
+    });
+    describe("the mobile top bar on scroll", () => {
+        function scrollTo(y: number) {
+            Object.defineProperty(window, "scrollY", {
+                value: y,
+                configurable: true,
+            });
+            fireEvent.scroll(window);
+        }
+        const bar = () => screen.getByRole("banner");
+
+        beforeEach(() => {
+            // jsdom lays nothing out, so give the page room to scroll: 1,000px.
+            Object.defineProperty(document.documentElement, "scrollHeight", {
+                value: window.innerHeight + 1000,
+                configurable: true,
+            });
+            scrollTo(0);
+        });
+        afterEach(() => {
+            Reflect.deleteProperty(document.documentElement, "scrollHeight");
+        });
+
+        it("reads an iOS rubber-band past the bottom as no scroll at all", () => {
+            render(<AppNav {...props} />);
+            scrollTo(1000);
+            expect(bar().getAttribute("data-hidden")).toBe("true");
+            // Overshoot, then spring back to the real bottom: not a scroll up.
+            scrollTo(1060);
+            scrollTo(1000);
+            expect(bar().getAttribute("data-hidden")).toBe("true");
+            scrollTo(980);
+            expect(bar().getAttribute("data-hidden")).toBe("false");
+        });
+
+        it("hides on a scroll down and returns on any scroll up", () => {
+            render(<AppNav {...props} />);
+            expect(bar().getAttribute("data-hidden")).toBe("false");
+
+            scrollTo(200);
+            expect(bar().getAttribute("data-hidden")).toBe("true");
+            expect(bar().className).toContain("-translate-y-full");
+
+            scrollTo(190);
+            expect(bar().getAttribute("data-hidden")).toBe("false");
+        });
+
+        it("stays put for a move under the threshold, and shows at the top", () => {
+            render(<AppNav {...props} />);
+            scrollTo(4);
+            expect(bar().getAttribute("data-hidden")).toBe("false");
+            scrollTo(300);
+            expect(bar().getAttribute("data-hidden")).toBe("true");
+            scrollTo(0);
+            expect(bar().getAttribute("data-hidden")).toBe("false");
+        });
+
+        it("comes back when a keyboard user focuses into it", () => {
+            render(<AppNav {...props} />);
+            scrollTo(300);
+            expect(bar().getAttribute("data-hidden")).toBe("true");
+            fireEvent.focus(screen.getByRole("button", { name: "Open menu" }));
+            expect(bar().getAttribute("data-hidden")).toBe("false");
+        });
+
+        it("skips the slide for reduced motion and stops listening on unmount", () => {
+            const { unmount } = render(<AppNav {...props} />);
+            expect(bar().className).toContain("motion-reduce:transition-none");
+            unmount();
+            expect(() => scrollTo(500)).not.toThrow();
+        });
     });
     it("keeps icon sign-out accessible and calls the existing action", async () => {
         render(<AppNav {...props} />);

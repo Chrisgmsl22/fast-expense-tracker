@@ -1,16 +1,17 @@
 import { ChevronRight } from "lucide-react";
 
 import { Pot, PotParts } from "@/components/money/BreakdownParts";
+import type { FundedExpense } from "@/components/money/FundingSplit";
 import { MonthBreakdownDialog } from "@/components/money/MonthBreakdownDialog";
 import {
     computeFeedTotals,
     computeSavingsSpend,
-    type FeedTotalExpense,
+    nonIncomeFundedRows,
     type FeedTotalMovement,
 } from "@/lib/domain/movement";
 
 type Props = {
-    expenses: FeedTotalExpense[];
+    expenses: FundedExpense[];
     movements: FeedTotalMovement[];
     monthLabel: string;
     partnerName: string;
@@ -56,6 +57,7 @@ export function SavingsSpendCard({
                     monthLabel={monthLabel}
                     partnerName={partnerName}
                     incomeTotal={incomeTotal}
+                    fundingRows={nonIncomeFundedRows(expenses)}
                     triggerClassName="mt-3 inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     trigger={
                         <>

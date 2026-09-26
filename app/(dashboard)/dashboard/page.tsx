@@ -114,7 +114,7 @@ export default async function DashboardPage({
                         net={summary.net}
                         dailyAvg={summary.dailyAvg}
                         daysLeft={summary.daysLeft}
-                        nonIncomeFunded={summary.nonIncomeFundedTotal}
+                        expenses={expenses}
                     />
                     <CategoriesGrid
                         categories={summary.categoryBudgets}

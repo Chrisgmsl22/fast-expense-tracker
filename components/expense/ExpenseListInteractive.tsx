@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { Lock, Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { movesSettlementBalance } from "@/lib/domain/expense";
-import { computeFeedTotals, type MovementType } from "@/lib/domain/movement";
+import {
+    computeFeedTotals,
+    nonIncomeFundedRows,
+    type MovementType,
+} from "@/lib/domain/movement";
 import {
     movementMovesSettlementBalance,
     type CoupleBalance,
@@ -96,6 +100,11 @@ function CategoryPill({ name, color }: { name: string; color: string }) {
 }
 
 const ROW_GRID = "sm:grid-cols-[5.5rem_minmax(0,1fr)_10rem_9rem_8rem_4rem]";
+
+/** Mobile: the title owns the first line and the badge wraps under it. Desktop: one line. */
+const ROW_TITLE =
+    "col-span-3 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap";
+const ROW_TITLE_TEXT = "min-w-0 break-words max-sm:basis-full sm:truncate";
 
 /** Same phrasing as `SettlementJournal`'s delete, so one action reads alike on both screens. */
 function movementDeleteMessage(
@@ -190,6 +199,7 @@ export function ExpenseListInteractive({
     // Movements ride along only when on screen: under a category filter the list
     // hides them, so counting them would total rows nobody can see.
     const totals = computeFeedTotals(filtered, showMovements ? movements : []);
+    const fundingRows = nonIncomeFundedRows(filtered);
 
     function openEdit(id: string) {
         setActionError(null);
@@ -311,11 +321,13 @@ export function ExpenseListInteractive({
             </div>
 
             {/* Rows — expenses + (in the All view) money movements, by date.
-                Bounded scroller (see frontend.md "Long lists"): the list scrolls
-                inside a fixed max-height instead of growing the whole page, so the
+                Desktop: bounded scroller (see frontend.md "Long lists"), so the
                 totals bar and chips stay in reach. overflow-x-hidden guards the
-                min-content trap (overflow-y:auto forces overflow-x to auto). */}
-            <ul className="max-h-[70vh] divide-y overflow-x-hidden overflow-y-auto">
+                min-content trap (overflow-y:auto forces overflow-x to auto).
+                Mobile: the list scrolls with the page, so the top bar can hide
+                and return; the totals chin is pinned anyway, and its spacer
+                below keeps the last row clear of it. */}
+            <ul className="max-h-[70vh] divide-y overflow-x-hidden overflow-y-auto max-sm:max-h-none max-sm:overflow-visible">
                 {feed.map((item) =>
                     item.kind === "expense" ? (
                         <ExpenseRow
@@ -360,6 +372,7 @@ export function ExpenseListInteractive({
                 sharesExpenses={sharesExpenses}
                 isCurrentMonth={isCurrentMonth}
                 incomeTotal={incomeTotal}
+                fundingRows={fundingRows}
             />
 
             <Dialog
@@ -582,7 +595,7 @@ function ExpenseRow({
     const hasRowTint = isSavings || expense.isPartnerPayment;
     return (
         <li
-            className={`group relative grid grid-cols-[minmax(0,1fr)_auto_4rem] items-center gap-x-3 gap-y-0.5 py-3 pl-4 sm:gap-4 sm:py-2.5 sm:pl-0 ${ROW_GRID} ${highlight}`}
+            className={`group relative grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-0.5 py-3 pl-4 sm:gap-4 sm:py-2.5 sm:pl-0 ${ROW_GRID} ${highlight}`}
         >
             {/* Mobile category accent — a short centered bar (a tinted row gets
                 a full coloured left border instead, so skip its bar). */}
@@ -599,23 +612,32 @@ function ExpenseRow({
                 {formatExpenseDate(expense.date)}
             </span>
 
-            {/* Description (+ mobile date · card subline) */}
-            <span className="min-w-0">
-                <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium sm:font-normal">
+            {/* Description (+ mobile date · card subline). On mobile the wrapper
+                dissolves so the title spans the whole row and the badge wraps
+                under it; amount and actions share the subline's row instead. */}
+            <span className="contents sm:block sm:min-w-0">
+                <span className={ROW_TITLE}>
+                    <span
+                        className={`${ROW_TITLE_TEXT} font-medium sm:font-normal`}
+                    >
                         {expense.description}
                     </span>
                     {expense.fundedFrom === "income" ? null : (
                         <FundingBadge source={expense.fundedFrom} />
                     )}
                 </span>
-                <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground sm:hidden">
-                    {formatExpenseDate(expense.date)}
-                    {isSavings ? null : (
+                <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground sm:hidden">
+                    {isSavings ? (
+                        <span className="whitespace-nowrap">
+                            {formatExpenseDate(expense.date)}
+                        </span>
+                    ) : (
                         <>
-                            {" · "}
+                            <span className="whitespace-nowrap">
+                                {formatExpenseDate(expense.date)} ·
+                            </span>
                             <Dot color={cardColor} />
-                            {cardName}
+                            <span className="min-w-0 truncate">{cardName}</span>
                         </>
                     )}
                 </span>
@@ -716,8 +738,8 @@ function LockedRowActions({ reason }: { reason: string }) {
             </span>
             {/* The visible copy of the reason. `aria-hidden` because the lock
                 above already carries it as its accessible name. It opens to the
-                LEFT, inside the row's own band: the list is a bounded scroller,
-                so anything placed above the first row is clipped. */}
+                LEFT, inside the row's own band: on desktop the list is a bounded
+                scroller, so anything placed above the first row is clipped. */}
             <span
                 aria-hidden
                 className="pointer-events-none absolute top-1/2 right-full z-30 mr-1 hidden w-max max-w-[15rem] -translate-y-1/2 rounded-md bg-foreground px-2 py-1 text-background shadow-md group-hover/lock:block group-focus-within/lock:block"
@@ -756,16 +778,18 @@ function MovementRow({
 
     return (
         <li
-            className={`group flex items-center gap-3 border-l-[3px] py-3 pr-1 pl-4 sm:py-2.5 ${rowTint}`}
+            className={`group grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-0.5 border-l-[3px] py-3 pr-1 pl-4 sm:flex sm:gap-3 sm:py-2.5 ${rowTint}`}
         >
-            <span className="min-w-0 flex-1">
-                <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium">{title}</span>
+            <span className="contents sm:block sm:min-w-0 sm:flex-1">
+                <span className={ROW_TITLE}>
+                    <span className={`${ROW_TITLE_TEXT} font-medium`}>
+                        {title}
+                    </span>
                     {m.fundedFrom === "income" ? null : (
                         <FundingBadge source={m.fundedFrom} />
                     )}
                 </span>
-                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                <span className="block min-w-0 truncate text-xs text-muted-foreground sm:mt-0.5">
                     {formatExpenseDate(m.date)}
                     {subline ? ` · ${subline}` : ""}
                 </span>

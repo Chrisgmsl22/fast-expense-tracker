@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/sheet";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { isSidebarLinkActive, type SidebarModel } from "./sidebar-model";
+import { nextNavScrollState, type NavScrollState } from "./scroll-header";
 
 type Props = {
     email?: string;
@@ -306,6 +307,26 @@ export function AppNav(props: Props) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [open, setOpen] = useState(false);
+    const [barHidden, setBarHidden] = useState(false);
+    const scrollState = useRef<NavScrollState>({ hidden: false, lastY: 0 });
+    useEffect(() => {
+        scrollState.current = { hidden: false, lastY: window.scrollY };
+        function onScroll() {
+            const next = nextNavScrollState(
+                scrollState.current,
+                window.scrollY,
+                document.documentElement.scrollHeight - window.innerHeight,
+            );
+            scrollState.current = next;
+            setBarHidden(next.hidden);
+        }
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
+    function revealBar() {
+        scrollState.current = { ...scrollState.current, hidden: false };
+        setBarHidden(false);
+    }
     const selectedMonth = searchParams.get("month");
     const contentProps = {
         explicitMonth:
@@ -324,7 +345,15 @@ export function AppNav(props: Props) {
             >
                 <SidebarContents {...contentProps} />
             </aside>
-            <header className="sidebar-theme flex h-16 items-center gap-2 bg-sidebar px-3 text-sidebar-foreground lg:hidden">
+            {/* A keyboard user tabbing into a hidden bar gets it back. */}
+            <header
+                data-hidden={barHidden}
+                onFocusCapture={revealBar}
+                className={cn(
+                    "sidebar-theme sticky top-0 z-30 flex h-[calc(4rem+env(safe-area-inset-top))] items-center gap-2 bg-sidebar px-3 pt-[env(safe-area-inset-top)] text-sidebar-foreground transition-transform duration-200 motion-reduce:transition-none lg:hidden",
+                    barHidden && "-translate-y-full",
+                )}
+            >
                 <Sheet open={open} onOpenChange={setOpen}>
                     <SheetTrigger
                         render={
