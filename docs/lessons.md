@@ -27,12 +27,21 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
-### 2026-09-25 — Playwright MCP saved screenshots in the primary checkout, not the worktree
+### 2026-09-25 — Browser-check a schema slice against its own database
 
-- **Symptom:** A browser check of BUG-7 ran against a worktree, but its two screenshots landed in the primary checkout's root, where another session had its own work in flight.
-- **Root cause:** Playwright MCP writes files relative to the MCP server's workspace root, which is the primary checkout. The agent's worktree does not change it.
-- **Fix / decision:** The agent moved both files to its scratchpad and confirmed the primary's `git status` was unchanged.
-- **Lesson for next time:** Give a browser agent an absolute `filename` in the scratchpad for every screenshot. After the check, confirm the primary checkout holds no new untracked files.
+- **Symptom:** CHORE-23 added a table while a parallel session used the shared local dev database. Migrating that database would put a migration the other branch lacks into its history; not migrating it makes every dashboard route throw.
+- **Root cause:** One local dev database serves every checkout, and `prisma migrate dev` records history per database, not per branch.
+- **Fix / decision:** The browser agent set `DATABASE_URL` and `DATABASE_URL_UNPOOLED` to a new database on the same container (`fet_chore23`), confirmed the target with `prisma migrate status`, then ran `migrate deploy`, both seeds and `pnpm dev` with the same prefix. Set variables win over the env file for Next.js and dotenv-cli.
+- **Lesson for next time:** A slice with a migration gets its own local database for the browser check. Confirm the database name before any write. Open it on `127.0.0.1:<port>`, not `localhost`: cookies ignore the port, so a `localhost` session from the other app's database is sent along, and every write fails its `userId` foreign key.
+
+---
+
+### 2026-09-25 — Playwright MCP screenshots land outside the worktree
+
+- **Symptom:** A browser check of BUG-7 ran against a worktree, but its two screenshots landed in the primary checkout's root, where another session had its own work in flight. On CHORE-23 a different server refused a scratchpad `filename` and saved to its own output folder outside the repo.
+- **Root cause:** Each Playwright MCP server writes to its own configured output location and refuses paths outside its allowed roots. The agent's worktree changes neither.
+- **Fix / decision:** The BUG-7 agent moved both files to its scratchpad and confirmed the primary's `git status` was unchanged.
+- **Lesson for next time:** Do not rely on a `filename` path. Ask the browser agent to report where each screenshot landed, and after the check confirm the primary checkout holds no new untracked files.
 
 ---
 
