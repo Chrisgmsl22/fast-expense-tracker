@@ -1,6 +1,7 @@
 import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
 import type { FeedTotals } from "@/lib/domain/movement";
 import { formatMxn } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { Donut, type DonutSlice } from "@/components/money/Donut";
 import {
     ALSO_COUNTED_ABOVE,
@@ -8,7 +9,17 @@ import {
     percentLabel,
 } from "@/components/money/summary-model";
 import { BottomLine } from "@/components/money/BottomLine";
-import { Pot, PotParts, Row, Section } from "@/components/money/BreakdownParts";
+import {
+    FundingSplit,
+    type FundingRows,
+} from "@/components/money/FundingSplit";
+import {
+    PartsCaption,
+    Pot,
+    PotParts,
+    Row,
+    Section,
+} from "@/components/money/BreakdownParts";
 
 export type MonthBreakdownProps = {
     totals: FeedTotals;
@@ -16,6 +27,8 @@ export type MonthBreakdownProps = {
     partnerName: string;
     /** This month's income, for the "x% of your income" line. Omitted = no line. */
     incomeTotal?: number;
+    /** The expense rows behind each half of the other-money pot. */
+    fundingRows: FundingRows;
 };
 
 /**
@@ -27,6 +40,7 @@ export function MonthBreakdown({
     monthLabel,
     partnerName,
     incomeTotal,
+    fundingRows,
 }: MonthBreakdownProps) {
     const {
         charged,
@@ -43,6 +57,8 @@ export function MonthBreakdown({
     const incomeShare = incomeShareLine(incomeThatLeft, incomeTotal);
     const otherMoney = otherMoneyThatLeft(totals);
     const paidNotFromIncome = paidToPartner.of.notFromIncome.amount;
+    const legacyNotFromIncome =
+        paidToPartner.of.notFromIncome.of.fromLegacyTransfers;
     const herShare = charged.of.partnerShare;
     // A legacy transfer reaches no bucket, so a pot holding nothing else counts
     // for nothing — "all but the transfers" would then be a claim about $0.
@@ -114,7 +130,11 @@ export function MonthBreakdown({
                                         label: "Spent",
                                         amount: whatIReallySpent.amount,
                                     },
-                                    { label: "Set aside", amount: setAside },
+                                    {
+                                        label: "Set aside",
+                                        amount: setAside,
+                                        tone: "positive",
+                                    },
                                     {
                                         label: `Transfers to ${partnerName}`,
                                         amount: legacyFromIncome,
@@ -140,6 +160,7 @@ export function MonthBreakdown({
                                 reader has (spec 0007 §6a carve-out). */}
                             <PotParts
                                 headline={otherMoney}
+                                caption="By who it went to"
                                 parts={[
                                     {
                                         label: "Own spending",
@@ -151,9 +172,45 @@ export function MonthBreakdown({
                                     },
                                 ]}
                             />
+                            {/* The same pot cut a second way. "From savings" is
+                                the same figure as on every other surface, so the
+                                legacy transfers (savings-only: a transfer cannot
+                                be reimbursed) get a row of their own. */}
+                            <div className="mt-3 border-t border-dashed pt-3">
+                                <PartsCaption>By which money paid</PartsCaption>
+                                <FundingSplit
+                                    fromSavings={
+                                        notFromIncome.fromSavings.amount
+                                    }
+                                    reimbursed={notFromIncome.reimbursed.amount}
+                                    rows={fundingRows}
+                                />
+                                {legacyNotFromIncome > 0 && (
+                                    <div className="flex min-h-6 items-center gap-1.5 py-1 text-xs">
+                                        <span
+                                            aria-hidden
+                                            className="size-3 shrink-0"
+                                        />
+                                        <span>
+                                            Transfers to {partnerName} (from
+                                            savings)
+                                        </span>
+                                        <span className="ml-auto font-medium tabular-nums">
+                                            {formatMxn(legacyNotFromIncome)}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                         </Pot>
                     )}
                 </div>
+                {incomeTotal !== undefined &&
+                    (incomeTotal > 0 || incomeThatLeft > 0) && (
+                        <IncomeRemainder
+                            incomeTotal={incomeTotal}
+                            incomeThatLeft={incomeThatLeft}
+                        />
+                    )}
             </Section>
 
             {charged.amount > 0 && (
@@ -230,10 +287,43 @@ function incomeShareLine(
     incomeTotal: number | undefined,
 ): string | null {
     if (incomeTotal === undefined) return null;
+    // The income figure itself lives in `IncomeRemainder`, right below this
+    // pot in the same section — repeating it here read as two facts about
+    // one number.
     const percent = percentLabel(spent, incomeTotal);
-    return percent === null
-        ? null
-        : `${percent} of your ${formatMxn(incomeTotal)} income`;
+    return percent === null ? null : `${percent} of your income`;
+}
+
+function IncomeRemainder({
+    incomeTotal,
+    incomeThatLeft,
+}: {
+    incomeTotal: number;
+    incomeThatLeft: number;
+}) {
+    // Compared in cents: a float sum landing a hair below zero (e.g. -1e-13)
+    // must read as exactly spent, never as a red "over income" that is not real.
+    const remainderCents = Math.round((incomeTotal - incomeThatLeft) * 100);
+    const over = remainderCents < 0;
+    const remainder = remainderCents / 100;
+    return (
+        <p className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-xl border px-4 py-3 text-sm">
+            <span className="text-muted-foreground">
+                Income{" "}
+                <span className="font-medium text-foreground tabular-nums">
+                    {formatMxn(incomeTotal)}
+                </span>
+            </span>
+            <span
+                className={cn(
+                    "font-semibold tabular-nums",
+                    over ? "text-danger" : "text-positive",
+                )}
+            >
+                {formatMxn(Math.abs(remainder))} {over ? "over income" : "left"}
+            </span>
+        </p>
+    );
 }
 
 /** A zero slice is dropped: an empty pot is not a $0.00 legend row. */

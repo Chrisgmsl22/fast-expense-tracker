@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Summary: the mix (CHORE-22)</title>
+        <!-- Owner-approved layout for the dashboard summary rail. Amounts and the
+     partner name are invented. Bar widths are visual, not calculated. -->
+        <style>
+            :root {
+                --bg: #eceef1;
+                --card: #fff;
+                --fg: #111827;
+                --muted: #6b7280;
+                --soft: #f1f2f4;
+                --border: #e6e8eb;
+                --spent: #4f46e5;
+                --other: #d97706;
+                --positive: #16a34a;
+                --money-out: #ea580c;
+                --positive-tint: #f0fdf4;
+                --transfer-tint: #fefce8;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: var(--fg);
+                font-family: system-ui, sans-serif;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+            main {
+                max-width: 380px;
+                margin: 0 auto;
+                padding: 28px 16px;
+            }
+            h1 {
+                font-size: 20px;
+                margin: 0 0 12px;
+                font-weight: 600;
+            }
+            .phone {
+                background: var(--card);
+                border-radius: 22px;
+                padding: 16px;
+                box-shadow: 0 0 0 1px var(--border);
+            }
+            .cost {
+                border: 1px solid var(--border);
+                border-left: 4px solid var(--spent);
+                border-radius: 14px;
+                padding: 14px;
+            }
+            .cost h3 {
+                margin: 0;
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--muted);
+            }
+            .big {
+                font-size: 28px;
+                font-weight: 700;
+                letter-spacing: -0.01em;
+                font-variant-numeric: tabular-nums;
+                margin-top: 2px;
+            }
+            .sub {
+                color: var(--muted);
+                font-size: 12.5px;
+                font-variant-numeric: tabular-nums;
+            }
+            .bar {
+                display: flex;
+                height: 8px;
+                border-radius: 99px;
+                overflow: hidden;
+                background: var(--soft);
+                margin: 12px 0 8px;
+            }
+            .bar i {
+                display: block;
+                height: 100%;
+            }
+            .row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 5px 0;
+                font-variant-numeric: tabular-nums;
+            }
+            .row .amt {
+                margin-left: auto;
+                font-weight: 600;
+            }
+            .dot {
+                width: 9px;
+                height: 9px;
+                border-radius: 50%;
+                flex: none;
+            }
+            .oth {
+                color: var(--other);
+            }
+            .boxlink {
+                display: flex;
+                justify-content: space-between;
+                border-top: 1px solid var(--border);
+                margin: 10px -14px -14px;
+                padding: 12px 14px;
+                font-weight: 600;
+            }
+            .pill {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                border-radius: 999px;
+                padding: 9px 16px;
+                margin-top: 10px;
+                font-variant-numeric: tabular-nums;
+            }
+            .pill.saved {
+                background: var(--positive-tint);
+                border: 1px solid #bbf7d0;
+            }
+            .pill.saved .v {
+                margin-left: auto;
+                font-weight: 700;
+                color: var(--positive);
+            }
+            .pill.partner {
+                background: var(--transfer-tint);
+                border: 1px solid #fde68a;
+                padding: 8px 16px;
+            }
+            .pill.partner .who {
+                font-weight: 600;
+            }
+            .pill.partner .pair {
+                margin-left: auto;
+                display: flex;
+                gap: 14px;
+                font-size: 13px;
+            }
+            .ic {
+                display: inline-grid;
+                place-items: center;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                font-size: 12px;
+                font-weight: 700;
+                flex: none;
+            }
+            .ic.in {
+                background: var(--positive);
+                color: #fff;
+            }
+            .pill.partner .ic {
+                background: #fff;
+                box-shadow: 0 0 0 1px #fde68a;
+                font-size: 13px;
+            }
+            .pill.partner .ic.in {
+                color: var(--positive);
+            }
+            .pill.partner .ic.out {
+                color: var(--money-out);
+            }
+            .flow {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .notes {
+                margin: 14px 4px 0;
+                font-size: 12.5px;
+                color: var(--muted);
+            }
+            .notes ul {
+                margin: 4px 0 10px;
+                padding-left: 18px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Summary: the mix</h1>
+            <div class="phone">
+                <div class="cost">
+                    <h3>What March cost me</h3>
+                    <div class="big">$12,480.00</div>
+                    <div class="sub">$15,210.00 charged</div>
+                    <div class="bar">
+                        <i style="width: 75%; background: var(--spent)"></i
+                        ><i style="width: 25%; background: var(--other)"></i>
+                    </div>
+                    <div class="row">
+                        <span
+                            class="dot"
+                            style="background: var(--spent)"
+                        ></span
+                        >From this month's income<span class="amt"
+                            >$9,360.00</span
+                        >
+                    </div>
+                    <div class="row">
+                        <span
+                            class="dot"
+                            style="background: var(--other)"
+                        ></span
+                        >From savings<span class="amt oth">$3,120.00</span>
+                    </div>
+                    <div class="boxlink">Full breakdown <span>›</span></div>
+                </div>
+                <div class="pill saved">
+                    <span class="ic in">+</span>Saved<span class="v"
+                        >$2,500.00</span
+                    >
+                </div>
+                <div class="pill partner">
+                    <span class="who">Sam</span>
+                    <span class="pair">
+                        <span class="flow" title="You sent Sam"
+                            ><span class="ic out">↑</span><b>$6,840.50</b></span
+                        >
+                        <span class="flow" title="Sam sent you"
+                            ><span class="ic in">↓</span><b>$7,215.00</b></span
+                        >
+                    </span>
+                </div>
+            </div>
+            <div class="notes">
+                <b>Reading it</b>
+                <ul>
+                    <li>
+                        The two rows add up to the headline. Reimbursed money is
+                        not a cost.
+                    </li>
+                    <li>
+                        Orange ↑: money you sent the partner. Green ↓: money the
+                        partner sent you.
+                    </li>
+                    <li>
+                        No net figure: the settlement chip above the summary
+                        owns who owes whom.
+                    </li>
+                </ul>
+                <b>Lives in Full breakdown only</b>
+                <ul>
+                    <li>
+                        Reimbursed (net $0), and the expense lists behind each
+                        funding source.
+                    </li>
+                    <li>
+                        Total out of this month's income, the income, and what
+                        is left of it.
+                    </li>
+                    <li>
+                        The savings-funded part of what you sent the partner.
+                    </li>
+                </ul>
+            </div>
+        </main>
+    </body>
+</html>

@@ -184,7 +184,7 @@ describe("the money tones stay tellable apart", () => {
     const CHIN_SEQUENCE: { key: string; tone: MoneyTone }[] = [
         { key: "charged", tone: "plain" },
         { key: "spent", tone: "spent" },
-        { key: "set-aside", tone: "savings" },
+        { key: "set-aside", tone: "positive" },
         { key: "not-from-income", tone: "otherMoney" },
         { key: "partner-paid-you", tone: "plain" },
         { key: "transfers", tone: "plain" },

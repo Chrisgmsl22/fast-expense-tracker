@@ -75,19 +75,37 @@ export function Pot({
 export function PotParts({
     headline,
     parts,
+    caption,
 }: {
     headline: number;
-    parts: { label: string; amount: number }[];
+    parts: { label: string; amount: number; tone?: MoneyTone }[];
+    /** Names the cut, for a pot that shows more than one. Drawn only with the parts. */
+    caption?: string;
 }) {
     const shown = parts.filter((part) => part.amount > 0);
     const sum = shown.reduce((total, part) => total + part.amount, 0);
     if (shown.length < 2 || Math.abs(sum - headline) >= 0.005) return null;
     return (
         <>
+            {caption && <PartsCaption>{caption}</PartsCaption>}
             {shown.map((part) => (
-                <Row key={part.label} label={part.label} amount={part.amount} />
+                <Row
+                    key={part.label}
+                    label={part.label}
+                    amount={part.amount}
+                    tone={part.tone}
+                />
             ))}
         </>
+    );
+}
+
+/** The small label over one cut of a pot, e.g. "By who it went to". */
+export function PartsCaption({ children }: { children: ReactNode }) {
+    return (
+        <p className="pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            {children}
+        </p>
     );
 }
 
@@ -95,14 +113,20 @@ export function Row({
     label,
     amount,
     tone = "plain",
+    note,
 }: {
     label: string;
     amount: number;
     tone?: MoneyTone;
+    /** A short qualifier after the label, e.g. that the money was kept. */
+    note?: string;
 }) {
     return (
         <div className="flex items-center gap-3 text-sm">
-            <span className="min-w-0 text-muted-foreground">{label}</span>
+            <span className="min-w-0 text-muted-foreground">
+                <span>{label}</span>
+                {note && <span className="ml-1.5 text-xs">{note}</span>}
+            </span>
             <span
                 className={`ml-auto font-semibold tabular-nums ${TONE_TEXT_CLASS[tone]}`}
             >

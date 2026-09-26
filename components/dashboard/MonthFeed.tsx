@@ -1,5 +1,5 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
-import { computeFeedTotals } from "@/lib/domain/movement";
+import { computeFeedTotals, nonIncomeFundedRows } from "@/lib/domain/movement";
 import { FundingBadge } from "@/components/expense/FundingBadge";
 import { SummaryRail } from "@/components/money/SummaryRail";
 import type { CoupleBalance } from "@/lib/domain/settlement";
@@ -56,6 +56,7 @@ export function MonthFeed({
     // Movements go in because a legacy `gf_paid` transfer is still a movement until
     // the data PR converts it; the footer would otherwise drop its money.
     const totals = computeFeedTotals(expenses, movements);
+    const fundingRows = nonIncomeFundedRows(expenses);
 
     const count = feed.length;
 
@@ -103,6 +104,7 @@ export function MonthFeed({
                 sharesExpenses={sharesExpenses}
                 isCurrentMonth={isCurrentMonth}
                 incomeTotal={incomeTotal}
+                fundingRows={fundingRows}
             />
         </div>
     );
