@@ -62,7 +62,7 @@ describe("MonthBreakdown", () => {
         expect(screen.getByText("This month's income")).toBeDefined();
         // Income that LEFT: 1,080 of consumption plus the 700 legacy transfer.
         const pot = screen.getByText(
-            "all but the transfers count toward 50/25/25",
+            "all but the transfers count toward your budget buckets",
         ).parentElement!;
         expect(within(pot).getByText("$1,780.00")).toBeDefined();
         expect(within(pot).getByText("Spent")).toBeDefined();
@@ -132,7 +132,7 @@ describe("MonthBreakdown", () => {
             );
 
             const pot = screen.getByText(
-                "all but the transfers count toward 50/25/25",
+                "all but the transfers count toward your budget buckets",
             ).parentElement!;
             expect(within(pot).getByText("$34,869.53")).toBeDefined();
             expect(within(pot).getByText("$19,450.82")).toBeDefined();
@@ -270,7 +270,7 @@ describe("MonthBreakdown", () => {
             renderIt();
 
             const pot = screen.getByText(
-                "counts toward 50/25/25",
+                "counts toward your budget buckets",
             ).parentElement!;
             expect(within(pot).getByText("$6,080.00")).toBeDefined();
             expect(within(pot).getByText("Spent")).toBeDefined();
@@ -361,13 +361,13 @@ describe("MonthBreakdown", () => {
             );
 
         it("says plainly that none of the pot reaches the budget", () => {
-            // "all but the transfers count toward 50/25/25" would be a claim
+            // "all but the transfers count toward your budget buckets" would be a claim
             // about $0 — and `PotParts` suppresses the itemisation that would
             // have shown it, because one part cannot partition anything.
             renderIt();
 
             const pot = screen.getByText(
-                "none of this counts toward 50/25/25",
+                "none of this counts toward your budget buckets",
             ).parentElement!;
             expect(screen.queryByText(/all but the transfers/)).toBeNull();
             expect(within(pot).getByText("$700.00")).toBeDefined();
@@ -441,7 +441,9 @@ describe("MonthBreakdown", () => {
         );
 
         expect(screen.queryByText("This month's income")).toBeNull();
-        expect(screen.queryByText("counts toward 50/25/25")).toBeNull();
+        expect(
+            screen.queryByText("counts toward your budget buckets"),
+        ).toBeNull();
         expect(screen.getByText("outside the budget")).toBeDefined();
         expect(screen.queryByText("$0.00")).toBeNull();
     });

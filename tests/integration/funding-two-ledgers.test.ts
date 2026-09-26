@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { db } from "@/lib/db";
+import { DEFAULT_BUDGET_RULE } from "@/lib/domain/budget-rule";
 import { computeBuckets } from "@/lib/domain/dashboard";
 import { partnerShareTotal } from "@/lib/domain/movement";
 import { PrismaDashboardRepository } from "@/lib/repositories/dashboard.repository";
@@ -57,7 +58,7 @@ describe("a savings-funded SHARED expense (two ledgers, spec 0007 §2 + ADR-0020
         const user = await seedSharedSavingsExpense();
 
         const spends = await dashboardRepo.getCategorySpends(user.id, MONTH);
-        const buckets = computeBuckets(spends, 0);
+        const buckets = computeBuckets(spends, 0, DEFAULT_BUDGET_RULE);
 
         // Not a smaller number — not a row at all. The filter is in the query.
         expect(spends).toEqual([]);

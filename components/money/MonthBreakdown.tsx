@@ -49,10 +49,10 @@ export function MonthBreakdown({
     const budgeted = whatIReallySpent.amount + setAside;
     const incomeCaption =
         budgeted === 0
-            ? "none of this counts toward 50/25/25"
+            ? "none of this counts toward your budget buckets"
             : legacyFromIncome > 0
-              ? "all but the transfers count toward 50/25/25"
-              : "counts toward 50/25/25";
+              ? "all but the transfers count toward your budget buckets"
+              : "counts toward your budget buckets";
 
     const chargeSlices = withMoney([
         {

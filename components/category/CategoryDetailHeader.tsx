@@ -12,7 +12,7 @@ const BUCKET_LABEL: Record<BucketKey, string> = {
 
 /**
  * Category-detail header: a Back link to the dashboard (month preserved), the
- * category's color dot + name + 50/25/25 bucket tag, and the over/under budget
+ * category's color dot + name + budget bucket tag, and the over/under budget
  * badge (teal when under, danger when over). The badge is shown only when a
  * limit is set.
  */

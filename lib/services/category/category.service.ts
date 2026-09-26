@@ -19,7 +19,7 @@ import type {
 /** Everything the category-detail screen renders. */
 export type CategoryDetail = {
     meta: CategoryMeta;
-    /** 50/25/25 bucket for the header tag (null = excluded, e.g. Unassigned). */
+    /** Budget bucket for the header tag (null = excluded, e.g. Unassigned). */
     bucket: BucketKey | null;
     /** Total my-share spend for the category this month. */
     spent: number;

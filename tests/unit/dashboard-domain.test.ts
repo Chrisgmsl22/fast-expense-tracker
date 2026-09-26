@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 
+import { DEFAULT_BUDGET_RULE } from "@/lib/domain/budget-rule";
 import {
     bucketOf,
     computeBuckets,
@@ -51,7 +52,7 @@ describe("computeBuckets", () => {
     ];
 
     it("sums into essentials/discretionary/savings, excluding unassigned", () => {
-        const buckets = computeBuckets(spends, 48000);
+        const buckets = computeBuckets(spends, 48000, DEFAULT_BUDGET_RULE);
         const byKey = Object.fromEntries(buckets.map((b) => [b.key, b]));
         expect(byKey.essentials!.spent).toBe(17200); // 14000 + 3200
         expect(byKey.discretionary!.spent).toBe(1400); // unassigned 500 NOT counted
@@ -59,7 +60,7 @@ describe("computeBuckets", () => {
     });
 
     it("derives 50/25/25 targets from income, in fixed order", () => {
-        const buckets = computeBuckets([], 48000);
+        const buckets = computeBuckets([], 48000, DEFAULT_BUDGET_RULE);
         expect(buckets.map((b) => b.key)).toEqual([
             "essentials",
             "discretionary",
@@ -69,10 +70,42 @@ describe("computeBuckets", () => {
     });
 
     it("returns zero spend (and zero targets) with no income or expenses", () => {
-        const buckets = computeBuckets([], 0);
+        const buckets = computeBuckets([], 0, DEFAULT_BUDGET_RULE);
         expect(buckets.every((b) => b.spent === 0 && b.target === 0)).toBe(
             true,
         );
+    });
+
+    // Guard: fails pre-fix, where the 50/25/25 constant ignored any rule.
+    it("Should derive targets and percents from a non-default rule", () => {
+        const buckets = computeBuckets(spends, 48000, {
+            essentials: 60,
+            discretionary: 30,
+            savings: 10,
+        });
+        expect(buckets.map((b) => [b.key, b.target, b.percent])).toEqual([
+            ["essentials", 28800, 60],
+            ["discretionary", 14400, 30],
+            ["savings", 4800, 10],
+        ]);
+        expect(buckets.map((b) => b.spent)).toEqual([17200, 1400, 12000]);
+    });
+
+    // Guard: fails pre-fix, where no bucket could hold 0% of income.
+    it("Should give a 0% bucket a zero target and keep its spend", () => {
+        const buckets = computeBuckets(spends, 48000, {
+            essentials: 70,
+            discretionary: 0,
+            savings: 30,
+        });
+        const discretionary = buckets.find((b) => b.key === "discretionary")!;
+        expect(discretionary).toEqual({
+            key: "discretionary",
+            spent: 1400,
+            target: 0,
+            percent: 0,
+        });
+        expect(buckets.every((b) => Number.isFinite(b.target))).toBe(true);
     });
 });
 

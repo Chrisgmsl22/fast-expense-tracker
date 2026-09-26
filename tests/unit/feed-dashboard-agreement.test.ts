@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_BUDGET_RULE } from "@/lib/domain/budget-rule";
 import { computeBuckets, type CategorySpend } from "@/lib/domain/dashboard";
 import {
     computeFeedTotals,
@@ -173,7 +174,7 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
     it("makes that number equal the sum the buckets are built from", () => {
         const totals = computeFeedTotals(month, []);
         const spends = categorySpendsFrom(month);
-        const bucketSum = computeBuckets(spends, 0).reduce(
+        const bucketSum = computeBuckets(spends, 0, DEFAULT_BUDGET_RULE).reduce(
             (sum, b) => sum + b.spent,
             0,
         );

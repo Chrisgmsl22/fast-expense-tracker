@@ -76,9 +76,9 @@ describe("sidebar model", () => {
                 ...sidebarSummary,
                 categoryBudgets: [],
                 buckets: [
-                    { key: "essentials", spent: 20, target: 0 },
-                    { key: "discretionary", spent: 0, target: 0 },
-                    { key: "savings", spent: 50, target: 0 },
+                    { key: "essentials", spent: 20, target: 0, percent: 50 },
+                    { key: "discretionary", spent: 0, target: 0, percent: 25 },
+                    { key: "savings", spent: 50, target: 0, percent: 25 },
                 ],
             },
             sidebarBalance,

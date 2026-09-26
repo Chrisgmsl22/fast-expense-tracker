@@ -269,11 +269,18 @@ These are not theme tokens. (Updated in slice 2.2: cards previously held semanti
 names that were never mapped, so dots rendered the raw CSS keyword — e.g. pure
 `yellow` instead of gold.)
 
-### Budget rule (50/25/25)
+### Budget rule (default 50/25/25)
 
-- **50% of monthly income** → Essentials
-- **25% of monthly income** → Discretionary
-- **25% of monthly income** → Savings
+Each user sets the split of monthly income across the three buckets in
+Settings. The three whole-number percentages sum to 100.
+
+- **Default:** 50% Essentials, 25% Discretionary, 25% Savings. A user with no
+  saved rule gets this default.
+- **Effective-dated, per user:** each saved rule (`BudgetRule`) has an effective
+  month. A month uses the latest rule at or before it.
+- **A change applies from the current month (CDMX) onward.** Past months keep
+  the split they had, for the same reason `actualExpenditure` is stored.
+- **Savings is still its own bucket**, whatever its percentage.
 
 See "Important nuance for 50/25/25 logic" in §1 for bucket definitions.
 

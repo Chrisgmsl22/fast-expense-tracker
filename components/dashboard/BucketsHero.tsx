@@ -2,16 +2,10 @@ import { Progress } from "@/components/ui/progress";
 import { formatMxn } from "@/lib/format";
 import type { Bucket, BucketKey } from "@/lib/domain/dashboard";
 
-/**
- * The 50/25/25 buckets hero — Essentials / Discretionary /
- * Savings, each a card with a colored top border, the bucket's percentage,
- * spend, and a Progress bar vs its income-derived target. Essentials and
- * Discretionary turn danger when over; Savings is a goal — reaching its target
- * reads as "goal met" (positive), not over-budget.
- */
+// Essentials and Discretionary turn danger when over their target. Savings is
+// a goal: reaching its target reads as "goal met", not over-budget.
 type BucketDisplay = {
     label: string;
-    pct: string;
     border: string;
     text: string;
     bar: string;
@@ -21,21 +15,18 @@ type BucketDisplay = {
 const DISPLAY: Record<BucketKey, BucketDisplay> = {
     essentials: {
         label: "Essentials",
-        pct: "50%",
         border: "border-t-bucket-essentials",
         text: "text-bucket-essentials",
         bar: "[&_[data-slot=progress-indicator]]:bg-bucket-essentials",
     },
     discretionary: {
         label: "Discretionary",
-        pct: "25%",
         border: "border-t-bucket-discretionary",
         text: "text-bucket-discretionary",
         bar: "[&_[data-slot=progress-indicator]]:bg-bucket-discretionary",
     },
     savings: {
         label: "Savings/Inv",
-        pct: "25%",
         border: "border-t-bucket-savings",
         text: "text-bucket-savings",
         bar: "[&_[data-slot=progress-indicator]]:bg-bucket-savings",
@@ -48,7 +39,7 @@ const DANGER_BAR = "[&_[data-slot=progress-indicator]]:bg-danger";
 function bucketStatus(bucket: Bucket): { text: string; danger: boolean } {
     const remaining = bucket.target - bucket.spent;
     if (bucket.key === "savings") {
-        return bucket.spent >= bucket.target && bucket.target > 0
+        return remaining <= 0 && bucket.spent > 0
             ? { text: "goal met", danger: false }
             : { text: `${formatMxn(remaining)} to go`, danger: false };
     }
@@ -57,16 +48,19 @@ function bucketStatus(bucket: Bucket): { text: string; danger: boolean } {
         : { text: `${formatMxn(remaining)} left`, danger: false };
 }
 
+/** A 0% bucket has no target to divide by: any spend fills it. */
+function progressFill(bucket: Bucket): number {
+    if (bucket.target <= 0) return bucket.spent > 0 ? 100 : 0;
+    return Math.min(100, (bucket.spent / bucket.target) * 100);
+}
+
 export function BucketsHero({ buckets }: { buckets: Bucket[] }) {
     return (
         <div className="grid gap-4 sm:grid-cols-3">
             {buckets.map((bucket) => {
                 const d = DISPLAY[bucket.key];
                 const status = bucketStatus(bucket);
-                const pct =
-                    bucket.target > 0
-                        ? Math.min(100, (bucket.spent / bucket.target) * 100)
-                        : 0;
+                const fill = progressFill(bucket);
                 return (
                     <div
                         key={bucket.key}
@@ -79,7 +73,7 @@ export function BucketsHero({ buckets }: { buckets: Bucket[] }) {
                                 {d.label}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                                {d.pct}
+                                {bucket.percent}%
                             </span>
                         </div>
                         <p
@@ -98,7 +92,7 @@ export function BucketsHero({ buckets }: { buckets: Bucket[] }) {
                             </span>
                         </p>
                         <Progress
-                            value={pct}
+                            value={fill}
                             aria-label={`${d.label} spend`}
                             className={`mt-3 ${status.danger ? DANGER_BAR : d.bar}`}
                         />

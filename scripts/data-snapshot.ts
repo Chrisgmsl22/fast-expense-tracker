@@ -164,6 +164,7 @@ async function rowCounts(db: Db): Promise<void> {
         incomes,
         settings,
         budgets,
+        budgetRules,
     ] = await Promise.all([
         db.user.count(),
         db.category.count(),
@@ -174,6 +175,7 @@ async function rowCounts(db: Db): Promise<void> {
         db.income.count(),
         db.settings.count(),
         db.categoryBudget.count(),
+        db.budgetRule.count(),
     ]);
     heading("Row counts");
     table(
@@ -184,6 +186,7 @@ async function rowCounts(db: Db): Promise<void> {
             ["Category", categories],
             ["Subcategory", subcategories],
             ["CategoryBudget", budgets],
+            ["BudgetRule", budgetRules],
             ["Card", cards],
             ["Expense", expenses],
             ["Movement", movements],

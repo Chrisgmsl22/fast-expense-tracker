@@ -9,9 +9,9 @@ export const sidebarSummary: Pick<
     savingsSpent: 400,
     net: 2300,
     buckets: [
-        { key: "essentials", spent: 1100, target: 1000 },
-        { key: "discretionary", spent: 200, target: 500 },
-        { key: "savings", spent: 400, target: 300 },
+        { key: "essentials", spent: 1100, target: 1000, percent: 50 },
+        { key: "discretionary", spent: 200, target: 500, percent: 25 },
+        { key: "savings", spent: 400, target: 300, percent: 25 },
     ],
     categoryBudgets: [
         {

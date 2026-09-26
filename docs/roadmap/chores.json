@@ -250,6 +250,26 @@
             "spec": "docs/designs-screens/summaryLayout-notes.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/82",
             "issue": null
+        },
+        {
+            "id": "CHORE-23",
+            "title": "Configure the Essentials / Discretionary / Savings split in Settings",
+            "description": "Owner request: set the bucket percentages from Settings instead of the fixed 50/25/25. Today the split is the BUCKET_RATIO constant in lib/domain/dashboard.ts, and BucketsHero.tsx hardcodes the '50%' / '25%' labels, so the targets, the labels, and the sidebar over-budget alert can only change through a code edit. Id 22 is taken by the in-flight feat/CHORE-22-mobile-summary-funding branch; this is 23 deliberately.",
+            "plan": "(1) Schema: three per-user integer percentages (essentials, discretionary, savings) with an effective month, defaults 50/25/25, so a user with no row keeps today's numbers and no data migration is needed. (2) Zod: whole numbers 0-100 that sum to exactly 100; the Settings form refuses any other total and shows the remainder live. (3) lib/domain/dashboard.ts takes the ratio as an argument instead of reading BUCKET_RATIO; the dashboard service reads it from getSettings(userId). (4) BucketsHero and the sidebar over-budget widget render the configured percentages, never a literal. (5) Settings section 'Budget rule' with the three inputs and a reset-to-50/25/25 control, via an IDOR-safe server action mirroring save-split-rule. DECIDED by the owner (2026-09-25): a change applies from the current month forward; past months keep the split they had, the same reason actualExpenditure is stored. So the split is effective-dated per user (resolved per month, the latest split at or before that month, falling back to 50/25/25), not a single Settings value — shape it at pickup. Tests: the sum-to-100 rule and its boundaries, the domain math with a non-default split, a past month keeping its old split after a change, the userId scope, and BucketsHero labels from data. Out of scope: the onboarding wizard step (CHORE-8.e reuses this path).",
+            "status": "shipped",
+            "spec": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/84",
+            "issue": null
+        },
+        {
+            "id": "CHORE-24",
+            "title": "Record a card points redemption that lowers a card's balance",
+            "description": "Owner request: 'I collect a bunch of points, so I use them to pay off or reduce the balance on certain purchases' — e.g. a $1,000 purchase, later 3,000 points redeemed for about $270 off. Today the only way to lower a card's balance is a card payment (Movement{type:'card_payment'}), which says cash left his bank account. A redemption moves no cash, so logging it as a payment is wrong and leaving it out overstates what he owes the card. Surface still undecided by the owner.",
+            "plan": "(1) A new Movement type 'points_redemption': cardId required, amount in MXN, optional points count, optional link to the expense it offsets, optional note. No funding source — no cash moves. (2) Capture: an entry in the Add menu beside 'Card payment', same dialog pattern, plus edit/delete mirroring CHORE-5. (3) Reads: it appears in the month feed, and CHORE-9's outstanding balance becomes charges - card payments - redemptions. It never enters Charged, cash out, or the settlement balance. DECIDED by the owner (2026-09-25): balance only, the way his bank app shows it — spend stays $1,000, he just owes the card $270 less; no budget, bucket or category figure changes. Tests: the type round-trips, cardId is required and userId-scoped, the redemption stays out of every cash and budget total, and CHORE-9 subtracts it. Pairs with CHORE-9; either can land first.",
+            "status": "open",
+            "spec": null,
+            "pr": null,
+            "issue": null
         }
     ]
 }
