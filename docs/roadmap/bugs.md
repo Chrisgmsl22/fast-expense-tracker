@@ -39,6 +39,6 @@ matching + wording stay human-in-the-loop, run on request.
 | BUG-4 | open   | Dashboard reads categories and subcategories with no userId — cross-user leak into the Add-expense picker                             | —     | docs/specs/0006-settings-standalone-shared-modes.md     | —                                                           |
 | BUG-5 | fixed  | A savings-funded payment to the partner appears in no line of the expenses chin                                                       | —     | docs/specs/0007-funding-source-and-settlement-cycles.md | https://github.com/Chrisgmsl22/fast-expense-tracker/pull/73 |
 | BUG-6 | fixed  | A future month is called 'a past month', and the open settlement tab disappears on any month but this one                             | —     | docs/specs/0007-funding-source-and-settlement-cycles.md | https://github.com/Chrisgmsl22/fast-expense-tracker/pull/78 |
-| BUG-7 | fixed  | The expense edit dialog can retype a partner payment's category and funding, and a reimbursed payment is silently rewritten to income | —     | docs/specs/0007-funding-source-and-settlement-cycles.md | —                                                           |
+| BUG-7 | fixed  | The expense edit dialog can retype a partner payment's category and funding, and a reimbursed payment is silently rewritten to income | —     | docs/specs/0007-funding-source-and-settlement-cycles.md | https://github.com/Chrisgmsl22/fast-expense-tracker/pull/83 |
 
 <!-- bugs:status:end -->
