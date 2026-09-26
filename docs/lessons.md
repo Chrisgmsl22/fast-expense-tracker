@@ -27,6 +27,24 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-09-25 — Playwright MCP saved screenshots in the primary checkout, not the worktree
+
+- **Symptom:** A browser check of BUG-7 ran against a worktree, but its two screenshots landed in the primary checkout's root, where another session had its own work in flight.
+- **Root cause:** Playwright MCP writes files relative to the MCP server's workspace root, which is the primary checkout. The agent's worktree does not change it.
+- **Fix / decision:** The agent moved both files to its scratchpad and confirmed the primary's `git status` was unchanged.
+- **Lesson for next time:** Give a browser agent an absolute `filename` in the scratchpad for every screenshot. After the check, confirm the primary checkout holds no new untracked files.
+
+---
+
+### 2026-09-25 — A plan asked every new test to fail pre-fix and also asked for pins
+
+- **Symptom:** BUG-7's register entry claimed every new test failed against the pre-fix code. The reviewer ran them pre-fix: six passed.
+- **Root cause:** One criterion asked for tests that fail without the fix; another asked to pin behaviour a schema already enforced. A pin passes before the fix by design, so the two criteria contradicted each other.
+- **Fix / decision:** The entry now names the six pins and says the other tests fail pre-fix. `slice-planning.md` now tells a plan to name each test as a guard or a pin.
+- **Lesson for next time:** Label each planned test as a guard or a pin. Check a "fails pre-fix" claim by running the tests against the pre-fix code.
+
+---
+
 ### 2026-09-18 — A spend card reused a broader financial total
 
 - **Symptom:** The "Spent from savings" card counted Savings-category allocations as "Your purchases".

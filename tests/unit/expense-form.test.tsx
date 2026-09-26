@@ -125,6 +125,78 @@ describe("ExpenseForm", () => {
         expect(screen.getByText(/a transfer, so no card/i)).toBeDefined();
     });
 
+    // A payment's category is fixed at creation and it can never read as
+    // reimbursed — the controls that could change either must be locked out,
+    // the same way the split and card controls already are.
+    it("locks the category and subcategory, and hides 'Fully reimbursed', on a payment", () => {
+        renderForm({ expense: { ...editable, isPartnerPayment: true } });
+
+        // Found BY its accessible name, which carries the "(fixed for a
+        // payment)" hint — the name is what assistive tech announces.
+        const category = screen.getByRole("combobox", {
+            name: /category \(fixed for a payment\)/i,
+        }) as HTMLButtonElement;
+        expect(category.disabled).toBe(true);
+        expect(
+            (screen.getByLabelText(/^subcategory$/i) as HTMLButtonElement)
+                .disabled,
+        ).toBe(true);
+        // `editable` is category c2 = health, where the checkbox would
+        // otherwise show — it must not, on a payment.
+        expect(
+            screen.queryByRole("checkbox", { name: /fully reimbursed/i }),
+        ).toBeNull();
+    });
+
+    it("calls updateExpense with the stored category and subcategory on a payment", async () => {
+        (updateExpense as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { id: "e1" },
+        });
+        renderForm({ expense: { ...editable, isPartnerPayment: true } });
+
+        fireEvent.submit(screen.getByRole("form", { name: /edit expense/i }));
+
+        await waitFor(() =>
+            expect(updateExpense).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    categoryId: editable.categoryId,
+                    subcategoryId: editable.subcategoryId,
+                }),
+            ),
+        );
+    });
+
+    it("opens a payment stored as reimbursed as income, with a visible notice", async () => {
+        (updateExpense as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { id: "e1" },
+        });
+        renderForm({
+            expense: {
+                ...editable,
+                isPartnerPayment: true,
+                fundedFrom: "reimbursed" as const,
+            },
+        });
+
+        // Otherwise a save of this legacy row fails: the hidden checkbox is
+        // gone, but the state it set is not.
+        expect(
+            screen.getByText(
+                /this payment was marked "fully reimbursed", which a payment can't be/i,
+            ),
+        ).toBeDefined();
+
+        fireEvent.submit(screen.getByRole("form", { name: /edit expense/i }));
+
+        await waitFor(() =>
+            expect(updateExpense).toHaveBeenCalledWith(
+                expect.objectContaining({ fundedFrom: "income" }),
+            ),
+        );
+    });
+
     it("leaves the split and card enabled on an ordinary expense", () => {
         renderForm({ expense: editable });
 

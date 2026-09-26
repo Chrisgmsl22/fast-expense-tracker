@@ -197,6 +197,47 @@ export async function updateExpense(
             };
         }
 
+        // Same silent-save concern as the split/card guard above: a payment's
+        // category is fixed at creation, and the owner's rule is that a
+        // payment is never reimbursed (spec 0007 §3.3 stays Health-only).
+        if (existing.isPartnerPayment) {
+            const categoryChanged = v.categoryId !== existing.categoryId;
+            const subcategoryChanged =
+                (v.subcategoryId ?? null) !== existing.subcategoryId;
+            const reimbursed = v.fundedFrom === "reimbursed";
+            if (categoryChanged || subcategoryChanged || reimbursed) {
+                return {
+                    ok: false,
+                    code: "validation",
+                    message:
+                        "A payment you sent your partner keeps its category, and can never be marked reimbursed.",
+                    fieldErrors: {
+                        ...(categoryChanged
+                            ? {
+                                  categoryId: [
+                                      "A payment's category can't be changed",
+                                  ],
+                              }
+                            : {}),
+                        ...(subcategoryChanged
+                            ? {
+                                  subcategoryId: [
+                                      "A payment's category can't be changed",
+                                  ],
+                              }
+                            : {}),
+                        ...(reimbursed
+                            ? {
+                                  fundedFrom: [
+                                      "A payment you sent your partner can never be reimbursed",
+                                  ],
+                              }
+                            : {}),
+                    },
+                };
+            }
+        }
+
         const count = await repo.updateForUser(id, userId, {
             categoryId: v.categoryId,
             subcategoryId: v.subcategoryId ?? null,

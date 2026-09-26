@@ -32,6 +32,7 @@ In an agent-led repo, not every slice needs a full Plan block. Use judgment.
 ### When to use a Full Plan
 
 Slices involving:
+
 - Security-sensitive code (auth, sessions, env handling, secret management)
 - Schema migrations (DB changes are hard to roll back cleanly)
 - A new pattern not yet in the codebase (this PR sets a precedent)
@@ -41,6 +42,7 @@ Slices involving:
 ### When to use a Light Plan
 
 Slices that are:
+
 - Straightforward CRUD page following an existing pattern in the repo
 - Obvious extensions of working code (e.g., "add delete button" after create/edit/list exist)
 - Polish slices (styling, copy, error message improvements)
@@ -54,22 +56,27 @@ Slices that are:
 ##### Plan
 
 **Scope (in)**
+
 - Bullet list of what this PR touches.
 - File-level granularity is good ("app/expenses/page.tsx").
 
 **Scope (out)**
+
 - Things explicitly deferred to later slices.
 - Anything tempting to bundle in but doesn't belong here.
 
 **Design decisions**
+
 - Key calls being made (link to ADRs for the big ones).
 - Method/component signatures if non-obvious.
 
 **Acceptance criteria**
+
 - What needs to be true for this to ship.
 - Tests passing, lint green, manual smoke check (if applicable).
 
 **Open questions**
+
 - Anything I'm unsure about — resolve before coding.
 
 ##### Tasks
@@ -103,6 +110,10 @@ block) is the same for both — the difference is how much is written upfront.
   don't start coding with unanswered design questions.
 - **Acceptance criteria should be checkable**. "Tests pass" is fine. "Code is
   clean" is not — it's not measurable.
+- **Name each test as a guard or a pin**. A guard test fails without the fix.
+  A regression pin locks in behaviour that already worked, so it passes before
+  the fix. "Every new test fails pre-fix" is false the moment a criterion asks
+  for a pin.
 
 ## The cycle
 
@@ -112,10 +123,10 @@ block) is the same for both — the difference is how much is written upfront.
 4. **Tests + lint + typecheck green** locally.
 5. **Adversarial review** via `reviewer` subagent (recommended for non-trivial slices).
 6. **Pre-PR cleanup** (all in one commit, part of the slice's PR):
-   - Mark all tasks `[x]` in the phase file.
-   - Copy the Plan block content into the PR description (Summary / Scope / Test plan).
-   - **Delete the Plan block** from the phase file.
-   - Mark the slice **shipped** in its phase-file section. The slice PR updates only *its own* slice; advancing the global "Currently active" pointer + staging the next brief is the **orchestrator's** serial job. Leave `main` **cold-resumable** — see [`session-handoff.md`](./session-handoff.md).
+    - Mark all tasks `[x]` in the phase file.
+    - Copy the Plan block content into the PR description (Summary / Scope / Test plan).
+    - **Delete the Plan block** from the phase file.
+    - Mark the slice **shipped** in its phase-file section. The slice PR updates only _its own_ slice; advancing the global "Currently active" pointer + staging the next brief is the **orchestrator's** serial job. Leave `main` **cold-resumable** — see [`session-handoff.md`](./session-handoff.md).
 7. **Open PR** → paste URL into the conversation for visibility.
 8. **Merge** → `main` is immediately clean. No stale Plan blocks ever land on `main`.
 9. **Retrospect** → if the slice hit avoidable friction (see threshold in `docs/lessons.md`), append an entry using the template there. No friction → skip. The reviewer subagent may also surface lesson candidates in its report — check those before deciding.

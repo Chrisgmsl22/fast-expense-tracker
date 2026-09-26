@@ -122,6 +122,23 @@ describe("a row the closed cycle COUNTED is frozen", () => {
         expect(repo.updates).toHaveLength(0);
     });
 
+    it("names the FREEZE, not the category rule, when a frozen payment's category is changed", async () => {
+        // The category-lock guard runs AFTER the closed-cycle check, so a
+        // frozen payment must not be told a rule it happens to also break.
+        const repo = repoWith("payment", CLOSED_AT);
+
+        const res = await updateExpense(
+            { ...soloPayload, categoryId: "cat2" },
+            repo,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("cycle_closed");
+        expect(res.message).toMatch(/payment counts in a settlement/i);
+        expect(repo.updates).toHaveLength(0);
+    });
+
     it("refuses the payment edit too", async () => {
         const deps = paymentDeps(CLOSED_AT);
 
