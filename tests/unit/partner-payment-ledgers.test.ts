@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_BUDGET_RULE } from "@/lib/domain/budget-rule";
 import { computeBuckets, type CategorySpend } from "@/lib/domain/dashboard";
 import {
     computeFeedTotals,
@@ -34,7 +35,11 @@ const paymentCategorySpend: CategorySpend = {
 
 describe("a payment to the partner is an ordinary expense", () => {
     it("reaches the budget buckets", () => {
-        const [essentials] = computeBuckets([paymentCategorySpend], 0);
+        const [essentials] = computeBuckets(
+            [paymentCategorySpend],
+            0,
+            DEFAULT_BUDGET_RULE,
+        );
 
         // `combined-expenses` is relevant, so the payment lands in essentials.
         expect(essentials!.spent).toBe(PAYMENT);
@@ -172,7 +177,7 @@ describe("a debt she fronted reaches no ledger", () => {
     it("is not an expense, so no bucket can see it", () => {
         // A debt is a Movement{gf_fronted}: nothing in the expense-shaped input
         // represents it, so there is no exclusion anyone can forget.
-        const [essentials] = computeBuckets([], 0);
+        const [essentials] = computeBuckets([], 0, DEFAULT_BUDGET_RULE);
         expect(essentials!.spent).toBe(0);
     });
 

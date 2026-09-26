@@ -1,5 +1,13 @@
 import { auth } from "@/auth";
-import { cardRepository, settingsRepository } from "@/lib/repositories";
+import { getCurrentMonthCdmx } from "@/lib/dates";
+import { resolveBudgetRule } from "@/lib/domain/budget-rule";
+import { formatMonthLabel } from "@/lib/format";
+import {
+    budgetRuleRepository,
+    cardRepository,
+    settingsRepository,
+} from "@/lib/repositories";
+import { BudgetRuleForm } from "@/components/settings/BudgetRuleForm";
 import { CardsForm } from "@/components/settings/CardsForm";
 import { SplitRuleForm } from "@/components/settings/SplitRuleForm";
 
@@ -8,7 +16,6 @@ export const dynamic = "force-dynamic";
 
 /** Sections designed in the mockup but deferred past CHORE-6.a (spec 0006 §8). */
 const COMING_SOON = [
-    "Budget rule",
     "Category limits",
     "Preferences",
     "Privacy",
@@ -25,9 +32,11 @@ export default async function SettingsPage() {
         return null;
     }
 
-    const [settings, cards] = await Promise.all([
+    const currentMonth = getCurrentMonthCdmx();
+    const [settings, cards, budgetRules] = await Promise.all([
         settingsRepository.getSettings(userId),
         cardRepository.listForSettings(userId),
+        budgetRuleRepository.listRules(userId),
     ]);
 
     return (
@@ -39,6 +48,11 @@ export default async function SettingsPage() {
                     sharesExpenses={settings.sharesExpenses}
                     partnerName={settings.partnerName}
                     defaultSharePercentage={settings.defaultSharePercentage}
+                />
+
+                <BudgetRuleForm
+                    rule={resolveBudgetRule(budgetRules, currentMonth)}
+                    monthLabel={formatMonthLabel(currentMonth)}
                 />
 
                 <CardsForm cards={cards} />

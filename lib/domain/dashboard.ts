@@ -1,9 +1,11 @@
 /**
- * Pure dashboard math — the 50/25/25 bucket model. No DB, no IO: the service
+ * Pure dashboard math — the three-bucket model. No DB, no IO: the service
  * feeds it raw per-category spend + income, it returns the bucket figures the
  * hero renders. Bucket definitions per docs/reference/domain-reference.md §1
  * ("Important nuance for 50/25/25 logic") + CLAUDE.md.
  */
+
+import type { BudgetRule } from "@/lib/domain/budget-rule";
 
 export type BucketKey = "essentials" | "discretionary" | "savings";
 
@@ -30,19 +32,20 @@ export type TopCategory = {
 export type Bucket = {
     key: BucketKey;
     spent: number;
-    /** `income × ratio` — the 50/25/25 target. */
+    /** `income × percent / 100` — the bucket's share of income. */
     target: number;
+    /** Whole-number percent of income from the month's budget rule. */
+    percent: number;
 };
 
 export const SAVINGS_SLUG = "savings";
 const UNASSIGNED_SLUG = "unassigned";
 
-/** Target share of income per bucket — the 50/25/25 rule. */
-export const BUCKET_RATIO: Record<BucketKey, number> = {
-    essentials: 0.5,
-    discretionary: 0.25,
-    savings: 0.25,
-};
+const BUCKET_ORDER: readonly BucketKey[] = [
+    "essentials",
+    "discretionary",
+    "savings",
+];
 
 /**
  * Which bucket a category belongs to, or `null` if it's excluded from the
@@ -59,13 +62,14 @@ export function bucketOf(category: {
 }
 
 /**
- * The three 50/25/25 buckets with summed spend + income-derived targets, always
- * in essentials → discretionary → savings order. Unassigned spend is excluded
+ * The three buckets with summed spend + targets from `rule`, always in
+ * essentials → discretionary → savings order. Unassigned spend is excluded
  * here (it has no bucket) but still counts toward the dashboard's total spend.
  */
 export function computeBuckets(
     categorySpends: CategorySpend[],
     incomeTotal: number,
+    rule: BudgetRule,
 ): Bucket[] {
     const spentByKey: Record<BucketKey, number> = {
         essentials: 0,
@@ -76,10 +80,11 @@ export function computeBuckets(
         const key = bucketOf(c);
         if (key) spentByKey[key] += c.spent;
     }
-    return (Object.keys(BUCKET_RATIO) as BucketKey[]).map((key) => ({
+    return BUCKET_ORDER.map((key) => ({
         key,
         spent: spentByKey[key],
-        target: incomeTotal * BUCKET_RATIO[key],
+        target: (incomeTotal * rule[key]) / 100,
+        percent: rule[key],
     }));
 }
 

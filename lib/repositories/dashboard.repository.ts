@@ -41,7 +41,7 @@ const UNASSIGNED_SLUG = "unassigned";
 
 /**
  * Read-only aggregates for the dashboard — the "port". Returns raw summed
- * spend per category/card; the 50/25/25 math lives in `lib/domain/dashboard.ts`,
+ * spend per category/card; the bucket math lives in `lib/domain/dashboard.ts`,
  * the assembly in `getDashboardSummary`. Mirrors the expense/income repositories
  * so an in-memory fake is swappable in tests.
  */

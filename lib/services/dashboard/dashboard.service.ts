@@ -1,4 +1,5 @@
 import { getMonthProgress } from "@/lib/dates";
+import { resolveBudgetRule } from "@/lib/domain/budget-rule";
 import {
     computeBuckets,
     savingsSpend,
@@ -6,7 +7,12 @@ import {
     type Bucket,
     type TopCategory,
 } from "@/lib/domain/dashboard";
-import { dashboardRepository, incomeRepository } from "@/lib/repositories";
+import {
+    budgetRuleRepository,
+    dashboardRepository,
+    incomeRepository,
+} from "@/lib/repositories";
+import type { BudgetRuleRepository } from "@/lib/repositories/budget-rule.repository";
 import type {
     CardSpend,
     CategoryBudgetItem,
@@ -51,14 +57,15 @@ export type DashboardSummary = {
 export type DashboardDeps = {
     dashboardRepo: DashboardRepository;
     incomeRepo: IncomeRepository;
+    budgetRuleRepo: BudgetRuleRepository;
     now: Date;
 };
 
 /**
- * Assemble the dashboard summary for `month`: income +
- * per-category spend → 50/25/25 buckets + the stat strip (spent / net / daily
+ * Assemble the dashboard summary for `month`: income + per-category spend →
+ * the month's budget-rule buckets + the stat strip (spent / net / daily
  * average / days left). Pure math lives in `lib/domain/dashboard`; this only
- * orchestrates the two repositories and the month-progress clock.
+ * orchestrates the repositories and the month-progress clock.
  *
  * "Spent" is consumption only (all categories minus Savings). Savings is a
  * transfer, not a spend — but it still leaves the account, so `net` subtracts
@@ -71,18 +78,30 @@ export async function getDashboardSummary(
 ): Promise<DashboardSummary> {
     const dashboardRepo = deps.dashboardRepo ?? dashboardRepository;
     const incomeRepo = deps.incomeRepo ?? incomeRepository;
+    const budgetRuleRepo = deps.budgetRuleRepo ?? budgetRuleRepository;
     const now = deps.now ?? new Date();
 
-    const [income, categorySpends, cards, categoryBudgets, nonIncomeFunded] =
-        await Promise.all([
-            incomeRepo.getMonthlySummary(userId, month),
-            dashboardRepo.getCategorySpends(userId, month),
-            dashboardRepo.getCardSpends(userId, month),
-            dashboardRepo.getCategoryBreakdown(userId, month),
-            dashboardRepo.getNonIncomeFundedTotal(userId, month),
-        ]);
+    const [
+        income,
+        categorySpends,
+        cards,
+        categoryBudgets,
+        nonIncomeFunded,
+        rules,
+    ] = await Promise.all([
+        incomeRepo.getMonthlySummary(userId, month),
+        dashboardRepo.getCategorySpends(userId, month),
+        dashboardRepo.getCardSpends(userId, month),
+        dashboardRepo.getCategoryBreakdown(userId, month),
+        dashboardRepo.getNonIncomeFundedTotal(userId, month),
+        budgetRuleRepo.listRules(userId),
+    ]);
 
-    const buckets = computeBuckets(categorySpends, income.total);
+    const buckets = computeBuckets(
+        categorySpends,
+        income.total,
+        resolveBudgetRule(rules, month),
+    );
     const totalOutflow = categorySpends.reduce((sum, c) => sum + c.spent, 0);
     const savings = savingsSpend(categorySpends);
     const consumptionSpent = totalOutflow - savings;

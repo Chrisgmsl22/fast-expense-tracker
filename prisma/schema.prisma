@@ -41,6 +41,7 @@ model User {
   categories      Category[]
   subcategories   Subcategory[]
   categoryBudgets CategoryBudget[]
+  budgetRules     BudgetRule[]
 }
 
 // Per-user category (ADR-0022). Each account owns its own copy of the category
@@ -82,6 +83,23 @@ model CategoryBudget {
   updatedAt  DateTime @updatedAt
 
   @@unique([userId, categoryId, month])
+}
+
+// The Essentials / Discretionary / Savings split, in force from `effectiveMonth`
+// until a later row. A past month keeps the row that applied then, so a new split
+// never rewrites history. No row = the 50/25/25 default.
+model BudgetRule {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  effectiveMonth String // "YYYY-MM" (CDMX frame), same as CategoryBudget.month
+  essentials     Int // whole percent; the three sum to 100
+  discretionary  Int
+  savings        Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, effectiveMonth])
 }
 
 // Per-user subcategory (ADR-0022) — belongs to a per-user Category and carries

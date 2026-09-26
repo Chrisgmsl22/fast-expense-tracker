@@ -48,7 +48,7 @@
     --spent: #4f46e5;
     --spent-tint: #eef2ff;
 
-    /* 50/25/25 budget buckets */
+    /* Budget buckets: essentials / discretionary / savings */
     --bucket-essentials: #475569;
     --bucket-discretionary: #d97706;
     --bucket-savings: #0d9488;

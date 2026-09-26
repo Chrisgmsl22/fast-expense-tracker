@@ -17,8 +17,9 @@ const fieldOf = (model: string, name: string) =>
         ?.fields.find((f) => f.name === name);
 
 describe("Prisma schema", () => {
-    it("Should define the nine core models", () => {
+    it("Should define the ten core models", () => {
         expect([...fieldsByModel.keys()].sort()).toEqual([
+            "BudgetRule",
             "Card",
             "Category",
             "CategoryBudget",
@@ -95,6 +96,23 @@ describe("Prisma schema", () => {
                 "userId",
             ]),
         );
+    });
+
+    it("Should store a whole-percent split per user per effective month", () => {
+        for (const field of ["essentials", "discretionary", "savings"]) {
+            expect(fieldOf("BudgetRule", field)).toMatchObject({
+                type: "Int",
+                isRequired: true,
+            });
+        }
+        expect(fieldOf("BudgetRule", "effectiveMonth")).toMatchObject({
+            type: "String",
+            isRequired: true,
+        });
+        const model = Prisma.dmmf.datamodel.models.find(
+            (m) => m.name === "BudgetRule",
+        );
+        expect(model?.uniqueFields).toEqual([["userId", "effectiveMonth"]]);
     });
 
     it("Should give Settings the single-user config fields", () => {

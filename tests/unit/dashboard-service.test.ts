@@ -8,6 +8,7 @@ import type {
     DashboardRepository,
 } from "@/lib/repositories/dashboard.repository";
 import type { CategorySpend } from "@/lib/domain/dashboard";
+import { FakeBudgetRuleRepository } from "@/tests/support/fake-budget-rule-repository";
 import { FakeIncomeRepository } from "@/tests/support/fake-income-repository";
 
 function cat(over: Partial<CategorySpend> & { spent: number }): CategorySpend {
@@ -83,12 +84,15 @@ describe("getDashboardSummary", () => {
             cards?: CardSpend[];
             categoryBudgets?: CategoryBudgetItem[];
             now?: Date;
+            budgetRuleRepo?: FakeBudgetRuleRepository;
         } = {},
     ) {
         const incomeRepo = new FakeIncomeRepository();
         incomeRepo.seedFixed("u1", 48000);
         return {
             incomeRepo,
+            budgetRuleRepo:
+                over.budgetRuleRepo ?? new FakeBudgetRuleRepository(),
             dashboardRepo: fakeDashboardRepo(
                 over.spends ?? spends,
                 over.cards ?? cards,
@@ -162,5 +166,74 @@ describe("getDashboardSummary", () => {
     it("passes the category-budget breakdown through", async () => {
         const summary = await getDashboardSummary("u1", "2026-06", deps());
         expect(summary.categoryBudgets).toEqual(categoryBudgets);
+    });
+
+    // Guard: the default percents reach each bucket; its 50/25/25 targets already held.
+    it("Should use 50/25/25 when the user has no saved rule", async () => {
+        const summary = await getDashboardSummary("u1", "2026-06", deps());
+        expect(summary.buckets.map((b) => [b.target, b.percent])).toEqual([
+            [24000, 50],
+            [12000, 25],
+            [12000, 25],
+        ]);
+    });
+
+    // Guard: fails pre-fix, where every month used the 50/25/25 constant.
+    it("Should use the rule in force for the VIEWED month", async () => {
+        const budgetRuleRepo = new FakeBudgetRuleRepository();
+        budgetRuleRepo.seed("u1", "2026-05", {
+            essentials: 60,
+            discretionary: 30,
+            savings: 10,
+        });
+        budgetRuleRepo.seed("u1", "2026-07", {
+            essentials: 40,
+            discretionary: 0,
+            savings: 60,
+        });
+
+        const june = await getDashboardSummary(
+            "u1",
+            "2026-06",
+            deps({ budgetRuleRepo }),
+        );
+        const july = await getDashboardSummary(
+            "u1",
+            "2026-07",
+            deps({ budgetRuleRepo }),
+        );
+        const april = await getDashboardSummary(
+            "u1",
+            "2026-04",
+            deps({ budgetRuleRepo }),
+        );
+
+        expect(june.buckets.map((b) => [b.target, b.percent])).toEqual([
+            [28800, 60],
+            [14400, 30],
+            [4800, 10],
+        ]);
+        expect(july.buckets.map((b) => [b.target, b.percent])).toEqual([
+            [19200, 40],
+            [0, 0],
+            [28800, 60],
+        ]);
+        expect(april.buckets.map((b) => b.percent)).toEqual([50, 25, 25]);
+    });
+
+    // Guard: another user's rule never reaches this user's buckets.
+    it("Should ignore another user's rule", async () => {
+        const budgetRuleRepo = new FakeBudgetRuleRepository();
+        budgetRuleRepo.seed("someone-else", "2026-01", {
+            essentials: 100,
+            discretionary: 0,
+            savings: 0,
+        });
+        const summary = await getDashboardSummary(
+            "u1",
+            "2026-06",
+            deps({ budgetRuleRepo }),
+        );
+        expect(summary.buckets.map((b) => b.percent)).toEqual([50, 25, 25]);
     });
 });
