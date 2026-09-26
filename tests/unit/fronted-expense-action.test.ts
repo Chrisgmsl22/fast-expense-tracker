@@ -200,6 +200,23 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
         expect(res.code).toBe("db_error");
         expect(res.message).toMatch(/could not save/i);
     });
+
+    // `reimbursed` is Health-only (spec 0007 §3.3) and a payment is never
+    // reimbursed. `partnerPaymentInputSchema` already refuses it — this pins
+    // that so the guard can't silently regress.
+    it("refuses fundedFrom: reimbursed — a payment carries no category to earn it", async () => {
+        const repo = new FakeExpenseRepository();
+        const res = await addPartnerPayment(
+            input({ fundedFrom: "reimbursed" }),
+            deps({ expenseRepo: repo }),
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.fundedFrom).toBeDefined();
+        expect(repo.inserts).toHaveLength(0);
+    });
 });
 
 describe("updatePartnerPayment (unit, injected fakes)", () => {
@@ -271,6 +288,22 @@ describe("updatePartnerPayment (unit, injected fakes)", () => {
         expect(res.ok).toBe(false);
         if (res.ok) return;
         expect(res.code).toBe("not_found");
+        expect(repo.updates).toHaveLength(0);
+    });
+
+    // Same schema-level refusal as `addPartnerPayment` — pinned here too,
+    // since this is a second, independent write path.
+    it("refuses fundedFrom: reimbursed", async () => {
+        const repo = seeded();
+        const res = await updatePartnerPayment(
+            { id: "e1", ...input({ fundedFrom: "reimbursed" }) },
+            deps({ expenseRepo: repo }),
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.fundedFrom).toBeDefined();
         expect(repo.updates).toHaveLength(0);
     });
 });

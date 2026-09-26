@@ -108,6 +108,9 @@ export function ExpenseForm({
     onCancel,
 }: Props) {
     const isEdit = expense !== undefined;
+    // A payment is never split and leaves a bank account, not a card. The server
+    // clamps both; disabling the controls stops the form taking a click it drops.
+    const isPartnerPayment = expense?.isPartnerPayment ?? false;
     const [date, setDate] = useState(
         expense ? toDateInputValue(expense.date) : "",
     );
@@ -120,14 +123,20 @@ export function ExpenseForm({
     const [description, setDescription] = useState(expense?.description ?? "");
     const [notes, setNotes] = useState(expense?.notes ?? "");
     const [isShared, setIsShared] = useState(expense?.isShared ?? false);
+    // A payment stored as `reimbursed` (only reachable through the bug this
+    // guards against) opens as `income` instead — reimbursed is Health-only,
+    // and a payment can never earn it.
+    const storedReimbursedPayment =
+        isPartnerPayment && expense?.fundedFrom === "reimbursed";
     const [fundedFrom, setFundedFrom] = useState<FundingSource>(
-        expense?.fundedFrom ?? "income",
+        storedReimbursedPayment ? "income" : (expense?.fundedFrom ?? "income"),
     );
-    // Set when a category change drops `reimbursed`, so the form can explain
-    // where the choice went instead of silently changing it.
+    // Set when a category change drops `reimbursed`, or a stored payment
+    // already carried it — either way the form says where the choice went
+    // instead of silently changing it.
     const [reimbursedClearedBy, setReimbursedClearedBy] = useState<
         string | null
-    >(null);
+    >(storedReimbursedPayment ? "a payment" : null);
     // An already-shared row keeps its stored split so historical splits stay
     // correct (CLAUDE.md domain note + immutable history, ADR-0021) — even in
     // Solo mode, editing a historical shared row must not rewrite its split.
@@ -155,9 +164,6 @@ export function ExpenseForm({
     const selectedCategory = categories.find((c) => c.id === categoryId);
     // Savings is a transfer, not a card purchase — no payment method applies.
     const isSavings = selectedCategory?.slug === SAVINGS_SLUG;
-    // A payment is never split and leaves a bank account, not a card. The server
-    // clamps both; disabling the controls stops the form taking a click it drops.
-    const isPartnerPayment = expense?.isPartnerPayment ?? false;
     const selectedSubcategory = availableSubcategories.find(
         (s) => s.id === subcategoryId,
     );
@@ -310,16 +316,29 @@ export function ExpenseForm({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                    <Label htmlFor="categoryId">Category</Label>
+                    <Label htmlFor="categoryId">
+                        Category
+                        {isPartnerPayment ? (
+                            <span className="font-normal text-muted-foreground">
+                                {" "}
+                                (fixed for a payment)
+                            </span>
+                        ) : null}
+                    </Label>
                     <Select
                         value={categoryId}
                         onValueChange={(value) =>
                             handleCategoryChange(value ?? "")
                         }
+                        disabled={isPartnerPayment}
                     >
                         <SelectTrigger
                             id="categoryId"
-                            aria-label="Category"
+                            aria-label={
+                                isPartnerPayment
+                                    ? "Category (fixed for a payment)"
+                                    : "Category"
+                            }
                             className="mt-1.5 w-full"
                         >
                             {selectedCategory ? (
@@ -348,7 +367,7 @@ export function ExpenseForm({
                     <Select
                         value={subcategoryId}
                         onValueChange={(value) => setSubcategoryId(value ?? "")}
-                        disabled={!categoryId}
+                        disabled={!categoryId || isPartnerPayment}
                     >
                         <SelectTrigger
                             id="subcategoryId"
@@ -506,10 +525,11 @@ export function ExpenseForm({
                     ) : null}
                 </div>
 
-                {/* Also shown when the row already carries the value on another
-                    category, so an existing `reimbursed` expense never loses it
-                    silently. */}
-                {canReimburse || fundedFrom === "reimbursed" ? (
+                {/* Shown even off Health so a legacy `reimbursed` row isn't
+                    dropped silently. Never offered on a payment: spec 0007
+                    §3.3 keeps reimbursed Health-only, and a payment can't earn it. */}
+                {!isPartnerPayment &&
+                (canReimburse || fundedFrom === "reimbursed") ? (
                     <div>
                         <label className="flex items-start gap-2.5">
                             <Checkbox
@@ -545,7 +565,9 @@ export function ExpenseForm({
 
                 {reimbursedClearedBy ? (
                     <p className="text-xs text-muted-foreground">
-                        {`"${FUNDING_TOGGLE_LABEL.reimbursed}" isn't available for ${reimbursedClearedBy}, so it's unchecked.`}
+                        {isPartnerPayment
+                            ? `This payment was marked "${FUNDING_TOGGLE_LABEL.reimbursed}", which a payment can't be. Saving records it as paid from this month's income.`
+                            : `"${FUNDING_TOGGLE_LABEL.reimbursed}" isn't available for ${reimbursedClearedBy}, so it's unchecked.`}
                     </p>
                 ) : null}
                 {fieldError("fundedFrom")}
