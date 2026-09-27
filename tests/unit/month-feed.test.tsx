@@ -149,7 +149,7 @@ describe("MonthFeed", () => {
             />,
         );
         // charged = 1820 + 185 = 2005; spent = 1237 + 185 = 1422
-        expect(screen.getByText("$2,005.00")).toBeDefined();
+        expect(screen.getByText("$2,005.00 charged")).toBeDefined();
         expect(screen.getByText("What June 2026 cost me")).toBeDefined();
         expect(screen.getAllByText("$1,422.00")[0]).toBeDefined();
     });
@@ -195,15 +195,15 @@ describe("MonthFeed", () => {
                 isCurrentMonth
             />,
         );
-        // The row and the footer line share the wording, so scope to the list.
-        expect(screen.getAllByText("Brenda paid you")).toHaveLength(2);
+        expect(screen.getByText("Brenda paid you")).toBeDefined();
         expect(screen.queryByText("Paid Brenda")).toBeNull();
         const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.getByText("Brenda paid you")).toBeDefined();
-        expect(totals.getByText("$700.00")).toBeDefined();
+        expect(
+            totals.getByRole("listitem", { name: "Brenda sent you $700.00" }),
+        ).toBeDefined();
     });
 
-    it("splits the footer into Charged / spent / Set aside / Total when savings is present", () => {
+    it("shows the cost, a Saved pill, and no income total when savings is present", () => {
         const mixed: ExpenseListItem[] = [
             {
                 id: "g1",
@@ -255,19 +255,22 @@ describe("MonthFeed", () => {
             />,
         );
         const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.getByText(/charged · my cost/)).toBeDefined();
-        expect(totals.getByText("$1,000.00")).toBeDefined();
-        expect(totals.getByText("From this month's income")).toBeDefined();
-        expect(totals.getAllByText("$680.00")[0]).toBeDefined();
-        expect(totals.getByText("Set aside to savings")).toBeDefined();
-        expect(totals.getByText("$5,000.00")).toBeDefined();
+        expect(totals.getByText("$1,000.00 charged")).toBeDefined();
         expect(
-            totals.getByText("Total — out of this month's income"),
-        ).toBeDefined();
-        expect(totals.getByText("$5,680.00")).toBeDefined();
+            totals.getByText("From this month's income").nextElementSibling
+                ?.textContent,
+        ).toBe("$680.00");
+        expect(totals.getByText("Saved").nextElementSibling?.textContent).toBe(
+            "$5,000.00",
+        );
+        // The income total lives in Full breakdown now.
+        expect(
+            totals.queryByText("Total — out of this month's income"),
+        ).toBeNull();
+        expect(totals.queryByText("$5,680.00")).toBeNull();
     });
 
-    it("shows zero allocations and an income total without savings or transfers", () => {
+    it("draws no Saved pill for a month that set nothing aside", () => {
         render(
             <MonthFeed
                 expenses={expenses}
@@ -279,13 +282,10 @@ describe("MonthFeed", () => {
             />,
         );
         const footer = within(screen.getByTestId("feed-totals"));
+        expect(footer.queryByText("Saved")).toBeNull();
         expect(
-            footer.getByText("Set aside to savings").nextElementSibling
+            footer.getByText("From this month's income").nextElementSibling
                 ?.textContent,
-        ).toBe("$0.00");
-        expect(
-            footer.getByText("Total — out of this month's income")
-                .nextElementSibling?.textContent,
         ).toBe("$1,422.00");
     });
 
@@ -315,12 +315,12 @@ describe("MonthFeed", () => {
         );
         // Card payment line present (no partner-money tag anymore).
         expect(screen.getByText("Card payment")).toBeDefined();
-        // Transfer line + footer "Paid to Brenda" figure.
+        // Transfer line + the "sent" flow in the partner pill.
         expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
-        // The payment is a breakdown of what I really spent, so it reads as one.
-        expect(totals.getByText("You paid Brenda")).toBeDefined();
-        expect(totals.getByText("$200.00")).toBeDefined();
+        expect(
+            totals.getByRole("listitem", { name: "You sent Brenda $200.00" }),
+        ).toBeDefined();
     });
 
     it("shows both transfer sources as partner details without changing income cost", () => {
@@ -351,20 +351,14 @@ describe("MonthFeed", () => {
         );
         const footer = within(screen.getByTestId("feed-totals"));
         expect(
-            footer.getByText("You paid Brenda").nextElementSibling?.textContent,
-        ).toBe("$8,200.00");
-        expect(
-            footer.getByText("Of that, outside income").nextElementSibling
-                ?.textContent,
-        ).toBe("$8,000.00");
+            footer.getByRole("listitem", { name: "You sent Brenda $8,200.00" }),
+        ).toBeDefined();
+        // Its savings slice moved to Full breakdown with the income total.
+        expect(footer.queryByText("Of that, from savings")).toBeNull();
         expect(
             footer.getByText("From this month's income").nextElementSibling
                 ?.textContent,
         ).toBe("$1,422.00");
-        expect(
-            footer.getByText("Total — out of this month's income")
-                .nextElementSibling?.textContent,
-        ).toBe("$1,622.00");
     });
 
     it("badges no ordinary row — income money is never 'not from income'", () => {
@@ -428,11 +422,11 @@ describe("MonthFeed", () => {
         );
         const footer = within(screen.getByTestId("feed-totals"));
         expect(
-            footer.getByText("Outside income").nextElementSibling?.textContent,
+            footer.getByText("From savings").nextElementSibling?.textContent,
         ).toBe("$680.00");
         expect(
-            footer.getByText("You paid Brenda").nextElementSibling?.textContent,
-        ).toBe("$680.00");
+            footer.getByRole("listitem", { name: "You sent Brenda $680.00" }),
+        ).toBeDefined();
         expect(footer.queryByText("$1,360.00")).toBeNull();
     });
 
@@ -455,18 +449,15 @@ describe("MonthFeed", () => {
         );
         const footer = within(screen.getByTestId("feed-totals"));
         expect(
-            footer.getByText("Outside income").nextElementSibling?.textContent,
+            footer.getByText("From savings").nextElementSibling?.textContent,
         ).toBe("$530.00");
         expect(
-            footer.getByText("You paid Brenda").nextElementSibling?.textContent,
-        ).toBe("$530.00");
-        expect(
-            footer.getByText("Of that, outside income").nextElementSibling
-                ?.textContent,
-        ).toBe("$530.00");
+            footer.getByRole("listitem", { name: "You sent Brenda $530.00" }),
+        ).toBeDefined();
+        expect(footer.queryByText("Of that, from savings")).toBeNull();
     });
 
-    it("omits the savings line when no money reached her that way", () => {
+    it("shows $0 sent when no money reached her", () => {
         render(
             <MonthFeed
                 expenses={expenses}
@@ -479,7 +470,9 @@ describe("MonthFeed", () => {
         );
 
         const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.queryByText("You paid Brenda")).toBeNull();
+        expect(
+            totals.getByRole("listitem", { name: "You sent Brenda $0.00" }),
+        ).toBeDefined();
     });
 
     it("keeps the reminder, and its scope, on an empty month", () => {
@@ -572,11 +565,12 @@ describe("MonthFeed", () => {
         // Non-partner activity stays.
         expect(screen.getByText("Card payment")).toBeDefined();
         // Historical partner data stays visible (immutable history, ADR-0021):
-        // the transfer row + the monthly "Paid to Brenda" footer figure.
+        // the transfer row + the "sent" flow in the partner pill.
         expect(screen.getAllByText(/Paid Brenda/)[0]).toBeDefined();
         const totals = within(screen.getByTestId("feed-totals"));
-        expect(totals.getByText("You paid Brenda")).toBeDefined();
-        expect(totals.getByText("$200.00")).toBeDefined();
+        expect(
+            totals.getByRole("listitem", { name: "You sent Brenda $200.00" }),
+        ).toBeDefined();
         // Only the settlement chip (its link) is hidden on the dashboard — the
         // running balance stays live and settleable via /settlement (ADR-0021,
         // decision 8; nothing is frozen).
@@ -627,8 +621,7 @@ describe("MonthFeed", () => {
                 isCurrentMonth
             />,
         );
-        // Charged / What I really spent / Set aside / Paid to Brenda / Total —
-        // every figure identical (ADR-0020).
+        // Every figure on the rail identical (ADR-0020).
         expect(screen.getByTestId("feed-totals").textContent).toBe(without);
         // …and the debt is not on screen at all: it reaches no ledger AND no
         // feed (spec 0007 §6b).

@@ -1,5 +1,7 @@
 import {
+    FROM_SAVINGS_LABEL,
     NON_INCOME_FUNDED_LABEL,
+    REIMBURSED_LABEL,
     NON_INCOME_FUNDED_SHORT_LABEL,
     ofWhichPaidToPartner,
     ofWhichPaidToPartnerShort,
@@ -10,7 +12,6 @@ import type { FeedTotals } from "@/lib/domain/movement";
 export type MoneyTone =
     | "plain"
     | "spent"
-    | "savings"
     | "otherMoney"
     | "partner"
     | "positive";
@@ -23,7 +24,6 @@ export type MoneyTone =
 export const TONE_COLOR: Record<MoneyTone, string> = {
     plain: "var(--muted-foreground)",
     spent: "var(--spent)",
-    savings: "var(--bucket-savings)",
     otherMoney: "var(--bucket-discretionary)",
     partner: "var(--transfer)",
     positive: "var(--positive)",
@@ -32,7 +32,6 @@ export const TONE_COLOR: Record<MoneyTone, string> = {
 export const TONE_TEXT_CLASS: Record<MoneyTone, string> = {
     plain: "text-foreground",
     spent: "text-spent",
-    savings: "text-bucket-savings",
     otherMoney: "text-bucket-discretionary",
     partner: "text-transfer",
     positive: "text-positive",
@@ -70,9 +69,10 @@ export const TOTAL_LABEL = "Total";
 export const TOTAL_QUALIFIER = "— out of this month's income";
 
 /**
- * The month's figures as one hierarchy, shared by the dashboard rail and the
- * expenses bar so the two screens cannot organise the same numbers differently.
- * A zero figure is dropped rather than printed: an empty savings pot is not $0.00.
+ * The month's figures as one hierarchy, each with its tone. No surface renders it
+ * directly: it is the line-up `summary-model.test.ts` pins, so no two coloured
+ * figures can meet. Each line's `of` is ONE cut of it, never two mixed. A zero
+ * figure is dropped rather than printed: an empty savings pot is not $0.00.
  */
 export function summaryLines(
     totals: FeedTotals,
@@ -112,7 +112,7 @@ export function summaryLines(
             key: "set-aside",
             label: "Set aside",
             amount: totals.setAside,
-            tone: "savings",
+            tone: "positive",
             of: [],
         });
     }
@@ -124,12 +124,17 @@ export function summaryLines(
             shortLabel: NON_INCOME_FUNDED_SHORT_LABEL,
             amount: totals.notFromIncome.amount,
             tone: "otherMoney",
+            // Cut by which money paid — the two parts add up to the line.
             of: nonZero([
                 {
-                    key: "not-from-income-partner",
-                    label: ofWhichPaid,
-                    shortLabel: ofWhichPaidShort,
-                    amount: totals.notFromIncome.of.sentToPartner,
+                    key: "not-from-income-savings",
+                    label: FROM_SAVINGS_LABEL,
+                    amount: totals.notFromIncome.fromSavings.amount,
+                },
+                {
+                    key: "not-from-income-reimbursed",
+                    label: REIMBURSED_LABEL,
+                    amount: totals.notFromIncome.reimbursed.amount,
                 },
             ]),
         });
@@ -210,18 +215,22 @@ function nonZero<T extends { amount: number }>(lines: T[]): T[] {
     return lines.filter((l) => l.amount > 0);
 }
 
+/**
+ * What the month cost me. Reimbursed money is out: it was paid back, so its net
+ * cost is zero. The charge still holds it — the card saw the full amount.
+ */
 export function summaryCost(totals: FeedTotals): {
     amount: number;
     incomePercent: number;
     outsideIncomePercent: number;
 } {
-    const amount = totals.whatIReallySpent.amount + totals.notFromIncome.amount;
+    const fromSavings = totals.notFromIncome.fromSavings.amount;
+    const amount = totals.whatIReallySpent.amount + fromSavings;
     return {
         amount,
         incomePercent:
             amount > 0 ? (totals.whatIReallySpent.amount / amount) * 100 : 0,
-        outsideIncomePercent:
-            amount > 0 ? (totals.notFromIncome.amount / amount) * 100 : 0,
+        outsideIncomePercent: amount > 0 ? (fromSavings / amount) * 100 : 0,
     };
 }
 

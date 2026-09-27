@@ -1,8 +1,10 @@
-import {
-    NON_INCOME_FUNDED_HINT,
-    NON_INCOME_FUNDED_LABEL,
-} from "@/lib/domain/funding";
+import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
+import { computeFeedTotals, nonIncomeFundedRows } from "@/lib/domain/movement";
 import { formatMxn } from "@/lib/format";
+import {
+    FundingSplit,
+    type FundedExpense,
+} from "@/components/money/FundingSplit";
 
 /**
  * The dashboard stat strip — Income in / Spent (my share) / Net so
@@ -15,16 +17,18 @@ export function StatStrip({
     net,
     dailyAvg,
     daysLeft,
-    nonIncomeFunded,
+    expenses,
 }: {
     income: number;
     spent: number;
     net: number;
     dailyAvg: number;
     daysLeft: number;
-    /** My-share spend the budget skipped (spec 0007 §3.1); 0 when none. */
-    nonIncomeFunded: number;
+    /** The month's rows, for the spend the budget skipped (spec 0007 §3.1). */
+    expenses: FundedExpense[];
 }) {
+    // The same figure and split the rail shows, so the two cannot disagree.
+    const { notFromIncome } = computeFeedTotals(expenses);
     return (
         <div>
             <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4">
@@ -40,10 +44,18 @@ export function StatStrip({
                     value={formatMxn(dailyAvg)}
                 />
             </div>
-            {nonIncomeFunded > 0 ? (
-                <p className="mt-2 text-xs text-muted-foreground">
-                    {`${NON_INCOME_FUNDED_LABEL}: ${formatMxn(nonIncomeFunded)} — ${NON_INCOME_FUNDED_HINT}.`}
-                </p>
+            {notFromIncome.amount > 0 ? (
+                <div className="mt-2 text-xs text-muted-foreground">
+                    <p>
+                        {`${NON_INCOME_FUNDED_LABEL}: ${formatMxn(notFromIncome.amount)} — outside the budget.`}
+                    </p>
+                    <FundingSplit
+                        fromSavings={notFromIncome.fromSavings.amount}
+                        reimbursed={notFromIncome.reimbursed.amount}
+                        rows={nonIncomeFundedRows(expenses)}
+                        className="mt-1 text-foreground"
+                    />
+                </div>
             ) : null}
         </div>
     );

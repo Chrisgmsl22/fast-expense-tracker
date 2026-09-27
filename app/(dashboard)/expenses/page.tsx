@@ -75,9 +75,7 @@ export default async function ExpensesPage({
     const { sharesExpenses } = settings;
 
     return (
-        // Bottom padding on mobile so the pinned chin — reminder row included —
-        // never covers the last rows.
-        <main className="p-8 pb-40 sm:pb-8">
+        <main className="p-8">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-semibold">Expenses</h1>
                 <AddExpenseButton

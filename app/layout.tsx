@@ -29,6 +29,9 @@ export const viewport: Viewport = {
     initialScale: 1,
     minimumScale: 1,
     maximumScale: 1,
+    // The page reaches under Safari's bars; fixed chrome pads with
+    // env(safe-area-inset-*) so nothing sits beneath them.
+    viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -41,7 +44,9 @@ export default function RootLayout({
             lang="en"
             className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
         >
-            <body className="min-h-full flex flex-col">
+            {/* viewport-fit=cover reaches under a landscape notch too, so the
+                side insets pad every page, auth included. */}
+            <body className="min-h-full flex flex-col pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
                 {children}
                 <SpeedInsights />
             </body>

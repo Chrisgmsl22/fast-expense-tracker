@@ -9,17 +9,20 @@ import {
     type FeedTotalExpense,
     type FeedTotalMovement,
 } from "@/lib/domain/movement";
+import type { FundedExpense } from "@/components/money/FundingSplit";
+import { funded, fundingRowsOf } from "@/tests/support/funding-rows";
 
 const expense = (
     overrides: Partial<FeedTotalExpense> & Pick<FeedTotalExpense, "id">,
-): FeedTotalExpense => ({
-    amount: 100,
-    actualExpenditure: 100,
-    isPartnerPayment: false,
-    category: { slug: "shopping" },
-    fundedFrom: "savings",
-    ...overrides,
-});
+): FundedExpense =>
+    funded({
+        amount: 100,
+        actualExpenditure: 100,
+        isPartnerPayment: false,
+        category: { slug: "shopping" },
+        fundedFrom: "savings",
+        ...overrides,
+    });
 
 const allocation = expense({
     id: "allocation",
@@ -313,6 +316,7 @@ describe("SavingsSpendCard", () => {
                 <SavingsSpendCard {...props} />
                 <MonthBreakdown
                     totals={computeFeedTotals(expenses, movements)}
+                    fundingRows={fundingRowsOf(expenses)}
                     monthLabel="June 2026"
                     partnerName="Alex"
                 />

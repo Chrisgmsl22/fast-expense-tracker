@@ -81,8 +81,10 @@ export const NON_INCOME_FUNDED_LABEL = "Not from this month's income";
 /** Short form, for the mobile totals bar. */
 export const NON_INCOME_FUNDED_SHORT_LABEL = "Not from income";
 
-export const NON_INCOME_FUNDED_HINT =
-    "savings or reimbursed — outside the budget";
+/** The two halves of `NON_INCOME_FUNDED_LABEL`, by which money paid. */
+export const FROM_SAVINGS_LABEL = "From savings";
+export const REIMBURSED_LABEL = "Reimbursed";
+export const REIMBURSED_NOTE = "paid back · net $0";
 
 /** Names a figure as a breakdown of the line above it, never money beside it. */
 export function ofWhichPaidToPartner(partnerName: string): string {

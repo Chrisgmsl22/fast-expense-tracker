@@ -5,9 +5,36 @@ import {
     FUNDING_SOURCES,
     allowsReimbursed,
     fundingSourceAfterCategoryChange,
+    fundingSourceFromToggles,
     isBudgetFunded,
     toFundingSource,
+    toTransferFundingSource,
 } from "@/lib/domain/funding";
+
+describe("funding source helpers", () => {
+    it.each([
+        [false, false, "income"],
+        [true, false, "savings"],
+        [false, true, "reimbursed"],
+        [true, true, "reimbursed"],
+    ] as const)(
+        "maps savings=%s reimbursed=%s to %s",
+        (paidFromSavings, fullyReimbursed, source) => {
+            expect(
+                fundingSourceFromToggles(paidFromSavings, fullyReimbursed),
+            ).toBe(source);
+        },
+    );
+
+    it.each([
+        ["savings", "savings"],
+        ["income", "income"],
+        ["reimbursed", "income"],
+        ["unknown", "income"],
+    ])("reads a stored transfer value %s as %s", (stored, source) => {
+        expect(toTransferFundingSource(stored)).toBe(source);
+    });
+});
 
 describe("funding source (spec 0007 §2/§3.1)", () => {
     it("offers exactly the three values, income first", () => {

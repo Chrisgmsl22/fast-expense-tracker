@@ -1,5 +1,14 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import {
+    describe,
+    it,
+    expect,
+    vi,
+    afterEach,
+    beforeEach,
+    type Mock,
+} from "vitest";
+import {
+    act,
     render,
     screen,
     fireEvent,
@@ -772,14 +781,115 @@ describe("ExpenseListInteractive", () => {
 
         it("shows the row at its full amount — the badge explains, it doesn't discount", () => {
             render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
-            expect(screen.getByText("Shoes")).toBeDefined();
-            expect(screen.getByText("$200.00")).toBeDefined();
+            const row = screen
+                .getByRole("button", { name: "Edit Shoes" })
+                .closest("li")!;
+            expect(within(row).getByText("Shoes")).toBeDefined();
+            expect(within(row).getByText("$200.00")).toBeDefined();
+        });
+
+        it("lists the funded rows behind each footer sub-row, following the filter", () => {
+            render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
+            const footer = within(screen.getByTestId("totals-footer"));
+            const reimbursed = footer
+                .getByText("Reimbursed")
+                .closest("details")!;
+            expect(within(reimbursed).getByText("Medicine")).toBeDefined();
+            expect(reimbursed.open).toBe(false);
+
+            fireEvent.click(screen.getByRole("button", { name: "Health" }));
+            expect(footer.queryByText("From savings")).toBeNull();
+            expect(footer.getByText("Reimbursed")).toBeDefined();
+        });
+
+        it("gives the title its own full-width line on mobile, badge beneath", () => {
+            render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
+            const title = screen.getAllByText("Shoes")[0]!;
+            // The title line spans every mobile column, so the amount and the
+            // actions sit on the next line instead of squeezing it.
+            expect(title.parentElement!.className).toContain("col-span-3");
+            expect(title.className).toContain("max-sm:basis-full");
+            expect(title.className).not.toMatch(/(^| )truncate/);
+            expect(
+                within(title.parentElement!).getByText("from savings"),
+            ).toBeDefined();
         });
 
         it("leaves an income-funded row unbadged", () => {
             render(<ExpenseListInteractive expenses={expenses} {...props} />);
             expect(screen.queryByText("from savings")).toBeNull();
             expect(screen.queryByText("reimbursed")).toBeNull();
+        });
+    });
+
+    describe("the list on a phone", () => {
+        afterEach(() => vi.unstubAllGlobals());
+
+        const rowList = () =>
+            screen.getByRole("button", { name: "Edit Tacos" }).closest("ul")!;
+
+        it("scrolls with the page on mobile, so the top bar can hide and return", () => {
+            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            const list = rowList().className.split(" ");
+            // Desktop keeps its bounded scroller…
+            expect(list).toContain("max-h-[70vh]");
+            expect(list).toContain("overflow-y-auto");
+            // …mobile drops both, so the window is the only scroller.
+            expect(list).toContain("max-sm:max-h-none");
+            expect(list).toContain("max-sm:overflow-visible");
+        });
+
+        it("keeps the mobile date on one line and truncates the card name instead", () => {
+            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            const row = screen
+                .getByRole("button", { name: "Edit Tacos" })
+                .closest("li")!;
+
+            // The date and its separator sit in one nowrap unit, so they never
+            // wrap onto their own line beside a lone "·".
+            const dateNode = within(row)
+                .getAllByText(/15 may 2026/i)
+                .find((el) => el.textContent === "15 may 2026 ·")!;
+            expect(dateNode).toBeDefined();
+            expect(dateNode.className).toContain("whitespace-nowrap");
+
+            // The card name is the subline's only shrinkable part.
+            const cardName = within(row)
+                .getAllByText("Amex")
+                .find((el) => el.className.includes("truncate"))!;
+            expect(cardName).toBeDefined();
+            expect(cardName.className).toContain("min-w-0");
+        });
+
+        it("keeps the last row clear of the pinned chin, safe area included", () => {
+            let update: ResizeObserverCallback | undefined;
+            vi.stubGlobal(
+                "ResizeObserver",
+                class {
+                    constructor(callback: ResizeObserverCallback) {
+                        update = callback;
+                    }
+                    observe() {}
+                    disconnect() {}
+                },
+            );
+            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            const chin = screen.getByTestId("totals-footer");
+            // The chin's box includes its env(safe-area-inset-bottom) padding.
+            expect(chin.className).toContain(
+                "pb-[env(safe-area-inset-bottom)]",
+            );
+            vi.spyOn(chin, "getBoundingClientRect").mockReturnValue({
+                height: 86,
+            } as DOMRect);
+            act(() =>
+                update?.([{} as ResizeObserverEntry], {} as ResizeObserver),
+            );
+            // The page ends in a spacer as tall as the chin, right after the rows.
+            const spacer = rowList().nextElementSibling as HTMLElement;
+            expect(spacer.getAttribute("aria-hidden")).toBe("true");
+            expect(spacer.className).toBe("sm:hidden");
+            expect(spacer.style.height).toBe("86px");
         });
     });
 

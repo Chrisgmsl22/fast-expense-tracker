@@ -5,6 +5,7 @@ import {
     TOTAL_LABEL,
     TOTAL_QUALIFIER,
     closingTotal,
+    type MoneyTone,
 } from "@/components/money/summary-model";
 
 /**
@@ -20,15 +21,26 @@ export function BottomLine({
     partnerName: string;
 }) {
     const { whatIReallySpent, paidToPartner, setAside } = totals;
-    const income = [
+    const rows: {
+        label: string;
+        amount: number;
+        tone?: MoneyTone;
+        note?: string;
+    }[] = [
         { label: "Spent on myself", amount: whatIReallySpent.of.spentOnMyself },
         {
             label: `Sent to ${partnerName}`,
             amount: paidToPartner.of.fromIncome.amount,
-            tone: "partner" as const,
+            tone: "partner",
         },
-        { label: "Set aside", amount: setAside, tone: "savings" as const },
-    ].filter((row) => row.amount > 0);
+        {
+            label: "Set aside",
+            amount: setAside,
+            tone: "positive",
+            note: "kept, not spent",
+        },
+    ];
+    const income = rows.filter((row) => row.amount > 0);
     // The same rule `PotParts` applies: a total over a single row restates it.
     const closing = income.length > 1 ? closingTotal(totals) : null;
     return (
@@ -56,7 +68,7 @@ export function BottomLine({
             )}
 
             <p className="mt-4 border-t pt-3 text-xs font-semibold uppercase">
-                Out of this month&apos;s income
+                Where this month&apos;s income went
             </p>
             <div className="mt-2 space-y-1.5">
                 {income.map((row) => (
@@ -65,6 +77,7 @@ export function BottomLine({
                         label={row.label}
                         amount={row.amount}
                         tone={row.tone}
+                        note={row.note}
                     />
                 ))}
             </div>

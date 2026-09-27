@@ -439,6 +439,14 @@ describe("computeFeedTotals", () => {
             notFromIncome: {
                 amount: 0,
                 of: { ownSpending: 0, sentToPartner: 0 },
+                fromSavings: {
+                    amount: 0,
+                    of: { ownSpending: 0, sentToPartner: 0 },
+                },
+                reimbursed: {
+                    amount: 0,
+                    of: { ownSpending: 0, sentToPartner: 0 },
+                },
             },
             paidToPartner: {
                 amount: 0,

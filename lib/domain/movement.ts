@@ -89,6 +89,43 @@ export type PartnerPaymentSources = {
     fromLegacyTransfers: number;
 };
 
+export type NonIncomeParts = { ownSpending: number; sentToPartner: number };
+
+/** Which half of `notFromIncome` a row lands in, or null when income funded it. */
+export type NonIncomeSource = "fromSavings" | "reimbursed";
+
+/** Exhaustive: a new funding source is a type error here until it is sorted. */
+export function nonIncomeSourceOf(
+    fundedFrom: FundingSource,
+): NonIncomeSource | null {
+    switch (fundedFrom) {
+        case BUDGET_FUNDING_SOURCE:
+            return null;
+        case "savings":
+            return "fromSavings";
+        case "reimbursed":
+            return "reimbursed";
+    }
+}
+
+/**
+ * The expense rows behind each half of `notFromIncome`. Same predicate as
+ * `computeFeedTotals`, so each list's `actualExpenditure` sums to its figure.
+ */
+export function nonIncomeFundedRows<E extends FeedTotalExpense>(
+    expenses: E[],
+): Record<NonIncomeSource, E[]> {
+    const rows: Record<NonIncomeSource, E[]> = {
+        fromSavings: [],
+        reimbursed: [],
+    };
+    for (const e of expenses) {
+        const source = nonIncomeSourceOf(e.fundedFrom);
+        if (source) rows[source].push(e);
+    }
+    return rows;
+}
+
 /** The figures the feed footer shows (ADR-0018 §1, extended by spec 0007). */
 export type FeedTotals = {
     /**
@@ -125,10 +162,12 @@ export type FeedTotals = {
      * ledgers: a $680 savings purchase and a $680 savings transfer read as two
      * figures here (spec 0007 §6a).
      */
-    notFromIncome: Breakdown<{
-        ownSpending: number;
-        sentToPartner: number;
-    }>;
+    notFromIncome: Breakdown<NonIncomeParts> & {
+        /** Savings-funded: money of mine from an earlier month, so a real cost. */
+        fromSavings: Breakdown<NonIncomeParts>;
+        /** Paid back in full (the insurer), so its net cost to me is zero. */
+        reimbursed: Breakdown<NonIncomeParts>;
+    };
     /**
      * Every peso that reached her, whichever money funded it and whichever table
      * holds it (spec 0007 §6a carve-out). Only `fromLegacyTransfers` is money no
@@ -177,8 +216,10 @@ export function computeFeedTotals(
     let spentOnMyself = 0;
     let sentToPartnerFromIncome = 0;
     let setAside = 0;
-    let nonIncomeOwnSpending = 0;
-    let nonIncomeSentToPartner = 0;
+    const nonIncome: Record<NonIncomeSource, NonIncomeParts> = {
+        fromSavings: { ownSpending: 0, sentToPartner: 0 },
+        reimbursed: { ownSpending: 0, sentToPartner: 0 },
+    };
     const paymentExpenseIds = new Set<string>();
     for (const e of expenses) {
         const isSavingsCategory = e.category.slug === SAVINGS_SLUG;
@@ -189,7 +230,8 @@ export function computeFeedTotals(
         // as an expense whichever money funded it.
         if (e.isPartnerPayment) paymentExpenseIds.add(e.id);
 
-        if (e.fundedFrom !== BUDGET_FUNDING_SOURCE) {
+        const source = nonIncomeSourceOf(e.fundedFrom);
+        if (source) {
             // Another month's money (or a refund). Kept out of BOTH budget
             // figures — including `setAside`, so moving old savings into the
             // Savings category isn't counted as allocating income twice.
@@ -197,8 +239,8 @@ export function computeFeedTotals(
             // Named here too, or the money reaching her hides among every
             // unrelated savings-funded row (BUG-5).
             if (e.isPartnerPayment)
-                nonIncomeSentToPartner += e.actualExpenditure;
-            else nonIncomeOwnSpending += e.actualExpenditure;
+                nonIncome[source].sentToPartner += e.actualExpenditure;
+            else nonIncome[source].ownSpending += e.actualExpenditure;
         } else if (isSavingsCategory) {
             setAside += e.actualExpenditure;
         } else if (e.isPartnerPayment) {
@@ -224,7 +266,13 @@ export function computeFeedTotals(
     }
 
     const whatIReallySpent = spentOnMyself + sentToPartnerFromIncome;
-    const notFromIncome = nonIncomeOwnSpending + nonIncomeSentToPartner;
+    const fromSavings = withAmount(nonIncome.fromSavings);
+    const reimbursed = withAmount(nonIncome.reimbursed);
+    const nonIncomeOwnSpending =
+        fromSavings.of.ownSpending + reimbursed.of.ownSpending;
+    const nonIncomeSentToPartner =
+        fromSavings.of.sentToPartner + reimbursed.of.sentToPartner;
+    const notFromIncome = fromSavings.amount + reimbursed.amount;
     const paidFromIncome = sentToPartnerFromIncome + legacyFromIncome;
     const paidNotFromIncome = nonIncomeSentToPartner + legacyNotFromIncome;
 
@@ -248,6 +296,8 @@ export function computeFeedTotals(
                 ownSpending: nonIncomeOwnSpending,
                 sentToPartner: nonIncomeSentToPartner,
             },
+            fromSavings,
+            reimbursed,
         },
         paidToPartner: {
             amount: paidFromIncome + paidNotFromIncome,
@@ -273,6 +323,10 @@ export function computeFeedTotals(
         // breakdown of a line already counted (spec 0007 §6a).
         total: whatIReallySpent + setAside + legacyFromIncome,
     };
+}
+
+function withAmount(parts: NonIncomeParts): Breakdown<NonIncomeParts> {
+    return { amount: parts.ownSpending + parts.sentToPartner, of: parts };
 }
 
 export function computeSavingsSpend(

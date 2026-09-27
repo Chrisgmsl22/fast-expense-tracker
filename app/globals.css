@@ -44,6 +44,9 @@
        a settlement-only debt (ADR-0020). Orange, distinct from the gold transfer. */
     --debt: #ea580c;
     --debt-tint: #fff7ed;
+    /* Cash that left me for the partner, as an arrow glyph on the summary. Same
+       hue as --debt today, but a separate meaning, so it keeps its own name. */
+    --money-out: #ea580c;
     /* "What I really spent" pill — the budget number, deliberately not green. */
     --spent: #4f46e5;
     --spent-tint: #eef2ff;
@@ -122,6 +125,7 @@
     --color-transfer-tint: var(--transfer-tint);
     --color-debt: var(--debt);
     --color-debt-tint: var(--debt-tint);
+    --color-money-out: var(--money-out);
     --color-spent: var(--spent);
     --color-spent-tint: var(--spent-tint);
     --color-bucket-essentials: var(--bucket-essentials);
