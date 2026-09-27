@@ -4,8 +4,15 @@ import type {
     VariableIncomeItem,
     VariableIncomeWriteData,
 } from "@/lib/repositories/income.repository";
+import { resolveEffective } from "@/lib/domain/effective-month";
+import { carryForwardRow } from "@/lib/domain/fixed-income";
 
 type StoredVariable = { id: string; userId: string } & VariableIncomeWriteData;
+type StoredFixed = {
+    userId: string;
+    effectiveMonth: string | null;
+    amount: number;
+};
 
 /**
  * In-memory `IncomeRepository` for unit tests. Satisfies the exact contract the
@@ -15,7 +22,7 @@ type StoredVariable = { id: string; userId: string } & VariableIncomeWriteData;
  */
 export class FakeIncomeRepository implements IncomeRepository {
     private readonly variableRows = new Map<string, StoredVariable>();
-    private readonly fixedByUser = new Map<string, number>();
+    private readonly fixedRows: StoredFixed[] = [];
     private seq = 0;
 
     /** Flip on to make the next write/delete throw, simulating a DB failure. */
@@ -23,8 +30,18 @@ export class FakeIncomeRepository implements IncomeRepository {
 
     /** Every variable row inserted via `insertVariable`, in order. */
     readonly inserts: StoredVariable[] = [];
-    /** Every `(userId, amount)` passed to `setFixed`, in order. */
-    readonly fixedWrites: Array<{ userId: string; amount: number }> = [];
+    /** Every call to `setFixed`, in order. */
+    readonly fixedWrites: Array<{
+        userId: string;
+        effectiveMonth: string;
+        amount: number;
+    }> = [];
+    /** Every call to `setFixedForMonthOnly`, in order. */
+    readonly monthOnlyWrites: Array<{
+        userId: string;
+        month: string;
+        amount: number;
+    }> = [];
 
     // --- arrange helpers ---
 
@@ -43,14 +60,35 @@ export class FakeIncomeRepository implements IncomeRepository {
         });
     }
 
-    seedFixed(userId: string, amount: number): void {
-        this.fixedByUser.set(userId, amount);
+    /** `effectiveMonth` defaults to `null`: the undated row that applies to every month. */
+    seedFixed(
+        userId: string,
+        amount: number,
+        effectiveMonth: string | null = null,
+    ): void {
+        this.upsertFixed(userId, effectiveMonth, amount);
+    }
+
+    private upsertFixed(
+        userId: string,
+        effectiveMonth: string | null,
+        amount: number,
+    ): void {
+        const row = this.fixedRows.find(
+            (r) => r.userId === userId && r.effectiveMonth === effectiveMonth,
+        );
+        if (row) row.amount = amount;
+        else this.fixedRows.push({ userId, effectiveMonth, amount });
     }
 
     // --- IncomeRepository contract ---
 
-    async getMonthlySummary(userId: string): Promise<IncomeMonthlySummary> {
-        const fixed = this.fixedByUser.get(userId) ?? 0;
+    async getMonthlySummary(
+        userId: string,
+        month: string,
+    ): Promise<IncomeMonthlySummary> {
+        const own = this.fixedRows.filter((r) => r.userId === userId);
+        const fixed = resolveEffective(own, month)?.amount ?? 0;
         const variable = [...this.variableRows.values()]
             .filter((r) => r.userId === userId)
             .reduce((sum, r) => sum + r.amount, 0);
@@ -91,9 +129,26 @@ export class FakeIncomeRepository implements IncomeRepository {
         return 1;
     }
 
-    async setFixed(userId: string, amount: number): Promise<void> {
+    async setFixed(
+        userId: string,
+        effectiveMonth: string,
+        amount: number,
+    ): Promise<void> {
         if (this.failOnWrite) throw new Error("fake: setFixed failed");
-        this.fixedByUser.set(userId, amount);
-        this.fixedWrites.push({ userId, amount });
+        this.upsertFixed(userId, effectiveMonth, amount);
+        this.fixedWrites.push({ userId, effectiveMonth, amount });
+    }
+
+    async setFixedForMonthOnly(
+        userId: string,
+        month: string,
+        amount: number,
+    ): Promise<void> {
+        if (this.failOnWrite) throw new Error("fake: setFixed failed");
+        const own = this.fixedRows.filter((r) => r.userId === userId);
+        const carry = carryForwardRow(own, month);
+        this.upsertFixed(userId, month, amount);
+        if (carry) this.upsertFixed(userId, carry.effectiveMonth, carry.amount);
+        this.monthOnlyWrites.push({ userId, month, amount });
     }
 }

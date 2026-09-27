@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
+import { getCurrentMonthCdmx } from "@/lib/dates";
 import { incomeRepository } from "@/lib/repositories";
 import type { IncomeRepository } from "@/lib/repositories/income.repository";
 import {
@@ -14,26 +15,26 @@ import {
 export type SetFixedIncomeCode = "validation" | "unauthenticated" | "db_error";
 
 export type SetFixedIncomeResult = ActionResult<
-    { amount: number },
+    { amount: number; effectiveMonth: string },
     FixedIncomeInput,
     SetFixedIncomeCode
 >;
 
-/**
- * Set the signed-in user's recurring monthly (FIXED) income (slice 2.3).
- * Upserts the single FIXED row via the repository. Allows 0 to clear it.
- */
+// With no month, or the current CDMX month (server clock), the amount applies
+// from now on. A past month changes that month alone. A future month is refused,
+// so a client month can never move the forward start date.
 export async function setFixedIncome(
     input: unknown,
     repo: IncomeRepository = incomeRepository,
 ): Promise<SetFixedIncomeResult> {
     const parsed = fixedIncomeInputSchema.safeParse(input);
     if (!parsed.success) {
+        const fieldErrors = toFieldErrors<FixedIncomeInput>(parsed.error);
         return {
             ok: false,
             code: "validation",
-            message: "Invalid amount",
-            fieldErrors: toFieldErrors<FixedIncomeInput>(parsed.error),
+            message: fieldErrors.month ? "Invalid month" : "Invalid amount",
+            fieldErrors,
         };
     }
 
@@ -47,9 +48,25 @@ export async function setFixedIncome(
         };
     }
 
+    const currentMonth = getCurrentMonthCdmx();
+    const month = parsed.data.month ?? currentMonth;
+    if (month > currentMonth) {
+        return {
+            ok: false,
+            code: "validation",
+            message: "Fixed income can't be set for a future month",
+            fieldErrors: { month: ["Month can't be after the current month"] },
+        };
+    }
+
+    const { amount } = parsed.data;
     try {
-        await repo.setFixed(userId, parsed.data.amount);
-        return { ok: true, data: { amount: parsed.data.amount } };
+        if (month < currentMonth) {
+            await repo.setFixedForMonthOnly(userId, month, amount);
+        } else {
+            await repo.setFixed(userId, currentMonth, amount);
+        }
+        return { ok: true, data: { amount, effectiveMonth: month } };
     } catch (e) {
         console.error("setFixedIncome: db write failed", e);
         return {

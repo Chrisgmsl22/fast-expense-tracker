@@ -324,8 +324,8 @@ export async function runSeed(
         }
     }
 
-    // One FIXED income row per user (the recurring monthly amount). Find-then-
-    // create — no unique constraint on (userId, type) — so a re-seed never
+    // An undated FIXED row (effectiveMonth null: applies from the start), only if
+    // the user has no FIXED row yet. Find-then-create, so a re-seed never
     // overwrites a value the user has since edited via the Income screen.
     const existingFixed = await db.income.findFirst({
         where: { userId: admin.id, type: "FIXED" },

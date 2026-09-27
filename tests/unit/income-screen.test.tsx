@@ -49,6 +49,7 @@ function renderScreen(over: Record<string, unknown> = {}) {
             variableTotal={4200}
             total={48200}
             month="2026-06"
+            currentMonth="2026-06"
             monthLabel="June"
             variable={variable}
             {...over}
@@ -158,6 +159,127 @@ describe("IncomeScreen", () => {
         expect(
             screen.getAllByRole("button", { name: /edit fixed income/i }),
         ).toHaveLength(2);
+    });
+
+    // Guard: pre-fix, a past month was read-only with a link to the current month.
+    it("Should offer the editor on a past month, scoped to that month", async () => {
+        (setFixedIncome as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { amount: 45000, effectiveMonth: "2026-05" },
+        });
+        renderScreen({ month: "2026-05", monthLabel: "May" });
+
+        expect(screen.queryByRole("link")).toBeNull();
+        expect(screen.queryByText(/past months keep their amount/i)).toBeNull();
+        expect(
+            screen.queryByText(/carries forward until you change it/i),
+        ).toBeNull();
+
+        fireEvent.click(
+            screen.getAllByRole("button", { name: /edit fixed income/i })[0]!,
+        );
+        const input = screen.getAllByRole("spinbutton", {
+            name: /fixed monthly income/i,
+            description: "Changes May 2026 only. Other months keep theirs.",
+        })[0]!;
+        fireEvent.change(input, { target: { value: "45000" } });
+        fireEvent.click(
+            screen.getAllByRole("button", { name: /save fixed income/i })[0]!,
+        );
+
+        await waitFor(() =>
+            expect(setFixedIncome).toHaveBeenCalledWith({
+                amount: "45000",
+                month: "2026-05",
+            }),
+        );
+        await waitFor(() => expect(refreshMock).toHaveBeenCalled());
+    });
+
+    // Guard: pre-fix, the footnote said "recurs every month", on desktop only.
+    it("Should say on both layouts that the amount carries forward", () => {
+        renderScreen();
+
+        expect(
+            screen.getAllByText("carries forward until you change it"),
+        ).toHaveLength(2);
+        expect(screen.queryByText(/recurs every month/i)).toBeNull();
+    });
+
+    // Guard: pre-fix, the input had no accessible description.
+    it("Should describe the editor input by its help text, then by its error", async () => {
+        (setFixedIncome as unknown as Mock).mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Invalid amount",
+            fieldErrors: { amount: ["Amount can't be negative"] },
+        });
+        renderScreen();
+
+        fireEvent.click(
+            screen.getAllByRole("button", { name: /edit fixed income/i })[0]!,
+        );
+        const input = screen.getAllByRole("spinbutton", {
+            name: /fixed monthly income/i,
+            description: /applies from june 2026 onward/i,
+        })[0]!;
+        expect(input.getAttribute("aria-invalid")).toBeNull();
+
+        fireEvent.change(input, { target: { value: "-5" } });
+        fireEvent.click(
+            screen.getAllByRole("button", { name: /save fixed income/i })[0]!,
+        );
+
+        await waitFor(() =>
+            expect(
+                screen.getAllByRole("spinbutton", {
+                    description: /amount can't be negative/i,
+                }),
+            ).toHaveLength(1),
+        );
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+    });
+
+    // Guard: pre-fix, the editor did not say when a change applies.
+    it("Should state on the current month that a change applies from now on", () => {
+        renderScreen();
+
+        fireEvent.click(
+            screen.getAllByRole("button", { name: /edit fixed income/i })[0]!,
+        );
+
+        expect(
+            screen.getAllByText(
+                /applies from june 2026 onward\. past months keep theirs\./i,
+            ).length,
+        ).toBeGreaterThan(0);
+        expect(
+            screen.queryByRole("link", { name: /change it for/i }),
+        ).toBeNull();
+    });
+
+    // Guard: a later month saves forward and sends no month, so the server never refuses it.
+    it("Should keep the editor on a later month, dated from the current month", async () => {
+        (setFixedIncome as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { amount: 44000, effectiveMonth: "2026-06" },
+        });
+        renderScreen({ month: "2026-07", monthLabel: "July" });
+
+        fireEvent.click(
+            screen.getAllByRole("button", { name: /edit fixed income/i })[0]!,
+        );
+
+        expect(
+            screen.getAllByText(/applies from june 2026 onward/i).length,
+        ).toBeGreaterThan(0);
+
+        fireEvent.click(
+            screen.getAllByRole("button", { name: /save fixed income/i })[0]!,
+        );
+        await waitFor(() =>
+            expect(setFixedIncome).toHaveBeenCalledWith({ amount: "44000" }),
+        );
     });
 
     it("defaults the add-form date to the first of the viewed month", () => {

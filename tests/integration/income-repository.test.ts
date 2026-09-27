@@ -24,7 +24,7 @@ describe("PrismaIncomeRepository (integration)", () => {
     it("getMonthlySummary sums fixed + the month's variable, scoped to user + month", async () => {
         const user = await seedUser("me@example.com");
         const other = await seedUser("other@example.com");
-        await repo.setFixed(user.id, 44000);
+        await repo.setFixed(user.id, "2026-06", 44000);
         await repo.insertVariable(user.id, {
             date: new Date("2026-06-10T06:00:00Z"),
             source: "Freelance",
@@ -41,7 +41,7 @@ describe("PrismaIncomeRepository (integration)", () => {
             source: "May gig",
             amount: 9999,
         });
-        await repo.setFixed(other.id, 10000);
+        await repo.setFixed(other.id, "2026-06", 10000);
         await repo.insertVariable(other.id, {
             date: new Date("2026-06-15T06:00:00Z"),
             source: "Not mine",
@@ -70,16 +70,133 @@ describe("PrismaIncomeRepository (integration)", () => {
         expect(rows[0]?.amount).toBe(200);
     });
 
-    it("setFixed upserts a single FIXED row (create then update)", async () => {
+    // Guard: pre-fix, getMonthlySummary summed every FIXED row (90000 here).
+    it("Should give each month its own fixed amount, with no double count", async () => {
         const user = await seedUser();
-        await repo.setFixed(user.id, 40000);
-        await repo.setFixed(user.id, 50000);
+        await db.income.createMany({
+            data: [
+                { userId: user.id, type: "FIXED", amount: 40000 },
+                {
+                    userId: user.id,
+                    type: "FIXED",
+                    amount: 50000,
+                    effectiveMonth: "2026-09",
+                },
+            ],
+        });
+
+        const fixedFor = async (month: string) =>
+            (await repo.getMonthlySummary(user.id, month)).fixed;
+        expect(await fixedFor("2026-08")).toBe(40000);
+        expect(await fixedFor("2026-09")).toBe(50000);
+        expect(await fixedFor("2027-01")).toBe(50000);
+    });
+
+    // Guard: without the createdAt order, both calls follow insert order.
+    it("Should read and write the first-created row when a month has two", async () => {
+        const user = await seedUser();
+        // Inserted first but created later, so insert order and createdAt disagree.
+        const newer = await db.income.create({
+            data: {
+                userId: user.id,
+                type: "FIXED",
+                amount: 42000,
+                effectiveMonth: "2026-09",
+                createdAt: new Date("2026-09-02T12:00:00Z"),
+            },
+        });
+        const older = await db.income.create({
+            data: {
+                userId: user.id,
+                type: "FIXED",
+                amount: 41000,
+                effectiveMonth: "2026-09",
+                createdAt: new Date("2026-09-01T12:00:00Z"),
+            },
+        });
+
+        expect((await repo.getMonthlySummary(user.id, "2026-09")).fixed).toBe(
+            41000,
+        );
+
+        await repo.setFixed(user.id, "2026-09", 45000);
+
+        expect((await repo.getMonthlySummary(user.id, "2026-09")).fixed).toBe(
+            45000,
+        );
+        const byId = async (id: string) =>
+            (await db.income.findUniqueOrThrow({ where: { id } })).amount;
+        expect(await byId(older.id)).toBe(45000);
+        expect(await byId(newer.id)).toBe(42000);
+    });
+
+    // Guard: pre-fix, setFixed updated the one FIXED row in place.
+    it("Should leave the undated legacy row untouched on a new save", async () => {
+        const user = await seedUser();
+        const legacy = await db.income.create({
+            data: { userId: user.id, type: "FIXED", amount: 40000 },
+        });
+        await repo.setFixed(user.id, "2026-09", 50000);
+
+        const rows = await db.income.findMany({
+            where: { userId: user.id, type: "FIXED" },
+            orderBy: { createdAt: "asc" },
+        });
+        expect(rows).toHaveLength(2);
+        expect(rows[0]).toMatchObject({
+            id: legacy.id,
+            amount: 40000,
+            effectiveMonth: null,
+        });
+        expect(rows[1]).toMatchObject({
+            amount: 50000,
+            effectiveMonth: "2026-09",
+        });
+    });
+
+    // Pin: the old single-row upsert also left one row.
+    it("Should keep one row when a month is saved twice", async () => {
+        const user = await seedUser();
+        await repo.setFixed(user.id, "2026-09", 40000);
+        await repo.setFixed(user.id, "2026-09", 50000);
 
         const rows = await db.income.findMany({
             where: { userId: user.id, type: "FIXED" },
         });
         expect(rows).toHaveLength(1);
-        expect(rows[0]?.amount).toBe(50000);
+        expect(rows[0]).toMatchObject({
+            amount: 50000,
+            effectiveMonth: "2026-09",
+        });
+    });
+
+    // Guard: pre-fix, the one FIXED row applied to every month.
+    it("Should give a month before the first dated row no fixed income", async () => {
+        const user = await seedUser();
+        await repo.setFixed(user.id, "2026-09", 50000);
+
+        expect((await repo.getMonthlySummary(user.id, "2026-08")).fixed).toBe(
+            0,
+        );
+    });
+
+    // Pin: reads and writes were already scoped by userId.
+    it("Should scope fixed rows by userId on read and write", async () => {
+        const me = await seedUser("me@example.com");
+        const other = await seedUser("other@example.com");
+        await repo.setFixed(me.id, "2026-07", 44000);
+        await repo.setFixed(other.id, "2026-09", 99000);
+        await repo.setFixed(other.id, "2026-07", 11000);
+
+        expect((await repo.getMonthlySummary(me.id, "2026-09")).fixed).toBe(
+            44000,
+        );
+        expect(
+            await db.income.findMany({
+                where: { userId: me.id, type: "FIXED" },
+                select: { amount: true, effectiveMonth: true },
+            }),
+        ).toEqual([{ amount: 44000, effectiveMonth: "2026-07" }]);
     });
 
     it("deleteVariableForUser removes an owned row and reports the count", async () => {
@@ -111,7 +228,7 @@ describe("PrismaIncomeRepository (integration)", () => {
 
     it("deleteVariableForUser never removes the FIXED row", async () => {
         const user = await seedUser();
-        await repo.setFixed(user.id, 44000);
+        await repo.setFixed(user.id, "2026-06", 44000);
         const fixed = await db.income.findFirstOrThrow({
             where: { userId: user.id, type: "FIXED" },
         });

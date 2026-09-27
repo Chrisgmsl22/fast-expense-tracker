@@ -1,6 +1,8 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
+import { resolveEffective } from "@/lib/domain/effective-month";
+import { carryForwardRow } from "@/lib/domain/fixed-income";
 
 /** One variable-income row, as the log table renders it. */
 export type VariableIncomeItem = {
@@ -20,8 +22,8 @@ export type VariableIncomeWriteData = {
 /**
  * Monthly income breakdown — the single source budget targets read (slice 2.4
  * consumes this instead of the retired `Settings.monthlyIncome` stopgap).
- * `fixed` is the recurring monthly amount; `variable` is the sum logged in the
- * month; `total` is their sum.
+ * `fixed` is the one FIXED amount in force for the month; `variable` is the sum
+ * logged in the month; `total` is their sum.
  */
 export type IncomeMonthlySummary = {
     fixed: number;
@@ -48,8 +50,18 @@ export interface IncomeRepository {
         data: VariableIncomeWriteData,
     ): Promise<{ id: string }>;
     deleteVariableForUser(id: string, userId: string): Promise<number>;
-    /** Upsert the user's single FIXED row to `amount`. */
-    setFixed(userId: string, amount: number): Promise<void>;
+    /** Upsert the FIXED amount that applies from `effectiveMonth` onward. */
+    setFixed(
+        userId: string,
+        effectiveMonth: string,
+        amount: number,
+    ): Promise<void>;
+    /** Set the FIXED amount of `month` alone; every other month keeps its amount. */
+    setFixedForMonthOnly(
+        userId: string,
+        month: string,
+        amount: number,
+    ): Promise<void>;
 }
 
 /**
@@ -65,10 +77,12 @@ export class PrismaIncomeRepository implements IncomeRepository {
         month: string,
     ): Promise<IncomeMonthlySummary> {
         const { start, end } = getMonthRangeUtc(month);
-        const [fixedAgg, variableAgg] = await Promise.all([
-            this.db.income.aggregate({
+        const [fixedRows, variableAgg] = await Promise.all([
+            // Same order as setFixed, so a month with two rows reads the row it writes.
+            this.db.income.findMany({
                 where: { userId, type: "FIXED" },
-                _sum: { amount: true },
+                orderBy: { createdAt: "asc" },
+                select: { amount: true, effectiveMonth: true },
             }),
             this.db.income.aggregate({
                 where: {
@@ -79,7 +93,7 @@ export class PrismaIncomeRepository implements IncomeRepository {
                 _sum: { amount: true },
             }),
         ]);
-        const fixed = fixedAgg._sum.amount ?? 0;
+        const fixed = resolveEffective(fixedRows, month)?.amount ?? 0;
         const variable = variableAgg._sum.amount ?? 0;
         return { fixed, variable, total: fixed + variable };
     }
@@ -135,25 +149,59 @@ export class PrismaIncomeRepository implements IncomeRepository {
         return result.count;
     }
 
-    /**
-     * Upsert the user's single FIXED row. There's no unique constraint on
-     * `(userId, type)`, so this is find-then-write — fine for a single-user
-     * personal tool with no concurrent writers.
-     */
-    async setFixed(userId: string, amount: number): Promise<void> {
-        const existing = await this.db.income.findFirst({
-            where: { userId, type: "FIXED" },
-            select: { id: true },
+    async setFixed(
+        userId: string,
+        effectiveMonth: string,
+        amount: number,
+    ): Promise<void> {
+        await upsertFixedRow(this.db, userId, effectiveMonth, amount);
+    }
+
+    // The next month's amount is read before any write, and both writes share
+    // one transaction: a failed carry-forward row also undoes the edit of `month`.
+    async setFixedForMonthOnly(
+        userId: string,
+        month: string,
+        amount: number,
+    ): Promise<void> {
+        await this.db.$transaction(async (tx) => {
+            const rows = await tx.income.findMany({
+                where: { userId, type: "FIXED" },
+                orderBy: { createdAt: "asc" },
+                select: { amount: true, effectiveMonth: true },
+            });
+            const carry = carryForwardRow(rows, month);
+            await upsertFixedRow(tx, userId, month, amount);
+            if (carry) {
+                await tx.income.create({
+                    data: { userId, type: "FIXED", ...carry },
+                });
+            }
         });
-        if (existing) {
-            await this.db.income.update({
-                where: { id: existing.id },
-                data: { amount },
-            });
-        } else {
-            await this.db.income.create({
-                data: { userId, type: "FIXED", amount },
-            });
-        }
+    }
+}
+
+// Find-then-write: no unique constraint covers (userId, effectiveMonth), which is
+// fine with no concurrent writers. The undated legacy row never matches.
+async function upsertFixedRow(
+    db: Prisma.TransactionClient,
+    userId: string,
+    effectiveMonth: string,
+    amount: number,
+): Promise<void> {
+    const existing = await db.income.findFirst({
+        where: { userId, type: "FIXED", effectiveMonth },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+    });
+    if (existing) {
+        await db.income.update({
+            where: { id: existing.id },
+            data: { amount },
+        });
+    } else {
+        await db.income.create({
+            data: { userId, type: "FIXED", effectiveMonth, amount },
+        });
     }
 }
