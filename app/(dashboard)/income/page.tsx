@@ -51,6 +51,7 @@ export default async function IncomePage({
                 variableTotal={summary.variable}
                 total={summary.total}
                 month={month}
+                currentMonth={currentMonth}
                 monthLabel={monthLabel}
                 variable={variable}
             />

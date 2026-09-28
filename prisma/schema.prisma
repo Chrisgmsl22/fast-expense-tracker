@@ -229,23 +229,25 @@ model Settings {
 }
 
 enum IncomeType {
-  FIXED // recurring monthly salary — one row per user, no date
+  FIXED // recurring monthly salary — one row per effective month, no date
   VARIABLE // one-off income logged against a specific month (date set)
 }
 
 // Income sources (slice 2.3) — the real data behind the 50/25/25 budget targets,
-// superseding the `Settings.monthlyIncome` stopgap. A FIXED row is the recurring
-// monthly amount (date null); VARIABLE rows are dated and month-scoped via the
-// same CDMX 06:00Z frame as Expense, so `getMonthRangeUtc` queries them directly.
+// superseding the `Settings.monthlyIncome` stopgap. A FIXED row is the monthly
+// amount from its effectiveMonth on (date null); VARIABLE rows are dated and
+// month-scoped via the same CDMX 06:00Z frame as Expense (`getMonthRangeUtc`).
 model Income {
   id     String @id @default(uuid())
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  type   IncomeType
-  amount Float // always positive (MXN)
-  source String? // VARIABLE label (e.g. "Freelance — logo"); null for FIXED
-  date   DateTime? // VARIABLE only; null for FIXED (recurs every month)
+  type           IncomeType
+  amount         Float // always positive (MXN)
+  source         String? // VARIABLE label (e.g. "Freelance — logo"); null for FIXED
+  date           DateTime? // VARIABLE only; null for FIXED (dated by effectiveMonth)
+  // FIXED only: first "YYYY-MM" (CDMX) the amount applies to; null = from the start
+  effectiveMonth String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

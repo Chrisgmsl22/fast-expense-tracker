@@ -284,6 +284,29 @@ Settings. The three whole-number percentages sum to 100.
 
 See "Important nuance for 50/25/25 logic" in §1 for bucket definitions.
 
+### Fixed income (effective-dated)
+
+Fixed income is effective-dated, the same way as the budget rule. One resolver
+in `lib/domain/effective-month.ts` serves both.
+
+- **Effective-dated, per user:** each FIXED `Income` row may have an effective month.
+  A month uses the one latest row at or before it. The rows never add up.
+- **A `null` effective month means "from the start".** It applies to every
+  month until a dated row takes over. Rows saved before effective dating, and
+  the seed row, have `null`.
+- **A change on the current month or later applies from the current month
+  (CDMX) onward.** A save writes the row for the current month, taken from the
+  server clock. Past months keep the fixed income they had, so their targets
+  and net do not change.
+- **A change on a past month M changes M only.** The save reads the amount in
+  force for M+1 first. Then one transaction writes M's row and, if M+1 has no
+  row of its own, a row for M+1 with that old amount. So every other month
+  keeps its amount (`carryForwardRow` in `lib/domain/fixed-income.ts`).
+- **The server checks the month.** It must be `YYYY-MM` and not after the
+  current CDMX month. A bad month is refused, never coerced.
+- **Variable income is not affected.** Each variable row is dated and counts in
+  its own month only.
+
 ---
 
 ## 5. Shared-expense math

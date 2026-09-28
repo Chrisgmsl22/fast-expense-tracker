@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isValidMonth } from "@/lib/dates";
+
 /**
  * Validation for the income screen (slice 2.3). Form inputs arrive as strings,
  * so the amount and date are coerced. The server action owns the CDMX→UTC date
@@ -15,9 +17,14 @@ export const variableIncomeInputSchema = z.object({
 
 export type VariableIncomeInput = z.infer<typeof variableIncomeInputSchema>;
 
-/** The recurring monthly amount; 0 clears it. */
+/** The fixed monthly amount; 0 clears it. `month` is sent only to edit one past month. */
 export const fixedIncomeInputSchema = z.object({
     amount: z.coerce.number().min(0, "Amount can't be negative"),
+    month: z
+        .string()
+        .refine(isValidMonth, "Month must be YYYY-MM")
+        .refine((m) => m >= "2000-01", "Month can't be before 2000")
+        .optional(),
 });
 
 export type FixedIncomeInput = z.infer<typeof fixedIncomeInputSchema>;

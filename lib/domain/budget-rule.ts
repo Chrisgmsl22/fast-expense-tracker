@@ -1,4 +1,5 @@
 import type { BucketKey } from "@/lib/domain/dashboard";
+import { resolveEffective } from "@/lib/domain/effective-month";
 
 /** Whole-number percent of income per bucket; the three sum to 100. */
 export type BudgetRule = Record<BucketKey, number>;
@@ -13,16 +14,11 @@ export const DEFAULT_BUDGET_RULE: BudgetRule = {
 };
 
 // The latest rule at or before `month`, else the default.
-// `YYYY-MM` strings sort in month order, so a string compare is safe.
 export function resolveBudgetRule(
     rules: readonly EffectiveBudgetRule[],
     month: string,
 ): BudgetRule {
-    let match: EffectiveBudgetRule | undefined;
-    for (const rule of rules) {
-        if (rule.effectiveMonth > month) continue;
-        if (!match || rule.effectiveMonth > match.effectiveMonth) match = rule;
-    }
+    const match = resolveEffective(rules, month);
     if (!match) return DEFAULT_BUDGET_RULE;
     return {
         essentials: match.essentials,

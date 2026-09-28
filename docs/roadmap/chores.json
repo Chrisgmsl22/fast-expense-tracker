@@ -282,6 +282,16 @@
             "issue": null
         },
         {
+            "id": "CHORE-25",
+            "title": "Fixed income changes apply from the current month forward",
+            "description": "Owner request while testing CHORE-23: 'When I update my income, it should act the same way — not update old months, only current month + forward.' Today a user has one FIXED Income row with no date, and set-fixed updates it in place, so a raise rewrites every past month's income, targets and net. getMonthlySummary also sums every FIXED row, so a second row would double the income.",
+            "plan": "Same shape as CHORE-23, stacked on it and reusing its resolver. (1) Schema: nullable Income.effectiveMonth ('YYYY-MM'), additive. The existing FIXED row keeps null, meaning 'from the start', so no data changes. (2) Domain: generalize resolveBudgetRule into one effective-month resolver both use; null sorts before every month. (3) Repository: getMonthlySummary resolves the one FIXED amount in force for the month instead of summing; setFixed upserts the FIXED row for the current CDMX month, taken from the server clock. (4) Income page: the editor shows on every month. On the current month or later a save applies from the current month onward. DECIDED by the owner (2026-09-27): on a past month M a save changes M only — one transaction writes M's row and, if M+1 has no row of its own, a carry row holding M+1's previous amount; the server refuses a future or malformed month. Tests: legacy null row applies to every month; a new amount applies to its month and later; a past month keeps its old amount; two saves in one month leave one row; userId scope; no double count. Out of scope: variable income (already dated) and Settings.monthlyIncome (vestigial).",
+            "status": "shipped",
+            "spec": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/86",
+            "issue": null
+        },
+        {
             "id": "CHORE-26",
             "title": "Copy a settlement overview to share with {partner}",
             "description": "Owner request (2026-09-27): a copy icon on the Settlement card puts a plain-text overview of the settlement on the clipboard, ready to paste to his partner, so he no longer retypes the rows and the total by hand. It covers the Open settlement tab and each closed cycle in History. Id 25 is taken by a local branch; this is 26 deliberately.",
