@@ -27,6 +27,24 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-09-27 — A worktree dev server on 127.0.0.1 never hydrates
+
+- **Symptom:** The CHORE-26 browser check opened `127.0.0.1:3026`, as the 2026-09-25 lesson says. The login form posted as a plain GET and never signed in.
+- **Root cause:** Next.js 16 blocks its dev resources for an origin not in `allowedDevOrigins`, so the client never hydrates on `127.0.0.1`. Separately, the auth redirect after an idle expiry goes to the `localhost:3000` URL from the env file, not to the worktree's port.
+- **Fix / decision:** A branch with no migration shares the local database, so the check used `localhost:3026`, and the shared cookies did no harm. After an expiry, sign in again on the worktree's own `/login`.
+- **Lesson for next time:** Use `127.0.0.1` only with its own database AND `allowedDevOrigins`. Otherwise use `localhost:<port>`. Start every browser check at the worktree's `/login`.
+
+---
+
+### 2026-09-27 — A touch target measured from the border box
+
+- **Symptom:** The implementer reported a 40×40 touch target. The reviewer measured 38×38. At 390px the icon also wrapped to line 2, because the plan limited its no-wrap rule to 1512px and the implementer read the whole placement rule as desktop-only.
+- **Root cause:** An `after:absolute after:-inset-*` target counts from the padding box, inside the border. The measurement script subtracted the inset from the border box.
+- **Fix / decision:** `after:-inset-2` (42px), confirmed with `getComputedStyle(button, '::after')` and `elementFromPoint` at 5px outside each edge.
+- **Lesson for next time:** Measure a touch target from its computed `::after` size, never from arithmetic. A placement criterion states its rule at desktop 1512 and mobile 390.
+
+---
+
 ### 2026-09-25 — Browser-check a schema slice against its own database
 
 - **Symptom:** CHORE-23 added a table while a parallel session used the shared local dev database. Migrating that database would put a migration the other branch lacks into its history; not migrating it makes every dashboard route throw.
