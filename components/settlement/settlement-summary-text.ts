@@ -11,10 +11,7 @@ type ExpenseRow = Extract<SettlementJournalItem, { kind: "your_expense" }>;
 type DebtRow = Extract<SettlementJournalItem, { kind: "partner_debt" }>;
 type TransferRow = Extract<SettlementJournalItem, { kind: "transfer" }>;
 
-/**
- * Which settlement the text describes. The open one is still running, so its
- * header ends in "present"; a closed one ends on its latest row.
- */
+/** The open settlement is still running, so its header ends in "present". */
 export type SettlementSummaryScope = "open" | "closed";
 
 type GroupedRows = {
@@ -43,12 +40,9 @@ const bullet = (label: string, amount: number): string =>
 const percentOf = (row: ExpenseRow): number =>
     Math.round((row.partnerShare / row.gross) * 100);
 
-/**
- * Oldest first by date. Rows that share a date keep the journal's order,
- * reversed, and that order is not entry order: the service appends rows line by
- * line (every "I owe" debt before every "owes me" debt) and then sorts by date
- * alone. The journal carries no entry time, so nothing here can do better.
- */
+// Same-day rows keep the journal's order, reversed, which is not entry order:
+// the service groups debts by direction before a date-only sort, and the
+// journal carries no entry time to do better.
 function oldestFirst(
     journal: SettlementJournalItem[],
 ): SettlementJournalItem[] {
@@ -121,10 +115,8 @@ function header(
         : `🧾 *Settlement ${first} – ${last}*`;
 }
 
-/**
- * The one whole percent every row shares, or null when they differ or when that
- * percent does not reproduce the summed share to the cent.
- */
+// Null when the rows differ, or when the shared percent does not reproduce the
+// summed share to the cent.
 function uniformPercent(rows: ExpenseRow[], totalShare: number): number | null {
     const percents = new Set(rows.map(percentOf));
     const [percent] = percents;
@@ -204,11 +196,8 @@ function finalLine(balance: CoupleBalance, partnerName: string): string {
         : `✅ *Final outcome: ${partnerName} receives ${amount} MXN*`;
 }
 
-/**
- * A WhatsApp-formatted overview of one settlement, to paste to the partner.
- * The figures come from `computeCoupleBalance` over the rows it lists, so the
- * outcome matches the on-screen balance and never quotes money it does not show.
- */
+// Every figure comes from computeCoupleBalance over the rows the text lists,
+// so the outcome matches the on-screen balance.
 export function buildSettlementSummaryText(
     journal: SettlementJournalItem[],
     partnerName: string,
