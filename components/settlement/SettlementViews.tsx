@@ -16,10 +16,15 @@ import type {
     CycleOutcome,
     SettlementJournalItem,
 } from "@/lib/services/settlement/settlement.service";
+import { CopySettlementButton } from "./CopySettlementButton";
 import { SettlementJournal } from "./SettlementJournal";
 import type { MonthPosition } from "./month-position";
 
 type View = "open" | "month" | "history";
+
+/** "September 2026" → "Sep 2026". */
+const shortMonthLabel = (label: string): string =>
+    label.replace(/^(\p{L}{3})\p{L}*/u, "$1");
 
 /** "4 items" / "1 item" — what the corner measures. */
 const itemCount = (n: number): string => `${n} ${n === 1 ? "item" : "items"}`;
@@ -43,10 +48,12 @@ export function SettlementViews({
     history: ClosedSettlementCycle[];
     partnerName: string;
 }) {
-    const tabs: { key: View; label: string }[] = [
-        { key: "open", label: "Open settlement" },
-        { key: "month", label: monthLabel },
-        { key: "history", label: "History" },
+    // A phone shows the short labels so the copy button fits on the tablist
+    // line; the full label stays the tab's accessible name.
+    const tabs: { key: View; label: string; short: string }[] = [
+        { key: "open", label: "Open settlement", short: "Open" },
+        { key: "month", label: monthLabel, short: shortMonthLabel(monthLabel) },
+        { key: "history", label: "History", short: "History" },
     ];
     // Sets the tab only at mount; a later month change is a soft navigation
     // that keeps this component mounted, so the initialiser never re-runs
@@ -65,17 +72,18 @@ export function SettlementViews({
 
     return (
         <div className="rounded-xl border p-5">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div
                     role="tablist"
                     aria-label="Settlement views"
-                    className="flex gap-1 rounded-lg bg-muted p-0.5"
+                    className="flex shrink-0 gap-1 rounded-lg bg-muted p-0.5"
                 >
-                    {tabs.map(({ key, label }) => (
+                    {tabs.map(({ key, label, short }) => (
                         <button
                             key={key}
                             type="button"
                             role="tab"
+                            aria-label={label}
                             aria-selected={view === key}
                             aria-controls="settlement-view-panel"
                             onClick={() => setView(key)}
@@ -85,27 +93,50 @@ export function SettlementViews({
                                     : "text-muted-foreground hover:text-foreground"
                             }`}
                         >
-                            {label}
+                            {short === label ? (
+                                label
+                            ) : (
+                                <>
+                                    <span className="sm:hidden">{short}</span>
+                                    <span className="hidden sm:inline">
+                                        {label}
+                                    </span>
+                                </>
+                            )}
                         </button>
                     ))}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                        {view === "history"
-                            ? `${renderedCount} ${renderedCount === 1 ? "settlement" : "settlements"}`
-                            : itemCount(renderedCount)}
-                    </span>
-                    {/* The descriptor names what a JOURNAL ROW can be, so it
-                        belongs only beside a row count — History counts closed
-                        settlements. The count leads either way, so a narrow
-                        screen truncates the prose and not the number. */}
-                    {view !== "history" && (
-                        <span className="hidden sm:inline">
-                            {" "}
-                            · shared expenses · debts · transfers
+                {/* The slot's wrap size is only the count and the button: the
+                    descriptor is `w-0`, so it takes what the line has left and
+                    truncates. That keeps the copy button on the tablist line
+                    without making the Open tab's header taller than the others. */}
+                <div className="flex min-w-0 grow items-center justify-end gap-2">
+                    <p className="flex min-w-0 grow justify-end text-xs text-muted-foreground">
+                        <span className="shrink-0 font-medium text-foreground">
+                            {view === "history"
+                                ? `${renderedCount} ${renderedCount === 1 ? "settlement" : "settlements"}`
+                                : itemCount(renderedCount)}
                         </span>
+                        {/* The descriptor names what a JOURNAL ROW can be, so it
+                            belongs only beside a row count — History counts closed
+                            settlements. The count leads either way, so a narrow
+                            screen truncates the prose and not the number. */}
+                        {view !== "history" && (
+                            <span className="hidden w-0 max-w-fit grow truncate sm:block">
+                                {/* Non-breaking: a plain space at the start
+                                    of a truncated block collapses away. */}
+                                {" "}· shared expenses · debts · transfers
+                            </span>
+                        )}
+                    </p>
+                    {view === "open" && (
+                        <CopySettlementButton
+                            journal={openJournal}
+                            partnerName={partnerName}
+                            scope="open"
+                        />
                     )}
-                </p>
+                </div>
             </div>
 
             <div id="settlement-view-panel" role="tabpanel" className="mt-3">
@@ -240,6 +271,19 @@ function ClosedCycles({
                             element — Base UI drops it when the panel unmounts. */}
                         <CollapsiblePanel id={`cycle-${cycle.id}`} keepMounted>
                             <div className="mb-2 ml-5 border-l pl-3">
+                                {/* In the panel, not the trigger: a button
+                                    inside a button is invalid markup. The
+                                    panel clips overflow, so the padding keeps
+                                    the button's 8px touch margin inside it. */}
+                                {cycle.journal.length > 0 && (
+                                    <div className="flex justify-end pt-2 pr-2">
+                                        <CopySettlementButton
+                                            journal={cycle.journal}
+                                            partnerName={partnerName}
+                                            scope="closed"
+                                        />
+                                    </div>
+                                )}
                                 <SettlementJournal
                                     bare
                                     readOnly

@@ -280,6 +280,16 @@
             "spec": null,
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "CHORE-26",
+            "title": "Copy a settlement overview to share with {partner}",
+            "description": "Owner request (2026-09-27): a copy icon on the Settlement card puts a plain-text overview of the settlement on the clipboard, ready to paste to his partner, so he no longer retypes the rows and the total by hand. It covers the Open settlement tab and each closed cycle in History. Id 25 is taken by a local branch; this is 26 deliberately.",
+            "plan": "(1) Pure builder components/settlement/settlement-summary-text.ts turns SettlementJournalItem[] + partnerName + scope (open | closed) into WhatsApp text (*bold*, indented • bullets, bold split/Total/Subtotal lines, em-dash dividers around the calculation, U+2212 minus): a '🧾 Settlement {first} – present' header for the open settlement or '– {last row date}' for a closed cycle; 'Shared expenses' (gross per row, each row's share in brackets when the percents differ, then a bold gross 'Subtotal' only); '🌸 {partner} owes you' (the share plus the debts {partner} owes, subtotal); '🍔 You owe {partner}' (your debts, subtotal); '💸 Payments' (either direction, note appended); a '🟰' line with the whole signed calculation when it has two or more terms; and '✅ Final outcome: {partner} owes / receives $X MXN' or 'settled'. Rows oldest first; empty sections omitted; the name and the percent come from the data. (2) Every figure comes from computeCoupleBalance over the rows the text lists, so the outcome equals the on-screen balance for the same rows. (3) CopySettlementButton (lucide Copy, outline Button icon-sm with a touch target of at least 40px, aria-label and hover/focus tooltip 'Copy settlement summary to clipboard') writes via navigator.clipboard.writeText; success swaps to Check for 2s with an aria-live 'Copied' that restarts on a repeat copy; a rejection or a missing clipboard shows 'Could not copy'. (4) SettlementViews shows it at the card's top-right on the tablist line on the Open tab (short tab labels below sm keep it there on a phone; header height identical on every tab) and inside each History cycle panel (never in the trigger), hidden when the rows are empty. No schema, action, or service change. Tests: builder at 100% incl. the computeCoupleBalance invariant; button hidden/copies/copied reset/failure; History copies its own cycle.",
+            "status": "shipped",
+            "spec": null,
+            "pr": null,
+            "issue": null
         }
     ]
 }
