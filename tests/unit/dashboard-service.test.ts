@@ -221,6 +221,20 @@ describe("getDashboardSummary", () => {
         expect(april.buckets.map((b) => b.percent)).toEqual([50, 25, 25]);
     });
 
+    // Pin: the service already passed the viewed month to the income read.
+    it("Should use the fixed income in force for the VIEWED month", async () => {
+        const d = deps();
+        d.incomeRepo.seedFixed("u1", 60000, "2026-07");
+
+        const june = await getDashboardSummary("u1", "2026-06", d);
+        const july = await getDashboardSummary("u1", "2026-07", d);
+
+        expect(june.income.fixed).toBe(48000);
+        expect(june.buckets[0]!.target).toBe(24000);
+        expect(july.income.fixed).toBe(60000);
+        expect(july.buckets[0]!.target).toBe(30000);
+    });
+
     // Guard: another user's rule never reaches this user's buckets.
     it("Should ignore another user's rule", async () => {
         const budgetRuleRepo = new FakeBudgetRuleRepository();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useId, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Eye, EyeOff, Pencil, Trash2, X } from "lucide-react";
 
@@ -17,7 +17,7 @@ import {
 import { addVariableIncome } from "@/app/_actions/income/add-variable";
 import { deleteVariableIncome } from "@/app/_actions/income/delete-variable";
 import { setFixedIncome } from "@/app/_actions/income/set-fixed";
-import { formatExpenseDate, formatMxn } from "@/lib/format";
+import { formatExpenseDate, formatMonthLabel, formatMxn } from "@/lib/format";
 import type { VariableIncomeItem } from "@/lib/repositories/income.repository";
 
 type Props = {
@@ -29,6 +29,8 @@ type Props = {
     total: number;
     /** The viewed month as `YYYY-MM` — new income defaults into it. */
     month: string;
+    /** The current CDMX month; a fixed edit before it changes that month only. */
+    currentMonth: string;
     /** Short month label for the stat cards (e.g. "June"). */
     monthLabel: string;
     variable: VariableIncomeItem[];
@@ -48,6 +50,7 @@ export function IncomeScreen({
     variableTotal,
     total,
     month,
+    currentMonth,
     monthLabel,
     variable,
 }: Props) {
@@ -61,6 +64,45 @@ export function IncomeScreen({
 
     const money = (n: number) => (hidden ? MASK : formatMxn(n));
     const signed = (n: number) => (hidden ? MASK : `+${formatMxn(n)}`);
+    const isPastMonth = month < currentMonth;
+
+    // Rendered twice: the desktop grid card and the mobile card.
+    const fixedField = editingFixed ? (
+        <FixedEditor
+            key={month}
+            current={fixed}
+            pastMonth={isPastMonth ? month : null}
+            currentMonth={currentMonth}
+            onCancel={() => setEditingFixed(false)}
+            onSaved={() => {
+                setEditingFixed(false);
+                router.refresh();
+            }}
+        />
+    ) : (
+        <>
+            <div className="mt-1 flex items-center gap-2">
+                <p className="text-2xl font-bold">{money(fixed)}</p>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Edit fixed income"
+                    onClick={() => {
+                        setActionError(null);
+                        setEditingFixed(true);
+                    }}
+                >
+                    <Pencil />
+                </Button>
+            </div>
+            {!isPastMonth && (
+                <p className="text-xs text-muted-foreground">
+                    carries forward until you change it
+                </p>
+            )}
+        </>
+    );
 
     function confirmDelete() {
         if (!deleting) return;
@@ -111,39 +153,7 @@ export function IncomeScreen({
                     <p className="text-xs text-muted-foreground">
                         Fixed income · monthly
                     </p>
-                    {editingFixed ? (
-                        <FixedEditor
-                            current={fixed}
-                            onCancel={() => setEditingFixed(false)}
-                            onSaved={() => {
-                                setEditingFixed(false);
-                                router.refresh();
-                            }}
-                        />
-                    ) : (
-                        <>
-                            <div className="mt-1 flex items-center gap-2">
-                                <p className="text-2xl font-bold">
-                                    {money(fixed)}
-                                </p>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    aria-label="Edit fixed income"
-                                    onClick={() => {
-                                        setActionError(null);
-                                        setEditingFixed(true);
-                                    }}
-                                >
-                                    <Pencil />
-                                </Button>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                recurs every month
-                            </p>
-                        </>
-                    )}
+                    {fixedField}
                 </div>
 
                 {/* Variable */}
@@ -191,32 +201,7 @@ export function IncomeScreen({
                 <p className="text-xs text-muted-foreground">
                     Fixed income · monthly
                 </p>
-                {editingFixed ? (
-                    <FixedEditor
-                        current={fixed}
-                        onCancel={() => setEditingFixed(false)}
-                        onSaved={() => {
-                            setEditingFixed(false);
-                            router.refresh();
-                        }}
-                    />
-                ) : (
-                    <div className="mt-1 flex items-center gap-2">
-                        <p className="text-2xl font-bold">{money(fixed)}</p>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Edit fixed income"
-                            onClick={() => {
-                                setActionError(null);
-                                setEditingFixed(true);
-                            }}
-                        >
-                            <Pencil />
-                        </Button>
-                    </div>
-                )}
+                {fixedField}
             </div>
 
             {/* Variable income log */}
@@ -363,23 +348,32 @@ export function IncomeScreen({
     );
 }
 
-/** Inline editor for the recurring fixed amount. */
+/** Inline editor for the fixed amount: one past month, or from now on. */
 function FixedEditor({
     current,
+    pastMonth,
+    currentMonth,
     onCancel,
     onSaved,
 }: {
     current: number;
+    /** The viewed month when it is before the current one; else `null`. */
+    pastMonth: string | null;
+    currentMonth: string;
     onCancel: () => void;
     onSaved: () => void;
 }) {
     const [amount, setAmount] = useState(String(current));
     const [error, setError] = useState<string | null>(null);
     const [pending, startTransition] = useTransition();
+    const helpId = useId();
+    const errorId = useId();
 
     function save() {
         startTransition(async () => {
-            const res = await setFixedIncome({ amount });
+            const res = await setFixedIncome(
+                pastMonth ? { amount, month: pastMonth } : { amount },
+            );
             if (res.ok) {
                 onSaved();
             } else {
@@ -399,6 +393,8 @@ function FixedEditor({
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     aria-label="Fixed monthly income"
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? `${helpId} ${errorId}` : helpId}
                     className="h-9"
                     autoFocus
                 />
@@ -423,8 +419,17 @@ function FixedEditor({
                     <X />
                 </Button>
             </div>
+            <p id={helpId} className="mt-1 text-xs text-muted-foreground">
+                {pastMonth
+                    ? `Changes ${formatMonthLabel(pastMonth)} only. Other months keep theirs.`
+                    : `Applies from ${formatMonthLabel(currentMonth)} onward. Past months keep theirs.`}
+            </p>
             {error && (
-                <p className="mt-1 text-xs text-destructive" role="alert">
+                <p
+                    id={errorId}
+                    className="mt-1 text-xs text-destructive"
+                    role="alert"
+                >
                     {error}
                 </p>
             )}
