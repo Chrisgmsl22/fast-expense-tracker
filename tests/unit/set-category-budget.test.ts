@@ -24,6 +24,8 @@ const meta: CategoryMeta = {
 function catRepo(found: CategoryMeta | null = meta): CategoryRepository {
     return {
         getBySlug: async () => found,
+        listForPicker: async () => [],
+        listSubcategoriesForPicker: async () => [],
         getSubcategorySpends: async () => [],
         getExpensesForCategoryMonth: async () => [],
         getPartnerPaymentDefaults: async () => null,

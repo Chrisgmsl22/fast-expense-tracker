@@ -24,6 +24,12 @@ async function seedUserAndCategory() {
     return { user, category };
 }
 
+function seedOtherUser() {
+    return db.user.create({
+        data: { email: "other@example.com", password: "x", name: "Other" },
+    });
+}
+
 const validInput = (categoryId: string) => ({
     date: "2026-05-15",
     amount: 1000,
@@ -90,6 +96,46 @@ describe("createExpense (integration)", () => {
         const res = await createExpense({
             ...validInput(category.id),
             subcategoryId: sub.id,
+        });
+
+        expect(res.ok).toBe(false);
+        if (!res.ok) {
+            expect(res.code).toBe("validation");
+            expect(res.fieldErrors?.subcategoryId).toBeDefined();
+        }
+        expect(await db.expense.count()).toBe(0);
+    });
+
+    it("refuses another user's category on an income-funded expense, writing nothing", async () => {
+        await seedUserAndCategory();
+        const other = await seedOtherUser();
+        const theirs = await db.category.create({
+            data: { userId: other.id, slug: "hobbies", name: "Hobbies" },
+        });
+
+        const res = await createExpense({
+            ...validInput(theirs.id),
+            fundedFrom: "income",
+        });
+
+        expect(res.ok).toBe(false);
+        if (!res.ok) {
+            expect(res.code).toBe("validation");
+            expect(res.fieldErrors?.categoryId).toBeDefined();
+        }
+        expect(await db.expense.count()).toBe(0);
+    });
+
+    it("refuses another user's subcategory even when it points at the chosen category", async () => {
+        const { category } = await seedUserAndCategory();
+        const other = await seedOtherUser();
+        const theirs = await db.subcategory.create({
+            data: { userId: other.id, categoryId: category.id, name: "Bakery" },
+        });
+
+        const res = await createExpense({
+            ...validInput(category.id),
+            subcategoryId: theirs.id,
         });
 
         expect(res.ok).toBe(false);

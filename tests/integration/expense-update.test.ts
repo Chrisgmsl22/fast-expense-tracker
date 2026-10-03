@@ -128,6 +128,60 @@ describe("updateExpense (integration)", () => {
         }
     });
 
+    it("refuses another user's category, leaving the row unchanged", async () => {
+        const { user, other, category } = await seed();
+        const { id } = await makeExpense(user.id, category.id);
+        const theirs = await db.category.create({
+            data: { userId: other.id, slug: "hobbies", name: "Hobbies" },
+        });
+
+        const res = await updateExpense(editInput(id, theirs.id));
+
+        expect(res.ok).toBe(false);
+        if (!res.ok) {
+            expect(res.code).toBe("validation");
+            expect(res.fieldErrors?.categoryId).toBeDefined();
+        }
+        const row = await db.expense.findUniqueOrThrow({ where: { id } });
+        expect(row.categoryId).toBe(category.id);
+        expect(row.description).toBe("Old");
+    });
+
+    it("refuses another user's subcategory even when it points at the chosen category", async () => {
+        const { user, other, category } = await seed();
+        const { id } = await makeExpense(user.id, category.id);
+        const theirs = await db.subcategory.create({
+            data: { userId: other.id, categoryId: category.id, name: "Bakery" },
+        });
+
+        const res = await updateExpense({
+            ...editInput(id, category.id),
+            subcategoryId: theirs.id,
+        });
+
+        expect(res.ok).toBe(false);
+        if (!res.ok) {
+            expect(res.code).toBe("validation");
+            expect(res.fieldErrors?.subcategoryId).toBeDefined();
+        }
+        const row = await db.expense.findUniqueOrThrow({ where: { id } });
+        expect(row.subcategoryId).toBe(null);
+        expect(row.description).toBe("Old");
+    });
+
+    it("answers not_found for another user's row that names their own category", async () => {
+        const { other } = await seed();
+        const theirs = await db.category.create({
+            data: { userId: other.id, slug: "hobbies", name: "Hobbies" },
+        });
+        const { id } = await makeExpense(other.id, theirs.id);
+
+        const res = await updateExpense(editInput(id, theirs.id));
+
+        expect(res.ok).toBe(false);
+        if (!res.ok) expect(res.code).toBe("not_found");
+    });
+
     it("returns not_found for a missing id", async () => {
         const { category } = await seed();
 

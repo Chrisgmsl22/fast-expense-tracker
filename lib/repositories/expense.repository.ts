@@ -95,8 +95,12 @@ export type ExpenseInsertData = ExpenseWriteData & {
 export interface ExpenseRepository {
     getById(userId: string, id: string): Promise<ExpenseEditable | null>;
     getForMonth(userId: string, month: string): Promise<ExpenseListItem[]>;
-    getSubcategoryCategoryId(subcategoryId: string): Promise<string | null>;
-    /** Scoped by user: a category the user doesn't own resolves to null, which is not Health, so the rule fails closed. */
+    /** Scoped by user: a subcategory the user doesn't own resolves to null. */
+    getSubcategoryCategoryId(
+        userId: string,
+        subcategoryId: string,
+    ): Promise<string | null>;
+    /** Scoped by user: a category the user doesn't own resolves to null. */
     getCategorySlug(userId: string, categoryId: string): Promise<string | null>;
     insert(userId: string, data: ExpenseInsertData): Promise<{ id: string }>;
     updateForUser(
@@ -191,10 +195,11 @@ export class PrismaExpenseRepository implements ExpenseRepository {
     }
 
     async getSubcategoryCategoryId(
+        userId: string,
         subcategoryId: string,
     ): Promise<string | null> {
-        const sub = await this.db.subcategory.findUnique({
-            where: { id: subcategoryId },
+        const sub = await this.db.subcategory.findFirst({
+            where: { id: subcategoryId, userId },
             select: { categoryId: true },
         });
         return sub?.categoryId ?? null;

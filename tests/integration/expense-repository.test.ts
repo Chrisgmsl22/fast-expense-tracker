@@ -38,6 +38,24 @@ async function seedExpense(opts: {
     });
 }
 
+describe("PrismaExpenseRepository ownership lookups (integration)", () => {
+    it("resolves a subcategory's category for its owner and null for anyone else", async () => {
+        const me = await seedUser("me@example.com");
+        const other = await seedUser("other@example.com");
+        const category = await seedCategory(me.id);
+        const sub = await db.subcategory.create({
+            data: { userId: me.id, categoryId: category.id, name: "Market" },
+        });
+
+        expect(await repo.getSubcategoryCategoryId(me.id, sub.id)).toBe(
+            category.id,
+        );
+        expect(await repo.getSubcategoryCategoryId(other.id, sub.id)).toBe(
+            null,
+        );
+    });
+});
+
 describe("PrismaExpenseRepository.getForMonth (integration)", () => {
     it("returns an empty array for a user with no expenses", async () => {
         const user = await seedUser();

@@ -85,14 +85,29 @@ export async function addPartnerPayment(
             };
         }
 
+        // The default category is resolved for this user; a chosen one is not.
+        if (
+            v.categoryId &&
+            (await expenseRepo.getCategorySlug(userId, v.categoryId)) === null
+        ) {
+            return {
+                ok: false,
+                code: "validation",
+                message: "Invalid payment",
+                fieldErrors: { categoryId: ["Category not found"] },
+            };
+        }
+
         // The default subcategory only applies to the default category — pairing
         // it with a category the user picked would persist a mismatched FK pair.
         const subcategoryId =
             v.subcategoryId ??
             (v.categoryId ? null : (defaults?.subcategoryId ?? null));
         if (subcategoryId) {
-            const owner =
-                await expenseRepo.getSubcategoryCategoryId(subcategoryId);
+            const owner = await expenseRepo.getSubcategoryCategoryId(
+                userId,
+                subcategoryId,
+            );
             if (owner !== categoryId) {
                 return {
                     ok: false,

@@ -79,8 +79,28 @@ export async function updateExpense(
     const v = parsed.data;
 
     try {
+        // The row's payment flag and its cycle are the server's facts, never the
+        // payload's. Read first, so another user's row answers not_found whatever
+        // the payload names.
+        const existing = await repo.getById(userId, id);
+        if (!existing) {
+            return {
+                ok: false,
+                code: "not_found",
+                message: "Expense not found.",
+            };
+        }
+
         // The slug is resolved from the DB, never taken from the client (spec 0007 §3.3).
         const categorySlug = await repo.getCategorySlug(userId, v.categoryId);
+        if (categorySlug === null) {
+            return {
+                ok: false,
+                code: "validation",
+                message: "Invalid expense",
+                fieldErrors: { categoryId: ["Category not found"] },
+            };
+        }
         const funding = expenseFundingSchema.safeParse({
             fundedFrom: v.fundedFrom,
             categorySlug,
@@ -96,6 +116,7 @@ export async function updateExpense(
 
         if (v.subcategoryId) {
             const categoryId = await repo.getSubcategoryCategoryId(
+                userId,
                 v.subcategoryId,
             );
             if (categoryId !== v.categoryId) {
@@ -110,17 +131,6 @@ export async function updateExpense(
                     },
                 };
             }
-        }
-
-        // The row's payment flag and its cycle are the server's facts, never the
-        // payload's; a missing row short-circuits here instead of after the write.
-        const existing = await repo.getById(userId, id);
-        if (!existing) {
-            return {
-                ok: false,
-                code: "not_found",
-                message: "Expense not found.",
-            };
         }
 
         // A stray `yourPercentage` on a payment payload must not reach the row.

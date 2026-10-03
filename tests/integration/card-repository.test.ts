@@ -82,6 +82,22 @@ describe("PrismaCardRepository (integration)", () => {
         expect(names).toEqual(["Amex", "NU", "Cash"]);
     });
 
+    it("lists only the user's active cards, A→Z, with the picker fields", async () => {
+        const user = await seedUser();
+        const other = await seedUser();
+        await seedCard(user.id, { name: "Zed", color: "#111111" });
+        await seedCard(user.id, { name: "Alpha", color: "#222222" });
+        await seedCard(user.id, { name: "Old", archivedAt: new Date() });
+        await seedCard(other.id, { name: "Beta" });
+
+        const rows = await repo.listActive(user.id);
+
+        expect(rows).toEqual([
+            { id: expect.any(String), name: "Alpha", color: "#222222" },
+            { id: expect.any(String), name: "Zed", color: "#111111" },
+        ]);
+    });
+
     it("countActive ignores archived cards", async () => {
         const user = await seedUser();
         await seedCard(user.id, { name: "A" });

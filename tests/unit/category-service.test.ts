@@ -66,6 +66,8 @@ function fakeCategoryRepo(
 ): CategoryRepository {
     return {
         getBySlug: async () => ("meta" in over ? over.meta! : meta),
+        listForPicker: async () => [],
+        listSubcategoriesForPicker: async () => [],
         getSubcategorySpends: async () => over.subSpends ?? subSpends,
         getExpensesForCategoryMonth: async () =>
             over.expenses ?? [exp({ id: "e1" }), exp({ id: "e2" })],
