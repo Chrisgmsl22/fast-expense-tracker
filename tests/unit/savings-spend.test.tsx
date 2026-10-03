@@ -21,6 +21,7 @@ const expense = (
         isPartnerPayment: false,
         category: { slug: "shopping" },
         fundedFrom: "savings",
+        countedInBudget: overrides.fundedFrom === "income",
         ...overrides,
     });
 
@@ -55,16 +56,47 @@ const expenses = [
     }),
 ];
 const movements: FeedTotalMovement[] = [
-    { id: "payment", type: "gf_paid", amount: 350, fundedFrom: "savings" },
-    { id: "legacy", type: "gf_paid", amount: 120, fundedFrom: "savings" },
-    { id: "received", type: "gf_received", amount: 500, fundedFrom: "savings" },
-    { id: "card", type: "card_payment", amount: 800, fundedFrom: "savings" },
-    { id: "debt", type: "gf_fronted", amount: 600, fundedFrom: "savings" },
+    {
+        id: "payment",
+        type: "gf_paid",
+        amount: 350,
+        fundedFrom: "savings",
+        countedInBudget: false,
+    },
+    {
+        id: "legacy",
+        type: "gf_paid",
+        amount: 120,
+        fundedFrom: "savings",
+        countedInBudget: false,
+    },
+    {
+        id: "received",
+        type: "gf_received",
+        amount: 500,
+        fundedFrom: "savings",
+        countedInBudget: false,
+    },
+    {
+        id: "card",
+        type: "card_payment",
+        amount: 800,
+        fundedFrom: "savings",
+        countedInBudget: false,
+    },
+    {
+        id: "debt",
+        type: "gf_fronted",
+        amount: 600,
+        fundedFrom: "savings",
+        countedInBudget: false,
+    },
     {
         id: "income-transfer",
         type: "gf_paid",
         amount: 50,
         fundedFrom: "income",
+        countedInBudget: true,
     },
 ];
 
@@ -73,7 +105,13 @@ describe("computeSavingsSpend", () => {
         "excludes %s from savings spend with and without a purchase",
         (type) => {
             const debts: FeedTotalMovement[] = [
-                { id: "debt", type, amount: 900, fundedFrom: "savings" },
+                {
+                    id: "debt",
+                    type,
+                    amount: 900,
+                    fundedFrom: "savings",
+                    countedInBudget: false,
+                },
             ];
             expect(computeSavingsSpend([], debts)).toEqual({
                 amount: 0,
@@ -121,6 +159,25 @@ describe("computeSavingsSpend", () => {
         ).toBe(120);
     });
 
+    it("counts an out-of-band purchase where the feed's From savings figure puts it", () => {
+        const rows = [
+            expense({
+                id: "cash-back",
+                amount: 450,
+                actualExpenditure: 450,
+                fundedFrom: "income",
+                countedInBudget: false,
+            }),
+        ];
+        expect(computeSavingsSpend(rows)).toEqual({
+            amount: 450,
+            of: { ownPurchases: 450, paidToPartner: 0 },
+        });
+        expect(computeFeedTotals(rows).notFromIncome.fromSavings.amount).toBe(
+            450,
+        );
+    });
+
     it("deduplicates a savings movement against an income-funded expense twin", () => {
         expect(
             computeSavingsSpend(
@@ -138,6 +195,7 @@ describe("computeSavingsSpend", () => {
                         type: "gf_paid",
                         amount: 100,
                         fundedFrom: "savings",
+                        countedInBudget: false,
                     },
                 ],
             ),
@@ -164,6 +222,7 @@ describe("computeSavingsSpend", () => {
                     type: "gf_paid",
                     amount: 100,
                     fundedFrom: "savings",
+                    countedInBudget: false,
                 },
             ],
             100,
@@ -188,6 +247,7 @@ describe("computeSavingsSpend", () => {
                     type: "gf_paid",
                     amount: 80,
                     fundedFrom: "savings",
+                    countedInBudget: false,
                 },
             ],
             80,

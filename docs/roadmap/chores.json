@@ -194,11 +194,10 @@
         {
             "id": "CHORE-15",
             "name": "funding-flag-frozen-edit",
-            "priority": 3,
             "title": "Thread the funding flag through the feed totals, and refuse a frozen row at the edit read",
-            "description": "Two follow-ups the #73 and #74 review rounds deliberately deferred, grouped because both are 'a predicate narrower than the read path it mirrors' — the shape that produced six defects across those reviews. (a) computeFeedTotals in lib/domain/movement.ts partitions on the NARROWED fundedFrom, so a stored value outside the enum lands in whatIReallySpent instead of the non-income figure, breaking the cross-screen agreement spec 0007 §2 exists to guarantee. Unreachable through the app because Zod validates writes; reachable via a raw DB edit or a future fourth funding value. (b) getMovementForEdit and getExpenseForEdit prefill a frozen row without refusing, so a stale tab can open a dialog that can only fail on save. Loud and non-corrupting — every write path refuses — but the two reads are symmetric and fixing one alone would repeat the one-surface mistake.",
-            "plan": "(a) Carry countedInBudget out of expense.repository.ts the way category.repository.ts already does, computed from the RAW column via isBudgetFunded, and thread it through FeedTotalExpense, MonthFeed.tsx and ExpenseListInteractive.tsx plus their fixtures. isBudgetFunded is already exported. Test with an out-of-band value written directly to the database, at the real seam. (b) Have both edit reads return the cycle_closed refusal the write paths return, using the same movesSettlementBalance / movementMovesSettlementBalance predicates, so the read and the write agree by construction. Do both in one slice. Depends on CHORE-11 and the #73 merge, since (a) touches a file both branches rewrote.",
-            "status": "open",
+            "description": "Two follow-ups the #73 and #74 review rounds deliberately deferred, grouped because both are 'a predicate narrower than the read path it mirrors' — the shape that produced six defects across those reviews. (a) computeFeedTotals in lib/domain/movement.ts partitions on the NARROWED fundedFrom, so a stored value outside the enum lands in whatIReallySpent instead of the non-income figure, breaking the cross-screen agreement spec 0007 §2 exists to guarantee. Unreachable through the app because Zod validates writes; reachable via a raw DB edit or a future fourth funding value. (b) getMovementForEdit and getExpenseForEdit prefill a frozen row without refusing, so a stale tab can open a dialog that can only fail on save. Loud and non-corrupting — every write path refuses — but the two reads are symmetric and fixing one alone would repeat the one-surface mistake. Scope widened (owner-approved) to the same shape on movements and on the Settlement page: movements narrowed fundedFrom too, the Settlement journal opened a frozen debt from page data, and each action carried its own copy of the frozen guard and its refusal text.",
+            "plan": "(a) Carry countedInBudget out of expense.repository.ts the way category.repository.ts already does, computed from the RAW column via isBudgetFunded, and thread it through FeedTotalExpense, MonthFeed.tsx and ExpenseListInteractive.tsx plus their fixtures. isBudgetFunded is already exported. Test with an out-of-band value written directly to the database, at the real seam. (b) Have both edit reads return the cycle_closed refusal the write paths return, using the same movesSettlementBalance / movementMovesSettlementBalance predicates, so the read and the write agree by construction. Do both in one slice. Depends on CHORE-11 and the #73 merge, since (a) touches a file both branches rewrote. Folded in: (c) the movement repository carries countedInBudget too, so an out-of-band transfer leaves the income figures and is badged; (d) the Settlement journal opens every edit through the matching read (getMovementForEdit for debts and transfers, getExpenseForEdit for payments) and handles a refusal like the Expenses list; (e) lib/domain/frozen-row.ts is the one home for the frozen guard and the refusal text, used by both edit reads and every refusing write.",
+            "status": "shipped",
             "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
             "pr": null,
             "issue": null
@@ -338,6 +337,18 @@
             "plan": "Brainstorm first, starting from the owner's notes-app budget template. Scope, data model and surface are decided at that brainstorm, not here.",
             "status": "open",
             "spec": null,
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-29",
+            "name": "out-of-band-funding",
+            "priority": 28,
+            "title": "Out-of-band funding value: display and edit semantics",
+            "description": "Follow-up from CHORE-15. An unknown stored fundedFrom now gets a badge and counts as from savings, but four gaps remain, all reachable only through a raw database edit. (a) The Settlement journal's transfer badge still reads the narrowed value (components/settlement/SettlementJournal.tsx, the transfer Row badge): journal rows carry no countedInBudget. (b) RowFundingBadge also badges card_payment, gf_received and debt rows holding an out-of-band value, where 'not from income' says nothing true. (c) Edit forms prefill the narrowed income and every update re-asserts fundedFrom, so any edit silently re-files an out-of-band row as income (pre-existing). (d) lib/services/settlement/settlement.service.ts builds its own copy of the frozen predicate for the journal's locked flag.",
+            "plan": "(a) Carry countedInBudget on journal transfer rows from the service and badge through RowFundingBadge. (b) Gate the movement badge to gf_paid. (c) Decide the edit semantics first: keep the stored value unless the user changes the funding control, or refuse the save with a validation error. (d) Derive the locked flag with isExpenseFrozen / isMovementFrozen from lib/domain/frozen-row.ts.",
+            "status": "open",
+            "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
             "pr": null,
             "issue": null
         }

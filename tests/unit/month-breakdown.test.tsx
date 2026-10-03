@@ -22,6 +22,7 @@ const expense = (
     isPartnerPayment: false,
     category: { slug: "groceries" },
     fundedFrom: "income",
+    countedInBudget: (over.fundedFrom ?? "income") === "income",
     ...over,
 });
 
@@ -45,8 +46,20 @@ const month: FeedTotalExpense[] = [
 ];
 
 const movements: FeedTotalMovement[] = [
-    { id: "m1", type: "gf_paid", amount: 700, fundedFrom: "income" },
-    { id: "m2", type: "gf_received", amount: 900, fundedFrom: "income" },
+    {
+        id: "m1",
+        type: "gf_paid",
+        amount: 700,
+        fundedFrom: "income",
+        countedInBudget: true,
+    },
+    {
+        id: "m2",
+        type: "gf_received",
+        amount: 900,
+        fundedFrom: "income",
+        countedInBudget: true,
+    },
 ];
 
 const totals = computeFeedTotals(month, movements);
@@ -111,12 +124,14 @@ describe("MonthBreakdown", () => {
                 type: "gf_paid",
                 amount: 15418.71,
                 fundedFrom: "income",
+                countedInBudget: true,
             },
             {
                 id: "m2",
                 type: "gf_paid",
                 amount: 1000,
                 fundedFrom: "savings",
+                countedInBudget: false,
             },
         ]);
 
@@ -366,6 +381,7 @@ describe("MonthBreakdown", () => {
                     type: "gf_paid",
                     amount: 700,
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
             ],
         );
@@ -554,6 +570,7 @@ describe("MonthBreakdown", () => {
                     type: "gf_paid",
                     amount: 680,
                     fundedFrom: "savings",
+                    countedInBudget: false,
                 },
             ],
         );
@@ -800,8 +817,20 @@ describe("the figures the rail leaves to Full breakdown", () => {
         }),
     ];
     const moved = computeFeedTotals(rows, [
-        { id: "m1", type: "gf_paid", amount: 700, fundedFrom: "income" },
-        { id: "m2", type: "gf_paid", amount: 250, fundedFrom: "savings" },
+        {
+            id: "m1",
+            type: "gf_paid",
+            amount: 700,
+            fundedFrom: "income",
+            countedInBudget: true,
+        },
+        {
+            id: "m2",
+            type: "gf_paid",
+            amount: 250,
+            fundedFrom: "savings",
+            countedInBudget: false,
+        },
     ]);
     const props = {
         totals: moved,

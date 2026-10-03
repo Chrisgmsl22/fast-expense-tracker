@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { getCurrentMonthCdmx, shiftMonth } from "../lib/dates.ts";
 import { movesSettlementBalance } from "../lib/domain/expense.ts";
+import { TRANSFER_FUNDING_SOURCES } from "../lib/domain/funding.ts";
 import { movementMovesSettlementBalance } from "../lib/domain/settlement.ts";
 
 /** Loopback names only. A hostname anywhere else is someone's real data. */
@@ -310,7 +311,62 @@ type MovementRow = {
     type: string;
     cardId: string | null;
     closedAt: Date | null;
+    fundedFrom?: string;
 };
+
+export type MovementFundingTally = {
+    type: string;
+    storedFundedFrom: string;
+    rows: number;
+    total: number;
+    /** A stored value the app never writes, so a read narrows it to `income`. */
+    outOfBand: boolean;
+};
+
+/** Movements counted by type × the RAW stored funding value, sorted for a stable print. */
+export function movementFundingTally(
+    movements: Pick<MovementRow, "type" | "amount" | "fundedFrom">[],
+): MovementFundingTally[] {
+    const known = TRANSFER_FUNDING_SOURCES as readonly string[];
+    const byKey = groupSum(
+        movements,
+        (m) => `${m.type}\u0000${m.fundedFrom ?? "income"}`,
+        (m) => m.amount,
+    );
+    return [...byKey.entries()]
+        .map(([key, acc]) => {
+            const [type, storedFundedFrom] = key.split("\u0000") as [
+                string,
+                string,
+            ];
+            return {
+                type,
+                storedFundedFrom,
+                rows: acc.count,
+                total: round2(acc.total),
+                outOfBand: !known.includes(storedFundedFrom),
+            };
+        })
+        .sort(
+            (a, b) =>
+                a.type.localeCompare(b.type) ||
+                a.storedFundedFrom.localeCompare(b.storedFundedFrom),
+        );
+}
+
+function movementsByFundingSource(movements: MovementRow[]): void {
+    heading("Movements by type and stored funding source");
+    table(
+        ["type", "stored fundedFrom", "rows", "total", "out of band"],
+        movementFundingTally(movements).map((t) => [
+            t.type,
+            t.storedFundedFrom,
+            t.rows,
+            mxn(t.total),
+            t.outOfBand ? "YES" : "no",
+        ]),
+    );
+}
 
 function partnerFlows(movements: MovementRow[]): void {
     heading("Partner money by month");
@@ -421,6 +477,7 @@ function settlementCycles(
 export async function snapshot(db: Db): Promise<void> {
     const withFundedFrom = modelHasField("Expense", "fundedFrom");
     const withExpenseMarker = modelHasField("Expense", "closedAt");
+    const withMovementFunding = modelHasField("Movement", "fundedFrom");
 
     await rowCounts(db);
 
@@ -434,7 +491,8 @@ export async function snapshot(db: Db): Promise<void> {
                 type: true,
                 cardId: true,
                 closedAt: true,
-            },
+                ...(withMovementFunding ? { fundedFrom: true } : {}),
+            } as Record<string, boolean> as never,
             orderBy: { date: "asc" },
         }) as Promise<MovementRow[]>,
         db.category.findMany({ select: { id: true, name: true } }),
@@ -458,6 +516,14 @@ export async function snapshot(db: Db): Promise<void> {
     }
 
     partnerFlows(movements);
+    if (withMovementFunding) {
+        movementsByFundingSource(movements);
+    } else {
+        heading("Movements by type and stored funding source");
+        console.log(
+            "  (skipped — Movement.fundedFrom is not in this schema yet)",
+        );
+    }
     perCard(expenses, movements, cards);
     settlementCycles(expenses, movements);
     console.log("");

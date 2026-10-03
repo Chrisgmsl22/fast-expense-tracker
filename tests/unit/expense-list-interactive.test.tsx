@@ -70,7 +70,12 @@ import { getMovementForEdit } from "@/app/_actions/movement/get-for-edit";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
 
+// jsdom has no layout, so it ships no `scrollIntoView`.
+const scrollIntoViewMock = vi.fn();
+Element.prototype.scrollIntoView = scrollIntoViewMock;
+
 beforeEach(() => {
+    scrollIntoViewMock.mockReset();
     refreshMock.mockReset();
     (deleteExpense as unknown as Mock).mockReset();
     (deleteMovement as unknown as Mock).mockReset();
@@ -86,6 +91,7 @@ const expenses = [
         amount: 200,
         actualExpenditure: 136,
         fundedFrom: "income" as const,
+        countedInBudget: true,
         isShared: true,
         isPartnerPayment: false,
         cycleClosedAt: null,
@@ -100,6 +106,7 @@ const expenses = [
         amount: 1000,
         actualExpenditure: 1000,
         fundedFrom: "income" as const,
+        countedInBudget: true,
         isShared: false,
         isPartnerPayment: false,
         cycleClosedAt: null,
@@ -123,6 +130,7 @@ const movements: MovementListItem[] = [
         card: { name: "Amex", color: "#ca8a04" },
         note: null,
         fundedFrom: "income",
+        countedInBudget: true,
         closedAt: null,
         cycleClosedAt: null,
     },
@@ -134,6 +142,7 @@ const movements: MovementListItem[] = [
         card: null,
         note: "netted",
         fundedFrom: "income",
+        countedInBudget: true,
         closedAt: null,
         cycleClosedAt: null,
     },
@@ -148,6 +157,7 @@ const debt: MovementListItem = {
     card: null,
     note: "she covered the vet",
     fundedFrom: "income",
+    countedInBudget: true,
     closedAt: null,
     cycleClosedAt: null,
 };
@@ -331,6 +341,7 @@ describe("ExpenseListInteractive", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 fundedFrom: "income" as const,
+                countedInBudget: true,
                 isShared: false,
                 isPartnerPayment: false,
                 cycleClosedAt: null,
@@ -400,7 +411,10 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("fetches the row then opens a prefilled edit dialog", async () => {
-        (getExpenseForEdit as unknown as Mock).mockResolvedValue({ id: "e1" });
+        (getExpenseForEdit as unknown as Mock).mockResolvedValue({
+            ok: true,
+            data: { id: "e1" },
+        });
         render(<ExpenseListInteractive expenses={expenses} {...props} />);
 
         fireEvent.click(screen.getByRole("button", { name: "Edit Tacos" }));
@@ -409,6 +423,189 @@ describe("ExpenseListInteractive", () => {
             expect(getExpenseForEdit).toHaveBeenCalledWith("e1"),
         );
         expect(await screen.findByText(/editing e1/i)).toBeDefined();
+    });
+
+    it("shows the server's refusal and opens no dialog when a stale row is frozen", async () => {
+        // The list still shows the controls (it predates the close); the read refuses.
+        (getExpenseForEdit as unknown as Mock).mockResolvedValue({
+            ok: false,
+            code: "cycle_closed",
+            message:
+                "Your partner's share of this expense counts in a settlement you already closed, so it can't be edited.",
+        });
+        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+
+        fireEvent.click(screen.getByRole("button", { name: "Edit Tacos" }));
+
+        const alert = await screen.findByRole("alert");
+        expect(alert.textContent).toMatch(/settlement you already closed/);
+        expect(screen.queryByRole("dialog")).toBeNull();
+        expect(screen.queryByTestId("expense-form")).toBeNull();
+        // Brought to wherever the user is, and the list refetched so the row locks.
+        await waitFor(() => expect(document.activeElement).toBe(alert));
+        expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: "center" });
+        expect(scrollIntoViewMock.mock.contexts[0]).toBe(alert);
+        expect(refreshMock).toHaveBeenCalledTimes(1);
+    });
+
+    describe("an error never carries into the next flow", () => {
+        const editRefused = {
+            ok: false,
+            code: "cycle_closed",
+            message:
+                "Your partner's share of this expense counts in a settlement you already closed, so it can't be edited.",
+        };
+
+        async function deleteDialogAfterEditRefusal(
+            deleteName: string,
+            dialogName: RegExp,
+        ) {
+            (getExpenseForEdit as unknown as Mock).mockResolvedValue(
+                editRefused,
+            );
+            render(
+                <ExpenseListInteractive
+                    expenses={expenses}
+                    {...{ ...props, movements }}
+                />,
+            );
+            fireEvent.click(screen.getByRole("button", { name: "Edit Tacos" }));
+            await screen.findByRole("alert");
+
+            // The alert can render before the transition settles; row controls
+            // stay disabled until it does, and a click on them is dropped.
+            const remove = screen.getByRole("button", {
+                name: deleteName,
+            }) as HTMLButtonElement;
+            await waitFor(() => expect(remove.disabled).toBe(false));
+            fireEvent.click(remove);
+            return screen.findByRole("dialog", { name: dialogName });
+        }
+
+        it.each([
+            ["an expense", "Delete Uber", /delete expense/i],
+            ["a movement", "Delete Paid Brenda", /delete this movement/i],
+        ])(
+            "opens the delete dialog for %s clean after an edit refusal",
+            async (_label, deleteName, dialogName) => {
+                const dialog = await deleteDialogAfterEditRefusal(
+                    deleteName,
+                    dialogName,
+                );
+
+                expect(within(dialog).queryByRole("alert")).toBeNull();
+                expect(
+                    (
+                        within(dialog).getByRole("button", {
+                            name: "Delete",
+                        }) as HTMLButtonElement
+                    ).disabled,
+                ).toBe(false);
+            },
+        );
+
+        it("shows no stale alert after a failed delete is retried successfully", async () => {
+            (deleteExpense as unknown as Mock)
+                .mockResolvedValueOnce({
+                    ok: false,
+                    code: "db_error",
+                    message: "Could not delete the expense. Please try again.",
+                })
+                .mockResolvedValueOnce({ ok: true, data: { id: "e1" } });
+            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+
+            fireEvent.click(
+                screen.getByRole("button", { name: "Delete Tacos" }),
+            );
+            fireEvent.click(
+                await screen.findByRole("button", { name: "Delete" }),
+            );
+            const dialog = await screen.findByRole("dialog", {
+                name: /delete expense/i,
+            });
+            await within(dialog).findByText(/could not delete the expense/i);
+
+            fireEvent.click(
+                await within(dialog).findByRole("button", { name: "Delete" }),
+            );
+
+            await waitFor(() =>
+                expect(screen.queryByRole("dialog")).toBeNull(),
+            );
+            expect(refreshMock).toHaveBeenCalledTimes(1);
+            expect(screen.queryByRole("alert")).toBeNull();
+            expect(scrollIntoViewMock).not.toHaveBeenCalled();
+        });
+    });
+
+    it("refreshes, disables the confirm and focuses the reason when a delete is refused for a closed cycle", async () => {
+        (deleteExpense as unknown as Mock).mockResolvedValue({
+            ok: false,
+            code: "cycle_closed",
+            message:
+                "Your partner's share of this expense counts in a settlement you already closed, so it can't be deleted.",
+        });
+        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+
+        fireEvent.click(screen.getByRole("button", { name: "Delete Tacos" }));
+        fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+
+        const dialog = await screen.findByRole("dialog", {
+            name: /delete expense/i,
+        });
+        const alert = await within(dialog).findByRole("alert");
+        expect(alert.textContent).toMatch(/settlement you already closed/);
+        expect(refreshMock).toHaveBeenCalledTimes(1);
+        // A retry could only repeat the refusal.
+        await waitFor(() =>
+            expect(
+                (
+                    within(dialog).getByRole("button", {
+                        name: "Delete",
+                    }) as HTMLButtonElement
+                ).disabled,
+            ).toBe(true),
+        );
+        await waitFor(() => expect(document.activeElement).toBe(alert));
+
+        // Cancel clears the refusal: nothing leaks into the list alert, and the
+        // next confirm starts enabled.
+        fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+        expect(screen.queryByRole("alert")).toBeNull();
+        fireEvent.click(screen.getByRole("button", { name: "Delete Uber" }));
+        const next = await screen.findByRole("dialog", {
+            name: /delete expense/i,
+        });
+        expect(
+            (
+                within(next).getByRole("button", {
+                    name: "Delete",
+                }) as HTMLButtonElement
+            ).disabled,
+        ).toBe(false);
+    });
+
+    it("keeps the confirm enabled after a delete fails for another reason", async () => {
+        (deleteExpense as unknown as Mock).mockResolvedValue({
+            ok: false,
+            code: "db_error",
+            message: "Could not delete the expense. Please try again.",
+        });
+        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+
+        fireEvent.click(screen.getByRole("button", { name: "Delete Tacos" }));
+        fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+
+        const dialog = await screen.findByRole("dialog", {
+            name: /delete expense/i,
+        });
+        await within(dialog).findByText(/could not delete the expense/i);
+        // A transient failure is worth retrying.
+        const confirm = (await within(dialog).findByRole("button", {
+            name: "Delete",
+        })) as HTMLButtonElement;
+        expect(confirm.disabled).toBe(false);
     });
 
     it("deletes after confirming, then refreshes", async () => {
@@ -501,7 +698,12 @@ describe("ExpenseListInteractive", () => {
                 expenses={expenses}
                 {...props}
                 movements={[
-                    { ...movements[1]!, amount: 8000, fundedFrom: "savings" },
+                    {
+                        ...movements[1]!,
+                        amount: 8000,
+                        fundedFrom: "savings",
+                        countedInBudget: false,
+                    },
                 ]}
             />,
         );
@@ -521,6 +723,7 @@ describe("ExpenseListInteractive", () => {
             amount: 530,
             actualExpenditure: 530,
             fundedFrom: "savings" as const,
+            countedInBudget: false,
             isShared: false,
             isPartnerPayment: true,
         };
@@ -597,13 +800,16 @@ describe("ExpenseListInteractive", () => {
 
     it("fetches a card payment then opens its edit dialog", async () => {
         (getMovementForEdit as unknown as Mock).mockResolvedValue({
-            id: "mv1",
-            date: new Date("2026-05-20T06:00:00Z"),
-            amount: 800,
-            type: "card_payment",
-            cardId: "card1",
-            note: null,
-            fundedFrom: "income",
+            ok: true,
+            data: {
+                id: "mv1",
+                date: new Date("2026-05-20T06:00:00Z"),
+                amount: 800,
+                type: "card_payment",
+                cardId: "card1",
+                note: null,
+                fundedFrom: "income",
+            },
         });
         render(
             <ExpenseListInteractive
@@ -623,13 +829,16 @@ describe("ExpenseListInteractive", () => {
 
     it("opens the transfer edit form for a transfer movement", async () => {
         (getMovementForEdit as unknown as Mock).mockResolvedValue({
-            id: "mv2",
-            date: new Date("2026-05-18T06:00:00Z"),
-            amount: 300,
-            type: "gf_paid",
-            cardId: null,
-            note: "netted",
-            fundedFrom: "income",
+            ok: true,
+            data: {
+                id: "mv2",
+                date: new Date("2026-05-18T06:00:00Z"),
+                amount: 300,
+                type: "gf_paid",
+                cardId: null,
+                note: "netted",
+                fundedFrom: "income",
+            },
         });
         render(
             <ExpenseListInteractive
@@ -648,7 +857,11 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("surfaces an error when the movement fails to load for edit", async () => {
-        (getMovementForEdit as unknown as Mock).mockResolvedValue(null);
+        (getMovementForEdit as unknown as Mock).mockResolvedValue({
+            ok: false,
+            code: "not_found",
+            message: "Couldn't load that movement. Please refresh.",
+        });
         render(
             <ExpenseListInteractive
                 expenses={expenses}
@@ -662,6 +875,73 @@ describe("ExpenseListInteractive", () => {
         expect(
             await screen.findByText(/couldn't load that movement/i),
         ).toBeDefined();
+        // Only a closed-cycle refusal means the list itself is stale.
+        expect(refreshMock).not.toHaveBeenCalled();
+    });
+
+    it("shows the server's refusal and opens no dialog when a stale transfer is frozen", async () => {
+        (getMovementForEdit as unknown as Mock).mockResolvedValue({
+            ok: false,
+            code: "cycle_closed",
+            message:
+                "This transfer counts in a settlement you already closed, so it can't be edited.",
+        });
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "Edit Paid Brenda" }),
+        );
+
+        const alert = await screen.findByRole("alert");
+        expect(alert.textContent).toMatch(/settlement you already closed/);
+        expect(screen.queryByRole("dialog")).toBeNull();
+        expect(screen.queryByTestId("transfer-form")).toBeNull();
+        await waitFor(() => expect(document.activeElement).toBe(alert));
+        expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: "center" });
+        expect(scrollIntoViewMock.mock.contexts[0]).toBe(alert);
+        expect(refreshMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("refreshes, disables the confirm and focuses the reason when a movement delete is refused for a closed cycle", async () => {
+        (deleteMovement as unknown as Mock).mockResolvedValue({
+            ok: false,
+            code: "cycle_closed",
+            message:
+                "This row counts in a settlement you already closed, so it can't be deleted.",
+        });
+        render(
+            <ExpenseListInteractive
+                expenses={expenses}
+                {...{ ...props, movements }}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "Delete Paid Brenda" }),
+        );
+        fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+
+        const dialog = await screen.findByRole("dialog", {
+            name: /delete this movement/i,
+        });
+        const alert = await within(dialog).findByRole("alert");
+        expect(alert.textContent).toMatch(/settlement you already closed/);
+        expect(refreshMock).toHaveBeenCalledTimes(1);
+        await waitFor(() =>
+            expect(
+                (
+                    within(dialog).getByRole("button", {
+                        name: "Delete",
+                    }) as HTMLButtonElement
+                ).disabled,
+            ).toBe(true),
+        );
+        await waitFor(() => expect(document.activeElement).toBe(alert));
     });
 
     it("deletes a movement after confirming, then refreshes", async () => {
@@ -734,6 +1014,7 @@ describe("ExpenseListInteractive", () => {
                 amount: 200,
                 actualExpenditure: 200,
                 fundedFrom: "savings" as const,
+                countedInBudget: false,
                 isShared: false,
                 isPartnerPayment: false,
                 cycleClosedAt: null,
@@ -753,6 +1034,7 @@ describe("ExpenseListInteractive", () => {
                 amount: 800,
                 actualExpenditure: 800,
                 fundedFrom: "reimbursed" as const,
+                countedInBudget: false,
                 isShared: false,
                 isPartnerPayment: false,
                 cycleClosedAt: null,
@@ -819,6 +1101,58 @@ describe("ExpenseListInteractive", () => {
             render(<ExpenseListInteractive expenses={expenses} {...props} />);
             expect(screen.queryByText("from savings")).toBeNull();
             expect(screen.queryByText("reimbursed")).toBeNull();
+        });
+
+        it("badges an out-of-band row and lists it where the footer counts it", () => {
+            // What the repository returns for a raw stored value outside the enum.
+            const outOfBand = {
+                ...fundedRows[0]!,
+                id: "f3",
+                description: "Cash-back purchase",
+                amount: 450,
+                actualExpenditure: 450,
+                fundedFrom: "income" as const,
+                countedInBudget: false,
+            };
+            render(
+                <ExpenseListInteractive
+                    expenses={[...expenses, outOfBand]}
+                    {...props}
+                />,
+            );
+
+            const row = screen
+                .getByRole("button", { name: "Edit Cash-back purchase" })
+                .closest("li")!;
+            expect(within(row).getByText("not from income")).toBeDefined();
+            const footer = within(screen.getByTestId("totals-footer"));
+            const fromSavings = footer
+                .getByText("From savings")
+                .closest("details")!;
+            expect(
+                within(fromSavings).getByText("Cash-back purchase"),
+            ).toBeDefined();
+        });
+
+        it("badges an out-of-band transfer the same way", () => {
+            render(
+                <ExpenseListInteractive
+                    expenses={expenses}
+                    {...props}
+                    movements={[
+                        {
+                            ...movements[1]!,
+                            fundedFrom: "income",
+                            countedInBudget: false,
+                        },
+                    ]}
+                />,
+            );
+
+            const row = screen
+                .getByRole("button", { name: "Edit Paid Brenda" })
+                .closest("li")!;
+            expect(within(row).getByText("not from income")).toBeDefined();
         });
     });
 

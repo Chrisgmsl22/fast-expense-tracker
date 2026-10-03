@@ -26,18 +26,12 @@ export type CategoryMeta = {
     monthlyBudget: number | null;
 };
 
-/**
- * The row plus the budget filter's verdict, read from the RAW column:
- * `fundedFrom` maps an out-of-band value to `income` while SQL drops it, so a
- * predicate over it would miss the rows that most need explaining.
- */
 export type CategoryExpenseListItem = Omit<ExpenseListItem, "subcategory"> & {
     /**
      * Subcategory names are not unique — `schema.prisma` has no constraint on
      * `(userId, categoryId, name)` — so "across M subcategories" must count ids.
      */
     subcategory: { id: string; name: string } | null;
-    countedInBudget: boolean;
 };
 
 /** One category option in the expense form's picker. */

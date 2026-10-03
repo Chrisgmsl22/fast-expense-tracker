@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
 import {
+    isBudgetFunded,
     toTransferFundingSource,
     type TransferFundingSource,
 } from "@/lib/domain/funding";
@@ -19,6 +20,8 @@ export type MovementListItem = {
     note: string | null;
     /** Meaningful on `gf_paid` only; every other type keeps the default. */
     fundedFrom: TransferFundingSource;
+    /** The budget filter's verdict on the RAW column — what the feed totals split on. */
+    countedInBudget: boolean;
     /**
      * Set when this transfer closed a settlement cycle. It travels with the LIST row,
      * so a feed can hide the controls the server will refuse.
@@ -125,6 +128,7 @@ export class PrismaMovementRepository implements MovementRepository {
             ...r,
             type: r.type as MovementType,
             fundedFrom: toTransferFundingSource(r.fundedFrom),
+            countedInBudget: isBudgetFunded(r.fundedFrom),
             cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
         }));
     }

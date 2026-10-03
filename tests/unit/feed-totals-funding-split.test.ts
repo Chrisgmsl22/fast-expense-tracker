@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import { summaryCost, summaryLines } from "@/components/money/summary-model";
 import {
     computeFeedTotals,
+    computeSavingsSpend,
     nonIncomeFundedRows,
     nonIncomeSourceOf,
+    transferSourceOf,
     type FeedTotalExpense,
+    type FeedTotalMovement,
 } from "@/lib/domain/movement";
 
 const expense = (
@@ -16,6 +19,7 @@ const expense = (
     isPartnerPayment: false,
     category: { slug: "groceries" },
     fundedFrom: "income",
+    countedInBudget: (over.fundedFrom ?? "income") === "income",
     ...over,
 });
 
@@ -133,11 +137,71 @@ describe("notFromIncome split by funding source", () => {
 
 describe("nonIncomeSourceOf", () => {
     it.each([
-        ["income", null],
-        ["savings", "fromSavings"],
-        ["reimbursed", "reimbursed"],
-    ] as const)("maps %s to %s", (fundedFrom, source) => {
-        expect(nonIncomeSourceOf(fundedFrom)).toBe(source);
+        ["income", true, null],
+        ["savings", false, "fromSavings"],
+        ["reimbursed", false, "reimbursed"],
+        // An out-of-band stored value: narrowed to income, skipped by the SQL filter.
+        ["income", false, "fromSavings"],
+    ] as const)(
+        "maps %s (counted in budget: %s) to %s",
+        (fundedFrom, countedInBudget, source) => {
+            expect(nonIncomeSourceOf({ fundedFrom, countedInBudget })).toBe(
+                source,
+            );
+        },
+    );
+});
+
+describe("transferSourceOf", () => {
+    it.each([
+        ["income", true, "fromIncome"],
+        ["savings", false, "fromSavings"],
+        // An out-of-band stored value: narrowed to income, but not budget-funded.
+        ["income", false, "fromSavings"],
+    ] as const)(
+        "maps %s (counted in budget: %s) to %s",
+        (fundedFrom, countedInBudget, source) => {
+            expect(transferSourceOf({ fundedFrom, countedInBudget })).toBe(
+                source,
+            );
+        },
+    );
+});
+
+describe("an out-of-band legacy transfer", () => {
+    // What the movement repository returns for a raw `cash-back` on a gf_paid.
+    const outOfBand: FeedTotalMovement = {
+        id: "mx",
+        type: "gf_paid",
+        amount: 400,
+        fundedFrom: "income",
+        countedInBudget: false,
+    };
+    const incomeTransfer: FeedTotalMovement = {
+        id: "mi",
+        type: "gf_paid",
+        amount: 700,
+        fundedFrom: "income",
+        countedInBudget: true,
+    };
+
+    it("leaves the income figures and the total", () => {
+        const totals = computeFeedTotals(october, [incomeTransfer, outOfBand]);
+
+        expect(totals.paidToPartner.of.fromIncome.of.fromLegacyTransfers).toBe(
+            700,
+        );
+        expect(
+            totals.paidToPartner.of.notFromIncome.of.fromLegacyTransfers,
+        ).toBe(400);
+        expect(totals.total).toBe(680 + 700);
+    });
+
+    it("counts as money from savings, like an out-of-band expense", () => {
+        expect(computeSavingsSpend([], [incomeTransfer, outOfBand])).toEqual({
+            amount: 400,
+            of: { ownPurchases: 0, paidToPartner: 400 },
+        });
     });
 });
 
@@ -156,6 +220,32 @@ describe("nonIncomeFundedRows", () => {
         expect(sum(rows.reimbursed)).toBe(
             totals.notFromIncome.reimbursed.amount,
         );
+    });
+
+    it("lists an out-of-band row under the figure that counts it", () => {
+        const outOfBand = expense({
+            id: "x1",
+            amount: 450,
+            actualExpenditure: 450,
+            fundedFrom: "income",
+            countedInBudget: false,
+        });
+        const month = [...october, outOfBand];
+        const rows = nonIncomeFundedRows(month);
+        const totals = computeFeedTotals(month);
+
+        expect(rows.fromSavings.map((row) => row.id)).toEqual([
+            "s1",
+            "s2",
+            "x1",
+        ]);
+        expect(
+            rows.fromSavings.reduce(
+                (sum, row) => sum + row.actualExpenditure,
+                0,
+            ),
+        ).toBe(totals.notFromIncome.fromSavings.amount);
+        expect(totals.whatIReallySpent.amount).toBe(680);
     });
 
     it("keeps the caller's own row type, extra fields included", () => {

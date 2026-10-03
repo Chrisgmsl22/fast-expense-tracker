@@ -1,12 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeftRight, BarChart3, Check, Pencil, Trash2 } from "lucide-react";
 
 import { deleteExpense } from "@/app/_actions/expense/delete";
+import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
 import { deleteMovement } from "@/app/_actions/movement/delete";
+import { getMovementForEdit } from "@/app/_actions/movement/get-for-edit";
 import { FundingBadge } from "@/components/expense/FundingBadge";
 import {
     PartnerDebtForm,
@@ -26,8 +28,13 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { toDateInputValue } from "@/lib/dates";
-import { BUDGET_FUNDING_SOURCE } from "@/lib/domain/funding";
+import { isPartnerPaymentAutoLabel } from "@/lib/domain/expense";
 import {
+    BUDGET_FUNDING_SOURCE,
+    toTransferFundingSource,
+} from "@/lib/domain/funding";
+import {
+    isPartnerDebt,
     partnerDebtLabel,
     type PartnerDebtDirection,
 } from "@/lib/domain/movement";
@@ -125,48 +132,120 @@ export function SettlementJournal({
 }) {
     const router = useRouter();
     const [editing, setEditing] = useState<PartnerDebtEditable | null>(null);
-    const [editingTransfer, setEditingTransfer] = useState<TransferRow | null>(
-        null,
-    );
+    const [editingTransfer, setEditingTransfer] = useState<{
+        direction: TransferRow["direction"];
+        source: TransferRow["source"];
+        transfer: TransferEditable;
+    } | null>(null);
     const [deleting, setDeleting] = useState<DeletableRow | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
+    const [deleteFrozen, setDeleteFrozen] = useState(false);
     const [pending, startTransition] = useTransition();
+    const listAlertRef = useRef<HTMLParagraphElement>(null);
+    const deleteAlertRef = useRef<HTMLParagraphElement>(null);
+    const showListAlert = actionError !== null && !deleting;
 
+    // The alert sits above a scrolling list, so a refusal on a lower row would
+    // otherwise land off-screen and the click would look like it did nothing.
+    useEffect(() => {
+        if (!showListAlert) return;
+        listAlertRef.current?.scrollIntoView({ block: "center" });
+        listAlertRef.current?.focus({ preventScroll: true });
+    }, [showListAlert, actionError]);
+
+    useEffect(() => {
+        if (deleteFrozen) deleteAlertRef.current?.focus();
+    }, [deleteFrozen]);
+
+    // A frozen refusal means this page predates the close: refresh so the row locks.
+    function showRefusal(res: { code: string; message: string }) {
+        setActionError(res.message);
+        if (res.code === "cycle_closed") router.refresh();
+    }
+
+    // Prefilled from the server, never the row: a stale tab must not open a frozen row.
     function openEdit(item: PartnerDebtRow) {
         setActionError(null);
-        // The debt movement carries everything the form needs, so prefill straight
-        // from the journal row — no server round-trip. A blank note falls back to
-        // the default label, so surface an empty field for that case.
-        setEditing({
-            id: item.id,
-            direction: item.direction,
-            date: toDateInputValue(item.date),
-            amount: String(item.amount),
-            note:
-                item.description ===
-                defaultDebtDescription(partnerName, item.direction)
-                    ? ""
-                    : item.description,
+        startTransition(async () => {
+            const res = await getMovementForEdit(item.id);
+            if (!res.ok) {
+                showRefusal(res);
+                return;
+            }
+            const direction = res.data.type;
+            if (!isPartnerDebt(direction)) {
+                setActionError("Couldn't load that debt. Please refresh.");
+                return;
+            }
+            setEditing({
+                id: res.data.id,
+                direction,
+                date: toDateInputValue(res.data.date),
+                amount: String(res.data.amount),
+                note: res.data.note ?? "",
+            });
         });
     }
 
     function openEditTransfer(item: TransferRow) {
         setActionError(null);
-        // Transfer rows carry date/amount/note, so prefill from the row too; the
-        // form takes the direction as a prop (see the edit dialog below).
-        setEditingTransfer(item);
+        if (item.source === "expense") {
+            startTransition(async () => {
+                const res = await getExpenseForEdit(item.id);
+                if (!res.ok) {
+                    showRefusal(res);
+                    return;
+                }
+                setEditingTransfer({
+                    direction: item.direction,
+                    source: item.source,
+                    transfer: {
+                        id: res.data.id,
+                        date: toDateInputValue(res.data.date),
+                        amount: String(res.data.actualExpenditure),
+                        // The auto-label is not a note, so the field starts empty for it.
+                        note: isPartnerPaymentAutoLabel(res.data.description)
+                            ? ""
+                            : res.data.description,
+                        fundedFrom: toTransferFundingSource(
+                            res.data.fundedFrom,
+                        ),
+                    },
+                });
+            });
+            return;
+        }
+        startTransition(async () => {
+            const res = await getMovementForEdit(item.id);
+            if (!res.ok) {
+                showRefusal(res);
+                return;
+            }
+            setEditingTransfer({
+                direction: item.direction,
+                source: item.source,
+                transfer: {
+                    id: res.data.id,
+                    date: toDateInputValue(res.data.date),
+                    amount: String(res.data.amount),
+                    note: res.data.note ?? "",
+                    // Re-asserted on save, so a savings-funded transfer keeps its source.
+                    fundedFrom: res.data.fundedFrom,
+                },
+            });
+        });
     }
 
-    /** String-input shape the transfer form prefills from the row being edited. */
-    const transferEdit: TransferEditable | null = editingTransfer && {
-        id: editingTransfer.id,
-        date: toDateInputValue(editingTransfer.date),
-        amount: String(editingTransfer.amount),
-        note: editingTransfer.note ?? "",
-        // Carried from the row so saving an edit here re-asserts the funding
-        // source instead of resetting a savings-funded transfer to income.
-        fundedFrom: editingTransfer.fundedFrom ?? "income",
-    };
+    function closeDeleteDialog() {
+        setDeleting(null);
+        setActionError(null);
+        setDeleteFrozen(false);
+    }
+
+    function openDelete(item: DeletableRow) {
+        closeDeleteDialog();
+        setDeleting(item);
+    }
 
     function confirmDelete() {
         if (!deleting) return;
@@ -178,36 +257,30 @@ export function SettlementJournal({
                     ? await deleteExpense({ id: deleting.id })
                     : await deleteMovement({ id: deleting.id });
             if (res.ok) {
-                setDeleting(null);
+                closeDeleteDialog();
                 router.refresh();
             } else {
-                setActionError(res.message);
+                showRefusal(res);
+                // Retrying can only repeat the refusal, so the confirm goes dead.
+                if (res.code === "cycle_closed") setDeleteFrozen(true);
             }
         });
     }
 
     const shell = bare ? "" : "rounded-xl border p-5";
-
-    if (journal.length === 0) {
-        return (
-            <div className={shell}>
-                {!bare && <p className="font-semibold">{title}</p>}
-                <p
-                    className={`text-sm text-muted-foreground ${bare ? "" : "mt-3"}`}
-                >
-                    {emptyMessage}
-                </p>
-            </div>
-        );
-    }
+    const isEmpty = journal.length === 0;
 
     // The service sorts newest-first, so all current-month rows precede the
     // carried-over ones; the divider goes before the first carried row.
     const firstCarriedId = journal.find((j) => j.carriedOver)?.id;
 
+    // One tree for both states: a refresh can empty the list under a refusal, and the
+    // alert and dialogs must keep their place (and focus) when it does.
     return (
         <div className={shell}>
-            {!bare && (
+            {bare ? null : isEmpty ? (
+                <p className="font-semibold">{title}</p>
+            ) : (
                 <div className="flex items-baseline justify-between">
                     <p className="font-semibold">{title}</p>
                     <p className="text-xs text-muted-foreground">
@@ -216,64 +289,74 @@ export function SettlementJournal({
                 </div>
             )}
 
-            {actionError && !deleting && (
-                <p className="mt-3 text-sm text-destructive" role="alert">
+            {showListAlert && (
+                <p
+                    ref={listAlertRef}
+                    tabIndex={-1}
+                    className="mt-3 text-sm text-destructive outline-none"
+                    role="alert"
+                >
                     {actionError}
                 </p>
             )}
 
-            <ul className="mt-3 max-h-[55vh] divide-y overflow-x-hidden overflow-y-auto">
-                {journal.map((item) => (
-                    <li key={`${item.kind}-${item.id}`}>
-                        {item.id === firstCarriedId && (
-                            <p className="py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                Earlier months
-                            </p>
-                        )}
-                        <JournalRow
-                            item={item}
-                            partnerName={partnerName}
-                            actions={
-                                // The row carries `locked`, so a view cannot reintroduce
-                                // the buttons by forgetting `readOnly`. Every producer of
-                                // a row must derive it.
-                                readOnly || item.locked ? null : item.kind ===
-                                  "partner_debt" ? (
-                                    <RowActions
-                                        label={item.description}
-                                        pending={pending}
-                                        // A movement-backed debt is the editable
-                                        // case — `PartnerDebtForm` writes
-                                        // `updatePartnerDebt`.
-                                        onEdit={
-                                            item.source === "movement"
-                                                ? () => openEdit(item)
-                                                : undefined
-                                        }
-                                        onDelete={() => {
-                                            setActionError(null);
-                                            setDeleting(item);
-                                        }}
-                                    />
-                                ) : item.kind === "transfer" ? (
-                                    <RowActions
-                                        label={transferTitle(
-                                            item.direction,
-                                            partnerName,
-                                        )}
-                                        pending={pending}
-                                        onEdit={() => openEditTransfer(item)}
-                                        onDelete={() => {
-                                            setActionError(null);
-                                            setDeleting(item);
-                                        }}
-                                    />
-                                ) : null
-                            }
-                        />
-                    </li>
-                ))}
-            </ul>
+            {isEmpty ? (
+                <p
+                    className={`text-sm text-muted-foreground ${bare ? "" : "mt-3"}`}
+                >
+                    {emptyMessage}
+                </p>
+            ) : (
+                <ul className="mt-3 max-h-[55vh] divide-y overflow-x-hidden overflow-y-auto">
+                    {journal.map((item) => (
+                        <li key={`${item.kind}-${item.id}`}>
+                            {item.id === firstCarriedId && (
+                                <p className="py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                    Earlier months
+                                </p>
+                            )}
+                            <JournalRow
+                                item={item}
+                                partnerName={partnerName}
+                                actions={
+                                    // The row carries `locked`, so a view cannot reintroduce
+                                    // the buttons by forgetting `readOnly`. Every producer of
+                                    // a row must derive it.
+                                    readOnly ||
+                                    item.locked ? null : item.kind ===
+                                      "partner_debt" ? (
+                                        <RowActions
+                                            label={item.description}
+                                            pending={pending}
+                                            // A movement-backed debt is the editable
+                                            // case — `PartnerDebtForm` writes
+                                            // `updatePartnerDebt`.
+                                            onEdit={
+                                                item.source === "movement"
+                                                    ? () => openEdit(item)
+                                                    : undefined
+                                            }
+                                            onDelete={() => openDelete(item)}
+                                        />
+                                    ) : item.kind === "transfer" ? (
+                                        <RowActions
+                                            label={transferTitle(
+                                                item.direction,
+                                                partnerName,
+                                            )}
+                                            pending={pending}
+                                            onEdit={() =>
+                                                openEditTransfer(item)
+                                            }
+                                            onDelete={() => openDelete(item)}
+                                        />
+                                    ) : null
+                                }
+                            />
+                        </li>
+                    ))}
+                </ul>
+            )}
 
             <Dialog
                 open={editing !== null}
@@ -310,12 +393,12 @@ export function SettlementJournal({
                     <DialogHeader>
                         <DialogTitle>Edit transfer</DialogTitle>
                     </DialogHeader>
-                    {editingTransfer && transferEdit && (
+                    {editingTransfer && (
                         <TransferForm
-                            key={editingTransfer.id}
+                            key={editingTransfer.transfer.id}
                             direction={editingTransfer.direction}
                             source={editingTransfer.source}
-                            transfer={transferEdit}
+                            transfer={editingTransfer.transfer}
                             partnerName={partnerName}
                             onCancel={() => setEditingTransfer(null)}
                             onSuccess={() => {
@@ -330,10 +413,7 @@ export function SettlementJournal({
             <Dialog
                 open={deleting !== null}
                 onOpenChange={(open) => {
-                    if (!open) {
-                        setDeleting(null);
-                        setActionError(null);
-                    }
+                    if (!open) closeDeleteDialog();
                 }}
             >
                 <DialogContent>
@@ -350,7 +430,12 @@ export function SettlementJournal({
                         </DialogDescription>
                     </DialogHeader>
                     {actionError && (
-                        <p className="text-sm text-destructive" role="alert">
+                        <p
+                            ref={deleteAlertRef}
+                            tabIndex={-1}
+                            className="text-sm text-destructive outline-none"
+                            role="alert"
+                        >
                             {actionError}
                         </p>
                     )}
@@ -358,10 +443,7 @@ export function SettlementJournal({
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => {
-                                setActionError(null);
-                                setDeleting(null);
-                            }}
+                            onClick={closeDeleteDialog}
                             disabled={pending}
                         >
                             Cancel
@@ -370,7 +452,7 @@ export function SettlementJournal({
                             type="button"
                             variant="destructive"
                             onClick={confirmDelete}
-                            disabled={pending}
+                            disabled={pending || deleteFrozen}
                         >
                             {pending ? "Deleting…" : "Delete"}
                         </Button>

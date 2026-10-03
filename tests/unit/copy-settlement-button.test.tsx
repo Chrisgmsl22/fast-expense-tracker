@@ -11,6 +11,12 @@ vi.mock("@/app/_actions/movement/delete", () => ({ deleteMovement: vi.fn() }));
 vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
     addPartnerDebt: vi.fn(),
 }));
+vi.mock("@/app/_actions/movement/get-for-edit", () => ({
+    getMovementForEdit: vi.fn(),
+}));
+vi.mock("@/app/_actions/expense/get-for-edit", () => ({
+    getExpenseForEdit: vi.fn(),
+}));
 vi.mock("@/app/_actions/movement/update-partner-debt", () => ({
     updatePartnerDebt: vi.fn(),
 }));

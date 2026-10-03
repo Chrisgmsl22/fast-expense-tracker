@@ -22,6 +22,7 @@ const paymentExpense: FeedTotalExpense = {
     isPartnerPayment: true,
     category: { slug: "combined-expenses" },
     fundedFrom: "income",
+    countedInBudget: true,
 };
 
 /** The dashboard reads per-category spend, which includes the payment row. */
@@ -69,6 +70,7 @@ describe("a payment to the partner is an ordinary expense", () => {
             isPartnerPayment: false,
             category: { slug: "groceries" },
             fundedFrom: "income",
+            countedInBudget: true,
         };
         const totals = computeFeedTotals([groceries, paymentExpense]);
 
@@ -91,6 +93,7 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
         amount: 8011.2,
         type: "gf_paid",
         fundedFrom: "income",
+        countedInBudget: true,
     };
     const groceries: FeedTotalExpense = {
         id: "e1",
@@ -99,6 +102,7 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
         isPartnerPayment: false,
         category: { slug: "groceries" },
         fundedFrom: "income",
+        countedInBudget: true,
     };
 
     it("still reaches the footer when nothing has been converted", () => {
@@ -131,6 +135,7 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
             isPartnerPayment: true,
             category: { slug: "combined-expenses" },
             fundedFrom: "income",
+            countedInBudget: true,
         };
         const totals = computeFeedTotals([converted], [legacyTransfer]);
 
@@ -152,18 +157,21 @@ describe("a LEGACY gf_paid movement, until the data PR converts it", () => {
                     amount: 5000,
                     type: "card_payment",
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
                 {
                     id: "m3",
                     amount: 300,
                     type: "gf_received",
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
                 {
                     id: "m4",
                     amount: 900,
                     type: "gf_fronted",
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
             ],
         );

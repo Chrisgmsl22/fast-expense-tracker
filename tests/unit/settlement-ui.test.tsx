@@ -7,7 +7,24 @@ import {
     within,
 } from "@testing-library/react";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const { refreshMock, getMovementForEditMock, getExpenseForEditMock } =
+    vi.hoisted(() => ({
+        refreshMock: vi.fn(),
+        getMovementForEditMock: vi.fn(),
+        getExpenseForEditMock: vi.fn(),
+    }));
+vi.mock("next/navigation", () => ({
+    useRouter: () => ({ refresh: refreshMock }),
+}));
+vi.mock("@/app/_actions/movement/get-for-edit", () => ({
+    getMovementForEdit: getMovementForEditMock,
+}));
+vi.mock("@/app/_actions/expense/get-for-edit", () => ({
+    getExpenseForEdit: getExpenseForEditMock,
+}));
+// jsdom has no layout, so it ships no `scrollIntoView`.
+const scrollIntoViewMock = vi.fn();
+Element.prototype.scrollIntoView = scrollIntoViewMock;
 const { deleteMock, deleteExpenseMock } = vi.hoisted(() => ({
     deleteMock: vi.fn(),
     deleteExpenseMock: vi.fn(),
@@ -47,8 +64,11 @@ import { SettlementBalanceCard } from "@/components/settlement/SettlementBalance
 import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown";
 import { SettlementJournal } from "@/components/settlement/SettlementJournal";
 import { SettlementChip } from "@/components/dashboard/SettlementChip";
+import { updatePartnerPayment } from "@/app/_actions/expense/update-partner-payment";
 import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
+import { FUNDING_TOGGLE_LABEL } from "@/lib/domain/funding";
 import { computeCoupleBalance } from "@/lib/domain/settlement";
+import type { MovementEditable } from "@/lib/repositories/movement.repository";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
 
 const sheOwes = computeCoupleBalance({
@@ -172,12 +192,41 @@ describe("SettlementBreakdown", () => {
     });
 });
 
+/** What `getMovementForEdit` returns for an open movement. */
+function editable(
+    over: Partial<MovementEditable> & Pick<MovementEditable, "id" | "type">,
+): { ok: true; data: MovementEditable } {
+    return {
+        ok: true,
+        data: {
+            date: new Date("2026-09-10T06:00:00Z"),
+            amount: 100,
+            cardId: null,
+            note: null,
+            fundedFrom: "income",
+            closedAt: null,
+            cycleClosedAt: null,
+            ...over,
+        },
+    };
+}
+
+beforeEach(() => {
+    refreshMock.mockReset();
+    getMovementForEditMock.mockReset();
+    getExpenseForEditMock.mockReset();
+    scrollIntoViewMock.mockReset();
+});
+
 describe("SettlementJournal", () => {
     it("shows a partner debt as positive and preserves its direction through edit", async () => {
         vi.mocked(updatePartnerDebt).mockResolvedValue({
             ok: true,
             data: { id: "partner-debt" },
         });
+        getMovementForEditMock.mockResolvedValue(
+            editable({ id: "partner-debt", type: "partner_debt" }),
+        );
         render(
             <SettlementJournal
                 partnerName="Alex"
@@ -425,20 +474,252 @@ describe("SettlementJournal", () => {
         expect(screen.queryByText(/delete to change/)).toBeNull();
     });
 
-    it("loads the debt into an edit form, prefilled from the row", async () => {
+    it("loads the debt into an edit form, prefilled from the server read", async () => {
+        getMovementForEditMock.mockResolvedValue(
+            editable({ id: "e2", type: "gf_fronted", amount: 300 }),
+        );
         render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
 
         const dialog = await screen.findByRole("dialog");
+        expect(getMovementForEditMock).toHaveBeenCalledWith("e2");
         expect(within(dialog).getByText('Edit "I owe Brenda"')).toBeDefined();
-        // Prefilled straight from the journal row — no server round-trip.
         expect(
             (within(dialog).getByLabelText(/What you owe/) as HTMLInputElement)
                 .value,
         ).toBe("300");
     });
 
-    it("edits a transfer, prefilled from the row, and saves via updateTransfer", async () => {
+    describe("a stale tab opening a row a closed cycle froze", () => {
+        const debtRefused = {
+            ok: false,
+            code: "cycle_closed",
+            message:
+                "This debt counts in a settlement you already closed, so it can't be edited.",
+        };
+
+        it.each([
+            ["the debt", "Edit I owe Brenda", "e2", debtRefused],
+            [
+                "the transfer",
+                "Edit Transfer — Brenda paid you",
+                "m1",
+                {
+                    ok: false,
+                    code: "cycle_closed",
+                    message:
+                        "This transfer counts in a settlement you already closed, so it can't be edited.",
+                },
+            ],
+        ])(
+            "shows the refusal for %s, refreshes, and opens no dialog",
+            async (_label, editName, id, refusal) => {
+                getMovementForEditMock.mockResolvedValue(refusal);
+                render(
+                    <SettlementJournal
+                        journal={journal}
+                        partnerName="Brenda"
+                    />,
+                );
+
+                fireEvent.click(screen.getByLabelText(editName));
+
+                const alert = await screen.findByRole("alert");
+                expect(getMovementForEditMock).toHaveBeenCalledWith(id);
+                expect(alert.textContent).toBe(refusal.message);
+                expect(screen.queryByRole("dialog")).toBeNull();
+                await waitFor(() => expect(document.activeElement).toBe(alert));
+                expect(scrollIntoViewMock).toHaveBeenCalledWith({
+                    block: "center",
+                });
+                expect(scrollIntoViewMock.mock.contexts[0]).toBe(alert);
+                expect(refreshMock).toHaveBeenCalledTimes(1);
+            },
+        );
+
+        it("does not refresh on a refusal that is not about the cycle", async () => {
+            getMovementForEditMock.mockResolvedValue({
+                ok: false,
+                code: "not_found",
+                message: "Couldn't load that movement. Please refresh.",
+            });
+            render(
+                <SettlementJournal journal={journal} partnerName="Brenda" />,
+            );
+
+            fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
+
+            expect((await screen.findByRole("alert")).textContent).toMatch(
+                /couldn't load that movement/i,
+            );
+            expect(screen.queryByRole("dialog")).toBeNull();
+            expect(refreshMock).not.toHaveBeenCalled();
+        });
+
+        it("disables the confirm and focuses the reason when a delete is refused", async () => {
+            deleteMock.mockResolvedValue({
+                ok: false,
+                code: "cycle_closed",
+                message:
+                    "This row counts in a settlement you already closed, so it can't be deleted.",
+            });
+            render(
+                <SettlementJournal journal={journal} partnerName="Brenda" />,
+            );
+            fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
+            const dialog = await screen.findByRole("dialog");
+            fireEvent.click(
+                within(dialog).getByRole("button", { name: "Delete" }),
+            );
+
+            const alert = await within(dialog).findByRole("alert");
+            expect(alert.textContent).toMatch(/settlement you already closed/);
+            expect(refreshMock).toHaveBeenCalledTimes(1);
+            await waitFor(() =>
+                expect(
+                    (
+                        within(dialog).getByRole("button", {
+                            name: "Delete",
+                        }) as HTMLButtonElement
+                    ).disabled,
+                ).toBe(true),
+            );
+            await waitFor(() => expect(document.activeElement).toBe(alert));
+
+            // Cancel clears it, so the next confirm starts clean and enabled.
+            fireEvent.click(
+                within(dialog).getByRole("button", { name: "Cancel" }),
+            );
+            await waitFor(() =>
+                expect(screen.queryByRole("dialog")).toBeNull(),
+            );
+            expect(screen.queryByRole("alert")).toBeNull();
+            fireEvent.click(
+                screen.getByLabelText("Delete Transfer — Brenda paid you"),
+            );
+            const next = await screen.findByRole("dialog");
+            expect(within(next).queryByRole("alert")).toBeNull();
+            expect(
+                (
+                    within(next).getByRole("button", {
+                        name: "Delete",
+                    }) as HTMLButtonElement
+                ).disabled,
+            ).toBe(false);
+        });
+
+        it("opens the delete dialog clean after an edit refusal", async () => {
+            getMovementForEditMock.mockResolvedValue(debtRefused);
+            render(
+                <SettlementJournal journal={journal} partnerName="Brenda" />,
+            );
+            fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
+            await screen.findByRole("alert");
+
+            const remove = screen.getByLabelText(
+                "Delete Transfer — Brenda paid you",
+            ) as HTMLButtonElement;
+            await waitFor(() => expect(remove.disabled).toBe(false));
+            fireEvent.click(remove);
+            const dialog = await screen.findByRole("dialog");
+            expect(within(dialog).queryByRole("alert")).toBeNull();
+        });
+
+        // On "Open settlement" the refresh drops the just-closed rows, so the list
+        // empties under the refusal. Simulated by re-rendering with no rows.
+        describe("when the refresh empties the list", () => {
+            const EMPTY =
+                "This settlement is empty — nothing has been logged since the last close.";
+            const openJournal = (rows: SettlementJournalItem[]) => (
+                <SettlementJournal
+                    bare
+                    journal={rows}
+                    partnerName="Brenda"
+                    emptyMessage={EMPTY}
+                />
+            );
+
+            it("keeps the edit refusal on screen and focused", async () => {
+                getMovementForEditMock.mockResolvedValue(debtRefused);
+                const { rerender } = render(openJournal(journal));
+                fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
+                const alert = await screen.findByRole("alert");
+                await waitFor(() => expect(document.activeElement).toBe(alert));
+
+                rerender(openJournal([]));
+
+                expect(screen.getByText(EMPTY)).toBeDefined();
+                const still = screen.getByRole("alert");
+                expect(still.textContent).toBe(debtRefused.message);
+                expect(document.activeElement).toBe(still);
+            });
+
+            it("keeps the refused delete dialog open, its reason focused and Delete disabled", async () => {
+                deleteMock.mockResolvedValue({
+                    ok: false,
+                    code: "cycle_closed",
+                    message:
+                        "This row counts in a settlement you already closed, so it can't be deleted.",
+                });
+                const { rerender } = render(openJournal(journal));
+                fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
+                const dialog = await screen.findByRole("dialog");
+                fireEvent.click(
+                    within(dialog).getByRole("button", { name: "Delete" }),
+                );
+                const alert = await within(dialog).findByRole("alert");
+                await waitFor(() => expect(document.activeElement).toBe(alert));
+
+                rerender(openJournal([]));
+
+                const still = screen.getByRole("dialog");
+                const reason = within(still).getByRole("alert");
+                expect(reason.textContent).toMatch(/already closed/);
+                expect(document.activeElement).toBe(reason);
+                expect(
+                    (
+                        within(still).getByRole("button", {
+                            name: "Delete",
+                        }) as HTMLButtonElement
+                    ).disabled,
+                ).toBe(true);
+
+                fireEvent.click(
+                    within(still).getByRole("button", { name: "Cancel" }),
+                );
+                await waitFor(() =>
+                    expect(screen.queryByRole("dialog")).toBeNull(),
+                );
+                expect(screen.queryByRole("alert")).toBeNull();
+            });
+        });
+
+        it("treats a debt edit that reads back a non-debt row as not found", async () => {
+            getMovementForEditMock.mockResolvedValue(
+                editable({ id: "e2", type: "gf_paid", amount: 300 }),
+            );
+            render(
+                <SettlementJournal journal={journal} partnerName="Brenda" />,
+            );
+            fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
+
+            expect((await screen.findByRole("alert")).textContent).toBe(
+                "Couldn't load that debt. Please refresh.",
+            );
+            expect(screen.queryByRole("dialog")).toBeNull();
+            expect(refreshMock).not.toHaveBeenCalled();
+        });
+    });
+
+    it("edits a transfer, prefilled from the server read, and saves via updateTransfer", async () => {
+        getMovementForEditMock.mockResolvedValue(
+            editable({
+                id: "m1",
+                type: "gf_received",
+                amount: 320,
+                note: "rent",
+            }),
+        );
         render(<SettlementJournal journal={journal} partnerName="Brenda" />);
         fireEvent.click(
             screen.getByLabelText("Edit Transfer — Brenda paid you"),
@@ -538,6 +819,128 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
             "textContent",
             "Expense not found.",
         );
+    });
+
+    describe("editing a payment opens through the expense read", () => {
+        const openPaymentEdit = () => {
+            render(
+                <SettlementJournal journal={[payment]} partnerName="Brenda" />,
+            );
+            fireEvent.click(
+                screen.getByLabelText("Edit Transfer — you paid Brenda"),
+            );
+        };
+
+        const paymentEditable = (description: string) => ({
+            ok: true,
+            data: {
+                id: "ePay",
+                date: new Date("2026-07-12T06:00:00Z"),
+                amount: 175,
+                actualExpenditure: 175,
+                categoryId: "cat1",
+                subcategoryId: null,
+                cardId: null,
+                description,
+                notes: null,
+                isShared: false,
+                yourPercentage: 1,
+                paidBy: "you",
+                fundedFrom: "savings",
+                isPartnerPayment: true,
+                cycleClosedAt: null,
+            },
+        });
+
+        it("prefills from the server's row, savings source included, and saves it back", async () => {
+            vi.mocked(updatePartnerPayment).mockResolvedValue({
+                ok: true,
+                data: { id: "ePay" },
+            });
+            getExpenseForEditMock.mockResolvedValue(
+                paymentEditable("rent share"),
+            );
+            openPaymentEdit();
+
+            const dialog = await screen.findByRole("dialog");
+            expect(getExpenseForEditMock).toHaveBeenCalledWith("ePay");
+            expect(getMovementForEditMock).not.toHaveBeenCalled();
+            expect(
+                (within(dialog).getByLabelText(/Amount/) as HTMLInputElement)
+                    .value,
+            ).toBe("175");
+            expect(
+                (within(dialog).getByLabelText(/Note/) as HTMLInputElement)
+                    .value,
+            ).toBe("rent share");
+            // Dropping the source here would re-file a savings payment as income on save.
+            expect(
+                within(dialog)
+                    .getByRole("checkbox", {
+                        name: FUNDING_TOGGLE_LABEL.savings,
+                    })
+                    .getAttribute("aria-checked"),
+            ).toBe("true");
+
+            fireEvent.click(
+                within(dialog).getByRole("button", { name: /Save changes/ }),
+            );
+            await waitFor(() =>
+                expect(updatePartnerPayment).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        id: "ePay",
+                        amount: "175",
+                        fundedFrom: "savings",
+                    }),
+                ),
+            );
+        });
+
+        it("leaves the note empty when the description is the auto-label", async () => {
+            getExpenseForEditMock.mockResolvedValue(
+                paymentEditable("Transfer — you paid Brenda"),
+            );
+            openPaymentEdit();
+
+            const dialog = await screen.findByRole("dialog");
+            expect(
+                (within(dialog).getByLabelText(/Note/) as HTMLInputElement)
+                    .value,
+            ).toBe("");
+        });
+
+        it("shows a closed-cycle refusal in view, refreshes, and opens no dialog", async () => {
+            const message =
+                "This payment counts in a settlement you already closed, so it can't be edited.";
+            getExpenseForEditMock.mockResolvedValue({
+                ok: false,
+                code: "cycle_closed",
+                message,
+            });
+            openPaymentEdit();
+
+            const alert = await screen.findByRole("alert");
+            expect(alert.textContent).toBe(message);
+            expect(screen.queryByRole("dialog")).toBeNull();
+            await waitFor(() => expect(document.activeElement).toBe(alert));
+            expect(scrollIntoViewMock.mock.contexts[0]).toBe(alert);
+            expect(refreshMock).toHaveBeenCalledTimes(1);
+        });
+
+        it("does not refresh when the payment is simply not found", async () => {
+            getExpenseForEditMock.mockResolvedValue({
+                ok: false,
+                code: "not_found",
+                message: "Couldn't load that expense. Please refresh.",
+            });
+            openPaymentEdit();
+
+            expect((await screen.findByRole("alert")).textContent).toMatch(
+                /couldn't load that expense/i,
+            );
+            expect(screen.queryByRole("dialog")).toBeNull();
+            expect(refreshMock).not.toHaveBeenCalled();
+        });
     });
 
     it("still routes money SHE sent through the movement action", async () => {

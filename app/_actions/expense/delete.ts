@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
-import { movesSettlementBalance } from "@/lib/domain/expense";
+import { frozenExpenseRefusal } from "@/lib/domain/frozen-row";
 import { expenseRepository } from "@/lib/repositories";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
 
@@ -67,16 +67,9 @@ export async function deleteExpense(
                 message: "Expense not found.",
             };
         }
-        // Frozen = the row's cycle is closed AND that cycle counted the row. An
-        // unshared expense inside a closed cycle counts for nothing and stays editable.
-        if (existing.cycleClosedAt && movesSettlementBalance(existing)) {
-            return {
-                ok: false,
-                code: "cycle_closed",
-                message: existing.isPartnerPayment
-                    ? "This payment counts in a settlement you already closed, so it can't be deleted."
-                    : "Your partner's share of this expense counts in a settlement you already closed, so it can't be deleted.",
-            };
+        const refusal = frozenExpenseRefusal(existing, "delete");
+        if (refusal) {
+            return { ok: false, code: "cycle_closed", message: refusal };
         }
 
         const count = await repo.deleteForUser(userId, id);
