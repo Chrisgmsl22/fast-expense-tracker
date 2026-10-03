@@ -52,7 +52,7 @@ export function togglesFromFundingSource(fundedFrom: FundingSource): {
 /**
  * Spread into every budget query — applied at the DATA BOUNDARY, so an excluded
  * row never reaches the bucket math at all. `computeFeedTotals` repeats the rule
- * in TypeScript against the NARROWED value; that copy is the one that can drift.
+ * through `countedInBudget`, which the list reads set with `isBudgetFunded`.
  */
 export const BUDGET_FUNDING_FILTER = {
     fundedFrom: BUDGET_FUNDING_SOURCE,

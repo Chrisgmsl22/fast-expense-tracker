@@ -5,6 +5,7 @@ import {
     assertLocalDatabase,
     assertReadOnlyOperation,
     MISSING_URL_MESSAGE,
+    movementFundingTally,
     NON_LOCAL_MESSAGE,
 } from "@/scripts/data-snapshot";
 
@@ -99,5 +100,52 @@ describe("data:snapshot — read-only guard", () => {
         ]) {
             expect(() => assertReadOnlyOperation(op)).toThrow(/read-only/);
         }
+    });
+});
+
+describe("data:snapshot — movements by stored funding source", () => {
+    it("tallies type × raw value and flags a value the app never writes", () => {
+        const tally = movementFundingTally([
+            { type: "gf_paid", amount: 100, fundedFrom: "income" },
+            { type: "gf_paid", amount: 50.25, fundedFrom: "income" },
+            { type: "gf_paid", amount: 300, fundedFrom: "savings" },
+            { type: "gf_paid", amount: 40, fundedFrom: "cash-back" },
+            { type: "card_payment", amount: 900 },
+        ]);
+
+        expect(tally).toEqual([
+            {
+                type: "card_payment",
+                storedFundedFrom: "income",
+                rows: 1,
+                total: 900,
+                outOfBand: false,
+            },
+            {
+                type: "gf_paid",
+                storedFundedFrom: "cash-back",
+                rows: 1,
+                total: 40,
+                outOfBand: true,
+            },
+            {
+                type: "gf_paid",
+                storedFundedFrom: "income",
+                rows: 2,
+                total: 150.25,
+                outOfBand: false,
+            },
+            {
+                type: "gf_paid",
+                storedFundedFrom: "savings",
+                rows: 1,
+                total: 300,
+                outOfBand: false,
+            },
+        ]);
+    });
+
+    it("is empty for no movements", () => {
+        expect(movementFundingTally([])).toEqual([]);
     });
 });

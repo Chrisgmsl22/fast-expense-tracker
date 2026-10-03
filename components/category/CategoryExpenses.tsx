@@ -1,12 +1,7 @@
-import { FundingBadge } from "@/components/expense/FundingBadge";
+import { RowFundingBadge } from "@/components/expense/FundingBadge";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { CategoryExpenseListItem } from "@/lib/repositories/category.repository";
 
-/**
- * Badges on `countedInBudget` (the SQL filter's verdict on the raw column), not
- * on `fundedFrom` — which reads an out-of-band value back as `income` and would
- * leave the one row that most needs a badge bare. Hence the `"unknown"` mapping.
- */
 export function CategoryExpenses({
     expenses,
     color,
@@ -39,15 +34,7 @@ export function CategoryExpenses({
                                     <span className="truncate text-sm font-medium">
                                         {e.description}
                                     </span>
-                                    {!e.countedInBudget && (
-                                        <FundingBadge
-                                            source={
-                                                e.fundedFrom === "income"
-                                                    ? "unknown"
-                                                    : e.fundedFrom
-                                            }
-                                        />
-                                    )}
+                                    <RowFundingBadge row={e} />
                                 </span>
                                 {e.subcategory && (
                                     <span

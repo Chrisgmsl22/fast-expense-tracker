@@ -16,6 +16,7 @@ const row: FeedTotalExpense = {
     category: { slug: "food" },
     isPartnerPayment: false,
     fundedFrom: "income",
+    countedInBudget: true,
 };
 const rows: FeedTotalExpense[] = [
     row,
@@ -25,6 +26,7 @@ const rows: FeedTotalExpense[] = [
         amount: 80,
         actualExpenditure: 60,
         fundedFrom: "savings",
+        countedInBudget: false,
     },
     {
         ...row,
@@ -32,6 +34,7 @@ const rows: FeedTotalExpense[] = [
         amount: 30,
         actualExpenditure: 30,
         fundedFrom: "reimbursed",
+        countedInBudget: false,
     },
     {
         ...row,
@@ -49,9 +52,27 @@ const rows: FeedTotalExpense[] = [
     },
 ];
 const totals = computeFeedTotals(rows, [
-    { id: "payment", type: "gf_paid", amount: 20, fundedFrom: "income" },
-    { id: "legacy", type: "gf_paid", amount: 15, fundedFrom: "income" },
-    { id: "received", type: "gf_received", amount: 10, fundedFrom: "income" },
+    {
+        id: "payment",
+        type: "gf_paid",
+        amount: 20,
+        fundedFrom: "income",
+        countedInBudget: true,
+    },
+    {
+        id: "legacy",
+        type: "gf_paid",
+        amount: 15,
+        fundedFrom: "income",
+        countedInBudget: true,
+    },
+    {
+        id: "received",
+        type: "gf_received",
+        amount: 10,
+        fundedFrom: "income",
+        countedInBudget: true,
+    },
 ]);
 const sharedProps = {
     monthLabel: "June 2026",
@@ -99,7 +120,12 @@ describe("summary layout", () => {
     it("uses the stored partner slice when an outside-income savings-category row has no charge", () => {
         const withSavingsCategory = computeFeedTotals([
             ...rows,
-            { ...rows[3]!, id: "old-savings", fundedFrom: "savings" },
+            {
+                ...rows[3]!,
+                id: "old-savings",
+                fundedFrom: "savings",
+                countedInBudget: false,
+            },
         ]);
         expect(summaryCost(withSavingsCategory).amount).toBe(170);
         expect(
@@ -149,7 +175,12 @@ describe("summary layout", () => {
 
     it("gates the income legend row at zero like its savings sibling (R4-N3)", () => {
         const savingsOnly = computeFeedTotals([
-            { ...row, id: "savings-only", fundedFrom: "savings" },
+            {
+                ...row,
+                id: "savings-only",
+                fundedFrom: "savings",
+                countedInBudget: false,
+            },
         ]);
         render(<SummaryRail totals={savingsOnly} {...sharedProps} />);
         const rail = within(screen.getByTestId("feed-totals"));
@@ -188,6 +219,7 @@ describe("summary layout", () => {
                     type: "gf_paid",
                     amount: 35,
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
             ],
         );
@@ -199,6 +231,7 @@ describe("summary layout", () => {
                     type: "gf_paid",
                     amount: 90,
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
             ],
         );
@@ -265,6 +298,7 @@ describe("summary layout", () => {
                     type: "gf_received",
                     amount: 500,
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
             ],
         );

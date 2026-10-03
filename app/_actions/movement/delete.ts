@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
-import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
+import { frozenMovementRefusal } from "@/lib/domain/frozen-row";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
 
@@ -68,17 +68,9 @@ export async function deleteMovement(
         }
         // Frozen = cycle closed AND that cycle counted the row. The DB CHECK allows
         // `closedAt` only on a transfer, so the marker can never freeze a debt.
-        if (
-            existing.cycleClosedAt &&
-            movementMovesSettlementBalance(existing.type)
-        ) {
-            return {
-                ok: false,
-                code: "cycle_closed",
-                message: existing.closedAt
-                    ? "This transfer closed a settlement and can't be deleted."
-                    : "This row counts in a settlement you already closed, so it can't be deleted.",
-            };
+        const refusal = frozenMovementRefusal(existing, "delete");
+        if (refusal) {
+            return { ok: false, code: "cycle_closed", message: refusal };
         }
 
         const count = await repo.deleteForUser(userId, id);

@@ -26,6 +26,7 @@ const expenses: FeedTotalExpense[] = [
         isPartnerPayment: false,
         category: { slug: "groceries" },
         fundedFrom: "income",
+        countedInBudget: true,
     },
     {
         id: "e2",
@@ -34,6 +35,7 @@ const expenses: FeedTotalExpense[] = [
         isPartnerPayment: true,
         category: { slug: "combined-expenses" },
         fundedFrom: "income",
+        countedInBudget: true,
     },
     {
         id: "e3",
@@ -42,6 +44,7 @@ const expenses: FeedTotalExpense[] = [
         isPartnerPayment: false,
         category: { slug: "shopping" },
         fundedFrom: "savings",
+        countedInBudget: false,
     },
 ];
 
@@ -51,12 +54,14 @@ const movements: FeedTotalMovement[] = [
         type: "gf_paid",
         amount: LEGACY_FROM_INCOME,
         fundedFrom: "income",
+        countedInBudget: true,
     },
     {
         id: "m2",
         type: "gf_paid",
         amount: LEGACY_FROM_SAVINGS,
         fundedFrom: "savings",
+        countedInBudget: false,
     },
 ];
 

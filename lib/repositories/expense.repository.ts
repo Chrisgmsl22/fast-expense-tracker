@@ -1,7 +1,11 @@
 import type { PrismaClient } from "@prisma/client";
 
 import { getMonthRangeUtc } from "@/lib/dates";
-import { toFundingSource, type FundingSource } from "@/lib/domain/funding";
+import {
+    isBudgetFunded,
+    toFundingSource,
+    type FundingSource,
+} from "@/lib/domain/funding";
 import { cycleCloseAtOrAfter } from "@/lib/domain/settlement";
 import { getCycleCloses } from "@/lib/repositories/cycle-closes";
 
@@ -14,6 +18,8 @@ export type ExpenseListItem = {
     isShared: boolean;
     /** Which month's money funded it (spec 0007 §3.1) — drives the row badge. */
     fundedFrom: FundingSource;
+    /** The budget filter's verdict on the RAW column — what the feed totals split on. */
+    countedInBudget: boolean;
     /** Money you SENT the partner — both consumption and cash out, one row. */
     isPartnerPayment: boolean;
     /**
@@ -190,6 +196,7 @@ export class PrismaExpenseRepository implements ExpenseRepository {
         return rows.map(({ createdAt, ...item }) => ({
             ...item,
             fundedFrom: toFundingSource(item.fundedFrom),
+            countedInBudget: isBudgetFunded(item.fundedFrom),
             cycleClosedAt: cycleCloseAtOrAfter(closes, createdAt),
         }));
     }

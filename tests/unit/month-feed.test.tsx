@@ -23,6 +23,7 @@ const partnerPayment: ExpenseListItem = {
     amount: 200,
     actualExpenditure: 200,
     fundedFrom: "income" as const,
+    countedInBudget: true,
     isShared: false,
     isPartnerPayment: true,
     cycleClosedAt: null,
@@ -44,6 +45,7 @@ const expenses: ExpenseListItem[] = [
         amount: 1820,
         actualExpenditure: 1237,
         fundedFrom: "income" as const,
+        countedInBudget: true,
         isShared: true,
         isPartnerPayment: false,
         cycleClosedAt: null,
@@ -63,6 +65,7 @@ const expenses: ExpenseListItem[] = [
         amount: 185,
         actualExpenditure: 185,
         fundedFrom: "income" as const,
+        countedInBudget: true,
         isShared: false,
         isPartnerPayment: false,
         cycleClosedAt: null,
@@ -86,6 +89,7 @@ const debt: MovementListItem = {
     card: null,
     note: "she covered the vet",
     fundedFrom: "income",
+    countedInBudget: true,
     closedAt: null,
     cycleClosedAt: null,
 };
@@ -181,6 +185,7 @@ describe("MonthFeed", () => {
                 card: null,
                 note: null,
                 fundedFrom: "income",
+                countedInBudget: true,
                 closedAt: null,
                 cycleClosedAt: null,
             },
@@ -212,6 +217,7 @@ describe("MonthFeed", () => {
                 amount: 1000,
                 actualExpenditure: 680,
                 fundedFrom: "income" as const,
+                countedInBudget: true,
                 isShared: true,
                 isPartnerPayment: false,
                 cycleClosedAt: null,
@@ -231,6 +237,7 @@ describe("MonthFeed", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 fundedFrom: "income" as const,
+                countedInBudget: true,
                 isShared: false,
                 isPartnerPayment: false,
                 cycleClosedAt: null,
@@ -299,6 +306,7 @@ describe("MonthFeed", () => {
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
                 fundedFrom: "income",
+                countedInBudget: true,
                 closedAt: null,
                 cycleClosedAt: null,
             },
@@ -330,6 +338,7 @@ describe("MonthFeed", () => {
             id: "legacy",
             amount: 8000,
             fundedFrom: "savings",
+            countedInBudget: false,
         };
         render(
             <MonthFeed
@@ -341,6 +350,7 @@ describe("MonthFeed", () => {
                         id: "income",
                         amount: 200,
                         fundedFrom: "income",
+                        countedInBudget: true,
                     },
                 ]}
                 monthLabel="June 2026"
@@ -377,6 +387,7 @@ describe("MonthFeed", () => {
                         card: null,
                         note: "netted week",
                         fundedFrom: "income",
+                        countedInBudget: true,
                         closedAt: null,
                         cycleClosedAt: null,
                     },
@@ -397,18 +408,89 @@ describe("MonthFeed", () => {
         expect(screen.queryAllByText("reimbursed")).toHaveLength(0);
     });
 
+    it("badges an out-of-band transfer and keeps it out of the income figure", () => {
+        // What the movement repository returns for a raw stored value outside the enum.
+        const outOfBand: MovementListItem = {
+            ...debt,
+            id: "m-oob",
+            type: "gf_paid",
+            amount: 400,
+            note: "cash-back transfer",
+            fundedFrom: "income",
+            countedInBudget: false,
+        };
+        render(
+            <MonthFeed
+                expenses={expenses}
+                movements={[outOfBand]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth
+            />,
+        );
+
+        const row = screen.getByText(/cash-back transfer/).closest("li")!;
+        expect(within(row).getByText("not from income")).toBeDefined();
+        const footer = within(screen.getByTestId("feed-totals"));
+        expect(
+            footer.getByText("From this month's income").nextElementSibling
+                ?.textContent,
+        ).toBe("$1,422.00");
+    });
+
+    it("badges an out-of-band row and keeps it out of the income figure", () => {
+        // What the repository returns for a raw stored value outside the enum.
+        const outOfBand: ExpenseListItem = {
+            ...expenses[1]!,
+            id: "e3",
+            description: "Cash-back purchase",
+            amount: 450,
+            actualExpenditure: 450,
+            fundedFrom: "income",
+            countedInBudget: false,
+        };
+        render(
+            <MonthFeed
+                expenses={[...expenses, outOfBand]}
+                movements={[]}
+                monthLabel="June 2026"
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth
+            />,
+        );
+
+        const title = screen.getByText("Cash-back purchase");
+        const badge = within(title.closest("li")!).getByText("not from income");
+        // The title truncates; the badge never wraps or shrinks in the narrow rail.
+        expect(title.className).toContain("truncate");
+        expect(badge.className).toContain("shrink-0");
+        expect(badge.className).toContain("whitespace-nowrap");
+        const footer = within(screen.getByTestId("feed-totals"));
+        expect(
+            footer.getByText("From savings").nextElementSibling?.textContent,
+        ).toBe("$450.00");
+        expect(
+            footer.getByText("From this month's income").nextElementSibling
+                ?.textContent,
+        ).toBe("$1,422.00");
+    });
+
     it("keeps outside-income consumption separate from legacy transfer details", () => {
         const expense = {
             ...expenses[0]!,
             amount: 680,
             actualExpenditure: 680,
             fundedFrom: "savings" as const,
+            countedInBudget: false,
         };
         const movement: MovementListItem = {
             ...debt,
             type: "gf_paid",
             amount: 680,
             fundedFrom: "savings",
+            countedInBudget: false,
         };
         render(
             <MonthFeed
@@ -436,6 +518,7 @@ describe("MonthFeed", () => {
             amount: 530,
             actualExpenditure: 530,
             fundedFrom: "savings" as const,
+            countedInBudget: false,
         };
         render(
             <MonthFeed
@@ -547,6 +630,7 @@ describe("MonthFeed", () => {
                 card: { name: "BBVA", color: "#2563eb" },
                 note: null,
                 fundedFrom: "income",
+                countedInBudget: true,
                 closedAt: null,
                 cycleClosedAt: null,
             },
@@ -637,6 +721,7 @@ describe("MonthFeed", () => {
                 amount: 5000,
                 actualExpenditure: 5000,
                 fundedFrom: "income" as const,
+                countedInBudget: true,
                 isShared: false,
                 isPartnerPayment: false,
                 cycleClosedAt: null,

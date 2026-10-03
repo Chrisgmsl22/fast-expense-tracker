@@ -1,20 +1,17 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
-import { movesSettlementBalance } from "@/lib/domain/expense";
+import { isExpenseFrozen, isMovementFrozen } from "@/lib/domain/frozen-row";
 import {
     computeFeedTotals,
     nonIncomeFundedRows,
     type MovementType,
 } from "@/lib/domain/movement";
-import {
-    movementMovesSettlementBalance,
-    type CoupleBalance,
-} from "@/lib/domain/settlement";
-import { FundingBadge } from "./FundingBadge";
+import type { CoupleBalance } from "@/lib/domain/settlement";
+import { RowFundingBadge } from "./FundingBadge";
 import { buildFeed } from "@/lib/feed";
 import { expenseCardLabel } from "@/lib/expense-display";
 import {
@@ -153,6 +150,57 @@ export function ExpenseListInteractive({
         null,
     );
     const [pending, startTransition] = useTransition();
+    const listAlertRef = useRef<HTMLParagraphElement>(null);
+    const showListAlert =
+        actionError !== null && !deleting && !deletingMovement;
+
+    // The alert sits above the list, so a refusal on a lower row would otherwise
+    // land off-screen and the click would look like it did nothing.
+    useEffect(() => {
+        if (!showListAlert) return;
+        listAlertRef.current?.scrollIntoView({ block: "center" });
+        listAlertRef.current?.focus({ preventScroll: true });
+    }, [showListAlert, actionError]);
+
+    // A frozen refusal means this list predates the close: refresh so the row
+    // drops its controls.
+    function showRefusal(res: { code: string; message: string }) {
+        setActionError(res.message);
+        if (res.code === "cycle_closed") router.refresh();
+    }
+
+    // Only one confirm dialog is ever mounted, so the two share this state.
+    const [deleteFrozen, setDeleteFrozen] = useState(false);
+    const deleteAlertRef = useRef<HTMLParagraphElement>(null);
+
+    // Retrying a frozen delete can only repeat the refusal, so the confirm goes
+    // dead and focus lands on the reason instead of the page body.
+    function showDeleteRefusal(res: { code: string; message: string }) {
+        showRefusal(res);
+        if (res.code === "cycle_closed") setDeleteFrozen(true);
+    }
+
+    useEffect(() => {
+        if (deleteFrozen) deleteAlertRef.current?.focus();
+    }, [deleteFrozen]);
+
+    function closeDeleteDialogs() {
+        setDeleting(null);
+        setDeletingMovement(null);
+        setActionError(null);
+        setDeleteFrozen(false);
+    }
+
+    // Each confirm starts clean, so an earlier flow's error never reads as this row's.
+    function openDelete(row: ExpenseListItem) {
+        closeDeleteDialogs();
+        setDeleting(row);
+    }
+
+    function openDeleteMovement(row: MovementListItem) {
+        closeDeleteDialogs();
+        setDeletingMovement(row);
+    }
 
     // Chips reflect only the categories present this month, in name order.
     const presentCategories = useMemo(() => {
@@ -204,12 +252,12 @@ export function ExpenseListInteractive({
     function openEdit(id: string) {
         setActionError(null);
         startTransition(async () => {
-            const data = await getExpenseForEdit(id);
-            if (!data) {
-                setActionError("Couldn't load that expense. Please refresh.");
+            const res = await getExpenseForEdit(id);
+            if (!res.ok) {
+                showRefusal(res);
                 return;
             }
-            setEditing(data);
+            setEditing(res.data);
         });
     }
 
@@ -218,10 +266,10 @@ export function ExpenseListInteractive({
         startTransition(async () => {
             const res = await deleteExpense({ id: deleting.id });
             if (res.ok) {
-                setDeleting(null);
+                closeDeleteDialogs();
                 router.refresh();
             } else {
-                setActionError(res.message);
+                showDeleteRefusal(res);
             }
         });
     }
@@ -229,12 +277,12 @@ export function ExpenseListInteractive({
     function openEditMovement(id: string) {
         setActionError(null);
         startTransition(async () => {
-            const data = await getMovementForEdit(id);
-            if (!data) {
-                setActionError("Couldn't load that movement. Please refresh.");
+            const res = await getMovementForEdit(id);
+            if (!res.ok) {
+                showRefusal(res);
                 return;
             }
-            setEditingMovement(data);
+            setEditingMovement(res.data);
         });
     }
 
@@ -243,18 +291,23 @@ export function ExpenseListInteractive({
         startTransition(async () => {
             const res = await deleteMovement({ id: deletingMovement.id });
             if (res.ok) {
-                setDeletingMovement(null);
+                closeDeleteDialogs();
                 router.refresh();
             } else {
-                setActionError(res.message);
+                showDeleteRefusal(res);
             }
         });
     }
 
     return (
         <>
-            {actionError && !deleting && !deletingMovement && (
-                <p className="mb-2 text-sm text-destructive" role="alert">
+            {showListAlert && (
+                <p
+                    ref={listAlertRef}
+                    tabIndex={-1}
+                    className="mb-2 text-sm text-destructive outline-none"
+                    role="alert"
+                >
                     {actionError}
                 </p>
             )}
@@ -336,7 +389,7 @@ export function ExpenseListInteractive({
                             partnerName={partnerName}
                             pending={pending}
                             onEdit={() => openEdit(item.expense.id)}
-                            onDelete={() => setDeleting(item.expense)}
+                            onDelete={() => openDelete(item.expense)}
                         />
                     ) : (
                         <MovementRow
@@ -345,7 +398,7 @@ export function ExpenseListInteractive({
                             partnerName={partnerName}
                             pending={pending}
                             onEdit={() => openEditMovement(item.movement.id)}
-                            onDelete={() => setDeletingMovement(item.movement)}
+                            onDelete={() => openDeleteMovement(item.movement)}
                         />
                     ),
                 )}
@@ -470,10 +523,7 @@ export function ExpenseListInteractive({
             <Dialog
                 open={deleting !== null}
                 onOpenChange={(open) => {
-                    if (!open) {
-                        setDeleting(null);
-                        setActionError(null);
-                    }
+                    if (!open) closeDeleteDialogs();
                 }}
             >
                 <DialogContent>
@@ -486,7 +536,12 @@ export function ExpenseListInteractive({
                         </DialogDescription>
                     </DialogHeader>
                     {actionError && (
-                        <p className="text-sm text-destructive" role="alert">
+                        <p
+                            ref={deleteAlertRef}
+                            tabIndex={-1}
+                            className="text-sm text-destructive outline-none"
+                            role="alert"
+                        >
                             {actionError}
                         </p>
                     )}
@@ -494,7 +549,7 @@ export function ExpenseListInteractive({
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setDeleting(null)}
+                            onClick={closeDeleteDialogs}
                             disabled={pending}
                         >
                             Cancel
@@ -503,7 +558,7 @@ export function ExpenseListInteractive({
                             type="button"
                             variant="destructive"
                             onClick={confirmDelete}
-                            disabled={pending}
+                            disabled={pending || deleteFrozen}
                         >
                             {pending ? "Deleting…" : "Delete"}
                         </Button>
@@ -514,10 +569,7 @@ export function ExpenseListInteractive({
             <Dialog
                 open={deletingMovement !== null}
                 onOpenChange={(open) => {
-                    if (!open) {
-                        setDeletingMovement(null);
-                        setActionError(null);
-                    }
+                    if (!open) closeDeleteDialogs();
                 }}
             >
                 <DialogContent>
@@ -533,7 +585,12 @@ export function ExpenseListInteractive({
                         </DialogDescription>
                     </DialogHeader>
                     {actionError && (
-                        <p className="text-sm text-destructive" role="alert">
+                        <p
+                            ref={deleteAlertRef}
+                            tabIndex={-1}
+                            className="text-sm text-destructive outline-none"
+                            role="alert"
+                        >
                             {actionError}
                         </p>
                     )}
@@ -541,7 +598,7 @@ export function ExpenseListInteractive({
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setDeletingMovement(null)}
+                            onClick={closeDeleteDialogs}
                             disabled={pending}
                         >
                             Cancel
@@ -550,7 +607,7 @@ export function ExpenseListInteractive({
                             type="button"
                             variant="destructive"
                             onClick={confirmDeleteMovement}
-                            disabled={pending}
+                            disabled={pending || deleteFrozen}
                         >
                             {pending ? "Deleting…" : "Delete"}
                         </Button>
@@ -584,8 +641,7 @@ function ExpenseRow({
     );
     // A row a closed cycle counted is frozen server-side, so it shows no controls.
     // The predicate is the settlement's own: a solo expense of the same age stays editable.
-    const frozen =
-        expense.cycleClosedAt !== null && movesSettlementBalance(expense);
+    const frozen = isExpenseFrozen(expense);
     // The gold that marked a transfer follows the payment into its expense row (spec 0007 §6a).
     const highlight = isSavings
         ? "border-l-[3px] border-positive bg-positive-tint sm:pl-4"
@@ -622,9 +678,7 @@ function ExpenseRow({
                     >
                         {expense.description}
                     </span>
-                    {expense.fundedFrom === "income" ? null : (
-                        <FundingBadge source={expense.fundedFrom} />
-                    )}
+                    <RowFundingBadge row={expense} />
                 </span>
                 <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground sm:hidden">
                     {isSavings ? (
@@ -773,8 +827,7 @@ function MovementRow({
     const { title, subline } = movementRowText(m, partnerName);
     // A movement a CLOSED cycle counted is frozen server-side, so it shows no
     // controls. `closedAt` marks one transfer per cycle and cannot be the predicate.
-    const frozen =
-        m.cycleClosedAt !== null && movementMovesSettlementBalance(m.type);
+    const frozen = isMovementFrozen(m);
 
     return (
         <li
@@ -785,9 +838,7 @@ function MovementRow({
                     <span className={`${ROW_TITLE_TEXT} font-medium`}>
                         {title}
                     </span>
-                    {m.fundedFrom === "income" ? null : (
-                        <FundingBadge source={m.fundedFrom} />
-                    )}
+                    <RowFundingBadge row={m} />
                 </span>
                 <span className="block min-w-0 truncate text-xs text-muted-foreground sm:mt-0.5">
                     {formatExpenseDate(m.date)}

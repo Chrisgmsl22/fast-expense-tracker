@@ -6,14 +6,13 @@ import {
     computeFeedTotals,
     type FeedTotalMovement,
 } from "@/lib/domain/movement";
-import { BUDGET_FUNDING_FILTER } from "@/lib/domain/funding";
 import { otherMoneyThatLeft } from "@/components/money/summary-model";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 
 /**
  * The dashboard and the expenses tab must answer the same question with the
- * same number. NOT pinned: the fixtures are already narrowed, so the one input
- * that can make the two disagree — an out-of-band stored value — is invisible.
+ * same number. The real-database version of the out-of-band case lives in
+ * `tests/integration/expense-repository.test.ts`.
  */
 
 function expense(
@@ -36,6 +35,7 @@ function expense(
         },
         subcategory: null,
         card: null,
+        countedInBudget: (over.fundedFrom ?? "income") === "income",
         ...over,
     };
 }
@@ -70,11 +70,11 @@ const month: ExpenseListItem[] = [
     }),
 ];
 
-/** Simulates the repository boundary: it filters the NARROWED value where Postgres filters the raw column. */
+/** Simulates the SQL budget filter, which sees the raw column the row's `countedInBudget` was read from. */
 function categorySpendsFrom(expenses: ExpenseListItem[]): CategorySpend[] {
     const byCategory = new Map<string, CategorySpend>();
     for (const e of expenses) {
-        if (e.fundedFrom !== BUDGET_FUNDING_FILTER.fundedFrom) continue;
+        if (!e.countedInBudget) continue;
         const existing = byCategory.get(e.category.slug);
         if (existing) {
             existing.spent += e.actualExpenditure;
@@ -116,10 +116,34 @@ function expensesTabTotals(
 
 /** A month with all three funding sources, a transfer, and a debt. */
 const movements: FeedTotalMovement[] = [
-    { id: "m1", type: "gf_paid", amount: 700, fundedFrom: "income" },
-    { id: "m2", type: "gf_paid", amount: 250, fundedFrom: "savings" },
-    { id: "m3", type: "gf_fronted", amount: 450, fundedFrom: "income" },
-    { id: "m4", type: "card_payment", amount: 5000, fundedFrom: "income" },
+    {
+        id: "m1",
+        type: "gf_paid",
+        amount: 700,
+        fundedFrom: "income",
+        countedInBudget: true,
+    },
+    {
+        id: "m2",
+        type: "gf_paid",
+        amount: 250,
+        fundedFrom: "savings",
+        countedInBudget: false,
+    },
+    {
+        id: "m3",
+        type: "gf_fronted",
+        amount: 450,
+        fundedFrom: "income",
+        countedInBudget: true,
+    },
+    {
+        id: "m4",
+        type: "card_payment",
+        amount: 5000,
+        fundedFrom: "income",
+        countedInBudget: true,
+    },
 ];
 
 describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
@@ -183,6 +207,35 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
         expect(totals.whatIReallySpent.amount).toBe(bucketSum);
     });
 
+    it("keeps an out-of-band stored value out of the budget on both screens", () => {
+        // What the repository returns for a raw `cash-back`: narrowed to income,
+        // but the SQL filter skips it.
+        const outOfBand = expense({
+            id: "e4",
+            description: "Cash-back purchase",
+            amount: 450,
+            actualExpenditure: 450,
+            fundedFrom: "income",
+            countedInBudget: false,
+        });
+        const withOutOfBand = [...month, outOfBand];
+        const totals = computeFeedTotals(withOutOfBand, []);
+        const bucketSum = computeBuckets(
+            categorySpendsFrom(withOutOfBand),
+            0,
+            DEFAULT_BUDGET_RULE,
+        ).reduce((sum, b) => sum + b.spent, 0);
+
+        expect(totals.whatIReallySpent.amount).toBe(680);
+        expect(totals.whatIReallySpent.amount).toBe(bucketSum);
+        // Still a cost, so it stays visible rather than reading as a net-$0 refund.
+        expect(totals.notFromIncome.fromSavings.amount).toBe(3000 + 450);
+        expect(totals.notFromIncome.reimbursed.amount).toBe(800);
+        expect(
+            totals.whatIReallySpent.amount + totals.notFromIncome.amount,
+        ).toBe(680 + 3000 + 800 + 450);
+    });
+
     it("keeps the excluded money visible and reconcilable", () => {
         const totals = computeFeedTotals(month, []);
 
@@ -226,7 +279,13 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
 
         it("still counts an income-funded savings row as set aside", () => {
             const totals = computeFeedTotals(
-                [{ ...savingsRow, fundedFrom: "income" as const }],
+                [
+                    {
+                        ...savingsRow,
+                        fundedFrom: "income" as const,
+                        countedInBudget: true,
+                    },
+                ],
                 [],
             );
 
@@ -239,8 +298,20 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
         // `gf_paid` still lands in the total; a debt (`gf_fronted`) never
         // reaches these totals at all. Funding source changes neither.
         const totals = computeFeedTotals(month, [
-            { id: "m1", type: "gf_paid", amount: 700, fundedFrom: "income" },
-            { id: "m2", type: "gf_fronted", amount: 450, fundedFrom: "income" },
+            {
+                id: "m1",
+                type: "gf_paid",
+                amount: 700,
+                fundedFrom: "income",
+                countedInBudget: true,
+            },
+            {
+                id: "m2",
+                type: "gf_fronted",
+                amount: 450,
+                fundedFrom: "income",
+                countedInBudget: true,
+            },
         ]);
 
         expect(totals.paidToPartner.amount).toBe(700);
@@ -251,7 +322,13 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
         // It used no part of this month's income, so it leaves the budget and
         // cash figures — but the settlement balance still counts it in full.
         const totals = computeFeedTotals(month, [
-            { id: "m1", type: "gf_paid", amount: 700, fundedFrom: "savings" },
+            {
+                id: "m1",
+                type: "gf_paid",
+                amount: 700,
+                fundedFrom: "savings",
+                countedInBudget: false,
+            },
         ]);
 
         expect(totals.paidToPartner.of.fromIncome.amount).toBe(0);
@@ -280,6 +357,7 @@ describe("the dashboard and the expenses tab agree (spec 0007 §2)", () => {
             type: "gf_paid" as const,
             amount: 680,
             fundedFrom: "savings" as const,
+            countedInBudget: false,
         };
 
         it("reports the purchase and the transfer as two separate figures", () => {

@@ -19,6 +19,7 @@ const month = [
         isPartnerPayment: false,
         category: { slug: "groceries" },
         fundedFrom: "income",
+        countedInBudget: true,
         description: "Market run",
     }),
     funded({
@@ -28,6 +29,7 @@ const month = [
         isPartnerPayment: false,
         category: { slug: "shopping" },
         fundedFrom: "savings",
+        countedInBudget: false,
         description: "New laptop",
         date: new Date("2026-10-04T12:00:00Z"),
     }),
@@ -38,6 +40,7 @@ const month = [
         isPartnerPayment: false,
         category: { slug: "health" },
         fundedFrom: "reimbursed",
+        countedInBudget: false,
         description: "Clinic visit",
         date: new Date("2026-10-09T12:00:00Z"),
     }),
@@ -48,6 +51,7 @@ const month = [
         isPartnerPayment: false,
         category: { slug: "savings" },
         fundedFrom: "income",
+        countedInBudget: true,
         description: "Emergency fund",
     }),
 ];

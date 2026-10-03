@@ -6,10 +6,13 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
+import { computeActualExpenditure } from "@/lib/domain/expense";
 import {
-    computeActualExpenditure,
-    movesSettlementBalance,
-} from "@/lib/domain/expense";
+    frozenExpenseRefusal,
+    isExpenseFrozen,
+    SPLIT_INTO_CLOSED_CYCLE_FIELD_ERROR,
+    SPLIT_INTO_CLOSED_CYCLE_MESSAGE,
+} from "@/lib/domain/frozen-row";
 import { expenseRepository } from "@/lib/repositories";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
 import {
@@ -149,34 +152,25 @@ export async function updateExpense(
         // The repository's write is not scoped by the cycle, so the refusal is here.
         // Both the row as stored and the row as it WOULD be are checked: ticking "shared"
         // inside a closed cycle adds a partner share to a filed balance.
-        if (existing.cycleClosedAt) {
-            const after = {
-                amount: v.amount,
-                actualExpenditure: money.actualExpenditure,
-                isPartnerPayment: existing.isPartnerPayment,
+        const refusal = frozenExpenseRefusal(existing, "edit");
+        if (refusal) {
+            return { ok: false, code: "cycle_closed", message: refusal };
+        }
+        const after = {
+            amount: v.amount,
+            actualExpenditure: money.actualExpenditure,
+            isPartnerPayment: existing.isPartnerPayment,
+            cycleClosedAt: existing.cycleClosedAt,
+        };
+        if (isExpenseFrozen(after)) {
+            return {
+                ok: false,
+                code: "cycle_closed",
+                message: SPLIT_INTO_CLOSED_CYCLE_MESSAGE,
+                fieldErrors: {
+                    isShared: [SPLIT_INTO_CLOSED_CYCLE_FIELD_ERROR],
+                },
             };
-            if (movesSettlementBalance(existing)) {
-                return {
-                    ok: false,
-                    code: "cycle_closed",
-                    message: existing.isPartnerPayment
-                        ? "This payment counts in a settlement you already closed, so it can't be edited."
-                        : "Your partner's share of this expense counts in a settlement you already closed, so it can't be edited.",
-                };
-            }
-            if (movesSettlementBalance(after)) {
-                return {
-                    ok: false,
-                    code: "cycle_closed",
-                    message:
-                        "This expense sits inside a settlement you already closed, so it can't be split with your partner now — that would change what the settlement settled.",
-                    fieldErrors: {
-                        isShared: [
-                            "The settlement covering this date is already closed",
-                        ],
-                    },
-                };
-            }
         }
 
         // Refused, not coerced: answering "saved" to a change that was dropped is a
