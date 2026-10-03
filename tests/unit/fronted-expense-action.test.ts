@@ -20,6 +20,8 @@ function categoryRepo(
 ): CategoryRepository {
     return {
         getBySlug: async () => null,
+        listForPicker: async () => [],
+        listSubcategoriesForPicker: async () => [],
         getSubcategorySpends: async () => [],
         getExpensesForCategoryMonth: async () => [],
         getPartnerPaymentDefaults: async () => defaults,
@@ -116,6 +118,36 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
         repo.setSubcategory("s9", "groceries");
         const res = await addPartnerPayment(
             input({ categoryId: "personal", subcategoryId: "s9" }),
+            deps({ expenseRepo: repo }),
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.subcategoryId).toBeDefined();
+        expect(repo.inserts).toHaveLength(0);
+    });
+
+    it("refuses another user's category, writing nothing", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.setCategorySlug("x", "groceries", "u2");
+        const res = await addPartnerPayment(
+            input({ categoryId: "x" }),
+            deps({ expenseRepo: repo }),
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.categoryId).toBeDefined();
+        expect(repo.inserts).toHaveLength(0);
+    });
+
+    it("refuses another user's subcategory under the default category, writing nothing", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.setSubcategory("s-other", "combined", "u2");
+        const res = await addPartnerPayment(
+            input({ subcategoryId: "s-other" }),
             deps({ expenseRepo: repo }),
         );
 

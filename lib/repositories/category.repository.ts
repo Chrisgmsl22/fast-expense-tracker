@@ -40,6 +40,21 @@ export type CategoryExpenseListItem = Omit<ExpenseListItem, "subcategory"> & {
     countedInBudget: boolean;
 };
 
+/** One category option in the expense form's picker. */
+export type CategoryPickerItem = {
+    id: string;
+    slug: string;
+    name: string;
+    color: string;
+};
+
+/** One subcategory option in the expense form's picker. */
+export type SubcategoryPickerItem = {
+    id: string;
+    name: string;
+    categoryId: string;
+};
+
 /** Null-subcategory expenses roll up under this label ("Other" bucket). */
 const OTHER_NAME = "Other";
 
@@ -55,6 +70,12 @@ export interface CategoryRepository {
      * can never resolve another user's category.
      */
     getBySlug(userId: string, slug: string): Promise<CategoryMeta | null>;
+    /** The user's categories for the expense picker, A→Z. */
+    listForPicker(userId: string): Promise<CategoryPickerItem[]>;
+    /** The user's subcategories for the expense picker. */
+    listSubcategoriesForPicker(
+        userId: string,
+    ): Promise<SubcategoryPickerItem[]>;
     /**
      * My-share spend (`actualExpenditure`) summed per subcategory for the month,
      * including **every** subcategory of the category (zero-spend rows kept), plus
@@ -102,6 +123,23 @@ export class PrismaCategoryRepository implements CategoryRepository {
                 isRelevant: true,
                 monthlyBudget: true,
             },
+        });
+    }
+
+    listForPicker(userId: string): Promise<CategoryPickerItem[]> {
+        return this.db.category.findMany({
+            where: { userId },
+            orderBy: { name: "asc" },
+            select: { id: true, slug: true, name: true, color: true },
+        });
+    }
+
+    listSubcategoriesForPicker(
+        userId: string,
+    ): Promise<SubcategoryPickerItem[]> {
+        return this.db.subcategory.findMany({
+            where: { userId },
+            select: { id: true, name: true, categoryId: true },
         });
     }
 

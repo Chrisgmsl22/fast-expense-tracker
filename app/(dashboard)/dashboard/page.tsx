@@ -1,10 +1,11 @@
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { getScopedMonth } from "@/lib/month-scope.server";
 import { formatMonthLabel } from "@/lib/format";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import {
+    cardRepository,
+    categoryRepository,
     expenseRepository,
     movementRepository,
     settingsRepository,
@@ -54,20 +55,9 @@ export default async function DashboardPage({
         getSettlement(userId),
         expenseRepository.getForMonth(userId, month),
         movementRepository.getForMonth(userId, month),
-        db.category.findMany({
-            orderBy: { name: "asc" },
-            select: { id: true, slug: true, name: true, color: true },
-        }),
-        db.subcategory.findMany({
-            select: { id: true, name: true, categoryId: true },
-        }),
-        // Archived cards drop out of the picker (spec 0006 §6); history reads
-        // stay unfiltered so old expenses still resolve their card.
-        db.card.findMany({
-            where: { userId, archivedAt: null },
-            orderBy: { name: "asc" },
-            select: { id: true, name: true, color: true },
-        }),
+        categoryRepository.listForPicker(userId),
+        categoryRepository.listSubcategoriesForPicker(userId),
+        cardRepository.listActive(userId),
         settingsRepository.getSettings(userId),
     ]);
 

@@ -103,6 +103,55 @@ describe("updateExpense (unit, injected fake repo)", () => {
         expect(res.fieldErrors?.subcategoryId).toBeDefined();
     });
 
+    it("refuses another user's category, leaving the row unwritten", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.seedExpense("e1", "u1");
+        repo.setCategorySlug("cat-other", "groceries", "u2");
+
+        const res = await updateExpense(
+            validInput({ categoryId: "cat-other" }),
+            repo,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.categoryId).toBeDefined();
+        expect(repo.updates).toHaveLength(0);
+    });
+
+    it("refuses another user's subcategory under the chosen category", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.seedExpense("e1", "u1");
+        repo.setSubcategory("sub-other", "cat1", "u2");
+
+        const res = await updateExpense(
+            validInput({ subcategoryId: "sub-other" }),
+            repo,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.subcategoryId).toBeDefined();
+        expect(repo.updates).toHaveLength(0);
+    });
+
+    it("answers not_found for another user's row even when the category is foreign too", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.seedExpense("e1", "u2");
+        repo.setCategorySlug("cat-other", "groceries", "u2");
+
+        const res = await updateExpense(
+            validInput({ categoryId: "cat-other" }),
+            repo,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("not_found");
+    });
+
     it("maps a repository write failure to db_error", async () => {
         const repo = new FakeExpenseRepository();
         repo.seedExpense("e1", "u1");
