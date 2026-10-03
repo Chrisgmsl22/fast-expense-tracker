@@ -16,53 +16,53 @@ own file with vertical slices, marked as `[PR]`.
 
 ## Currently active (derived)
 
-**In progress:** none · **Available next:** 2.7, 2.8, 2.9, 3.1, 5.1
+**In progress:** none · **Available next:** P12 privacy-toggle (2.8), P13 recurring-flag (3.1), P26 currency-picker (5.1)
 
-| Slice | Phase | Type        | State     | Depends on       |
-| ----- | ----- | ----------- | --------- | ---------------- |
-| 0.1   | 0     | foundation  | shipped   | —                |
-| 0.2   | 0     | fan-out     | shipped   | 0.1              |
-| 0.3   | 0     | fan-out     | shipped   | 0.1              |
-| 0.4   | 0     | fan-out     | shipped   | 0.1              |
-| 1.1   | 1     | foundation  | shipped   | phase:0          |
-| 1.2   | 1     | fan-out     | shipped   | 1.1              |
-| 1.3   | 1     | fan-out     | shipped   | 1.1              |
-| 1.4   | 1     | fan-out     | shipped   | 1.1, 1.8         |
-| 1.5   | 1     | fan-out     | shipped   | 1.1              |
-| 1.6   | 1     | integration | shipped   | 1.4, 1.5         |
-| 1.7   | 1     | fan-out     | shipped   | 1.1              |
-| 1.8   | 1     | foundation  | shipped   | 1.1              |
-| 1.9   | 1     | foundation  | shipped   | 1.1              |
-| 1.10  | 1     | fan-out     | shipped   | 1.3, 1.9         |
-| 2.1   | 2     | fan-out     | shipped   | 1.6              |
-| 2.2   | 2     | fan-out     | shipped   | 1.6              |
-| 2.3   | 2     | foundation  | shipped   | 2.1, 2.2         |
-| 2.4a  | 2     | foundation  | shipped   | 2.3              |
-| 2.4b  | 2     | fan-out     | shipped   | 2.4a             |
-| 2.4c  | 2     | fan-out     | shipped   | 2.4a             |
-| 2.5   | 2     | fan-out     | shipped   | 2.4b, 2.4c       |
-| 2.6   | 2     | integration | shipped   | 2.5              |
-| 2.7   | 2     | fan-out     | available | 1.1              |
-| 2.8   | 2     | fan-out     | available | 2.4a             |
-| 2.9   | 2     | fan-out     | available | 2.3              |
-| 2.10  | 2     | fan-out     | shipped   | 2.4c             |
-| 2.11  | 2     | fan-out     | shipped   | 2.3, 2.4c        |
-| 2.12  | 2     | integration | shipped   | 2.6              |
-| 3.1   | 3     | foundation  | available | 1.4, 1.5, 1.6    |
-| 3.2   | 3     | fan-out     | blocked   | 3.1              |
-| 3.3   | 3     | fan-out     | blocked   | 3.1              |
-| 3.4   | 3     | integration | blocked   | 3.2, 3.3         |
-| 5.1   | 5     | foundation  | available | 1.4, 1.6         |
-| 5.2   | 5     | integration | blocked   | 5.1              |
-| 6.1   | 6     | foundation  | blocked   | phase:1, phase:2 |
-| 6.2   | 6     | fan-out     | blocked   | 6.1              |
-| 6.3   | 6     | fan-out     | blocked   | 6.1              |
-| 6.4   | 6     | fan-out     | blocked   | 6.1              |
-| 6.5   | 6     | integration | blocked   | 6.2, 6.3         |
-| 7.1   | 7     | foundation  | blocked   | phase:2          |
-| 7.2   | 7     | fan-out     | blocked   | 7.1              |
-| 7.3   | 7     | fan-out     | blocked   | 7.1              |
-| 7.4   | 7     | integration | blocked   | 7.2, 7.3         |
+| Slice | Name                     | Priority | Phase | Type        | State      | Depends on       |
+| ----- | ------------------------ | -------- | ----- | ----------- | ---------- | ---------------- |
+| 0.1   | —                        | —        | 0     | foundation  | shipped    | —                |
+| 0.2   | —                        | —        | 0     | fan-out     | shipped    | 0.1              |
+| 0.3   | —                        | —        | 0     | fan-out     | shipped    | 0.1              |
+| 0.4   | —                        | —        | 0     | fan-out     | shipped    | 0.1              |
+| 1.1   | —                        | —        | 1     | foundation  | shipped    | phase:0          |
+| 1.2   | —                        | —        | 1     | fan-out     | shipped    | 1.1              |
+| 1.3   | —                        | —        | 1     | fan-out     | shipped    | 1.1              |
+| 1.4   | —                        | —        | 1     | fan-out     | shipped    | 1.1, 1.8         |
+| 1.5   | —                        | —        | 1     | fan-out     | shipped    | 1.1              |
+| 1.6   | —                        | —        | 1     | integration | shipped    | 1.4, 1.5         |
+| 1.7   | —                        | —        | 1     | fan-out     | shipped    | 1.1              |
+| 1.8   | —                        | —        | 1     | foundation  | shipped    | 1.1              |
+| 1.9   | —                        | —        | 1     | foundation  | shipped    | 1.1              |
+| 1.10  | —                        | —        | 1     | fan-out     | shipped    | 1.3, 1.9         |
+| 2.1   | —                        | —        | 2     | fan-out     | shipped    | 1.6              |
+| 2.2   | —                        | —        | 2     | fan-out     | shipped    | 1.6              |
+| 2.3   | —                        | —        | 2     | foundation  | shipped    | 2.1, 2.2         |
+| 2.4a  | —                        | —        | 2     | foundation  | shipped    | 2.3              |
+| 2.4b  | —                        | —        | 2     | fan-out     | shipped    | 2.4a             |
+| 2.4c  | —                        | —        | 2     | fan-out     | shipped    | 2.4a             |
+| 2.5   | —                        | —        | 2     | fan-out     | shipped    | 2.4b, 2.4c       |
+| 2.6   | —                        | —        | 2     | integration | shipped    | 2.5              |
+| 2.7   | —                        | —        | 2     | fan-out     | superseded | 1.1              |
+| 2.8   | privacy-toggle           | P12      | 2     | fan-out     | available  | 2.4a             |
+| 2.9   | —                        | —        | 2     | fan-out     | superseded | 2.3              |
+| 2.10  | —                        | —        | 2     | fan-out     | shipped    | 2.4c             |
+| 2.11  | —                        | —        | 2     | fan-out     | shipped    | 2.3, 2.4c        |
+| 2.12  | —                        | —        | 2     | integration | shipped    | 2.6              |
+| 3.1   | recurring-flag           | P13      | 3     | foundation  | available  | 1.4, 1.5, 1.6    |
+| 3.2   | recurring-rollover       | P14      | 3     | fan-out     | blocked    | 3.1              |
+| 3.3   | recurring-prompt-setting | P15      | 3     | fan-out     | blocked    | 3.1              |
+| 3.4   | recurring-clone          | P16      | 3     | integration | blocked    | 3.2, 3.3         |
+| 5.1   | currency-picker          | P26      | 5     | foundation  | available  | 1.4, 1.6         |
+| 5.2   | foreign-amount-display   | P27      | 5     | integration | blocked    | 5.1              |
+| 6.1   | responsive-audit         | P17      | 6     | foundation  | blocked    | phase:1, phase:2 |
+| 6.2   | responsive-capture-form  | P18      | 6     | fan-out     | blocked    | 6.1              |
+| 6.3   | optimistic-ui            | P19      | 6     | fan-out     | blocked    | 6.1              |
+| 6.4   | pwa-install              | P20      | 6     | fan-out     | blocked    | 6.1              |
+| 6.5   | mobile-regression        | P21      | 6     | integration | blocked    | 6.2, 6.3         |
+| 7.1   | email-scaffold           | P22      | 7     | foundation  | blocked    | phase:2          |
+| 7.2   | email-template           | P23      | 7     | fan-out     | blocked    | 7.1              |
+| 7.3   | email-cron               | P24      | 7     | fan-out     | blocked    | 7.1              |
+| 7.4   | cron-e2e                 | P25      | 7     | integration | blocked    | 7.2, 7.3         |
 
 <!-- roadmap:status:end -->
 

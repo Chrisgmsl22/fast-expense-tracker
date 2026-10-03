@@ -27,6 +27,15 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-10-02 — A pull that changes schema.prisma needs prisma generate
+
+- **Symptom:** After a pull that changed `schema.prisma`, the dev server threw `PrismaClientValidationError` on `Income.effectiveMonth`.
+- **Root cause:** `pnpm install` said "Already up to date", so `postinstall` did not run and the generated client stayed stale.
+- **Fix / decision:** `pnpm db:generate`, then restart `pnpm dev`.
+- **Lesson for next time:** After any pull or merge that touches `schema.prisma`, run `pnpm db:generate` yourself. Do not count on `pnpm install`. See also the 2026-09-16 entry.
+
+---
+
 ### 2026-09-27 — A worktree dev server on 127.0.0.1 never hydrates
 
 - **Symptom:** The CHORE-26 browser check opened `127.0.0.1:3026`, as the 2026-09-25 lesson says. The login form posted as a plain GET and never signed in.

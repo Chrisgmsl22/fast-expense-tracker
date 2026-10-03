@@ -16,7 +16,7 @@
             "title": "Decouple partner money from cards — drop the funded-card-payment flag",
             "description": "The 'card payment funded by Brenda' flag encodes two real events as one and spawned the edge cases you hit (money-in vs money-in-then-card vs kept-as-cash). Per the model, money from Brenda is just money in; a card payment is just a card payment; they're never coupled.",
             "plan": "Foundation (depends on CHORE-4). (1) Remove Movement.fundedByPartner + the 'funded_card_payment' settlement journal kind. (2) Money-from-Brenda = a plain gf_received transfer-in; a card payment = a plain card_payment — two independent events. (3) settlement.service: moneyPartnerPaidYou = Σ gf_received only (drop the fundedByPartner term from the sum). (4) Simplify the settlement help / info-icon copy now that the edge cases are gone. (5) Prod data migration: existing fundedByPartner card payments → split into a gf_received (money in) + a plain card_payment (reviewed SQL on real data).",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0005-cash-basis-money-model.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/54",
             "issue": null
@@ -36,7 +36,7 @@
             "title": "Edit + delete money movements (card payments + transfers), with optional note",
             "description": "Card payments and settlement transfers are delete-only (delete + re-add), and transfers can't be edited at all — surfaced when a $350 payment was logged as $320 with no way to fix it. Make both editable + deletable, mirroring CHORE-1's settlement-debt edit, and give transfers an optional note. Least urgent of the rework.",
             "plan": "New updateMovement action (IDOR-safe, scoped by userId). Edit mode on the movement forms (card-payment form + transfer form); optional free-text note on transfers ('what it was toward' — a label, never a budget category). Reuse CHORE-1's dialog pattern in the settlement journal + the expenses feed. Depends on CHORE-3 (final transfer shape after the funded-card flag is gone).",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0005-cash-basis-money-model.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/56",
             "issue": null
@@ -46,7 +46,7 @@
             "title": "Settings foundation — configurable partner behind an opt-in sharing toggle",
             "description": "Make the app usable by anyone: partner identity becomes per-user data behind an opt-in 'I share expenses' toggle, instead of the hardcoded PARTNER_NAME='Brenda' constant (used in 13 files). Foundation of CHORE-6 (spec 0006) — the Settings page and the shared/solo split both build on this flag. The Settings page is currently an empty stub.",
             "plan": "Kicks off with an ADR (partner-as-Settings + opt-in sharing mode; docs/decisions is protected — sign-off first). (1) Schema: Settings +sharesExpenses(Boolean, default false) +partnerName(String?); defaultSharePercentage already exists. (2) A getSettings(userId) accessor as the single source; remove the PARTNER_NAME constant and thread the name down as data (no component imports a partner constant). (3) Settings page shell (server component reads Settings) + the Expense-split-rule block: an 'I share expenses' toggle that reveals + requires partner name and your share % when on. Persist via an IDOR-safe server action (name required when toggle on). (4) Owner-account migration: sharesExpenses=true, partnerName='Brenda' (no record rewrites). BUG-2 rider: the same manual owner prod-migration trip also re-seeds prod Category.color (gray→per-slug) and FK-safely deletes the retired Amex Gold card — documented in docs/operations/owner-shared-mode-migration.md, no app code. Tests: action validation, accessor, form both modes. Out of scope: the gating sweep (6.b), card management (6.c), and the deferred mock sections (Account/Preferences/Privacy/Export/theme).",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/58",
             "issue": null
@@ -56,7 +56,7 @@
             "title": "Solo mode — hide the shared-expense + settlement machinery when sharing is off",
             "description": "With the sharesExpenses flag in place (CHORE-6.a), a solo user must see a plain expense tracker: no split control, no settlement, no partner anywhere. Today that machinery is always on. Depends on CHORE-6.a.",
             "plan": "When sharesExpenses=false, hide/guard: (1) the shared/% control in components/expense/ExpenseForm.tsx (expenses save isShared:false, yourPercentage:1, actualExpenditure=amount); (2) the Settlement route + its link in components/nav/AppNav.tsx, plus a server-side route guard (solo user hitting the URL → redirect); (3) the partner items in the Add menu (components/expense/AddExpenseButton.tsx → gf_received/gf_paid/gf_fronted actions); (4) partner widgets on the dashboard. Shared mode renders exactly as today. Tests: each surface in both modes; route guard. Depends on CHORE-6.a.",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/62",
             "issue": null
@@ -66,7 +66,7 @@
             "title": "Card management — add / rename / recolor / archive cards in Settings",
             "description": "Cards are seeded only; there is no way to add, rename, recolor, or remove one from the app. Add card management to the Settings page. Delete is unsafe (cards are referenced by Expense[] and Movement[]), so removal is soft-archive. Depends on CHORE-6.a (the Settings page shell).",
             "plan": "Full card vertical slice (none exists today). (1) Schema: Card +archivedAt(DateTime?). (2) lib/palette.ts: shared named palette (seeded colours + extras) — ends the seed↔login-page hex drift; seed + login import it. (3) lib/schemas/card.ts: Zod (name 1–40, type credit|debit|cash, color validated #RRGGBB — swatch OR custom hex). (4) lib/repositories/card.repository.ts: listActive (archivedAt:null, pickers), listForSettings (all), create, updateForUser, archiveForUser, deleteForUser (IDOR-safe where:{id,userId}; delete uses deleteMany + re-checks Expense/Movement refs, refuses if any). (5) app/_actions/card/{add,update,archive,delete}.ts mirroring save-split-rule (Zod→auth→repo→ActionResult; codes validation|unauthenticated|has_references|not_found|limit_reached|duplicate_name|db_error). (6) Settings Cards section (components/settings/CardsForm.tsx) replaces the coming-soon chip: list + Add form + per-card edit (rename/recolor swatch+hex) + Archive(used)/Delete(unused). (7) Picker reads (expenses/page, dashboard/page) filter archivedAt:null; history reads unfiltered. Rules: Cash fully locked (no edit/archive/delete); archive used / hard-delete unused; unique active name per user (case-insensitive); cap 10 active (MAX_ACTIVE_CARDS); no unarchive. Deferred to CHORE-9: outstanding-balance warn/block on archive. Tests: CRUD actions, validation, IDOR scoping, delete-refuses-when-referenced, hex validation, cap + duplicate-name, archive hides-from-picker-keeps-history, palette module, CardsForm both states. Depends on CHORE-6.a. Full design: docs/specs/0006-settings-standalone-shared-modes.md §6.",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/63",
             "issue": null
@@ -86,13 +86,15 @@
             "title": "Per-user categories, subcategories, and budgets (multi-tenancy foundation)",
             "description": "Category, Subcategory, and CategoryBudget are global (no userId) — one shared config for the whole DB. With public signup (8.d) every user would share the same category set, colors, and monthly budgets; one user editing a budget changes it for everyone. Expenses ARE userId-scoped, so spend stays private, but the scaffolding leaks. Make categories/subcategories/budgets per-user before any signup. Reverses ADR-0016 (budgets deliberately global for the single-user app). Foundation for CHORE-8.b–8.e.",
             "plan": "Kicks off with a superseding ADR (reverses ADR-0016; docs/decisions is protected — sign-off first). (1) Schema: +userId on Category, Subcategory, CategoryBudget (relations to User); change CategoryBudget @@unique([categoryId,month]) -> @@unique([userId,categoryId,month]). (2) Owner data migration: backfill userId = owner on all existing Category/Subcategory/CategoryBudget rows so nothing orphans; dev via prisma migrate, PROD via a documented reviewed-SQL runbook (mirror spec 0005's careful-real-data approach — Neon MCP survey before/after). (3) Scope every category/budget read + write by userId: dashboard.repository (getCategorySpends/getCategoryBreakdown), category.repository, category-budget.repository, the set-budget action, seed. (4) Tests: per-user isolation (user A's budget/color invisible to B), userId scoping on every read/write, migration correctness. Depends on nothing new; blocks 8.b/8.c/8.d/8.e.",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/65",
             "issue": null
         },
         {
             "id": "CHORE-8.b",
+            "name": "starter-kit",
+            "priority": 8,
             "title": "New-user starter kit — default categories/subcategories/cards/settings",
             "description": "A single provisioning routine that seeds a fresh account's starting data so a new user lands in a working, private tracker. Shared by the owner seed AND signup (8.d) so the two never drift. Depends on CHORE-8.a (per-user categories).",
             "plan": "(1) A provisionNewUser(userId) domain/service routine that seeds, all userId-scoped: the default 13 categories + subcategories (the frozen reference in domain-reference.md), a default Cash card (REQUIRED — Cash is un-addable via the UI since 6.c) plus optional generic Credit + Debit starters, and a default Solo Settings row (sharesExpenses=false). (2) Refactor prisma/seed.ts to provision the owner via the same routine (DRY). (3) Tests: a freshly provisioned user has the full default set, isolated from other users; seed still works. Depends on 8.a.",
@@ -103,8 +105,10 @@
         },
         {
             "id": "CHORE-8.c",
+            "name": "category-settings",
+            "priority": 6,
             "title": "Per-user category management in Settings",
-            "description": "Now that categories are per-user (8.a), give users a Settings 'Categories' section to manage them — mirroring the Cards section from 6.c. Rename / recolor / add / set monthly budget / archive. Makes the seeded default set adjustable per account.",
+            "description": "Now that categories are per-user (8.a), give users a Settings 'Categories' section to manage them — mirroring the Cards section from 6.c. Rename / recolor / add / set monthly budget / archive. Makes the seeded default set adjustable per account. It also carries the bucket view: categories grouped by bucket (Essentials, Discretionary, Savings), with the category and subcategory relevance controls from CHORE-27. Design (2026-10-02): docs/designs-screens/categoryManagement.html, option 1a (grouped list). The July branch feat/CHORE-8.c-category-management (cc9292f) is a reference only and will not be rebased.",
             "plan": "Mirror the CHORE-6.c card vertical slice for Category: Zod schema, IDOR-safe userId-scoped CRUD actions, a Settings Categories section (client form), reads. Decide exact ops at pickup (rename/recolor/add/set-budget/archive; delete only if unused, else archive — categories are referenced by Expense[]). Coordinates with the existing inline dashboard budget editing (set-budget) so they share the same per-user path. Depends on 8.a.",
             "status": "open",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
@@ -113,6 +117,8 @@
         },
         {
             "id": "CHORE-8.d",
+            "name": "public-signup",
+            "priority": 9,
             "title": "Public signup, capped to a configurable max users in PROD",
             "description": "Add a real signup page, bounded: PROD accepts at most N users (default 10) so onboarding stays small and controlled. Reverses the 'no signup' deferral in spec 0006 §8. A new account is provisioned via the 8.b starter kit so it lands in a clean, private Solo tracker. Depends on 8.a + 8.b.",
             "plan": "(1) Signup page (app/(auth)/signup, mirror the login page/form -> server action pattern) + public server action: email + password + display name (Zod; password strength), bcrypt.hash(pw,10) like the seed, create User then provisionNewUser (8.b). Replace the SignUpComingSoon placeholder on the login page with a real link. (2) User cap: MAX_USERS env var (default 10) checked BEFORE create — db.user.count vs cap, reject at-cap with a clear 'signups are currently full' message; document in .env.example + coding-conventions.md. (3) After signup, sign the user in (auto) and route to onboarding (8.e). (4) Empty-state: dashboard shows a 'set your income' nudge when a user has no income (not a dead 0/0/0). (5) Update spec 0006 §8. Tests: happy path, duplicate-email reject, at-cap boundary (N-1 ok, N rejected), validation, password hashed (never plain). Out of scope: email verification, password reset, OAuth, rate-limiting beyond the cap. Depends on 8.a + 8.b.",
@@ -123,6 +129,8 @@
         },
         {
             "id": "CHORE-8.e",
+            "name": "onboarding-wizard",
+            "priority": 10,
             "title": "Signup onboarding wizard",
             "description": "After a user signs up (8.d), walk them through a short multi-step onboarding (modal/wizard) to set up their account instead of dropping them on an empty dashboard. Built against a user-provided Claude design reference.",
             "plan": "A multi-step wizard shown on first sign-in: welcome -> display name + fixed monthly income -> pick/confirm a card (from the starter kit) -> 'do you share expenses?' toggle (+ partner name + your % when on) -> budget rule (show the default 50/25/25 as a starting point) -> done. Persists via the existing settings / income / card paths (no new money model). Steps + visuals finalized against the shared design. Depends on 8.d (a just-signed-up user) + 8.a/8.b. Out of scope: re-running the wizard later (Settings already covers edits).",
@@ -133,9 +141,11 @@
         },
         {
             "id": "CHORE-9",
+            "name": "card-balance",
+            "priority": 4,
             "title": "Per-card outstanding balance",
-            "description": "Show the current outstanding balance per card — the stat deferred since ADR-0018's era, refreshed for the cash-basis money model. Read-model + display only, no new capture (expenses already carry cardId; card payments are Movement{type:'card_payment', cardId}). Converted from the old backlog slice 2.13 (PR #46, closed) because it's feedback-driven and interlocks with card management (CHORE-6.c). Logging-completeness-bound: accurate only if every charge is logged — label it 'based on logged expenses', not the bank statement.",
-            "plan": "(1) Read-model, userId-scoped, behind the repository (no db in components): outstanding(card) = Sum of expense.amount charged to that card MINUS Sum of movement.amount where type='card_payment' and cardId matches. Use expense.amount (the FULL charge to the card) — NOT actualExpenditure: the card was charged the full amount regardless of any expense split; card balance is source-agnostic (spec 0005 §3). (2) Surface it on the dashboard 'Spend by card' area or a dedicated per-card view (exact surface: brainstorm on pickup); label 'based on logged expenses'. (3) CHORE-6.c interaction (careful): an archived card can still carry a nonzero outstanding balance, so this display MUST still show archived cards whose balance != 0 (never hide a card you still owe on) — pickers stay archived-filtered, this display does not. Coordinate with 6.c so archiving a card with a nonzero outstanding warns/blocks. Depends on CHORE-6.c. Tests: outstanding math (charges - payments; uses amount, ignores split), userId scoping, archived-but-nonzero card still shown, zero-balance card. Out of scope: reconciling against a real bank statement, editing card balances directly.",
+            "description": "Show the current outstanding balance per card — the stat deferred since ADR-0018's era, refreshed for the cash-basis money model. Read-model + display only, no new capture (expenses already carry cardId; card payments are Movement{type:'card_payment', cardId}). Converted from the old backlog slice 2.13 (PR #46, closed) because it's feedback-driven and interlocks with card management (CHORE-6.c). Logging-completeness-bound: accurate only if every charge is logged — label it 'based on logged expenses', not the bank statement. Surface decided by the owner (2026-10-02): a new Cards page. Design (2026-10-02): docs/designs-screens/cardBalances.html (tiles + detail drawer). CHORE-24's redemptions read on the same page.",
+            "plan": "(1) Read-model, userId-scoped, behind the repository (no db in components): outstanding(card) = Sum of expense.amount charged to that card MINUS Sum of movement.amount where type='card_payment' and cardId matches. Use expense.amount (the FULL charge to the card) — NOT actualExpenditure: the card was charged the full amount regardless of any expense split; card balance is source-agnostic (spec 0005 §3). (2) Surface it on the new Cards page (decided 2026-10-02; design docs/designs-screens/cardBalances.html); label 'based on logged expenses'. (3) CHORE-6.c interaction (careful): an archived card can still carry a nonzero outstanding balance, so this display MUST still show archived cards whose balance != 0 (never hide a card you still owe on) — pickers stay archived-filtered, this display does not. Coordinate with 6.c so archiving a card with a nonzero outstanding warns/blocks. Depends on CHORE-6.c. Tests: outstanding math (charges - payments; uses amount, ignores split), userId scoping, archived-but-nonzero card still shown, zero-balance card. Out of scope: reconciling against a real bank statement, editing card balances directly.",
             "status": "open",
             "spec": "docs/specs/0005-cash-basis-money-model.md",
             "pr": null,
@@ -146,7 +156,7 @@
             "title": "Settlement cycles and the payment-is-the-expense inversion (slices E' and F)",
             "description": "The whole settlement and partner-money story, split across two PRs that must merge in order. Registered late: this work ran for two sessions with no roadmap entry at all, so the SessionStart hooks reported 'no slice' and a cold agent reading the roadmap would have seen nothing in flight. The model: what he owes the partner lives in settlement only — absent from both feeds, every bucket, every category — and the payment he sends her is the Expense that counts in the budget. Settlements became cycles, with membership by entry time in a half-open window (previousMarker, marker]. Funding source (income | savings | reimbursed) marks which month's money paid for a row; only income reaches the 50/25/25 budget, and a savings-funded transfer still counts in the settlement balance.",
             "plan": "PR #74 (slice E', branch feat/settlement-cycles): the inversion, settlement cycles, the month switcher, and rounding fixed at the cause. PR #73 (branch feat/funding-source-expenses): funding source on expenses and on transfers to the partner. MERGE ORDER IS #74 THEN #73 — #73 builds on the settlement read #74 restructured, and #74 carries spec 0007 to main (it is absent from #73's tree, so ADR-0023 cites a spec not in its own branch). Both PRs are SCHEMA ONLY: vercel.json runs 'prisma migrate deploy' on every production build, so a merge is an unreviewed production data migration — every data statement was pulled out and deferred to CHORE-12. Slice F still owes the removal of the cross-ledger Total figure (spec 0007 §6b assigns it to slice F; it survives in lib/domain/movement.ts until then). Decisions: ADR-0024 (the payment is the expense) and ADR-0023 (funding source), both signed off 2026-09-15. After #74 merges, delete the superseded branch feat/fronted-debt-as-expense — it carries a divergent copy of spec 0007.",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/74",
             "issue": null
@@ -156,7 +166,7 @@
             "title": "Settlement marker mirror + the deferred production data migration",
             "description": "The two halves of what CHORE-11 deliberately left undone, which must ship together. HALF 1, a known gap shipped in #74: closedAt lives only on Movement, but after the inversion a payment to the partner is an Expense — so a cycle squared only by paying the partner cannot be closed at all, which is the main flow. #74 contains this by returning a real no_marker error instead of reporting a success it did not achieve. HALF 2: the production data conversion pulled out of #74 and #73. They cannot be separated, because a gf_paid movement carrying closedAt has nowhere to put that marker until half 1 lands.",
             "plan": "Branch off feat/settlement-cycles, not main. Depends on CHORE-11 merging first. (1) Expense.closedAt mirroring Movement.closedAt, with the same constraint shape, and every marker read becoming a union of both tables — find them all. (2) The data conversion, following spec 0005 §6: pre-flight counts, one transaction, idempotent, and a per-user settlement-balance compare before and after that must match to the cent. It also flips the subcategory rename ('Purchases made by girlfriend' -> 'Covered for me'), which #74 deliberately reverted: rename the ROWS by id first, then PARTNER_PAYMENT_SUBCATEGORY_NAME and prisma/seed.ts together, never separately — the seed matches subcategories by name, so a half-done rename creates a duplicate on the next re-seed. (3) HARD REQUIREMENT: the conversion MUST reuse the movement's id for the expense it creates. Three places already assume it (withoutConvertedTwins in settlement.service.ts, the twin-dedup in lib/domain/movement.ts, and ADR-0024) and nothing enforces it; new ids would double every transfer in paidToPartner, total and moneyYouPaidPartner. (4) Prefer additive — do not delete a converted movement unless you can show a read path double-counts it. (5) A read-only survey in docs/operations/ for the owner to run himself; never connect to production. Rollout: survey production, take a Neon restore point, then merge — merging IS the migration. The deferred SQL and the two preserved integration test files are held outside the repo at ~/.claude/harness/tasks/fet-payment-is-the-expense/.",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/79",
             "issue": null
@@ -166,7 +176,7 @@
             "title": "One month chooser, shared by every page, that survives navigation",
             "description": "RE-CONFIRMED in manual testing after #74 merged: switching sections still drops you back to the current month instead of keeping the one in the query param. The switcher remembers your choice on Settlement only. MonthPicker already writes the shared cookie on every page that renders it; only Settlement reads it back, so Expenses sets the memory and then ignores its own write. The owner also wants the control itself made consistent: the SAME component on every page, with Settlement's 'take me back' affordance being the only page-specific addition. That button needs a background so it reads as a button rather than text, and active verbiage — 'Take me back to the current month' or similar, not a bare label. Ids 10, 11 and 12 are taken by in-flight branches; this is 13 deliberately.",
             "plan": "",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/80",
             "issue": null
@@ -176,13 +186,15 @@
             "title": "Rebuild the expenses chin as a nested, colour-coded breakdown with a chart",
             "description": "The footer grew to six flat lines across PRs #73 and #74 and stopped reading as one idea. Owner, looking at a real September: 'it is confusing just reading it, it is too much information and I think we could organize it better.' He gave the structure he wants, and it is a HIERARCHY, not a list — that is the point, and a flat row per figure is what makes it unreadable: Charged in total (its own pill-shaped colour), then What I really spent, with a nested line for how much of that came from savings, a nested line for how much went to the partner, and under THAT a line for how much of the partner payment came from savings. He also wants colour, and — because even nested this is a lot on one bar — the chin clickable to open a modal with a chart, probably a pie. BUG-5 is the same defect from the data side and is fixed here: a savings-funded payment currently appears in NO line at all, because paidToPartner counts income-funded rows only and notFromIncomeTransfers holds movements only. Nesting it under 'What I really spent → paid to partner → from savings' is exactly where he expects it.",
             "plan": "",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/80",
             "issue": null
         },
         {
             "id": "CHORE-15",
+            "name": "funding-flag-frozen-edit",
+            "priority": 3,
             "title": "Thread the funding flag through the feed totals, and refuse a frozen row at the edit read",
             "description": "Two follow-ups the #73 and #74 review rounds deliberately deferred, grouped because both are 'a predicate narrower than the read path it mirrors' — the shape that produced six defects across those reviews. (a) computeFeedTotals in lib/domain/movement.ts partitions on the NARROWED fundedFrom, so a stored value outside the enum lands in whatIReallySpent instead of the non-income figure, breaking the cross-screen agreement spec 0007 §2 exists to guarantee. Unreachable through the app because Zod validates writes; reachable via a raw DB edit or a future fourth funding value. (b) getMovementForEdit and getExpenseForEdit prefill a frozen row without refusing, so a stale tab can open a dialog that can only fail on save. Loud and non-corrupting — every write path refuses — but the two reads are symmetric and fixing one alone would repeat the one-surface mistake.",
             "plan": "(a) Carry countedInBudget out of expense.repository.ts the way category.repository.ts already does, computed from the RAW column via isBudgetFunded, and thread it through FeedTotalExpense, MonthFeed.tsx and ExpenseListInteractive.tsx plus their fixtures. isBudgetFunded is already exported. Test with an out-of-band value written directly to the database, at the real seam. (b) Have both edit reads return the cycle_closed refusal the write paths return, using the same movesSettlementBalance / movementMovesSettlementBalance predicates, so the read and the write agree by construction. Do both in one slice. Depends on CHORE-11 and the #73 merge, since (a) touches a file both branches rewrote.",
@@ -196,13 +208,15 @@
             "title": "Clean up after the settlement rework — branches, worktrees and review debt",
             "description": "Housekeeping that accumulated across the two settlement sessions. None of it changes behaviour; all of it misleads the next reader if left. The divergent spec copy is the sharpest item: feat/fronted-debt-as-expense carries a docs/specs/0007 about 130 lines apart from the live one, so anyone who opens that branch reads a superseded design as if it were current.",
             "plan": "(1) After CHORE-11 merges, delete the superseded branch feat/fronted-debt-as-expense and its divergent spec copy. (2) Remove the six stale worktrees left from merged or superseded work; never remove one with uncommitted changes — report it and let the owner decide. (3) Clear the review debt the round-5 pass listed: strip the review-round tags ('for two rounds', 'Round 4', 'I-1') from comments, since the why survives without the round number; de-duplicate the close-set query between settlement.repository.ts and cycle-closes.ts, which agree only by coincidence; add the missing test for the updateTransfer closed-cycle guard; and parallelise the serial await in movement.repository.ts getById, which getForMonth already does correctly. (4) Consider renaming tests/unit/fronted-expense-action.test.ts and tests/integration/fronted-subcategory-rename.test.ts, whose names still say 'fronted' under the superseded model — owner's call, since a rename adds diff noise for no behaviour change. PARTIAL as shipped: (1), (2) and (3) are done (branch/worktree cleanup was a git operation with no diff), though (3)'s review-round tag-stripping landed earlier on main (commit f1b7158) rather than in this PR. (3)'s close-set de-duplication landed as a single-owner rewrite in cycle-closes.ts rather than the shared predicate originally planned, because CHORE-12 merged first and made a marker a two-table read, which obsoleted the shared predicate. (4), the test-file rename, is still outstanding, left for the owner's call.",
-            "status": "shipped",
+            "status": "merged",
             "spec": null,
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/78",
             "issue": null
         },
         {
             "id": "CHORE-17",
+            "name": "comment-cleanup",
+            "priority": 11,
             "title": "Bring the existing code back to the comment bar",
             "description": "coding-conventions.md says 'default to no comment' and caps an earned one at 1-3 lines. The codebase does not follow it: 108 files carry 274 comment blocks over the cap, holding 1,996 lines between them. lib/ sits at roughly 24% comment lines. The rule and the code drifted apart long before the settlement rework, and the drift is self-sustaining — agents are told to match the neighbouring file's density, so every new file reproduces the house style and reads as compliant while doing it. The worst offenders: lib/services/settlement/settlement.service.ts (28 blocks, 219 lines), lib/domain/expense.ts (8, 88), lib/repositories/movement.repository.ts (8, 75), lib/domain/movement.ts (6, 75), lib/repositories/expense.repository.ts (8, 73), components/settlement/SettlementJournal.tsx (10, 71). Measured on the CHORE-11 branch, so it includes that work's own comments; the pre-existing share is lower but still most of it.",
             "plan": "Do this AFTER CHORE-11 and the #73 merge land, or it conflicts with everything. Not one PR — 108 files is unreviewable. Slice it worst-first by directory, roughly four passes: (1) lib/services and lib/domain, (2) lib/repositories, (3) app/_actions, (4) components. Each pass is its own PR, small enough to read. Method, the one that worked on the two settlement PRs: run a reviewer over the diff with a comments-only lens and have it return a verdict per block — DELETE (restates the code, review narration, reader infers it), SHRINK (with the exact 1-3 line replacement text written out, so the implementer pastes rather than re-judges), or KEEP (only above the cap, and only with a demonstration of what a reader loses if it were cut — 'it explains the design' is not a reason). Then an implementer applies the verdicts verbatim and runs the full gates; comments only, no logic touched, so any test failure means a real edit slipped in. Two lenses beyond size: delete any comment that is now FALSE, since a comment that lies is worse than none; and strip review-provenance tags ('Round 4', 'for two rounds', 'that's how X shipped'), which belong in git history. scripts/check-comment-size.sh warns on newly added over-cap blocks, so this cleanup stops the bleeding rather than being repeated later. Out of scope: tests/ (different density norms) and any comment linking an ADR for a non-obvious decision, which the convention explicitly allows.",
@@ -216,7 +230,7 @@
             "title": "Show savings-funded spend on the dashboard",
             "description": "Owner request from manual testing: 'add a dash graph/category to show how much money I spent with my savings money.' Today the dashboard's 50/25/25 buckets deliberately exclude every savings-funded row (spec 0007 §2 — that money was counted as savings in the month it was earned, so counting it again double-counts), and the only place the figure surfaces is a footnote line under the buckets. So the dashboard answers 'how is this month's income being used' and never answers 'how much of my savings did I spend', which is a question he actually has. The data already exists: getNonIncomeFundedTotal is on dashboard.repository.ts, and CHORE-14 adds the payment-side breakdown.",
             "plan": "",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/80",
             "issue": null
@@ -226,7 +240,7 @@
             "title": "Surface an unsettled balance on the Expenses chin, linking to Settlement",
             "description": "Owner request: 'if I owe Brenda money, or she owes me, I should see the button/reminder on the chin on the expenses page, clicking it should take me to the settlement page.' Today the balance lives only on the Settlement page, so the one screen he uses daily gives no sign that money is outstanding — he has to remember to go and look. The dashboard feed already renders an 'All settled' pill linking to /settlement (components/dashboard/MonthFeed.tsx), so the pattern exists and the Expenses chin simply does not carry it.",
             "plan": "",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/80",
             "issue": null
@@ -236,7 +250,7 @@
             "title": "Redesign navigation from the official dark grouped sidebar mock",
             "description": "The official sidebar export replaces Option A as the CHORE-20 design source. It shows a dark rail with Overview, Money, and Setup groups; an active item; the L4 bucket-bar logo; a settlement status pill; a monthly balance widget; over-budget alerts; and an account/sign-out area. Its mobile view uses a burger control that opens the same rail. Add expense belongs in the page header. This chore covers the left navigation sidebar, not the right month-feed rail.",
             "plan": "",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0008-sidebar-navigation.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/81",
             "issue": null
@@ -246,7 +260,7 @@
             "title": "Redesign the dashboard summary and Expenses footer from the summary layout mock",
             "description": "Owner-approved follow-up to CHORE-20. Use docs/designs-screens/summaryLayout.html for the dashboard right-rail summary and the Expenses footer on desktop and mobile. The mock is imported with invented amounts and a fictional partner name. Its visual hierarchy is the reference; its sample arithmetic and labels must not override the financial model. Implement this chore in a separate PR after the sidebar work.",
             "plan": "",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/designs-screens/summaryLayout-notes.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/82",
             "issue": null
@@ -256,7 +270,7 @@
             "title": "Make the Expenses screen usable on a phone and split outside-income money by funding source",
             "description": "Owner feedback from using the app in production on a phone (Safari), approved 2026-09-25. Follow-up to CHORE-21. (a) The Expenses list is too tight at 390px: titles truncate ('Transfer — you …') and badges wrap into the amount column. (b) The pinned summary chin takes ~40% of the mobile screen; Safari's bottom bar makes it tighter. (c) After scrolling down, the top bar needs a long scroll back to reappear. (d) 'Not from this month's income' merges savings-funded and reimbursed rows (e.g. a $3,500 insurance-refunded Health visit sits inside 'Own spending'), gives no list of what it holds, and 'My cost' counts the refunded money as a cost. (e) 'Set aside' renders teal (grey in the breakdown modal) and sits under an 'Out of this month's income' heading that reads like spend, though it is money kept. (f) Since Full breakdown already holds every figure, the owner asked for a lighter dashboard summary.",
             "plan": "Decision: split by funding source in the SUMMARY, not a new category — a category says what was bought (the visit stays Health); fundedFrom already records which money paid. No schema change. (1) Domain: computeFeedTotals adds notFromIncome.fromSavings and notFromIncome.reimbursed (each ownSpending + sentToPartner); one sorting rule (nonIncomeSourceOf) feeds both the figures and the row lists, so each list sums to its figure. (2) summaryCost ('My cost') = whatIReallySpent + fromSavings; reimbursed is excluded (net cost 0). 'Charged' is unchanged — the card saw the full charge. (3) Every 'Not from this month's income' surface (Expenses footer, breakdown pot) shows 'From savings' and 'Reimbursed · paid back · net $0' sub-rows, each a native <details> (closed by default) listing description, date, actualExpenditure from rows the page already loads. Zero sub-rows are not drawn. The dashboard rail shows only the summed 'From savings' figure (rev 4 lighter summary) — no itemised lists there. (4) Set aside uses the green --positive token everywhere; BottomLine heading becomes 'Where this month's income went' and Set aside is noted as kept, not spent. (5) Mobile rows: title takes the full width and may wrap, badge under the title, date/amount/icons share line two; desktop unchanged. (6) Mobile chin collapses to one line 'My cost $X · Charged $Y' + chevron (aria-expanded); the settlement band stays visible. (7) viewport-fit=cover; chin pads env(safe-area-inset-bottom), mobile header pads the top inset. (8) Mobile top bar is sticky, hides on scroll down, reappears on any scroll up past an 8px threshold, always visible at the top, motion-reduce respected; pure rule in components/nav/scroll-header.ts. Worked example (invented, October shape): income 680 + savings 4,758 own + 530 to partner + reimbursed 3,500 → My cost 5,968 (was 9,468), From savings 5,288, Reimbursed 3,500. (9) 'From savings' is notFromIncome.fromSavings on every surface; in the breakdown pot a legacy savings-funded transfer gets its own row ('Transfers to {partner} (from savings)'), and each of the pot's two cuts is captioned. (10) On mobile the Expenses list scrolls with the page (desktop keeps its 70vh scroller). (11) Lighter dashboard summary (docs/designs-screens/summaryMix.html): SummaryRail becomes a cost box (What {month} cost me, a '{charged} charged' subline, the income/savings bar, 'From this month's income' + 'From savings' rows that sum to the headline, and a 'Full breakdown ›' link), a green 'Saved' pill (setAside; hidden at 0), and a partner pill with ↑ sent (paidToPartner) and ↓ received (partnerPaidYou), each flow named in words, no net figure (hidden in solo mode when both are 0). The removed rows (Reimbursed, Set aside row, the income total box with Income and left, the partner rows and 'Of that, from savings', the expense lists) live in Full breakdown, which gains an 'Income $X · $Y left' line. The ↑ glyph uses a new --money-out token. Tests: domain 100% (split, list-sums-to-figure, charged unchanged), FundingSplit, parts-sum-to-parent on every surface, scroll-header rule, AppNav, chin toggle, row layout.",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/designs-screens/summaryMix.html",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/85",
             "issue": null
@@ -266,18 +280,20 @@
             "title": "Configure the Essentials / Discretionary / Savings split in Settings",
             "description": "Owner request: set the bucket percentages from Settings instead of the fixed 50/25/25. Today the split is the BUCKET_RATIO constant in lib/domain/dashboard.ts, and BucketsHero.tsx hardcodes the '50%' / '25%' labels, so the targets, the labels, and the sidebar over-budget alert can only change through a code edit. Id 22 is taken by the in-flight feat/CHORE-22-mobile-summary-funding branch; this is 23 deliberately.",
             "plan": "(1) Schema: three per-user integer percentages (essentials, discretionary, savings) with an effective month, defaults 50/25/25, so a user with no row keeps today's numbers and no data migration is needed. (2) Zod: whole numbers 0-100 that sum to exactly 100; the Settings form refuses any other total and shows the remainder live. (3) lib/domain/dashboard.ts takes the ratio as an argument instead of reading BUCKET_RATIO; the dashboard service reads it from getSettings(userId). (4) BucketsHero and the sidebar over-budget widget render the configured percentages, never a literal. (5) Settings section 'Budget rule' with the three inputs and a reset-to-50/25/25 control, via an IDOR-safe server action mirroring save-split-rule. DECIDED by the owner (2026-09-25): a change applies from the current month forward; past months keep the split they had, the same reason actualExpenditure is stored. So the split is effective-dated per user (resolved per month, the latest split at or before that month, falling back to 50/25/25), not a single Settings value — shape it at pickup. Tests: the sum-to-100 rule and its boundaries, the domain math with a non-default split, a past month keeping its old split after a change, the userId scope, and BucketsHero labels from data. Out of scope: the onboarding wizard step (CHORE-8.e reuses this path).",
-            "status": "shipped",
+            "status": "merged",
             "spec": null,
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/84",
             "issue": null
         },
         {
             "id": "CHORE-24",
+            "name": "points-redemption",
+            "priority": 5,
             "title": "Record a card points redemption that lowers a card's balance",
-            "description": "Owner request: 'I collect a bunch of points, so I use them to pay off or reduce the balance on certain purchases' — e.g. a $1,000 purchase, later 3,000 points redeemed for about $270 off. Today the only way to lower a card's balance is a card payment (Movement{type:'card_payment'}), which says cash left his bank account. A redemption moves no cash, so logging it as a payment is wrong and leaving it out overstates what he owes the card. Surface still undecided by the owner.",
-            "plan": "(1) A new Movement type 'points_redemption': cardId required, amount in MXN, optional points count, optional link to the expense it offsets, optional note. No funding source — no cash moves. (2) Capture: an entry in the Add menu beside 'Card payment', same dialog pattern, plus edit/delete mirroring CHORE-5. (3) Reads: it appears in the month feed, and CHORE-9's outstanding balance becomes charges - card payments - redemptions. It never enters Charged, cash out, or the settlement balance. DECIDED by the owner (2026-09-25): balance only, the way his bank app shows it — spend stays $1,000, he just owes the card $270 less; no budget, bucket or category figure changes. Tests: the type round-trips, cardId is required and userId-scoped, the redemption stays out of every cash and budget total, and CHORE-9 subtracts it. Pairs with CHORE-9; either can land first.",
+            "description": "Owner request: 'I collect a bunch of points, so I use them to pay off or reduce the balance on certain purchases' — e.g. a $1,000 purchase, later 3,000 points redeemed for about $270 off. Today the only way to lower a card's balance is a card payment (Movement{type:'card_payment'}), which says cash left his bank account. A redemption moves no cash, so logging it as a payment is wrong and leaving it out overstates what he owes the card. Its reads show on the new Cards page decided for CHORE-9.",
+            "plan": "(1) A new Movement type 'points_redemption': cardId required, amount in MXN, optional points count, optional note (the cardBalances design drops the link to a purchase: a redemption is only a −$ line on the card). No funding source — no cash moves. (2) Capture: an entry in the Add menu beside 'Card payment', same dialog pattern, plus edit/delete mirroring CHORE-5. (3) Reads: it appears in the month feed, and CHORE-9's outstanding balance becomes charges - card payments - redemptions. It never enters Charged, cash out, or the settlement balance. DECIDED by the owner (2026-09-25): balance only, the way his bank app shows it — spend stays $1,000, he just owes the card $270 less; no budget, bucket or category figure changes. Tests: the type round-trips, cardId is required and userId-scoped, the redemption stays out of every cash and budget total, and CHORE-9 subtracts it. Pairs with CHORE-9; either can land first.",
             "status": "open",
-            "spec": null,
+            "spec": "docs/designs-screens/cardBalances.html",
             "pr": null,
             "issue": null
         },
@@ -286,7 +302,7 @@
             "title": "Fixed income changes apply from the current month forward",
             "description": "Owner request while testing CHORE-23: 'When I update my income, it should act the same way — not update old months, only current month + forward.' Today a user has one FIXED Income row with no date, and set-fixed updates it in place, so a raise rewrites every past month's income, targets and net. getMonthlySummary also sums every FIXED row, so a second row would double the income.",
             "plan": "Same shape as CHORE-23, stacked on it and reusing its resolver. (1) Schema: nullable Income.effectiveMonth ('YYYY-MM'), additive. The existing FIXED row keeps null, meaning 'from the start', so no data changes. (2) Domain: generalize resolveBudgetRule into one effective-month resolver both use; null sorts before every month. (3) Repository: getMonthlySummary resolves the one FIXED amount in force for the month instead of summing; setFixed upserts the FIXED row for the current CDMX month, taken from the server clock. (4) Income page: the editor shows on every month. On the current month or later a save applies from the current month onward. DECIDED by the owner (2026-09-27): on a past month M a save changes M only — one transaction writes M's row and, if M+1 has no row of its own, a carry row holding M+1's previous amount; the server refuses a future or malformed month. Tests: legacy null row applies to every month; a new amount applies to its month and later; a past month keeps its old amount; two saves in one month leave one row; userId scope; no double count. Out of scope: variable income (already dated) and Settings.monthlyIncome (vestigial).",
-            "status": "shipped",
+            "status": "merged",
             "spec": null,
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/86",
             "issue": null
@@ -296,9 +312,33 @@
             "title": "Copy a settlement overview to share with {partner}",
             "description": "Owner request (2026-09-27): a copy icon on the Settlement card puts a plain-text overview of the settlement on the clipboard, ready to paste to his partner, so he no longer retypes the rows and the total by hand. It covers the Open settlement tab and each closed cycle in History. Id 25 is taken by a local branch; this is 26 deliberately.",
             "plan": "(1) Pure builder components/settlement/settlement-summary-text.ts turns SettlementJournalItem[] + partnerName + scope (open | closed) into WhatsApp text (*bold*, indented • bullets, bold split/Total/Subtotal lines, em-dash dividers around the calculation, U+2212 minus): a '🧾 Settlement {first} – present' header for the open settlement or '– {last row date}' for a closed cycle; 'Shared expenses' (gross per row, each row's share in brackets when the percents differ, then a bold gross 'Subtotal' only); '🌸 {partner} owes you' (the share plus the debts {partner} owes, subtotal); '🍔 You owe {partner}' (your debts, subtotal); '💸 Payments' (either direction, note appended); a '🟰' line with the whole signed calculation when it has two or more terms; and '✅ Final outcome: {partner} owes / receives $X MXN' or 'settled'. Rows oldest first; empty sections omitted; the name and the percent come from the data. (2) Every figure comes from computeCoupleBalance over the rows the text lists, so the outcome equals the on-screen balance for the same rows. (3) CopySettlementButton (lucide Copy, outline Button icon-sm with a touch target of at least 40px, aria-label and hover/focus tooltip 'Copy settlement summary to clipboard') writes via navigator.clipboard.writeText; success swaps to Check for 2s with an aria-live 'Copied' that restarts on a repeat copy; a rejection or a missing clipboard shows 'Could not copy'. (4) SettlementViews shows it at the card's top-right on the tablist line on the Open tab (short tab labels below sm keep it there on a phone; header height identical on every tab) and inside each History cycle panel (never in the trigger), hidden when the rows are empty. No schema, action, or service change. Tests: builder at 100% incl. the computeCoupleBalance invariant; button hidden/copies/copied reset/failure; History copies its own cycle.",
-            "status": "shipped",
+            "status": "merged",
             "spec": null,
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/87",
+            "issue": null
+        },
+        {
+            "id": "CHORE-27",
+            "name": "subcategory-relevance",
+            "priority": 1,
+            "title": "Move Personal to Essentials and let a subcategory override its category's bucket",
+            "description": "Owner decisions (2026-10-02): Personal moves to Essentials, so Disposable Income is the only Discretionary category. A subcategory can override its category's relevance, Essential or Discretionary only, and inherits it by default. Bucket membership applies to every month, past ones included.",
+            "plan": "(1) Schema: keep Category.isRelevant; add a nullable Subcategory.isRelevant, where null means 'inherit from the category'. (2) Data migration: set Personal isRelevant = true for every user. (3) Every bucket read resolves an expense's bucket from the subcategory override, else the category flag. (4) Update prisma/seed.ts and docs/reference/domain-reference.md to match. The management controls ship with CHORE-8.c. Open at pickup: whether a subcategory under Savings or Unassigned may carry an override. Tests: override and inherit, a past month re-buckets after the change, the migration flips Personal for every user and nothing else, userId scope.",
+            "status": "open",
+            "spec": null,
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-28",
+            "name": "budget-planner",
+            "priority": 7,
+            "title": "Budget section to plan the month",
+            "description": "Owner request (2026-10-02): a new 'Budget' section to plan the month ahead (how much goes to essentials, which important payments are due, how much to save, and how much is left available), replacing the budget the owner keeps today in a notes app.",
+            "plan": "Brainstorm first, starting from the owner's notes-app budget template. Scope, data model and surface are decided at that brainstorm, not here.",
+            "status": "open",
+            "spec": null,
+            "pr": null,
             "issue": null
         }
     ]

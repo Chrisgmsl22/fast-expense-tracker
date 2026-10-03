@@ -14,8 +14,8 @@ export const bugsConfig: RegisterConfig = {
     docPath: "docs/roadmap/bugs.md",
     branchPattern: "fix/{id}-",
     statuses: [
-        { value: "open", label: "Open" },
-        { value: "in-progress", label: "In progress" },
+        { value: "open", label: "Open", open: true },
+        { value: "in-progress", label: "In progress", open: true },
         { value: "fixed", label: "Fixed, awaiting merge" },
         { value: "merged", label: "Merged", terminal: true },
     ],

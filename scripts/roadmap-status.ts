@@ -2,6 +2,14 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+import {
+    assertUnique,
+    checkOpenness,
+    checkPriorityFields,
+    priorityLabel,
+    prioritizedList,
+} from "./lib/priority.ts";
+
 // ---------------------------------------------------------------------------
 // Manifest — the static slice dependency graph (docs/roadmap/slices.json).
 // ---------------------------------------------------------------------------
@@ -15,6 +23,10 @@ export interface SliceDef {
     title: string;
     /** slice ids ("1.1") or phase tokens ("phase:1") */
     dependsOn: string[];
+    name?: string;
+    priority?: number | null;
+    /** the work that replaced this slice; it counts as done for dependents */
+    supersededBy?: string;
 }
 
 export interface Manifest {
@@ -64,7 +76,23 @@ export function validateManifest(data: unknown): Manifest {
             throw new Error(
                 `slices.json: slice ${s.id} dependsOn must be an array`,
             );
+        if (
+            s.supersededBy !== undefined &&
+            (typeof s.supersededBy !== "string" || s.supersededBy === "")
+        )
+            throw new Error(
+                `slices.json: slice ${s.id} supersededBy must be a non-empty string`,
+            );
+        checkPriorityFields("slices.json", s);
+        if (s.supersededBy !== undefined)
+            checkOpenness(
+                "slices.json",
+                s as unknown as SliceDef,
+                false,
+                "superseded",
+            );
     }
+    assertUnique("slices.json", m.slices as SliceDef[]);
 
     const phases = new Set((m.slices as SliceDef[]).map((s) => s.phase));
     for (const s of m.slices as SliceDef[]) {
@@ -91,7 +119,12 @@ export function validateManifest(data: unknown): Manifest {
 // Derived state — computed from the manifest + live git, never stored.
 // ---------------------------------------------------------------------------
 
-export type SliceState = "shipped" | "in-progress" | "available" | "blocked";
+export type SliceState =
+    | "shipped"
+    | "superseded"
+    | "in-progress"
+    | "available"
+    | "blocked";
 
 export interface GitState {
     /** result of `git rev-parse --abbrev-ref HEAD`, e.g. "feat/1.4-capture" or "main" */
@@ -148,14 +181,16 @@ export function deriveStatus(manifest: Manifest, git: GitState): RoadmapModel {
         );
     }
     const isShipped = (id: string) => shipped.get(id) === true;
-    const phaseShipped = (n: number) =>
-        manifest.slices
-            .filter((s) => s.phase === n)
-            .every((s) => isShipped(s.id));
+    const superseded = new Set(
+        manifest.slices.filter((s) => s.supersededBy).map((s) => s.id),
+    );
+    const isDone = (id: string) => isShipped(id) || superseded.has(id);
+    const phaseDone = (n: number) =>
+        manifest.slices.filter((s) => s.phase === n).every((s) => isDone(s.id));
     const depMet = (dep: string) =>
         dep.startsWith(PHASE_PREFIX)
-            ? phaseShipped(Number(dep.slice(PHASE_PREFIX.length)))
-            : isShipped(dep);
+            ? phaseDone(Number(dep.slice(PHASE_PREFIX.length)))
+            : isDone(dep);
 
     // Pass 2: classify the rest.
     const slices: SliceStatus[] = manifest.slices.map((s) => {
@@ -168,6 +203,8 @@ export function deriveStatus(manifest: Manifest, git: GitState): RoadmapModel {
         let missingDeps: string[] = [];
         if (isShipped(s.id)) {
             state = "shipped";
+        } else if (superseded.has(s.id)) {
+            state = "superseded";
         } else if (branch || worktree) {
             state = "in-progress";
         } else {
@@ -187,6 +224,27 @@ export function deriveStatus(manifest: Manifest, git: GitState): RoadmapModel {
 
     const mineId = slices.find((s) => s.mine)?.id ?? null;
     return { slices, mineId };
+}
+
+// "Shipped" is known only from git after a merge, and slice PRs never edit
+// slices.json, so a stale or missing priority is flagged in the line, not thrown.
+export function priorityDrift(model: RoadmapModel): string[] {
+    const drift: string[] = [];
+    for (const s of model.slices) {
+        const ranked = s.priority !== undefined && s.priority !== null;
+        if (s.state === "shipped" && ranked)
+            drift.push(`${s.id} is shipped but keeps P${s.priority}`);
+        const missing = [
+            ...(s.name === undefined ? ["name"] : []),
+            ...(ranked ? [] : ["priority"]),
+        ];
+        if (
+            (s.state === "available" || s.state === "blocked") &&
+            missing.length
+        )
+            drift.push(`${s.id} is open but has no ${missing.join(" or ")}`);
+    }
+    return drift;
 }
 
 // ---------------------------------------------------------------------------
@@ -209,7 +267,9 @@ export function formatView(model: RoadmapModel): string {
             : "Not on a slice branch (current ref maps to no slice).",
     );
     parts.push(`Shipped: ${idList(byState("shipped"))}.`);
-    parts.push(`Available next: ${idList(byState("available"))}.`);
+    const superseded = byState("superseded");
+    if (superseded.length) parts.push(`Superseded: ${idList(superseded)}.`);
+    parts.push(`Available next: ${prioritizedList(byState("available"))}.`);
 
     // Blocked slices are not actionable now; show a count, not the full list
     // (the README table + `--json` carry the per-slice detail).
@@ -226,10 +286,17 @@ export function formatView(model: RoadmapModel): string {
                   : "";
         parts.push(
             "In flight elsewhere: " +
-                inFlightElsewhere.map((s) => `${s.id}${where(s)}`).join("; ") +
+                inFlightElsewhere
+                    .map((s) => `${priorityLabel(s)}${where(s)}`)
+                    .join("; ") +
                 ". ⚠️ Do not claim an in-flight slice; PR state is git-inferred — confirm via GitHub MCP if acting on it.",
         );
     }
+    const drift = priorityDrift(model);
+    if (drift.length)
+        parts.push(
+            `slices.json drift, for the orchestrator to fix: ${drift.join("; ")}.`,
+        );
     return "[roadmap] " + parts.join(" ");
 }
 
@@ -243,14 +310,14 @@ export function renderReadmeBlock(model: RoadmapModel): string {
         "",
         "## Currently active (derived)",
         "",
-        `**In progress:** ${idList(inProgress)} · **Available next:** ${idList(available)}`,
+        `**In progress:** ${idList(inProgress)} · **Available next:** ${prioritizedList(available, Infinity)}`,
         "",
-        "| Slice | Phase | Type | State | Depends on |",
-        "| ----- | ----- | ---- | ----- | ---------- |",
+        "| Slice | Name | Priority | Phase | Type | State | Depends on |",
+        "| ----- | ---- | -------- | ----- | ---- | ----- | ---------- |",
     ];
     const rows = model.slices.map(
         (s) =>
-            `| ${s.id} | ${s.phase} | ${s.type} | ${s.state} | ${s.dependsOn.join(", ") || "—"} |`,
+            `| ${s.id} | ${s.name ?? "—"} | ${s.priority != null ? `P${s.priority}` : "—"} | ${s.phase} | ${s.type} | ${s.state} | ${s.dependsOn.join(", ") || "—"} |`,
     );
     return [...header, ...rows, "", README_END].join("\n");
 }

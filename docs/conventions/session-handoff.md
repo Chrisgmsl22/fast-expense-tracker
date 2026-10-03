@@ -68,6 +68,11 @@ Rules that fall out of this:
   there is no `slices.json` merge contention under the parallel cap.
 - **Source of truth = the manifest + git.** "Currently active" is a computed
   index over them (`pnpm roadmap:status`), regenerated, not transcribed.
+- **Names and priorities span `slices.json`, `chores.json` and `bugs.json`.** Every
+  open item has a `name` (kebab-case) and a `priority` (positive integer), each
+  unique across the three; the unit suite enforces that in CI. Status lines sort
+  open work by priority. Ids never change. A closed item (shipped, fixed, merged,
+  cancelled, `supersededBy`) has none; `[roadmap]` flags a merged slice keeping one.
 
 ## Enforcement
 
