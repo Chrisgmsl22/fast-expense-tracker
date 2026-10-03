@@ -38,7 +38,7 @@
             "proposedSolution": "Fixed. The Expenses page had the same unscoped reads as the dashboard, so both pages were fixed. Neither page imports db now: the picker reads go through CategoryRepository.listForPicker and listSubcategoriesForPicker and the new CardRepository.listActive, each scoped by the session userId, with the same fields and ordering as before. On the write side, createExpense and updateExpense refuse a categoryId the user does not own (validation, field error on categoryId) for every funding source, and ExpenseRepository.getSubcategoryCategoryId now takes userId, so a foreign subcategoryId is refused (validation, field error on subcategoryId). This holds even when the subcategory points at the chosen category. updateExpense now reads the row first, so another user's expense id still answers not_found whatever category the payload names. The closed-cycle and partner-payment guards keep their positions. The partner-payment add path (addPartnerPayment) closes the same hole: a caller-chosen categoryId the user does not own is refused (validation, field error on categoryId) before any insert, and its subcategory lookup is userId-scoped too. The default-category path is unchanged. Tests: integration tests cover the scoped picker reads and the foreign-id refusals at the create, update and add-payment action seams, and unit tests cover the same refusals through the fake repository.",
             "status": "fixed",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/88",
             "issue": null
         },
         {
