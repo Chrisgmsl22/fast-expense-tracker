@@ -199,7 +199,7 @@
             "plan": "(a) Carry countedInBudget out of expense.repository.ts the way category.repository.ts already does, computed from the RAW column via isBudgetFunded, and thread it through FeedTotalExpense, MonthFeed.tsx and ExpenseListInteractive.tsx plus their fixtures. isBudgetFunded is already exported. Test with an out-of-band value written directly to the database, at the real seam. (b) Have both edit reads return the cycle_closed refusal the write paths return, using the same movesSettlementBalance / movementMovesSettlementBalance predicates, so the read and the write agree by construction. Do both in one slice. Depends on CHORE-11 and the #73 merge, since (a) touches a file both branches rewrote. Folded in: (c) the movement repository carries countedInBudget too, so an out-of-band transfer leaves the income figures and is badged; (d) the Settlement journal opens every edit through the matching read (getMovementForEdit for debts and transfers, getExpenseForEdit for payments) and handles a refusal like the Expenses list; (e) lib/domain/frozen-row.ts is the one home for the frozen guard and the refusal text, used by both edit reads and every refusing write.",
             "status": "shipped",
             "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/90",
             "issue": null
         },
         {
