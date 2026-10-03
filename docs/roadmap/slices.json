@@ -162,10 +162,13 @@
             "phase": 2,
             "type": "fan-out",
             "title": "Card management — add / edit / delete user cards (design pending)",
-            "dependsOn": ["1.1"]
+            "dependsOn": ["1.1"],
+            "supersededBy": "CHORE-6.c"
         },
         {
             "id": "2.8",
+            "name": "privacy-toggle",
+            "priority": 12,
             "phase": 2,
             "type": "fan-out",
             "title": "Global privacy toggle — persisted PrivacyProvider masks money app-wide (reverses 2.3 income-only eye toggle)",
@@ -176,7 +179,8 @@
             "phase": 2,
             "type": "fan-out",
             "title": "Settings screen — budget/income + 68/32 split, per-category budgets, currency (shell for cards 2.7 + privacy 2.8); low priority",
-            "dependsOn": ["2.3"]
+            "dependsOn": ["2.3"],
+            "supersededBy": "CHORE-6.a, CHORE-23"
         },
         {
             "id": "2.10",
@@ -202,6 +206,8 @@
 
         {
             "id": "3.1",
+            "name": "recurring-flag",
+            "priority": 13,
             "phase": 3,
             "type": "foundation",
             "title": "Recurring checkbox + badge",
@@ -209,6 +215,8 @@
         },
         {
             "id": "3.2",
+            "name": "recurring-rollover",
+            "priority": 14,
             "phase": 3,
             "type": "fan-out",
             "title": "getRecurringForCloning + month-rollover detection",
@@ -216,6 +224,8 @@
         },
         {
             "id": "3.3",
+            "name": "recurring-prompt-setting",
+            "priority": 15,
             "phase": 3,
             "type": "fan-out",
             "title": "Recurring prompt suppression setting",
@@ -223,6 +233,8 @@
         },
         {
             "id": "3.4",
+            "name": "recurring-clone",
+            "priority": 16,
             "phase": 3,
             "type": "integration",
             "title": "Clone modal + date-shift logic + e2e",
@@ -231,6 +243,8 @@
 
         {
             "id": "5.1",
+            "name": "currency-picker",
+            "priority": 26,
             "phase": 5,
             "type": "foundation",
             "title": "Currency picker + originalAmount + Zod",
@@ -238,6 +252,8 @@
         },
         {
             "id": "5.2",
+            "name": "foreign-amount-display",
+            "priority": 27,
             "phase": 5,
             "type": "integration",
             "title": "Foreign-amount display + e2e",
@@ -246,6 +262,8 @@
 
         {
             "id": "6.1",
+            "name": "responsive-audit",
+            "priority": 17,
             "phase": 6,
             "type": "foundation",
             "title": "Responsive audit + FAB + useMediaQuery",
@@ -253,6 +271,8 @@
         },
         {
             "id": "6.2",
+            "name": "responsive-capture-form",
+            "priority": 18,
             "phase": 6,
             "type": "fan-out",
             "title": "Capture form responsive split",
@@ -260,6 +280,8 @@
         },
         {
             "id": "6.3",
+            "name": "optimistic-ui",
+            "priority": 19,
             "phase": 6,
             "type": "fan-out",
             "title": "Optimistic UI (useOptimistic)",
@@ -267,6 +289,8 @@
         },
         {
             "id": "6.4",
+            "name": "pwa-install",
+            "priority": 20,
             "phase": 6,
             "type": "fan-out",
             "title": "PWA manifest + install prompt + icons",
@@ -274,6 +298,8 @@
         },
         {
             "id": "6.5",
+            "name": "mobile-regression",
+            "priority": 21,
             "phase": 6,
             "type": "integration",
             "title": "Mobile regression sweep + Playwright mobile",
@@ -282,6 +308,8 @@
 
         {
             "id": "7.1",
+            "name": "email-scaffold",
+            "priority": 22,
             "phase": 7,
             "type": "foundation",
             "title": "Resend integration + env + React Email scaffold",
@@ -289,6 +317,8 @@
         },
         {
             "id": "7.2",
+            "name": "email-template",
+            "priority": 23,
             "phase": 7,
             "type": "fan-out",
             "title": "Email template content + preview route",
@@ -296,6 +326,8 @@
         },
         {
             "id": "7.3",
+            "name": "email-cron",
+            "priority": 24,
             "phase": 7,
             "type": "fan-out",
             "title": "Vercel cron + summary computation",
@@ -303,6 +335,8 @@
         },
         {
             "id": "7.4",
+            "name": "cron-e2e",
+            "priority": 25,
             "phase": 7,
             "type": "integration",
             "title": "Cron e2e test",

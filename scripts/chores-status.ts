@@ -16,8 +16,8 @@ export const choresConfig: RegisterConfig = {
     docPath: "docs/roadmap/chores.md",
     branchPattern: "feat/{id}-",
     statuses: [
-        { value: "open", label: "Open" },
-        { value: "in-progress", label: "In progress" },
+        { value: "open", label: "Open", open: true },
+        { value: "in-progress", label: "In progress", open: true },
         { value: "shipped", label: "Shipped, awaiting merge" },
         { value: "merged", label: "Merged", terminal: true },
         // Side-exit: considered but intentionally not built. Listed (not counted)
