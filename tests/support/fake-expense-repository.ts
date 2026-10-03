@@ -37,11 +37,18 @@ const DEFAULT_WRITE: ExpenseInsertData = {
  * contract the Prisma adapter does, so an action driven by this fake exercises
  * its real orchestration (validate → authz → FK → persist → map) with zero
  * database. Arrange state with the seed helpers; assert against `inserts`.
+ * Ownership tests must pass `ownerId`: an id without one belongs to the caller.
  */
 export class FakeExpenseRepository implements ExpenseRepository {
     private readonly rows = new Map<string, StoredExpense>();
-    private readonly subcategoryToCategory = new Map<string, string>();
-    private readonly categoryToSlug = new Map<string, string>();
+    private readonly subcategories = new Map<
+        string,
+        { categoryId: string; ownerId?: string }
+    >();
+    private readonly categories = new Map<
+        string,
+        { slug: string; ownerId?: string }
+    >();
     private seq = 0;
 
     /** Flip on to make the next write throw, simulating a DB failure. */
@@ -59,13 +66,17 @@ export class FakeExpenseRepository implements ExpenseRepository {
 
     // --- arrange helpers ---
 
-    setSubcategory(subcategoryId: string, categoryId: string): void {
-        this.subcategoryToCategory.set(subcategoryId, categoryId);
+    setSubcategory(
+        subcategoryId: string,
+        categoryId: string,
+        ownerId?: string,
+    ): void {
+        this.subcategories.set(subcategoryId, { categoryId, ownerId });
     }
 
     /** Give a category a slug, so the Health rule can be exercised. */
-    setCategorySlug(categoryId: string, slug: string): void {
-        this.categoryToSlug.set(categoryId, slug);
+    setCategorySlug(categoryId: string, slug: string, ownerId?: string): void {
+        this.categories.set(categoryId, { slug, ownerId });
     }
 
     seedExpense(
@@ -114,16 +125,22 @@ export class FakeExpenseRepository implements ExpenseRepository {
     }
 
     async getSubcategoryCategoryId(
+        userId: string,
         subcategoryId: string,
     ): Promise<string | null> {
-        return this.subcategoryToCategory.get(subcategoryId) ?? null;
+        const sub = this.subcategories.get(subcategoryId);
+        if (!sub || (sub.ownerId && sub.ownerId !== userId)) return null;
+        return sub.categoryId;
     }
 
+    /** An unarranged category id resolves to a non-Health slug the caller owns. */
     async getCategorySlug(
-        _userId: string,
+        userId: string,
         categoryId: string,
     ): Promise<string | null> {
-        return this.categoryToSlug.get(categoryId) ?? null;
+        const category = this.categories.get(categoryId);
+        if (category?.ownerId && category.ownerId !== userId) return null;
+        return category?.slug ?? "uncategorized";
     }
 
     async insert(

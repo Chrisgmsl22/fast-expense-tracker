@@ -1,5 +1,6 @@
 import type {
     CardCreate,
+    CardPickerItem,
     CardRepository,
     CardSettingsItem,
     CardUpdate,
@@ -70,6 +71,13 @@ export class FakeCardRepository implements CardRepository {
                 archivedAt: c.archivedAt,
                 inUse: c.references > 0,
             }));
+    }
+
+    async listActive(userId: string): Promise<CardPickerItem[]> {
+        return [...this.cards.values()]
+            .filter((c) => c.userId === userId && c.archivedAt === null)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(({ id, name, color }) => ({ id, name, color }));
     }
 
     async countActive(userId: string): Promise<number> {

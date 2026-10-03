@@ -15,6 +15,9 @@ export type CardSettingsItem = {
     inUse: boolean;
 };
 
+/** One card option in the expense form's picker. */
+export type CardPickerItem = { id: string; name: string; color: string };
+
 /** Fields set when adding a card; `type` is immutable after creation. */
 export type CardCreate = { name: string; type: string; color: string };
 
@@ -30,6 +33,11 @@ export type CardUpdate = { name: string; type: string; color: string };
 export interface CardRepository {
     /** All of the user's cards (active first, then archived; each A→Z), with `inUse`. */
     listForSettings(userId: string): Promise<CardSettingsItem[]>;
+    /**
+     * The user's active cards for a picker, A→Z. Archived cards drop out here only;
+     * history reads stay unfiltered so old expenses still resolve their card.
+     */
+    listActive(userId: string): Promise<CardPickerItem[]>;
     /** Count of the user's active (non-archived) cards — the add-cap check. */
     countActive(userId: string): Promise<number>;
     /** An active card matching `name` case-insensitively, or null (dup-name check). */
@@ -100,6 +108,14 @@ export class PrismaCardRepository implements CardRepository {
         return items.sort(
             (a, b) => Number(a.type === "cash") - Number(b.type === "cash"),
         );
+    }
+
+    listActive(userId: string): Promise<CardPickerItem[]> {
+        return this.db.card.findMany({
+            where: { userId, archivedAt: null },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, color: true },
+        });
     }
 
     countActive(userId: string): Promise<number> {

@@ -89,6 +89,55 @@ describe("createExpense (unit, injected fake repo)", () => {
         expect(repo.inserts).toHaveLength(0);
     });
 
+    it.each(["income", "savings"])(
+        "refuses another user's category when funded from %s",
+        async (fundedFrom) => {
+            const repo = new FakeExpenseRepository();
+            repo.setCategorySlug("cat-other", "groceries", "u2");
+
+            const res = await createExpense(
+                validInput({ categoryId: "cat-other", fundedFrom }),
+                repo,
+            );
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.code).toBe("validation");
+            expect(res.fieldErrors?.categoryId).toBeDefined();
+            expect(repo.inserts).toHaveLength(0);
+        },
+    );
+
+    it("persists the user's own subcategory under its category", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.setCategorySlug("cat1", "groceries", "u1");
+        repo.setSubcategory("sub-mine", "cat1", "u1");
+
+        const res = await createExpense(
+            validInput({ subcategoryId: "sub-mine" }),
+            repo,
+        );
+
+        expect(res.ok).toBe(true);
+        expect(repo.inserts[0]?.subcategoryId).toBe("sub-mine");
+    });
+
+    it("refuses another user's subcategory under the chosen category", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.setSubcategory("sub-other", "cat1", "u2");
+
+        const res = await createExpense(
+            validInput({ subcategoryId: "sub-other" }),
+            repo,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.subcategoryId).toBeDefined();
+        expect(repo.inserts).toHaveLength(0);
+    });
+
     it("maps a repository write failure to db_error", async () => {
         const repo = new FakeExpenseRepository();
         repo.failOnWrite = true;

@@ -55,6 +55,48 @@ async function seedExpense(opts: {
     });
 }
 
+describe("PrismaCategoryRepository picker reads (integration)", () => {
+    it("lists only the user's categories, A→Z, with the picker fields", async () => {
+        const me = await seedUser("me@example.com");
+        const other = await seedUser("other@example.com");
+        await seedCategory(me.id, "transport", true, null, "#2563eb");
+        await seedCategory(me.id, "groceries", true, null, "#16a34a");
+        await seedCategory(other.id, "hobbies");
+
+        const rows = await repo.listForPicker(me.id);
+
+        expect(rows).toEqual([
+            {
+                id: expect.any(String),
+                slug: "groceries",
+                name: "groceries",
+                color: "#16a34a",
+            },
+            {
+                id: expect.any(String),
+                slug: "transport",
+                name: "transport",
+                color: "#2563eb",
+            },
+        ]);
+    });
+
+    it("lists only the user's subcategories", async () => {
+        const me = await seedUser("me@example.com");
+        const other = await seedUser("other@example.com");
+        const mine = await seedCategory(me.id, "groceries");
+        const theirs = await seedCategory(other.id, "groceries");
+        const sub = await seedSubcategory(me.id, mine.id, "Market");
+        await seedSubcategory(other.id, theirs.id, "Bakery");
+
+        const rows = await repo.listSubcategoriesForPicker(me.id);
+
+        expect(rows).toEqual([
+            { id: sub.id, name: "Market", categoryId: mine.id },
+        ]);
+    });
+});
+
 describe("PrismaCategoryRepository.getBySlug (integration)", () => {
     it("returns category metadata by slug for the owning user", async () => {
         const user = await seedUser();

@@ -23,11 +23,12 @@ export type CreateExpenseResult = ActionResult<
 >;
 
 /**
- * Create an expense for the signed-in user (slice 1.4).
+ * Create an expense for the signed-in user.
  *
- * Orchestration only: validate → authenticate → check the subcategory FK →
- * persist → map failures. The money math (`computeActualExpenditure`), the
- * CDMX→UTC date, and the DB writes each live in their own unit.
+ * Orchestration only: validate → authenticate → check the category and
+ * subcategory belong to the user → persist → map failures. The money math
+ * (`computeActualExpenditure`), the CDMX→UTC date, and the DB writes each live
+ * in their own unit.
  *
  * `actualExpenditure` is computed server-side and stored, never trusted from the
  * client (spec 0001 §3). `paidBy` is persisted as-is — netting lives in the
@@ -64,6 +65,14 @@ export async function createExpense(
     try {
         // The slug is resolved from the DB, never taken from the client (spec 0007 §3.3).
         const categorySlug = await repo.getCategorySlug(userId, v.categoryId);
+        if (categorySlug === null) {
+            return {
+                ok: false,
+                code: "validation",
+                message: "Invalid expense",
+                fieldErrors: { categoryId: ["Category not found"] },
+            };
+        }
         const funding = expenseFundingSchema.safeParse({
             fundedFrom: v.fundedFrom,
             categorySlug,
@@ -77,11 +86,12 @@ export async function createExpense(
             };
         }
 
-        // A subcategory must belong to the chosen category — both FKs are valid
-        // individually, so without this check a mismatched pair would persist as
-        // silently-wrong data. A missing subcategory returns null and fails too.
+        // Both FKs are valid individually, so without this check a mismatched pair
+        // would persist as silently-wrong data. A missing or foreign subcategory
+        // resolves to null and fails too.
         if (v.subcategoryId) {
             const categoryId = await repo.getSubcategoryCategoryId(
+                userId,
                 v.subcategoryId,
             );
             if (categoryId !== v.categoryId) {
