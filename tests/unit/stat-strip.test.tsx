@@ -19,6 +19,7 @@ const groceries = funded({
     isPartnerPayment: false,
     category: { slug: "groceries" },
     fundedFrom: "income",
+    countedInBudget: true,
 });
 
 describe("StatStrip", () => {
@@ -62,6 +63,7 @@ describe("StatStrip", () => {
                         isPartnerPayment: false,
                         category: { slug: "shopping" },
                         fundedFrom: "savings",
+                        countedInBudget: false,
                         description: "Desk chair",
                     }),
                     funded({
@@ -71,6 +73,7 @@ describe("StatStrip", () => {
                         isPartnerPayment: false,
                         category: { slug: "health" },
                         fundedFrom: "reimbursed",
+                        countedInBudget: false,
                         description: "Dentist",
                     }),
                 ]}

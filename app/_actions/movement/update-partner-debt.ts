@@ -7,7 +7,7 @@ import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { isPartnerDebt } from "@/lib/domain/movement";
-import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
+import { frozenMovementRefusal } from "@/lib/domain/frozen-row";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
 import {
@@ -96,16 +96,9 @@ export async function updatePartnerDebt(
 
         // A debt carries no marker column — the DB CHECK allows `closedAt` only on a
         // transfer — so the repository where-clause never blocked it.
-        if (
-            existing.cycleClosedAt &&
-            movementMovesSettlementBalance(existing.type)
-        ) {
-            return {
-                ok: false,
-                code: "cycle_closed",
-                message:
-                    "This debt counts in a settlement you already closed, so it can't be edited.",
-            };
+        const refusal = frozenMovementRefusal(existing, "edit");
+        if (refusal) {
+            return { ok: false, code: "cycle_closed", message: refusal };
         }
 
         const count = await repo.updateForUser(id, userId, {

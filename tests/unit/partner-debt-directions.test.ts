@@ -28,6 +28,7 @@ describe("debts in both directions", () => {
                     card: null,
                     note: null,
                     fundedFrom,
+                    countedInBudget: fundedFrom === "income",
                     closedAt: null,
                     cycleClosedAt: null,
                 }),

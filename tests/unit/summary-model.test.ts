@@ -23,6 +23,7 @@ const groceries: FeedTotalExpense = {
     isPartnerPayment: false,
     category: { slug: "groceries" },
     fundedFrom: "income",
+    countedInBudget: true,
 };
 
 describe("summaryLines", () => {
@@ -63,12 +64,14 @@ describe("summaryLines", () => {
                     type: "gf_paid",
                     amount: 700,
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
                 {
                     id: "m2",
                     type: "gf_paid",
                     amount: 250,
                     fundedFrom: "savings",
+                    countedInBudget: false,
                 },
             ],
         );
@@ -88,8 +91,23 @@ describe("summaryLines", () => {
 describe("otherMoneyThatLeft", () => {
     it("adds the legacy transfers that left the same pot", () => {
         const totals = computeFeedTotals(
-            [{ ...groceries, id: "s1", fundedFrom: "savings" }],
-            [{ id: "m1", type: "gf_paid", amount: 250, fundedFrom: "savings" }],
+            [
+                {
+                    ...groceries,
+                    id: "s1",
+                    fundedFrom: "savings",
+                    countedInBudget: false,
+                },
+            ],
+            [
+                {
+                    id: "m1",
+                    type: "gf_paid",
+                    amount: 250,
+                    fundedFrom: "savings",
+                    countedInBudget: false,
+                },
+            ],
         );
 
         // 680 of savings-funded consumption + 250 that reached her from savings.
@@ -197,7 +215,12 @@ describe("the money tones stay tellable apart", () => {
         const everything = computeFeedTotals(
             [
                 groceries,
-                { ...groceries, id: "s1", fundedFrom: "savings" },
+                {
+                    ...groceries,
+                    id: "s1",
+                    fundedFrom: "savings",
+                    countedInBudget: false,
+                },
                 { ...groceries, id: "sv", category: { slug: "savings" } },
             ],
             [
@@ -206,18 +229,21 @@ describe("the money tones stay tellable apart", () => {
                     type: "gf_paid",
                     amount: 700,
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
                 {
                     id: "m2",
                     type: "gf_paid",
                     amount: 250,
                     fundedFrom: "savings",
+                    countedInBudget: false,
                 },
                 {
                     id: "m3",
                     type: "gf_received",
                     amount: 500,
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
             ],
         );
@@ -256,7 +282,15 @@ describe("closingTotal", () => {
     it("is the total once something adds to it", () => {
         const totals = computeFeedTotals(
             [groceries],
-            [{ id: "m1", type: "gf_paid", amount: 700, fundedFrom: "income" }],
+            [
+                {
+                    id: "m1",
+                    type: "gf_paid",
+                    amount: 700,
+                    fundedFrom: "income",
+                    countedInBudget: true,
+                },
+            ],
         );
         expect(closingTotal(totals)).toBe(1380);
     });

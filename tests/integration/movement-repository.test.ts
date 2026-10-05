@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { db } from "@/lib/db";
+import { computeFeedTotals, computeSavingsSpend } from "@/lib/domain/movement";
 import {
     PrismaMovementRepository,
     type MovementWriteData,
@@ -145,5 +146,38 @@ describe("PrismaMovementRepository (integration)", () => {
                 fundedFrom: "income",
             });
         });
+    });
+});
+
+describe("an out-of-band funding value on a movement (integration)", () => {
+    it("flags it from the raw column and keeps it out of the income figures", async () => {
+        const user = await seedUser();
+        await repo.insert(user.id, write({ amount: 700 }));
+        await repo.insert(
+            user.id,
+            write({ amount: 300, fundedFrom: "savings" }),
+        );
+        // Not a value the app writes: only a raw database edit puts it here.
+        await db.movement.create({
+            data: {
+                userId: user.id,
+                ...write({ amount: 400 }),
+                fundedFrom: "cash-back",
+            },
+        });
+
+        const rows = await repo.getForMonth(user.id, "2026-07");
+        const byAmount = new Map(rows.map((r) => [r.amount, r]));
+        expect(byAmount.get(700)!.countedInBudget).toBe(true);
+        expect(byAmount.get(300)!.countedInBudget).toBe(false);
+        const outOfBand = byAmount.get(400)!;
+        expect(outOfBand.fundedFrom).toBe("income");
+        expect(outOfBand.countedInBudget).toBe(false);
+
+        const totals = computeFeedTotals([], rows);
+        expect(totals.paidToPartner.of.fromIncome.amount).toBe(700);
+        expect(totals.paidToPartner.of.notFromIncome.amount).toBe(300 + 400);
+        expect(totals.total).toBe(700);
+        expect(computeSavingsSpend([], rows).amount).toBe(300 + 400);
     });
 });

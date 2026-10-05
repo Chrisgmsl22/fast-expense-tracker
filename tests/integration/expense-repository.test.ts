@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest";
 
 import { db } from "@/lib/db";
+import { computeFeedTotals } from "@/lib/domain/movement";
+import { PrismaDashboardRepository } from "@/lib/repositories/dashboard.repository";
 import { PrismaExpenseRepository } from "@/lib/repositories/expense.repository";
 
 const repo = new PrismaExpenseRepository(db);
+const dashboardRepo = new PrismaDashboardRepository(db);
 
 // Minimal fixtures for an expense row. Truncation (tests/integration/truncate.ts)
 // gives each test a clean database, so ids/emails don't need to be unique across
@@ -25,6 +28,7 @@ async function seedExpense(opts: {
     description: string;
     amount?: number;
     actualExpenditure?: number;
+    fundedFrom?: string;
 }) {
     return db.expense.create({
         data: {
@@ -34,6 +38,7 @@ async function seedExpense(opts: {
             description: opts.description,
             amount: opts.amount ?? 100,
             actualExpenditure: opts.actualExpenditure ?? opts.amount ?? 100,
+            ...(opts.fundedFrom ? { fundedFrom: opts.fundedFrom } : {}),
         },
     });
 }
@@ -147,5 +152,65 @@ describe("PrismaExpenseRepository.getForMonth (integration)", () => {
         const [row] = await repo.getForMonth(user.id, "2026-05");
         expect(row?.amount).toBe(1000);
         expect(row?.actualExpenditure).toBe(680);
+    });
+});
+
+describe("an out-of-band funding value read through getForMonth (integration)", () => {
+    async function seedMonth() {
+        const user = await seedUser();
+        const cat = await seedCategory(user.id, "shopping");
+        const rows: [string, number, string | undefined][] = [
+            ["income row", 1000, undefined],
+            ["savings row", 300, "savings"],
+            // Not a value the app writes: only a raw database edit puts it here.
+            ["cash-back row", 450, "cash-back"],
+        ];
+        for (const [description, amount, fundedFrom] of rows) {
+            await seedExpense({
+                userId: user.id,
+                categoryId: cat.id,
+                date: "2026-05-10T12:00:00Z",
+                description,
+                amount,
+                fundedFrom,
+            });
+        }
+        return user;
+    }
+
+    it("flags the budget verdict from the raw column, not the narrowed value", async () => {
+        const user = await seedMonth();
+
+        const rows = await repo.getForMonth(user.id, "2026-05");
+        const byDescription = new Map(rows.map((r) => [r.description, r]));
+
+        expect(byDescription.get("income row")!.countedInBudget).toBe(true);
+        expect(byDescription.get("savings row")!.countedInBudget).toBe(false);
+        const outOfBand = byDescription.get("cash-back row")!;
+        expect(outOfBand.fundedFrom).toBe("income");
+        expect(outOfBand.countedInBudget).toBe(false);
+    });
+
+    it("gives the feed totals the same budget figure the dashboard's SQL reads", async () => {
+        const user = await seedMonth();
+
+        const totals = computeFeedTotals(
+            await repo.getForMonth(user.id, "2026-05"),
+        );
+        const categorySpends = await dashboardRepo.getCategorySpends(
+            user.id,
+            "2026-05",
+        );
+        const nonIncome = await dashboardRepo.getNonIncomeFundedTotal(
+            user.id,
+            "2026-05",
+        );
+
+        expect(totals.whatIReallySpent.amount).toBe(1000);
+        expect(totals.whatIReallySpent.amount).toBe(
+            categorySpends.reduce((sum, c) => sum + c.spent, 0),
+        );
+        expect(totals.notFromIncome.amount).toBe(300 + 450);
+        expect(totals.notFromIncome.amount).toBe(nonIncome);
     });
 });

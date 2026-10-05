@@ -68,6 +68,8 @@ export type FeedTotalExpense = {
     category: { slug: string };
     /** Which month's money funded it (spec 0007 §3.1). */
     fundedFrom: FundingSource;
+    /** `isBudgetFunded` on the RAW column: in or out of the budget. `fundedFrom` only names which half. */
+    countedInBudget: boolean;
 };
 
 /**
@@ -96,15 +98,17 @@ export type NonIncomeSource = "fromSavings" | "reimbursed";
 
 /** Exhaustive: a new funding source is a type error here until it is sorted. */
 export function nonIncomeSourceOf(
-    fundedFrom: FundingSource,
+    e: Pick<FeedTotalExpense, "fundedFrom" | "countedInBudget">,
 ): NonIncomeSource | null {
-    switch (fundedFrom) {
-        case BUDGET_FUNDING_SOURCE:
-            return null;
-        case "savings":
-            return "fromSavings";
+    if (e.countedInBudget) return null;
+    switch (e.fundedFrom) {
         case "reimbursed":
             return "reimbursed";
+        case "savings":
+        // An unknown stored value narrowed to `income`. It is still a cost, so it
+        // reads as savings, never as a net-$0 refund that would hide the spend.
+        case BUDGET_FUNDING_SOURCE:
+            return "fromSavings";
     }
 }
 
@@ -120,7 +124,7 @@ export function nonIncomeFundedRows<E extends FeedTotalExpense>(
         reimbursed: [],
     };
     for (const e of expenses) {
-        const source = nonIncomeSourceOf(e.fundedFrom);
+        const source = nonIncomeSourceOf(e);
         if (source) rows[source].push(e);
     }
     return rows;
@@ -193,7 +197,22 @@ export type FeedTotalMovement = {
     type: MovementType;
     amount: number;
     fundedFrom: TransferFundingSource;
+    /** Same rule as `FeedTotalExpense.countedInBudget`, on the movement's raw column. */
+    countedInBudget: boolean;
 };
+
+/** Exhaustive: a new transfer funding source is a type error here until it is sorted. */
+export function transferSourceOf(
+    m: Pick<FeedTotalMovement, "fundedFrom" | "countedInBudget">,
+): "fromIncome" | "fromSavings" {
+    if (m.countedInBudget) return "fromIncome";
+    switch (m.fundedFrom) {
+        case "savings":
+        // An unknown stored value narrowed to `income`: read like an out-of-band expense.
+        case BUDGET_FUNDING_SOURCE:
+            return "fromSavings";
+    }
+}
 
 /**
  * Footer totals for a month. "What I really spent" carries the dashboard's
@@ -230,7 +249,7 @@ export function computeFeedTotals(
         // as an expense whichever money funded it.
         if (e.isPartnerPayment) paymentExpenseIds.add(e.id);
 
-        const source = nonIncomeSourceOf(e.fundedFrom);
+        const source = nonIncomeSourceOf(e);
         if (source) {
             // Another month's money (or a refund). Kept out of BOTH budget
             // figures — including `setAside`, so moving old savings into the
@@ -260,8 +279,7 @@ export function computeFeedTotals(
         }
         if (m.type !== "gf_paid") continue;
         if (paymentExpenseIds.has(m.id)) continue;
-        if (m.fundedFrom === BUDGET_FUNDING_SOURCE)
-            legacyFromIncome += m.amount;
+        if (transferSourceOf(m) === "fromIncome") legacyFromIncome += m.amount;
         else legacyNotFromIncome += m.amount;
     }
 
@@ -342,13 +360,13 @@ export function computeSavingsSpend(
     const totals = computeFeedTotals(
         expenses.filter(
             (expense) =>
-                expense.fundedFrom === "savings" &&
+                nonIncomeSourceOf(expense) === "fromSavings" &&
                 (expense.isPartnerPayment ||
                     expense.category.slug !== SAVINGS_SLUG),
         ),
         movements.filter(
             (movement) =>
-                movement.fundedFrom === "savings" &&
+                transferSourceOf(movement) === "fromSavings" &&
                 !paymentExpenseIds.has(movement.id),
         ),
     );

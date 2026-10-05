@@ -26,6 +26,7 @@ const expenses = [
         isPartnerPayment: false,
         category: { slug: "groceries" },
         fundedFrom: "income",
+        countedInBudget: true,
         description: "Market run",
     }),
     funded({
@@ -35,6 +36,7 @@ const expenses = [
         isPartnerPayment: false,
         category: { slug: "shopping" },
         fundedFrom: "savings",
+        countedInBudget: false,
         description: "New laptop",
     }),
     funded({
@@ -44,6 +46,7 @@ const expenses = [
         isPartnerPayment: true,
         category: { slug: "combined-expenses" },
         fundedFrom: "savings",
+        countedInBudget: false,
         description: "Paid Avery",
     }),
     funded({
@@ -53,11 +56,18 @@ const expenses = [
         isPartnerPayment: false,
         category: { slug: "health" },
         fundedFrom: "reimbursed",
+        countedInBudget: false,
         description: "Clinic visit",
     }),
 ];
 const movements: FeedTotalMovement[] = [
-    { id: "m1", type: "gf_paid", amount: 1000, fundedFrom: "savings" },
+    {
+        id: "m1",
+        type: "gf_paid",
+        amount: 1000,
+        fundedFrom: "savings",
+        countedInBudget: false,
+    },
 ];
 const totals = computeFeedTotals(expenses, movements);
 const fundingRows = fundingRowsOf(expenses);

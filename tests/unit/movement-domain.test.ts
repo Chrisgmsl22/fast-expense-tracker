@@ -34,6 +34,7 @@ describe("computeFeedTotals", () => {
         isPartnerPayment: false,
         category: { slug: "groceries" },
         fundedFrom: "income" as const,
+        countedInBudget: true,
     };
     const savings = {
         id: "e2",
@@ -42,11 +43,18 @@ describe("computeFeedTotals", () => {
         isPartnerPayment: false,
         category: { slug: "savings" },
         fundedFrom: "income" as const,
+        countedInBudget: true,
     };
 
     /** A LEGACY `gf_paid` movement as the footer totals read it. */
     const transfer = (amount: number, fundedFrom: "income" | "savings") => [
-        { id: "m1", type: "gf_paid" as const, amount, fundedFrom },
+        {
+            id: "m1",
+            type: "gf_paid" as const,
+            amount,
+            fundedFrom,
+            countedInBudget: fundedFrom === "income",
+        },
     ];
 
     it("splits consumption from the savings transfer", () => {
@@ -63,6 +71,7 @@ describe("computeFeedTotals", () => {
             amount: 400,
             actualExpenditure: 400,
             fundedFrom: "savings" as const,
+            countedInBudget: false,
         };
         const t = computeFeedTotals([groceries, fromSavings]);
 
@@ -76,7 +85,11 @@ describe("computeFeedTotals", () => {
     it("keeps a savings-CATEGORY row out of the charge slices", () => {
         // Nothing was charged for it, so it can only distort the donut.
         const t = computeFeedTotals([
-            { ...savings, fundedFrom: "savings" as const },
+            {
+                ...savings,
+                fundedFrom: "savings" as const,
+                countedInBudget: false,
+            },
         ]);
 
         expect(t.charged.amount).toBe(0);
@@ -93,6 +106,7 @@ describe("computeFeedTotals", () => {
             isPartnerPayment: true,
             category: { slug: "combined-expenses" },
             fundedFrom: "income" as const,
+            countedInBudget: true,
         };
         const t = computeFeedTotals([groceries, payment]);
 
@@ -138,6 +152,7 @@ describe("computeFeedTotals", () => {
                     type: "gf_received",
                     amount: 3200,
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
             ],
         );
@@ -175,12 +190,14 @@ describe("computeFeedTotals", () => {
                         type: "gf_paid",
                         amount: 800,
                         fundedFrom: "savings",
+                        countedInBudget: false,
                     },
                     {
                         id: "m2",
                         type: "gf_paid",
                         amount: 200,
                         fundedFrom: "income",
+                        countedInBudget: true,
                     },
                 ],
             );
@@ -199,6 +216,7 @@ describe("computeFeedTotals", () => {
                 isPartnerPayment: true,
                 category: { slug: "combined-expenses" },
                 fundedFrom: "savings" as const,
+                countedInBudget: false,
             };
             const t = computeFeedTotals([converted], transfer(800, "savings"));
             expect(
@@ -217,6 +235,7 @@ describe("computeFeedTotals", () => {
             isPartnerPayment: true,
             category: { slug: "combined-expenses" },
             fundedFrom: "savings" as const,
+            countedInBudget: false,
         };
 
         it("is consumption the budget skips, not a cash transfer", () => {
@@ -311,6 +330,7 @@ describe("computeFeedTotals", () => {
                 isPartnerPayment: true,
                 category: { slug: "combined-expenses" },
                 fundedFrom: "income" as const,
+                countedInBudget: true,
             },
             {
                 id: "p2",
@@ -319,6 +339,7 @@ describe("computeFeedTotals", () => {
                 isPartnerPayment: true,
                 category: { slug: "combined-expenses" },
                 fundedFrom: "savings" as const,
+                countedInBudget: false,
             },
             {
                 id: "s3",
@@ -327,6 +348,7 @@ describe("computeFeedTotals", () => {
                 isPartnerPayment: false,
                 category: { slug: "shopping" },
                 fundedFrom: "savings" as const,
+                countedInBudget: false,
             },
         ];
         const movements = [
@@ -335,18 +357,21 @@ describe("computeFeedTotals", () => {
                 type: "gf_paid" as const,
                 amount: 700,
                 fundedFrom: "income" as const,
+                countedInBudget: true,
             },
             {
                 id: "m2",
                 type: "gf_paid" as const,
                 amount: 250,
                 fundedFrom: "savings" as const,
+                countedInBudget: false,
             },
             {
                 id: "m3",
                 type: "gf_received" as const,
                 amount: 400,
                 fundedFrom: "income" as const,
+                countedInBudget: true,
             },
         ];
 
@@ -411,12 +436,14 @@ describe("computeFeedTotals", () => {
                     type: "card_payment",
                     amount: 5000,
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
                 {
                     id: "m3",
                     type: "gf_fronted",
                     amount: 400,
                     fundedFrom: "income",
+                    countedInBudget: true,
                 },
             ],
         );

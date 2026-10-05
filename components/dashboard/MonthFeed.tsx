@@ -1,6 +1,6 @@
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, nonIncomeFundedRows } from "@/lib/domain/movement";
-import { FundingBadge } from "@/components/expense/FundingBadge";
+import { RowFundingBadge } from "@/components/expense/FundingBadge";
 import { SummaryRail } from "@/components/money/SummaryRail";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
@@ -141,9 +141,7 @@ function ExpenseRow({
                     <span className="truncate text-sm font-medium">
                         {e.description}
                     </span>
-                    {e.fundedFrom === "income" ? null : (
-                        <FundingBadge source={e.fundedFrom} />
-                    )}
+                    <RowFundingBadge row={e} />
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                     {formatExpenseDate(e.date)}
@@ -205,9 +203,7 @@ function MovementRow({
                     <span className="truncate text-sm font-medium">
                         {title}
                     </span>
-                    {m.fundedFrom === "income" ? null : (
-                        <FundingBadge source={m.fundedFrom} />
-                    )}
+                    <RowFundingBadge row={m} />
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {formatExpenseDate(m.date)}

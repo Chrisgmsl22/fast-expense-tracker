@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
-import { movementMovesSettlementBalance } from "@/lib/domain/settlement";
+import { frozenMovementRefusal } from "@/lib/domain/frozen-row";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
 import {
@@ -84,17 +84,9 @@ export async function updateTransfer(
 
         // A transfer a closed cycle COUNTED is frozen, not only the one carrying its
         // marker: editing either rewrites what a filed settlement settled.
-        if (
-            existing.cycleClosedAt &&
-            movementMovesSettlementBalance(existing.type)
-        ) {
-            return {
-                ok: false,
-                code: "cycle_closed",
-                message: existing.closedAt
-                    ? "This transfer closed a settlement and can't be edited."
-                    : "This transfer counts in a settlement you already closed, so it can't be edited.",
-            };
+        const refusal = frozenMovementRefusal(existing, "edit");
+        if (refusal) {
+            return { ok: false, code: "cycle_closed", message: refusal };
         }
 
         const count = await repo.updateForUser(id, userId, {

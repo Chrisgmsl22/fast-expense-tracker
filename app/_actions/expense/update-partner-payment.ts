@@ -6,10 +6,8 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
-import {
-    movesSettlementBalance,
-    partnerPaymentDescription,
-} from "@/lib/domain/expense";
+import { partnerPaymentDescription } from "@/lib/domain/expense";
+import { frozenExpenseRefusal } from "@/lib/domain/frozen-row";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import { expenseRepository, settingsRepository } from "@/lib/repositories";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
@@ -88,15 +86,11 @@ export async function updatePartnerPayment(
                 message: "Payment not found.",
             };
         }
-        // Asked through the shared predicate even though a payment always counts, so
-        // all three write paths freeze on one definition of "the cycle counted this".
-        if (existing.cycleClosedAt && movesSettlementBalance(existing)) {
-            return {
-                ok: false,
-                code: "cycle_closed",
-                message:
-                    "This payment counts in a settlement you already closed, so it can't be edited.",
-            };
+        // Asked through the shared helper even though a payment always counts, so
+        // every path freezes on one definition of "the cycle counted this".
+        const refusal = frozenExpenseRefusal(existing, "edit");
+        if (refusal) {
+            return { ok: false, code: "cycle_closed", message: refusal };
         }
 
         const { partnerName } = await settingsRepo.getSettings(userId);
