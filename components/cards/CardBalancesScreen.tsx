@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { CreditCard } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { getCardHistory } from "@/app/_actions/card/get-history";
-import { formatMonthName, formatMxn } from "@/lib/format";
+import { formatMxn } from "@/lib/format";
 import { MonthPicker } from "@/components/expense/MonthPicker";
 import {
     namesInState,
@@ -18,7 +18,6 @@ import { CardBalanceTile } from "./CardBalanceTile";
 import { CardBalanceRow } from "./CardBalanceRow";
 import { CardBalanceDrawer, type CardHistoryState } from "./CardBalanceDrawer";
 import { CardBalanceNotice } from "./CardBalanceNotice";
-import { FutureMonthNotice } from "./FutureMonthNotice";
 import { LogCardPaymentDialog } from "./LogCardPaymentDialog";
 
 type Props = {
@@ -30,6 +29,31 @@ type Props = {
 };
 
 type TotalsProps = { summary: CardBalancesView; monthName: string };
+
+const isShown = (el: HTMLElement) =>
+    el.isConnected && (el.checkVisibility?.() ?? true);
+
+/**
+ * Where focus returns when the payment dialog closes. The tile grid and the
+ * phone rows swap at 640px, so if the viewport crosses it while the dialog is
+ * open, the control that opened it is hidden and focus would drop to `<body>`.
+ * Then the same card's control that is on screen takes it.
+ */
+function shownTrigger(
+    opener: HTMLElement | null,
+    cardId: string | undefined,
+): HTMLElement | null {
+    if (opener && isShown(opener)) return opener;
+    if (!cardId) return null;
+    const triggers = document.querySelectorAll<HTMLElement>(
+        "[data-card-trigger]",
+    );
+    return (
+        [...triggers].find(
+            (el) => el.dataset.cardTrigger === cardId && isShown(el),
+        ) ?? null
+    );
+}
 
 function EmptyState() {
     return (
@@ -215,34 +239,6 @@ export function CardBalancesScreen({
         router.refresh();
     }
 
-    const picker = (
-        <MonthPicker
-            month={month}
-            remember
-            // A month that has not happened stays in the URL and out of the
-            // shared month cookie, so stepping forward here never parks
-            // /expenses, /income, /dashboard or /settlement in the future.
-            rememberFuture={false}
-            currentMonth={currentMonth}
-        />
-    );
-
-    // A future month has no rows, so every card would carry the previous
-    // month's closing balance forward and print it as a real figure. It holds
-    // only if nothing is charged and nothing is paid between now and then.
-    // Refuse the figures; the picker keeps the way back on screen.
-    if (month > currentMonth) {
-        return (
-            <div className="flex flex-col gap-3.5">
-                {picker}
-                <FutureMonthNotice
-                    monthName={monthName}
-                    currentMonthName={formatMonthName(currentMonth)}
-                />
-            </div>
-        );
-    }
-
     if (cards.length === 0) {
         return (
             <div className="flex flex-col gap-3.5">
@@ -254,7 +250,7 @@ export function CardBalancesScreen({
 
     return (
         <div className="flex flex-col gap-3.5">
-            {picker}
+            <MonthPicker month={month} remember currentMonth={currentMonth} />
             <CardBalanceNotice />
             <Totals summary={summary} monthName={monthName} />
             <CompactTotals summary={summary} monthName={monthName} />
@@ -297,9 +293,7 @@ export function CardBalancesScreen({
                 onClose={() => setPaymentOpen(false)}
                 onSuccess={onPaid}
                 returnFocus={() =>
-                    paymentTrigger.current?.isConnected
-                        ? paymentTrigger.current
-                        : null
+                    shownTrigger(paymentTrigger.current, paymentCard?.id)
                 }
             />
         </div>

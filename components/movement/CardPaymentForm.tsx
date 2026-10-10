@@ -20,6 +20,7 @@ import {
 } from "@/app/_actions/movement/update-card-payment";
 import type { FieldErrors } from "@/lib/actions/result";
 import { balanceAfterPayment, payFullAmount } from "@/lib/domain/card-balance";
+import { getTodayCdmx } from "@/lib/dates";
 import { formatBalance, formatMonthLabel, formatMxn } from "@/lib/format";
 import type { CardPaymentInput } from "@/lib/schemas/movement";
 import type { CardOption } from "@/components/expense/ExpenseForm";
@@ -42,7 +43,7 @@ type Props = {
     defaultCardId?: string;
     /** Current balance per card id: enables "Pay full" and the before → after line. */
     balances?: Readonly<Record<string, number>>;
-    /** "2026-09": the month on screen, so a payment dated outside it says so. */
+    /** "2026-09": the month on screen, so a payment dated after it says so. */
     viewingMonth?: string;
     onSuccess?: () => void;
     onCancel?: () => void;
@@ -81,10 +82,12 @@ export function CardPaymentForm({
         balance === undefined
             ? null
             : balanceAfterPayment(balance, Number(amount || 0));
-    // Saving refreshes the month on screen, so a payment dated elsewhere looks
-    // like nothing happened. Name where it will land instead.
-    const outsideMonthNote =
-        viewingMonth && date.length === 10 && date.slice(0, 7) !== viewingMonth
+    // The balance on screen is the month's closing balance, and its opening
+    // carries every earlier row. So a payment dated in this month or before it
+    // lowers that balance; only one dated in a later month leaves it unchanged.
+    // Name where that one lands, since saving would look like nothing happened.
+    const laterMonthNote =
+        viewingMonth && date.length === 10 && date.slice(0, 7) > viewingMonth
             ? `Lands in ${formatMonthLabel(date.slice(0, 7))}. You are viewing ${formatMonthLabel(viewingMonth)}, so this balance will not change.`
             : null;
 
@@ -149,12 +152,13 @@ export function CardPaymentForm({
                         id="cp-date"
                         name="date"
                         type="date"
+                        max={getTodayCdmx()}
                         required
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
                         className="mt-1.5"
                         aria-describedby={
-                            outsideMonthNote ? "cp-date-note" : undefined
+                            laterMonthNote ? "cp-date-note" : undefined
                         }
                     />
                     {fieldError("date")}
@@ -165,10 +169,10 @@ export function CardPaymentForm({
                         role="status"
                         className={cn(
                             "text-xs text-muted-foreground",
-                            outsideMonthNote && "mt-1.5",
+                            laterMonthNote && "mt-1.5",
                         )}
                     >
-                        {outsideMonthNote}
+                        {laterMonthNote}
                     </p>
                 </div>
                 <div className="sm:col-span-2">
@@ -273,11 +277,11 @@ export function CardPaymentForm({
             </div>
 
             {/* A balance the payment will not reach has no "after": a date in
-                another month withholds the preview, as a past month does. */}
+                a later month withholds the preview. */}
             {selectedCard &&
             balance !== undefined &&
             balanceAfter !== null &&
-            !outsideMonthNote ? (
+            !laterMonthNote ? (
                 <div className="space-y-1.5">
                     <p className="flex items-center gap-2 rounded-lg bg-payment-tint px-3 py-2.5 text-sm tabular-nums">
                         <span>{selectedCard.name} balance</span>

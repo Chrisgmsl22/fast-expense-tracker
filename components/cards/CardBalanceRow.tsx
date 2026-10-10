@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBalance, formatMxnCompactAbs } from "@/lib/format";
@@ -18,11 +19,20 @@ type Props = {
 /** The mobile card row: one tap opens the detail drawer. */
 export function CardBalanceRow({ card, onOpen }: Props) {
     const head = headlineState(card);
+    const id = useId();
+    const typeId = `${id}-type`;
+    const breakdownId = `${id}-breakdown`;
     return (
         <button
             type="button"
             aria-label={`${card.name}, ${formatBalance(card.balance)}, ${stateLabel(head)}`}
+            // The label replaces the row's content, so the line beneath it is
+            // handed to assistive tech as the description.
+            aria-describedby={
+                head === "untouched" ? typeId : `${typeId} ${breakdownId}`
+            }
             onClick={(e) => onOpen(card, e.currentTarget)}
+            data-card-trigger={card.id}
             className="flex min-h-[88px] w-full flex-col gap-2 rounded-xl border bg-card px-3.5 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
             <span className="flex w-full items-center gap-2.5">
@@ -48,11 +58,11 @@ export function CardBalanceRow({ card, onOpen }: Props) {
                 />
             </span>
             <span className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
-                <span>{cardTypeLabel(card.type)}</span>
+                <span id={typeId}>{cardTypeLabel(card.type)}</span>
                 {head === "untouched" ? null : (
                     <>
                         <span aria-hidden>·</span>
-                        <span>
+                        <span id={breakdownId}>
                             {card.opening < 0 ? "−" : ""}
                             {formatMxnCompactAbs(card.opening)} +{" "}
                             {formatMxnCompactAbs(card.charged)} −{" "}

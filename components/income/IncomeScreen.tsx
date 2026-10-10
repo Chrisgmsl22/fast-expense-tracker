@@ -17,6 +17,7 @@ import {
 import { addVariableIncome } from "@/app/_actions/income/add-variable";
 import { deleteVariableIncome } from "@/app/_actions/income/delete-variable";
 import { setFixedIncome } from "@/app/_actions/income/set-fixed";
+import { getTodayCdmx } from "@/lib/dates";
 import { formatExpenseDate, formatMonthLabel, formatMxn } from "@/lib/format";
 import type { VariableIncomeItem } from "@/lib/repositories/income.repository";
 
@@ -544,6 +545,7 @@ function AddIncomeForm({
                         id="income-date"
                         name="date"
                         type="date"
+                        max={getTodayCdmx()}
                         required
                         value={date}
                         onChange={(e) => setDate(e.target.value)}

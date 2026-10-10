@@ -29,7 +29,7 @@ import {
     togglesFromFundingSource,
     type FundingSource,
 } from "@/lib/domain/funding";
-import { toDateInputValue } from "@/lib/dates";
+import { getTodayCdmx, toDateInputValue } from "@/lib/dates";
 import { formatMxn } from "@/lib/format";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { ExpenseInput } from "@/lib/schemas/expense";
@@ -280,6 +280,7 @@ export function ExpenseForm({
                         id="date"
                         name="date"
                         type="date"
+                        max={getTodayCdmx()}
                         required
                         value={date}
                         onChange={(e) => setDate(e.target.value)}

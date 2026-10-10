@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import {
+    describe,
+    it,
+    expect,
+    vi,
+    afterEach,
+    beforeEach,
+    type Mock,
+} from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 const refreshMock = vi.fn();
@@ -316,5 +324,23 @@ describe("IncomeScreen", () => {
             }),
         );
         await waitFor(() => expect(refreshMock).toHaveBeenCalled());
+    });
+});
+
+describe("IncomeScreen date cap", () => {
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        // 03:00Z on 15 October: still 14 October in CDMX.
+        vi.setSystemTime(new Date("2026-10-15T03:00:00Z"));
+    });
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("caps the add-income date input at today in CDMX", async () => {
+        renderScreen({ month: "2026-10", currentMonth: "2026-10" });
+        fireEvent.click(screen.getByRole("button", { name: /add income/i }));
+        const date = await screen.findByLabelText("Date");
+        expect(date.getAttribute("max")).toBe("2026-10-14");
     });
 });

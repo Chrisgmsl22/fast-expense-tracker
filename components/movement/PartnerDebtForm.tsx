@@ -13,6 +13,7 @@ import {
     type UpdatePartnerDebtResult,
 } from "@/app/_actions/movement/update-partner-debt";
 import type { FieldErrors } from "@/lib/actions/result";
+import { getTodayCdmx } from "@/lib/dates";
 import type { PartnerDebtInput } from "@/lib/schemas/movement";
 import {
     partnerDebtLabel,
@@ -127,6 +128,7 @@ export function PartnerDebtForm({
                         id="debt-date"
                         name="date"
                         type="date"
+                        max={getTodayCdmx()}
                         required
                         value={date}
                         onChange={(e) => setDate(e.target.value)}

@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import {
+    describe,
+    it,
+    expect,
+    vi,
+    afterEach,
+    beforeEach,
+    type Mock,
+} from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("@/app/_actions/movement/add-card-payment", () => ({
@@ -139,30 +147,56 @@ describe("CardPaymentForm", () => {
         expect(screen.getByText("BBVA balance")).toBeDefined();
     });
 
-    it("withholds the before → after line when the date lands in another month", () => {
+    it("keeps the before → after line for a date in an earlier month, with no note", () => {
+        // The closing balance on screen opens with every earlier row, so a
+        // payment dated last month lowers it too.
         render(
             <CardPaymentForm
                 cards={cards}
                 defaultCardId="card2"
-                balances={{ card2: 4199 }}
+                balances={{ card2: 2750 }}
                 viewingMonth="2026-10"
             />,
         );
         const date = screen.getByLabelText("Date");
-
-        fireEvent.change(date, { target: { value: "2026-10-15" } });
-        expect(screen.getByText("BBVA balance")).toBeDefined();
+        fireEvent.change(screen.getByLabelText(/Amount/), {
+            target: { value: "600" },
+        });
 
         fireEvent.change(date, { target: { value: "2026-09-15" } });
+
+        const preview = screen.getByText("BBVA balance").parentElement!;
+        expect(preview.textContent).toContain("$2,750.00");
+        expect(preview.textContent).toContain("$2,150.00");
+        expect(screen.queryByText(/Lands in/)).toBeNull();
+        expect(date.getAttribute("aria-describedby")).toBeNull();
+    });
+
+    it("withholds the before → after line for a date in a later month, and says why", () => {
+        render(
+            <CardPaymentForm
+                cards={cards}
+                defaultCardId="card2"
+                balances={{ card2: 2750 }}
+                viewingMonth="2026-09"
+            />,
+        );
+        const date = screen.getByLabelText("Date");
+
+        fireEvent.change(date, { target: { value: "2026-09-20" } });
+        expect(screen.getByText("BBVA balance")).toBeDefined();
+
+        fireEvent.change(date, { target: { value: "2026-10-03" } });
         expect(
             screen.getByText(
-                "Lands in September 2026. You are viewing October 2026, so this balance will not change.",
+                "Lands in October 2026. You are viewing September 2026, so this balance will not change.",
             ),
         ).toBeDefined();
         expect(screen.queryByText("BBVA balance")).toBeNull();
 
-        fireEvent.change(date, { target: { value: "2026-10-16" } });
+        fireEvent.change(date, { target: { value: "2026-08-30" } });
         expect(screen.getByText("BBVA balance")).toBeDefined();
+        expect(screen.queryByText(/Lands in/)).toBeNull();
     });
 
     it("describes the date field with the cue, and only while it is shown", () => {
@@ -170,18 +204,18 @@ describe("CardPaymentForm", () => {
             <CardPaymentForm
                 cards={cards}
                 defaultCardId="card2"
-                viewingMonth="2026-10"
+                viewingMonth="2026-09"
             />,
         );
         const date = screen.getByLabelText("Date");
 
         expect(date.getAttribute("aria-describedby")).toBeNull();
 
-        fireEvent.change(date, { target: { value: "2026-09-15" } });
+        fireEvent.change(date, { target: { value: "2026-10-03" } });
 
         const describedBy = date.getAttribute("aria-describedby")!;
         const note = document.getElementById(describedBy)!;
-        expect(note.textContent).toContain("Lands in September 2026");
+        expect(note.textContent).toContain("Lands in October 2026");
         expect(note.getAttribute("role")).toBe("status");
     });
 
@@ -222,5 +256,23 @@ describe("CardPaymentForm", () => {
             ).toBeDefined(),
         );
         expect(onSuccess).not.toHaveBeenCalled();
+    });
+});
+
+describe("CardPaymentForm date cap", () => {
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        // 03:00Z on 15 October: still 14 October in CDMX.
+        vi.setSystemTime(new Date("2026-10-15T03:00:00Z"));
+    });
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("caps the date input at today in CDMX", () => {
+        render(<CardPaymentForm cards={cards} />);
+        expect(screen.getByLabelText("Date").getAttribute("max")).toBe(
+            "2026-10-14",
+        );
     });
 });

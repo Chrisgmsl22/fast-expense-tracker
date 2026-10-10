@@ -1,4 +1,12 @@
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import {
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+    type Mock,
+} from "vitest";
 import {
     fireEvent,
     render,
@@ -224,85 +232,30 @@ describe("CardBalancesScreen", () => {
     });
 });
 
-describe("CardBalancesScreen on a month that has not happened", () => {
-    const clearMonthCookie = () => {
+describe("CardBalancesScreen month switcher", () => {
+    beforeEach(() => {
         document.cookie = "fet_scoped_month=; path=/; max-age=0";
-    };
-
-    beforeEach(clearMonthCookie);
-
-    // November, looked at from September: no rows, so every balance shown would
-    // be September's closing carried forward and printed as a real figure.
-    const renderFuture = () => renderScreen(CARDS, "2026-09", "2026-11");
-
-    it("refuses every carried-forward figure and says why", () => {
-        renderFuture();
-
-        expect(screen.getByText("November has not happened yet")).toBeDefined();
-        expect(
-            screen.getByText(
-                "Nothing has been charged or paid in November, so there is no balance to show. Go back to September for your real card balances.",
-            ),
-        ).toBeDefined();
-
-        expect(screen.queryByRole("region", { name: "Totals" })).toBeNull();
-        expect(screen.queryByRole("region", { name: "Total owed" })).toBeNull();
-        expect(screen.queryAllByRole("article")).toHaveLength(0);
-        // September's closing total and BBVA's closing balance.
-        expect(screen.queryByText("$7,345.60")).toBeNull();
-        expect(screen.queryByText("$6,130.00")).toBeNull();
     });
 
-    it("keeps the way back on screen", () => {
-        renderFuture();
-
-        fireEvent.click(
-            screen.getByRole("button", {
-                name: "Take me back to the current month",
-            }),
-        );
-        expect(push).toHaveBeenCalledWith("/cards?month=2026-09");
-        // Going back repairs the shared month cookie too.
-        expect(document.cookie).toContain("fet_scoped_month=2026-09");
-    });
-
-    it("leaves the real figures alone on the current month", () => {
+    it("stops at the current month", () => {
         renderScreen();
 
-        expect(screen.queryByText(/has not happened yet/)).toBeNull();
-        expect(
-            within(screen.getByRole("region", { name: "Totals" })).getByText(
-                "$7,345.60",
-            ),
-        ).toBeDefined();
+        const next = screen.getByRole("button", {
+            name: /next month/i,
+        }) as HTMLButtonElement;
+        expect(next.disabled).toBe(true);
     });
 
-    it("leaves the real figures alone on a past month", () => {
+    it("steps forward from a past month", () => {
         // September, looked at from October.
         renderScreen(CARDS, "2026-10", "2026-09");
-
-        expect(screen.queryByText(/has not happened yet/)).toBeNull();
-        expect(
-            within(screen.getByRole("region", { name: "Totals" })).getByText(
-                "$7,345.60",
-            ),
-        ).toBeDefined();
-        expect(within(tile("BBVA")).getByText("$6,130.00")).toBeDefined();
-    });
-
-    it("steps forward in the URL without remembering the month for other pages", () => {
-        // The month cookie is shared with /dashboard, /expenses, /income and
-        // /settlement. A month that has not happened would leave them empty,
-        // which reads as "I spent nothing" rather than "this is the future".
-        renderScreen();
 
         fireEvent.click(screen.getByRole("button", { name: /next month/i }));
 
         expect(push).toHaveBeenCalledWith("/cards?month=2026-10");
-        expect(document.cookie).not.toContain("fet_scoped_month=2026-10");
     });
 
-    it("still remembers a month that has happened", () => {
+    it("remembers a past month for the other pages", () => {
         renderScreen();
 
         fireEvent.click(
@@ -637,6 +590,34 @@ describe("CardBalancesScreen on a phone", () => {
         );
     });
 
+    it("hands the breakdown beneath the label to assistive tech", () => {
+        renderScreen();
+        const row = screen.getByRole("button", {
+            name: "BBVA, $6,130.00, Owed",
+        });
+
+        // The label replaces the row's content, so the line beneath it has to
+        // be reachable as the description instead.
+        const description = (row.getAttribute("aria-describedby") ?? "")
+            .split(" ")
+            .map((id) => document.getElementById(id)?.textContent)
+            .join(" ");
+        expect(description).toBe("Credit $0.00 + $18.4k − $12.3k − $0.00");
+    });
+
+    it("describes an untouched row by its card type alone", () => {
+        renderScreen([
+            card({ id: "gold", name: "Amex Gold", charged: 0, paid: 0 }),
+        ]);
+        const row = screen.getByRole("button", {
+            name: "Amex Gold, $0.00, No activity",
+        });
+
+        const ids = (row.getAttribute("aria-describedby") ?? "").split(" ");
+        expect(ids).toHaveLength(1);
+        expect(document.getElementById(ids[0]!)?.textContent).toBe("Credit");
+    });
+
     it("truncates a card name at its longest allowed length", () => {
         const name = "N".repeat(40);
         renderScreen([card({ id: "long", name, charged: 100, paid: 0 })]);
@@ -740,6 +721,29 @@ describe("CardBalancesScreen statement lines", () => {
                 .nextElementSibling?.className,
         );
     });
+
+    it("mutes a zero Charged line like a zero Paid line, and keeps a real charge dark", () => {
+        renderScreen([
+            card({ id: "bbva", name: "BBVA", charged: 400, paid: 100 }),
+            card({
+                id: "plat",
+                name: "Amex Platinum",
+                charged: 0,
+                paid: 500,
+                before: { charged: 1000, paid: 0, redeemed: 0 },
+            }),
+        ]);
+
+        const charged = (name: string) =>
+            within(tile(name)).getByText("Charged in September")
+                .nextElementSibling as HTMLElement | null;
+        expect(charged("Amex Platinum")?.className).toContain(
+            "text-muted-foreground",
+        );
+        expect(charged("BBVA")?.className).not.toContain(
+            "text-muted-foreground",
+        );
+    });
 });
 
 describe("CardBalancesScreen focus after the payment dialog", () => {
@@ -783,6 +787,52 @@ describe("CardBalancesScreen focus after the payment dialog", () => {
         await waitFor(() =>
             expect(document.activeElement).toBe(
                 screen.getByRole("button", { name: "NU details" }),
+            ),
+        );
+    });
+});
+
+describe("CardBalancesScreen focus when the viewport crosses 640px", () => {
+    const original = Object.getOwnPropertyDescriptor(
+        HTMLElement.prototype,
+        "checkVisibility",
+    );
+    afterEach(() => {
+        if (original) {
+            Object.defineProperty(
+                HTMLElement.prototype,
+                "checkVisibility",
+                original,
+            );
+        } else {
+            delete (HTMLElement.prototype as Partial<HTMLElement>)
+                .checkVisibility;
+        }
+    });
+
+    it("returns focus to the card's phone row when the tile that opened the dialog is hidden", async () => {
+        renderScreen();
+        fireEvent.click(
+            screen.getByRole("button", { name: "Log a payment on BBVA" }),
+        );
+        const dialog = await screen.findByRole("dialog", {
+            name: "Log a payment",
+        });
+
+        // The window narrows below 640px: the tile grid (`hidden sm:grid`) is
+        // gone and the phone rows are shown.
+        Object.defineProperty(HTMLElement.prototype, "checkVisibility", {
+            configurable: true,
+            value(this: HTMLElement) {
+                return !this.closest(".hidden");
+            },
+        });
+        fireEvent.keyDown(dialog, { key: "Escape" });
+
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+        await waitFor(() =>
+            expect(document.activeElement).toBe(
+                screen.getByRole("button", { name: /^BBVA, / }),
             ),
         );
     });
@@ -853,7 +903,7 @@ describe("CardBalancesScreen month statement", () => {
         expect(within(dialog).queryByText("BBVA balance")).toBeNull();
     });
 
-    it("says where a payment lands when its date falls outside the month on screen", async () => {
+    it("says where a payment lands only when its date falls after the month on screen", async () => {
         renderScreen(CARDS, "2026-10");
         fireEvent.click(
             screen.getByRole("button", { name: "Log a payment on BBVA" }),
@@ -874,9 +924,15 @@ describe("CardBalancesScreen month statement", () => {
 
         fireEvent.change(date, { target: { value: "2026-09-30" } });
         expect(within(dialog).queryByText(/Lands in/)).toBeNull();
+
+        // An earlier month reaches September's balance, so it gets no note.
+        fireEvent.change(date, { target: { value: "2026-08-12" } });
+        expect(within(dialog).queryByText(/Lands in/)).toBeNull();
     });
 
-    it("withholds the before → after line when the date leaves the month on screen", async () => {
+    it("keeps the before → after line when the date is in an earlier month", async () => {
+        // The closing balance on screen opens with every earlier row, so an
+        // August payment lowers September's balance too.
         renderScreen();
         fireEvent.click(
             screen.getByRole("button", { name: "Log a payment on BBVA" }),
@@ -890,12 +946,7 @@ describe("CardBalancesScreen month statement", () => {
             target: { value: "2026-08-15" },
         });
 
-        expect(
-            within(dialog).getByText(
-                "Lands in August 2026. You are viewing September 2026, so this balance will not change.",
-            ),
-        ).toBeDefined();
-        expect(within(dialog).queryByText("BBVA balance")).toBeNull();
-        expect(within(dialog).queryByText("$6,130.00")).toBeNull();
+        expect(within(dialog).getByText("BBVA balance")).toBeDefined();
+        expect(within(dialog).queryByText(/Lands in/)).toBeNull();
     });
 });

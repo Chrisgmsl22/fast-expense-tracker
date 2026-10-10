@@ -13,26 +13,34 @@ vi.mock("next/navigation", () => ({
 
 import { MonthPicker } from "@/components/expense/MonthPicker";
 
+const clearMonthCookie = () => {
+    document.cookie = "fet_scoped_month=; path=/; max-age=0";
+};
+
 beforeEach(() => {
     pushMock.mockReset();
     pathname.current = "/expenses";
+    clearMonthCookie();
 });
+
+const nextButton = () =>
+    screen.getByRole("button", { name: /next month/i }) as HTMLButtonElement;
 
 describe("MonthPicker", () => {
     it("navigates to the previous and next month", () => {
-        render(<MonthPicker month="2026-05" />);
+        render(<MonthPicker month="2026-05" currentMonth="2026-09" />);
 
         fireEvent.click(
             screen.getByRole("button", { name: /previous month/i }),
         );
         expect(pushMock).toHaveBeenCalledWith("/expenses?month=2026-04");
 
-        fireEvent.click(screen.getByRole("button", { name: /next month/i }));
+        fireEvent.click(nextButton());
         expect(pushMock).toHaveBeenCalledWith("/expenses?month=2026-06");
     });
 
     it("navigates to a month chosen in the picker", () => {
-        render(<MonthPicker month="2026-05" />);
+        render(<MonthPicker month="2026-05" currentMonth="2026-09" />);
         fireEvent.change(screen.getByLabelText(/filter by month/i), {
             target: { value: "2026-09" },
         });
@@ -41,15 +49,15 @@ describe("MonthPicker", () => {
 
     it("stays on the current route when used outside /expenses", () => {
         pathname.current = "/income";
-        render(<MonthPicker month="2026-05" />);
-        fireEvent.click(screen.getByRole("button", { name: /next month/i }));
+        render(<MonthPicker month="2026-05" currentMonth="2026-09" />);
+        fireEvent.click(nextButton());
         expect(pushMock).toHaveBeenCalledWith("/income?month=2026-06");
     });
 
     it("remembers the month in a cookie when asked, alongside the URL", () => {
         // Both are written by the same click, so the store and the URL cannot
         // drift apart.
-        render(<MonthPicker month="2026-09" remember />);
+        render(<MonthPicker month="2026-09" remember currentMonth="2026-09" />);
         fireEvent.click(
             screen.getByRole("button", { name: /previous month/i }),
         );
@@ -58,43 +66,11 @@ describe("MonthPicker", () => {
     });
 
     it("writes no cookie unless the screen opted in", () => {
-        document.cookie = "fet_scoped_month=; path=/; max-age=0";
-        render(<MonthPicker month="2026-09" />);
+        render(<MonthPicker month="2026-09" currentMonth="2026-09" />);
         fireEvent.click(
             screen.getByRole("button", { name: /previous month/i }),
         );
         expect(document.cookie).not.toContain("fet_scoped_month=2026-08");
-    });
-
-    it("remembers a month that has not happened, unless the screen opts out", () => {
-        // The default holds /expenses, /income, /dashboard and /settlement
-        // exactly where they were; only /cards opts out.
-        document.cookie = "fet_scoped_month=; path=/; max-age=0";
-        render(<MonthPicker month="2026-09" remember currentMonth="2026-09" />);
-        fireEvent.click(screen.getByRole("button", { name: /next month/i }));
-        expect(document.cookie).toContain("fet_scoped_month=2026-10");
-    });
-
-    it("writes no cookie for a month after the current one when asked not to", () => {
-        document.cookie = "fet_scoped_month=; path=/; max-age=0";
-        render(
-            <MonthPicker
-                month="2026-09"
-                remember
-                rememberFuture={false}
-                currentMonth="2026-09"
-            />,
-        );
-        fireEvent.click(screen.getByRole("button", { name: /next month/i }));
-
-        // The URL still goes there; only the shared memory is withheld.
-        expect(pushMock).toHaveBeenCalledWith("/expenses?month=2026-10");
-        expect(document.cookie).not.toContain("fet_scoped_month=2026-10");
-
-        fireEvent.click(
-            screen.getByRole("button", { name: /previous month/i }),
-        );
-        expect(document.cookie).toContain("fet_scoped_month=2026-08");
     });
 
     it("offers the back-to-current button only while looking at another month", () => {
@@ -115,13 +91,6 @@ describe("MonthPicker", () => {
         ).toBeNull();
     });
 
-    it("offers no back-to-current button when the page supplies no clock", () => {
-        render(<MonthPicker month="2026-08" />);
-        expect(
-            screen.queryByRole("button", { name: /take me back/i }),
-        ).toBeNull();
-    });
-
     it("gives the back-to-current button a filled background, not text styling", () => {
         // The owner reported it read as a label; ghost has no background.
         render(<MonthPicker month="2026-08" currentMonth="2026-09" />);
@@ -133,5 +102,43 @@ describe("MonthPicker", () => {
         render(<MonthPicker month="2026-08" remember currentMonth="2026-09" />);
         fireEvent.click(screen.getByRole("button", { name: /take me back/i }));
         expect(document.cookie).toContain("fet_scoped_month=2026-09");
+    });
+});
+
+describe("MonthPicker stops at the current month", () => {
+    it("disables Next on the current month", () => {
+        render(<MonthPicker month="2026-09" remember currentMonth="2026-09" />);
+
+        expect(nextButton().disabled).toBe(true);
+        fireEvent.click(nextButton());
+        expect(pushMock).not.toHaveBeenCalled();
+        expect(document.cookie).not.toContain("fet_scoped_month=2026-10");
+    });
+
+    it("keeps Next enabled on every past month, up to the current one", () => {
+        render(<MonthPicker month="2026-08" currentMonth="2026-09" />);
+
+        expect(nextButton().disabled).toBe(false);
+        fireEvent.click(nextButton());
+        expect(pushMock).toHaveBeenCalledWith("/expenses?month=2026-09");
+    });
+
+    it("caps the native month input at the current month", () => {
+        render(<MonthPicker month="2026-05" currentMonth="2026-09" />);
+
+        expect(
+            screen.getByLabelText(/filter by month/i).getAttribute("max"),
+        ).toBe("2026-09");
+    });
+
+    it("refuses a future month typed past the cap, writing neither URL nor cookie", () => {
+        // Some browsers render `type="month"` as a plain text box and ignore `max`.
+        render(<MonthPicker month="2026-09" remember currentMonth="2026-09" />);
+        fireEvent.change(screen.getByLabelText(/filter by month/i), {
+            target: { value: "2026-11" },
+        });
+
+        expect(pushMock).not.toHaveBeenCalled();
+        expect(document.cookie).not.toContain("fet_scoped_month=2026-11");
     });
 });

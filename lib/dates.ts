@@ -26,12 +26,29 @@ export function getMonthRangeUtc(month: string): { start: Date; end: Date } {
  * UTC-6 boundary (when a UTC day has rolled over but CDMX hasn't) is testable.
  */
 export function getCurrentMonthCdmx(now: Date = new Date()): string {
-    const cdmx = new Date(
-        now.getTime() - CDMX_UTC_OFFSET_HOURS * 60 * 60 * 1000,
+    return getTodayCdmx(now).slice(0, 7);
+}
+
+/**
+ * Today as `yyyy-mm-dd` in CDMX wall-clock time: the latest date capture
+ * accepts, and the `max` of every date input. `now` is injectable for the
+ * UTC-6 boundary.
+ */
+export function getTodayCdmx(now: Date = new Date()): string {
+    return toDateInputValue(
+        new Date(now.getTime() - CDMX_UTC_OFFSET_HOURS * 60 * 60 * 1000),
     );
-    const year = cdmx.getUTCFullYear();
-    const month = String(cdmx.getUTCMonth() + 1).padStart(2, "0");
-    return `${year}-${month}`;
+}
+
+/**
+ * Whether a captured calendar date (read in UTC, like `toDateInputValue`) falls
+ * after today in CDMX. No page opens a future month, so a row dated there could
+ * not be seen, edited or deleted. An invalid date is left to the caller's own
+ * validation.
+ */
+export function isAfterTodayCdmx(date: Date, now: Date = new Date()): boolean {
+    if (Number.isNaN(date.getTime())) return false;
+    return toDateInputValue(date) > getTodayCdmx(now);
 }
 
 /**

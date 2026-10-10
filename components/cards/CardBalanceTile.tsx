@@ -53,6 +53,7 @@ export function CardBalanceTile({
                 type="button"
                 onClick={(e) => onOpen(card, e.currentTarget)}
                 aria-label={`${card.name} details`}
+                data-card-trigger={card.id}
                 className={cn(
                     "flex min-w-0 items-center gap-2.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                     STRETCHED,
