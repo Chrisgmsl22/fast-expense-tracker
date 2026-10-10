@@ -37,6 +37,10 @@ import {
     PrismaBudgetRuleRepository,
     type BudgetRuleRepository,
 } from "./budget-rule.repository";
+import {
+    PrismaUserProvisioningRepository,
+    type UserProvisioningRepository,
+} from "./user-provisioning.repository";
 
 /**
  * Composition root — the single place the concrete Prisma adapters are wired to
@@ -74,3 +78,6 @@ export const cardRepository: CardRepository = new PrismaCardRepository(db);
 
 export const budgetRuleRepository: BudgetRuleRepository =
     new PrismaBudgetRuleRepository(db);
+
+export const userProvisioningRepository: UserProvisioningRepository =
+    new PrismaUserProvisioningRepository(db);

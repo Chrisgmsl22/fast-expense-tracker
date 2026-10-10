@@ -2,62 +2,28 @@
 import { describe, it, expect, vi } from "vitest";
 import bcrypt from "bcryptjs";
 
-import {
-    PARTNER_PAYMENT_CATEGORY_SLUG,
-    PARTNER_PAYMENT_SUBCATEGORY_NAME,
-} from "@/lib/domain/expense";
-import { CATEGORY_SEED, CARD_SEED, runSeed } from "@/prisma/seed";
+import { OWNER_CARDS, runSeed } from "@/prisma/seed";
+import { FakeUserProvisioningRepository } from "@/tests/support/fake-user-provisioning-repository";
 
 const ADMIN = { adminEmail: "admin@example.com", adminPassword: "s3cret-pw" };
 
 /**
- * Builds a Prisma-shaped mock exposing only the delegates `runSeed` touches.
- * Idempotency branch control:
- * @param opts.subExists / cardExists  — blanket: every row already exists.
- * @param opts.existingSubNames        — only these subcategory names exist
- *                                        (simulates a partial re-seed).
+ * Only the delegates the seed itself may touch: a direct category, subcategory
+ * or settings write throws here. Writes land in `events` to assert step order.
  */
-function makeDb(
-    opts: {
-        subExists?: boolean;
-        cardExists?: boolean;
-        incomeExists?: boolean;
-        existingSubNames?: Set<string>;
-    } = {},
-) {
-    const subExists = (name: string) =>
-        opts.subExists || (opts.existingSubNames?.has(name) ?? false);
-    const category = {
-        upsert: vi.fn<
-            (args: {
-                where: { userId_slug: { userId: string; slug: string } };
-                create: unknown;
-                update: unknown;
-            }) => Promise<{ id: string }>
-        >(async (args) => ({ id: `cat-${args.where.userId_slug.slug}` })),
-    };
-    const subcategory = {
-        findFirst: vi.fn<
-            (args: {
-                where: { userId: string; categoryId: string; name: string };
-            }) => Promise<{ id: string } | null>
-        >(async (args) =>
-            subExists(args.where.name) ? { id: "sub-existing" } : null,
-        ),
-        create: vi.fn<
-            (args: {
-                data: { userId: string; categoryId: string; name: string };
-            }) => Promise<{ id: string }>
-        >(async () => ({ id: "sub-new" })),
-    };
+function makeDb(opts: { cardExists?: boolean; incomeExists?: boolean } = {}) {
+    const events: string[] = [];
     const user = {
         upsert: vi.fn<
             (args: {
                 where: { email: string };
                 create: { email: string; name: string; password: string };
-                update: unknown;
+                update: Record<string, never>;
             }) => Promise<{ id: string }>
-        >(async (args) => ({ id: "user-1", ...args.create })),
+        >(async () => {
+            events.push("user.upsert");
+            return { id: "user-1" };
+        }),
     };
     const card = {
         findFirst: vi.fn<
@@ -74,13 +40,19 @@ function makeDb(
                     type: string;
                 };
             }) => Promise<{ id: string }>
-        >(async () => ({ id: "card-new" })),
+        >(async () => {
+            events.push("card.create");
+            return { id: "card-new" };
+        }),
         update: vi.fn<
             (args: {
                 where: { id: string };
                 data: { color: string; type: string };
             }) => Promise<{ id: string }>
-        >(async (args) => ({ id: args.where.id })),
+        >(async (args) => {
+            events.push("card.update");
+            return { id: args.where.id };
+        }),
     };
     const income = {
         findFirst: vi.fn<
@@ -92,229 +64,143 @@ function makeDb(
             (args: {
                 data: { userId: string; type: string; amount: number };
             }) => Promise<{ id: string }>
-        >(async () => ({ id: "income-new" })),
+        >(async () => {
+            events.push("income.create");
+            return { id: "income-new" };
+        }),
     };
-    // Test mock: only the delegates runSeed uses are implemented.
-    const db = {
-        category,
-        subcategory,
-        user,
-        card,
-        income,
-    } as unknown as Parameters<typeof runSeed>[0];
-    return { db, category, subcategory, user, card, income };
+    // A partial mock: only the delegates runSeed itself may use.
+    const db = { user, card, income } as unknown as Parameters<
+        typeof runSeed
+    >[0];
+    return { db, user, card, income, events };
 }
 
-describe("CATEGORY_SEED data", () => {
-    it("defines all 13 system categories", () => {
-        expect(CATEGORY_SEED).toHaveLength(13);
-    });
+function makeProvisioning(events: string[]) {
+    const provisioning = new FakeUserProvisioningRepository();
+    const provision = provisioning.provisionNewUser.bind(provisioning);
+    vi.spyOn(provisioning, "provisionNewUser").mockImplementation(
+        async (userId) => {
+            events.push("provision");
+            return provision(userId);
+        },
+    );
+    return provisioning;
+}
 
-    it("encodes the 50/25/25 isRelevant flags from the domain reference", () => {
-        const bySlug = Object.fromEntries(
-            CATEGORY_SEED.map((c) => [c.slug, c]),
-        );
-        expect(bySlug["housing"]?.isRelevant).toBe(true);
-        expect(bySlug["savings"]?.isRelevant).toBe(true);
-        expect(bySlug["personal"]?.isRelevant).toBe(false);
-        expect(bySlug["disposable-income"]?.isRelevant).toBe(false);
-        expect(bySlug["unassigned"]?.isRelevant).toBe(false);
-    });
-
-    it("gives the unassigned sentinel no subcategories", () => {
-        const unassigned = CATEGORY_SEED.find((c) => c.slug === "unassigned");
-        expect(unassigned?.subcategories).toEqual([]);
-    });
-
-    /**
-     * The seed and `getPartnerPaymentDefaults` both match this subcategory BY NAME.
-     * If the seed drifts from the constant, a payment files with
-     * `subcategoryId: null` and nothing says so.
-     */
-    it("seeds the partner-payment subcategory under the name the code looks up", () => {
-        const combined = CATEGORY_SEED.find(
-            (c) => c.slug === PARTNER_PAYMENT_CATEGORY_SLUG,
-        );
-
-        expect(combined?.subcategories).toContain(
-            PARTNER_PAYMENT_SUBCATEGORY_NAME,
-        );
-        // Exactly one, or a fresh provision creates the duplicate outright.
-        expect(
-            combined?.subcategories.filter(
-                (n) => n === PARTNER_PAYMENT_SUBCATEGORY_NAME,
-            ),
-        ).toHaveLength(1);
-    });
-});
-
-describe("CARD_SEED data", () => {
-    it("defines the 5 cards with per-card brand hex (domain-reference §4)", () => {
-        expect(CARD_SEED).toHaveLength(5);
-        const byName = Object.fromEntries(CARD_SEED.map((c) => [c.name, c]));
-        expect(byName["Amex Platinum"]).toMatchObject({
-            color: "#6b7280",
-            type: "credit",
-        });
-        expect(byName["Amex Gold"]).toMatchObject({
-            color: "#ca8a04",
-            type: "credit",
-        });
-        expect(byName["NU"]).toMatchObject({
-            color: "#9333ea",
-            type: "credit",
-        });
-        expect(byName["BBVA"]).toMatchObject({
-            color: "#2563eb",
-            type: "debit",
-        });
-        expect(byName["Cash"]).toMatchObject({
-            color: "#16a34a",
-            type: "cash",
-        });
-        for (const c of CARD_SEED) {
-            expect(c.color).toMatch(/^#[0-9a-f]{6}$/i);
-        }
+describe("OWNER_CARDS", () => {
+    it("Should be the owner's four branded cards and not Cash", () => {
+        expect(OWNER_CARDS).toEqual([
+            { name: "Amex Platinum", color: "#6b7280", type: "credit" },
+            { name: "Amex Gold", color: "#ca8a04", type: "credit" },
+            { name: "NU", color: "#9333ea", type: "credit" },
+            { name: "BBVA", color: "#2563eb", type: "debit" },
+        ]);
     });
 });
 
 describe("runSeed", () => {
-    it("upserts all 13 categories keyed by the per-user (userId, slug)", async () => {
-        const { db, category } = makeDb();
-        await runSeed(db, ADMIN);
-        expect(category.upsert).toHaveBeenCalledTimes(13);
-        const keys = category.upsert.mock.calls.map(
-            (c) => c[0].where.userId_slug,
-        );
-        // Every category is stamped with the owner id (ADR-0022).
-        expect(keys.every((k) => k.userId === "user-1")).toBe(true);
-        expect(new Set(keys.map((k) => k.slug))).toEqual(
-            new Set(CATEGORY_SEED.map((c) => c.slug)),
-        );
+    it("Should provision the owner first, then add the owner-only extras", async () => {
+        const { db, events } = makeDb();
+        const provisioning = makeProvisioning(events);
+
+        await runSeed(db, ADMIN, provisioning);
+
+        expect(provisioning.calls).toEqual(["user-1"]);
+        expect(events).toEqual([
+            "user.upsert",
+            "provision",
+            "card.create",
+            "card.create",
+            "card.create",
+            "card.create",
+            "income.create",
+        ]);
     });
 
-    it("writes a hex color and the owner userId on every category upsert", async () => {
-        const { db, category } = makeDb();
-        await runSeed(db, ADMIN);
-        for (const call of category.upsert.mock.calls) {
-            const create = call[0].create as { color: string; userId: string };
-            expect(create.color).toMatch(/^#[0-9a-f]{6}$/i);
-            expect(create.userId).toBe("user-1");
-        }
-    });
+    it("Should report what provisioning and the owner extras created", async () => {
+        const { db, events } = makeDb();
+        const summary = await runSeed(db, ADMIN, makeProvisioning(events));
 
-    it("creates every subcategory on a fresh DB, linked to its category", async () => {
-        const { db, subcategory } = makeDb({ subExists: false });
-        await runSeed(db, ADMIN);
-        const total = CATEGORY_SEED.reduce(
-            (n, c) => n + c.subcategories.length,
-            0,
-        );
-        expect(subcategory.create).toHaveBeenCalledTimes(total);
-        for (const call of subcategory.create.mock.calls) {
-            expect(call[0].data.categoryId).toMatch(/^cat-/);
-            expect(call[0].data.userId).toBe("user-1"); // stamped per-user
-        }
-    });
-
-    it("creates no subcategories when they already exist (idempotent)", async () => {
-        const { db, subcategory } = makeDb({ subExists: true });
-        await runSeed(db, ADMIN);
-        expect(subcategory.create).not.toHaveBeenCalled();
-    });
-
-    it("creates only the missing subcategories on a partial re-seed", async () => {
-        // "Rent" and "Gasoline" already exist; every other subcategory is new.
-        const existingSubNames = new Set(["Rent", "Gasoline"]);
-        const { db, subcategory } = makeDb({ existingSubNames });
-        await runSeed(db, ADMIN);
-        const total = CATEGORY_SEED.reduce(
-            (n, c) => n + c.subcategories.length,
-            0,
-        );
-        expect(subcategory.create).toHaveBeenCalledTimes(
-            total - existingSubNames.size,
-        );
-        const createdNames = subcategory.create.mock.calls.map(
-            (c) => c[0].data.name,
-        );
-        expect(createdNames).not.toContain("Rent");
-        expect(createdNames).not.toContain("Gasoline");
-    });
-
-    /**
-     * Re-seeding after `20260916230000_convert_partner_payments` renamed the rows:
-     * the seed matches by name, so it must find the renamed row and add nothing.
-     * The old spelling must not come back either — two names for one thing is the
-     * duplicate the rename exists to avoid.
-     */
-    it("creates no duplicate partner-payment subcategory on a renamed database", async () => {
-        const { db, subcategory } = makeDb({
-            existingSubNames: new Set([PARTNER_PAYMENT_SUBCATEGORY_NAME]),
+        expect(summary).toMatchObject({
+            provisioned: { categoriesCreated: 13, settingsCreated: true },
+            ownerCardsCreated: 4,
+            fixedIncomeCreated: true,
         });
-        await runSeed(db, ADMIN);
+    });
 
-        const createdNames = subcategory.create.mock.calls.map(
-            (c) => c[0].data.name,
+    it("Should create the four owner cards for the owner on a fresh database", async () => {
+        const { db, card, events } = makeDb({ cardExists: false });
+        await runSeed(db, ADMIN, makeProvisioning(events));
+
+        expect(card.create.mock.calls.map((c) => c[0].data)).toEqual(
+            OWNER_CARDS.map((c) => ({ userId: "user-1", ...c })),
         );
-        expect(createdNames).not.toContain(PARTNER_PAYMENT_SUBCATEGORY_NAME);
-        // And no second name for the same thing, under the pre-rename spelling.
-        expect(createdNames).not.toContain("Purchases made by girlfriend");
-    });
-
-    it("creates the 5 cards for the admin user on a fresh DB", async () => {
-        const { db, card } = makeDb({ cardExists: false });
-        await runSeed(db, ADMIN);
-        expect(card.create).toHaveBeenCalledTimes(5);
         expect(card.update).not.toHaveBeenCalled();
-        for (const call of card.create.mock.calls) {
-            expect(call[0].data.userId).toBe("user-1");
-            expect(call[0].data.color).toMatch(/^#[0-9a-f]{6}$/i);
-        }
     });
 
-    it("updates existing cards' color on re-seed instead of creating (idempotent)", async () => {
-        const { db, card } = makeDb({ cardExists: true });
-        await runSeed(db, ADMIN);
+    it("Should refresh the owner cards' color and type on a re-seed instead of creating", async () => {
+        const { db, card, events } = makeDb({ cardExists: true });
+        const summary = await runSeed(db, ADMIN, makeProvisioning(events));
+
         expect(card.create).not.toHaveBeenCalled();
-        expect(card.update).toHaveBeenCalledTimes(5);
-        for (const call of card.update.mock.calls) {
-            expect(call[0].data.color).toMatch(/^#[0-9a-f]{6}$/i);
-        }
+        expect(card.update.mock.calls.map((c) => c[0].data)).toEqual(
+            OWNER_CARDS.map(({ color, type }) => ({ color, type })),
+        );
+        expect(summary.ownerCardsCreated).toBe(0);
     });
 
-    it("creates a FIXED income row for the admin on a fresh DB", async () => {
-        const { db, income } = makeDb({ incomeExists: false });
-        const summary = await runSeed(db, ADMIN);
-        expect(income.create).toHaveBeenCalledTimes(1);
-        const data = income.create.mock.calls[0]![0].data;
-        expect(data).toMatchObject({ userId: "user-1", type: "FIXED" });
-        expect(data.amount).toBeGreaterThan(0);
-        expect(summary.fixedIncomeCreated).toBe(true);
-    });
+    it("Should create the FIXED income row only when the owner has none", async () => {
+        const fresh = makeDb({ incomeExists: false });
+        await runSeed(fresh.db, ADMIN, makeProvisioning(fresh.events));
+        expect(fresh.income.create).toHaveBeenCalledTimes(1);
+        expect(fresh.income.create.mock.calls[0]![0].data).toMatchObject({
+            userId: "user-1",
+            type: "FIXED",
+        });
 
-    it("does not recreate the FIXED income row on re-seed (idempotent)", async () => {
-        const { db, income } = makeDb({ incomeExists: true });
-        const summary = await runSeed(db, ADMIN);
-        expect(income.create).not.toHaveBeenCalled();
+        const reseed = makeDb({ incomeExists: true });
+        const summary = await runSeed(
+            reseed.db,
+            ADMIN,
+            makeProvisioning(reseed.events),
+        );
+        expect(reseed.income.create).not.toHaveBeenCalled();
         expect(summary.fixedIncomeCreated).toBe(false);
     });
 
-    it("upserts the admin user keyed by email with a bcrypt hash, never plaintext", async () => {
-        const { db, user } = makeDb();
-        await runSeed(db, ADMIN);
-        expect(user.upsert).toHaveBeenCalledTimes(1);
-        const args = user.upsert.mock.calls[0]![0];
-        expect(args.where.email).toBe(ADMIN.adminEmail);
-        const stored = args.create.password;
-        expect(stored).not.toBe(ADMIN.adminPassword);
-        expect(stored.startsWith("$2")).toBe(true);
-        expect(bcrypt.compareSync(ADMIN.adminPassword, stored)).toBe(true);
+    it("Should stop before the owner extras when provisioning fails", async () => {
+        const { db, card, income, events } = makeDb();
+        const provisioning = makeProvisioning(events);
+        provisioning.failOnWrite = true;
+
+        await expect(runSeed(db, ADMIN, provisioning)).rejects.toThrow();
+        expect(card.create).not.toHaveBeenCalled();
+        expect(income.create).not.toHaveBeenCalled();
     });
 
-    it("keys and stores the admin email in lowercase, trimmed form", async () => {
-        const { db, user } = makeDb();
-        await runSeed(db, { ...ADMIN, adminEmail: "  Admin@Example.COM " });
+    it("Should upsert the owner by email with a bcrypt hash and never reset the password", async () => {
+        const { db, user, events } = makeDb();
+        await runSeed(db, ADMIN, makeProvisioning(events));
+
+        const args = user.upsert.mock.calls[0]![0];
+        expect(args.where.email).toBe(ADMIN.adminEmail);
+        expect(args.create.name).toBe("Christian");
+        expect(args.create.password).not.toBe(ADMIN.adminPassword);
+        expect(
+            bcrypt.compareSync(ADMIN.adminPassword, args.create.password),
+        ).toBe(true);
+        expect(args.update).toEqual({});
+    });
+
+    it("Should key and store the owner email in lowercase, trimmed form", async () => {
+        const { db, user, events } = makeDb();
+        await runSeed(
+            db,
+            { ...ADMIN, adminEmail: "  Admin@Example.COM " },
+            makeProvisioning(events),
+        );
+
         const args = user.upsert.mock.calls[0]![0];
         expect(args.where.email).toBe("admin@example.com");
         expect(args.create.email).toBe("admin@example.com");

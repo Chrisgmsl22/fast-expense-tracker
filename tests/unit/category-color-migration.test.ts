@@ -1,21 +1,20 @@
 // @vitest-environment node
 //
 // BUG-2 guard: the backfill migration repairs production category colors with
-// hard-coded literals. These tests fail if a slug is added to CATEGORY_COLORS
-// and silently missed by the migration, or if a hex drifts between the two.
-//
-// Merge order: `CATEGORY_COLORS` moves from `@/prisma/seed` to
-// `@/lib/domain/starter-kit` when the new-user starter kit lands. Whichever of
-// the two branches merges second must retarget the import below. A failure here
-// after that merge is the intended signal, not a regression.
+// hard-coded literals. These tests fail if a starter category is added and
+// silently missed by the migration, or if a hex drifts between the two.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { describe, it, expect } from "vitest";
 
-import { CATEGORY_COLORS, CATEGORY_SEED } from "@/prisma/seed";
+import { STARTER_CATEGORIES } from "@/lib/domain/starter-kit";
 
 const GRAY = "#6b7280";
+
+const CATEGORY_COLORS: Record<string, string> = Object.fromEntries(
+    STARTER_CATEGORIES.map((c) => [c.slug, c.color]),
+);
 
 const MIGRATION_PATH = path.join(
     process.cwd(),
@@ -53,13 +52,7 @@ const colorfulSlugs = Object.keys(CATEGORY_COLORS).filter(
     (slug) => slug !== "unassigned",
 );
 
-describe("CATEGORY_COLORS", () => {
-    it("covers every seeded category slug", () => {
-        expect(new Set(Object.keys(CATEGORY_COLORS))).toEqual(
-            new Set(CATEGORY_SEED.map((c) => c.slug)),
-        );
-    });
-
+describe("starter category colors", () => {
     it("gives every non-unassigned slug a non-gray hex", () => {
         expect(colorfulSlugs.length).toBeGreaterThan(0);
         for (const slug of colorfulSlugs) {
@@ -74,7 +67,7 @@ describe("CATEGORY_COLORS", () => {
 });
 
 describe("backfill_category_colors migration", () => {
-    it("writes the seed's hex for every non-unassigned slug", () => {
+    it("writes the starter kit's hex for every non-unassigned slug", () => {
         for (const slug of colorfulSlugs) {
             const update = bySlug.get(slug);
             expect(

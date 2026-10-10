@@ -19,8 +19,8 @@ Three steps, one transaction. Full reasoning is in the migration file's header.
    match on, since every account's row carries its own — **scoped to that
    account's `combined-expenses` category**, and then updates that row **in
    place**. No new row, so every expense keeps the `subcategoryId` it points at.
-   `PARTNER_PAYMENT_SUBCATEGORY_NAME` and `prisma/seed.ts` flip in the same
-   commit.
+   `PARTNER_PAYMENT_SUBCATEGORY_NAME` and `lib/domain/starter-kit.ts` flip in
+   the same commit.
 2. Converts every `Movement{type:"gf_paid"}` into the
    `Expense{isPartnerPayment}` it already is under ADR-0024. The expense keeps
    the movement's **id**, `createdAt`, `date`, amount, note, `fundedFrom` and
