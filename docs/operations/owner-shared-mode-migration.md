@@ -54,8 +54,9 @@ render in color.
 > `Card` rows, and it matches them **by name**: for the owner's cards
 > (`OWNER_CARDS` in `prisma/seed.ts`; Cash comes from `lib/domain/starter-kit.ts`) it does
 > `findFirst({ name })`, then either `update({ color, type })` or `create`. So a
-> re-seed rewrites every card's `color`/`type`, and any card the owner **renamed**
-> in Settings is not found and is **re-created as a duplicate**. The owner has
+> re-seed rewrites the `color` and `type` of the four owner cards (`OWNER_CARDS`),
+> and any of them the owner **renamed** in Settings is not found and is
+> **re-created as a duplicate**. Cash is never rewritten. The owner has
 > edited cards since CHORE-6.c shipped, so a re-seed would damage real data to
 > fix a color.
 
