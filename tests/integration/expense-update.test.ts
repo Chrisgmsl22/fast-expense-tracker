@@ -169,6 +169,33 @@ describe("updateExpense (integration)", () => {
         expect(row.description).toBe("Old");
     });
 
+    it("refuses another user's card, leaving the row unchanged", async () => {
+        const { user, other, category } = await seed();
+        const { id } = await makeExpense(user.id, category.id);
+        const theirs = await db.card.create({
+            data: {
+                userId: other.id,
+                name: "Their Visa",
+                color: "#7c3aed",
+                type: "credit",
+            },
+        });
+
+        const res = await updateExpense({
+            ...editInput(id, category.id),
+            cardId: theirs.id,
+        });
+
+        expect(res.ok).toBe(false);
+        if (!res.ok) {
+            expect(res.code).toBe("validation");
+            expect(res.fieldErrors?.cardId).toBeDefined();
+        }
+        const row = await db.expense.findUniqueOrThrow({ where: { id } });
+        expect(row.cardId).toBe(null);
+        expect(row.description).toBe("Old");
+    });
+
     it("answers not_found for another user's row that names their own category", async () => {
         const { other } = await seed();
         const theirs = await db.category.create({

@@ -186,6 +186,28 @@ describe("PrismaDashboardRepository.getCardSpends (integration)", () => {
         ]);
     });
 
+    it("never resolves a card another user owns", async () => {
+        const user = await seedUser("me@example.com");
+        const other = await seedUser("other@example.com");
+        const cat = await seedCategory(user.id, "housing", true);
+        const theirs = await seedCard(other.id, "Their Visa", "#7c3aed");
+        await seedExpense({
+            userId: user.id,
+            categoryId: cat.id,
+            date: "2026-06-05T12:00:00Z",
+            amount: 800,
+            actualExpenditure: 800,
+            cardId: theirs.id,
+        });
+
+        const rows = await repo.getCardSpends(user.id, "2026-06");
+
+        expect(rows).toHaveLength(1);
+        expect(rows[0]!.spent).toBe(800);
+        expect(rows[0]!.name).not.toBe("Their Visa");
+        expect(rows[0]!.color).not.toBe("#7c3aed");
+    });
+
     it("scopes to the user + month", async () => {
         const user = await seedUser("me@example.com");
         const other = await seedUser("other@example.com");

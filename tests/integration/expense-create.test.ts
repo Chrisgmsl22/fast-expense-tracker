@@ -145,4 +145,53 @@ describe("createExpense (integration)", () => {
         }
         expect(await db.expense.count()).toBe(0);
     });
+
+    it("refuses another user's card, writing nothing", async () => {
+        const { category } = await seedUserAndCategory();
+        const other = await seedOtherUser();
+        const theirs = await db.card.create({
+            data: {
+                userId: other.id,
+                name: "Their Visa",
+                color: "#7c3aed",
+                type: "credit",
+            },
+        });
+
+        const res = await createExpense({
+            ...validInput(category.id),
+            cardId: theirs.id,
+        });
+
+        expect(res.ok).toBe(false);
+        if (!res.ok) {
+            expect(res.code).toBe("validation");
+            expect(res.fieldErrors?.cardId).toBeDefined();
+        }
+        expect(await db.expense.count()).toBe(0);
+    });
+
+    it("stores the user's own card", async () => {
+        const { user, category } = await seedUserAndCategory();
+        const mine = await db.card.create({
+            data: {
+                userId: user.id,
+                name: "My Visa",
+                color: "#2563eb",
+                type: "credit",
+            },
+        });
+
+        const res = await createExpense({
+            ...validInput(category.id),
+            cardId: mine.id,
+        });
+
+        expect(res.ok).toBe(true);
+        if (!res.ok) throw new Error("expected success");
+        const row = await db.expense.findUniqueOrThrow({
+            where: { id: res.data.id },
+        });
+        expect(row.cardId).toBe(mine.id);
+    });
 });

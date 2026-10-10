@@ -74,11 +74,10 @@
         {
             "id": "BUG-8",
             "name": "card-ownership",
-            "priority": 2,
             "title": "Expense create and update accept a cardId that belongs to another user",
             "description": "Expense create and update do not check that the submitted cardId belongs to the session user, so a crafted request can file an expense against another account's card. Found in the BUG-4 review, which closes the same hole for categories and subcategories. Severity is bounded while the app has one real user, but it becomes a live data-isolation bug once CHORE-8.d opens public signup. Blocks CHORE-8.d.",
-            "proposedSolution": "Refuse a foreign cardId with the validation error code on every create and update, the same way BUG-4 refuses a foreign category: look the card up scoped by userId before the write. Tests: a create naming another user's cardId is rejected; an update moving an expense onto another user's card is rejected; the user's own card still saves.",
-            "status": "open",
+            "proposedSolution": "Fixed. The same hole was also open on card payments and on the dashboard card read, so all of them were fixed. createExpense, updateExpense, addCardPayment and updateCardPayment now look the card up with CardRepository.findByIdForUser, which is scoped by the session userId and injected into each action. A cardId the user does not own is refused (validation, field error on cardId) before any write. A null cardId (cash) skips the lookup, and the user's own card still saves whether it is active or archived. Check order is kept: another user's expense or card-payment id still answers not_found, and in updateExpense the closed-cycle and partner-payment guards run before the card check. PrismaDashboardRepository.getCardSpends now scopes its card lookup by userId, so another user's card name and color never reach the dashboard. Tests: unit tests at all four action seams cover the foreign-card refusal (nothing written) and the own-card save. Integration tests cover the refusal on create and update through the real repositories, and the dashboard read ignoring another user's card. Every foreign-card refusal test and the dashboard test fail against the pre-fix code. The own-card saves, the not_found ordering and the closed-cycle ordering are regression pins and passed before the fix too.",
+            "status": "fixed",
             "spec": null,
             "pr": null,
             "issue": null
