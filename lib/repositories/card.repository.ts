@@ -1,5 +1,25 @@
 import type { PrismaClient } from "@prisma/client";
 
+import { getMonthRangeUtc } from "@/lib/dates";
+import {
+    NO_BALANCE_CARD_TYPES,
+    type CardHistoryEntry,
+    type CardPeriodTotals,
+    type CardTotals,
+} from "@/lib/domain/card-balance";
+import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
+
+// A Savings-category row is money set aside, not a purchase, even when it names a card.
+const CARD_CHARGE_FILTER = { category: { slug: { not: SAVINGS_SLUG } } };
+
+// Archived cards are retired: the Card balances page neither lists nor counts them.
+const BALANCE_CARD_FILTER = {
+    archivedAt: null,
+    type: { notIn: [...NO_BALANCE_CARD_TYPES] },
+};
+
+const NO_TOTALS: CardTotals = { charged: 0, paid: 0, redeemed: 0 };
+
 /** One card row for the Settings card list, with its usage flag. */
 export type CardSettingsItem = {
     id: string;
@@ -23,6 +43,20 @@ export type CardCreate = { name: string; type: string; color: string };
 
 /** Editable fields on a card edit (rename / recolor / retype). */
 export type CardUpdate = { name: string; type: string; color: string };
+
+/** One active card that can carry a balance, with its sums before and during a month. */
+export type CardBalanceRow = CardPeriodTotals & {
+    id: string;
+    name: string;
+    color: string;
+    type: string;
+};
+
+/** One card's sums before a month, and its charges and payments inside it, unordered. */
+export type CardMonthHistory = {
+    before: CardTotals;
+    entries: CardHistoryEntry[];
+};
 
 /**
  * Data-access contract for cards — the "port". Actions depend on this interface,
@@ -67,6 +101,14 @@ export interface CardRepository {
     deleteForUser(userId: string, id: string): Promise<number>;
     /** True when the card is the user's locked `type:"cash"` card. */
     isCash(userId: string, id: string): Promise<boolean>;
+    /** A→Z, split at `month` (CDMX). Redemptions are not tracked yet, so 0. */
+    listBalances(userId: string, month: string): Promise<CardBalanceRow[]>;
+    /** One active balance card's month history; null for any other card. */
+    getHistory(
+        userId: string,
+        cardId: string,
+        month: string,
+    ): Promise<CardMonthHistory | null>;
 }
 
 /**
@@ -204,5 +246,148 @@ export class PrismaCardRepository implements CardRepository {
             select: { type: true },
         });
         return card?.type === "cash";
+    }
+
+    async listBalances(
+        userId: string,
+        month: string,
+    ): Promise<CardBalanceRow[]> {
+        const cards = await this.db.card.findMany({
+            where: { userId, ...BALANCE_CARD_FILTER },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, color: true, type: true },
+        });
+        if (cards.length === 0) return [];
+
+        const cardIds = cards.map((c) => c.id);
+        const { start, end } = getMonthRangeUtc(month);
+        const [before, during] = await Promise.all([
+            this.sumsByCard(userId, cardIds, { lt: start }),
+            this.sumsByCard(userId, cardIds, { gte: start, lt: end }),
+        ]);
+        return cards.map((card) => ({
+            ...card,
+            before: before.get(card.id) ?? NO_TOTALS,
+            during: during.get(card.id) ?? NO_TOTALS,
+        }));
+    }
+
+    async getHistory(
+        userId: string,
+        cardId: string,
+        month: string,
+    ): Promise<CardMonthHistory | null> {
+        const card = await this.db.card.findFirst({
+            where: { id: cardId, userId, ...BALANCE_CARD_FILTER },
+            select: { id: true },
+        });
+        if (!card) return null;
+
+        const { start, end } = getMonthRangeUtc(month);
+        const inMonth = { gte: start, lt: end };
+        const [before, expenses, payments] = await Promise.all([
+            this.sumsByCard(userId, [cardId], { lt: start }),
+            this.db.expense.findMany({
+                where: { userId, cardId, date: inMonth, ...CARD_CHARGE_FILTER },
+                select: {
+                    id: true,
+                    date: true,
+                    createdAt: true,
+                    description: true,
+                    amount: true,
+                    isShared: true,
+                    category: { select: { name: true } },
+                },
+            }),
+            this.db.movement.findMany({
+                where: { userId, cardId, date: inMonth, type: "card_payment" },
+                select: {
+                    id: true,
+                    date: true,
+                    createdAt: true,
+                    amount: true,
+                    note: true,
+                },
+            }),
+        ]);
+
+        return {
+            before: before.get(cardId) ?? NO_TOTALS,
+            entries: [
+                ...expenses.map(
+                    (e): CardHistoryEntry => ({
+                        id: e.id,
+                        kind: "charge",
+                        date: e.date,
+                        createdAt: e.createdAt,
+                        description: e.description,
+                        detail: e.category.name,
+                        isShared: e.isShared,
+                        amount: e.amount,
+                    }),
+                ),
+                ...payments.map(
+                    (m): CardHistoryEntry => ({
+                        id: m.id,
+                        kind: "payment",
+                        date: m.date,
+                        createdAt: m.createdAt,
+                        description: null,
+                        detail: m.note,
+                        isShared: false,
+                        amount: m.amount,
+                    }),
+                ),
+            ],
+        };
+    }
+
+    /**
+     * Charged and paid per card for rows whose date falls in `date`, summed in the
+     * database. Charged is the full `amount` whatever the split or funding source.
+     */
+    private async sumsByCard(
+        userId: string,
+        cardIds: string[],
+        date: { gte?: Date; lt: Date },
+    ): Promise<Map<string, CardTotals>> {
+        const [charges, payments] = await Promise.all([
+            this.db.expense.groupBy({
+                by: ["cardId"],
+                where: {
+                    userId,
+                    cardId: { in: cardIds },
+                    date,
+                    ...CARD_CHARGE_FILTER,
+                },
+                _sum: { amount: true },
+            }),
+            this.db.movement.groupBy({
+                by: ["cardId"],
+                where: {
+                    userId,
+                    type: "card_payment",
+                    cardId: { in: cardIds },
+                    date,
+                },
+                _sum: { amount: true },
+            }),
+        ]);
+        const charged = new Map(
+            charges.map((g) => [g.cardId, g._sum.amount ?? 0]),
+        );
+        const paid = new Map(
+            payments.map((g) => [g.cardId, g._sum.amount ?? 0]),
+        );
+        return new Map(
+            cardIds.map((id) => [
+                id,
+                {
+                    charged: charged.get(id) ?? 0,
+                    paid: paid.get(id) ?? 0,
+                    redeemed: 0,
+                },
+            ]),
+        );
     }
 }

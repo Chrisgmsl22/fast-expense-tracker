@@ -47,6 +47,60 @@ describe("resolveMonth — URL, then store, then now", () => {
     });
 });
 
+describe("resolveMonth — never a month that has not happened", () => {
+    it("clamps a future URL parameter to the current month, not the cookie", () => {
+        // The link asked for a later month; the nearest month that exists is
+        // now. Falling back to the cookie would show March under a December URL.
+        expect(
+            resolveMonth({ param: "2026-11", stored: "2026-06", now: NOW }),
+        ).toBe("2026-09");
+        expect(resolveMonth({ param: "2027-01", now: NOW })).toBe("2026-09");
+    });
+
+    it("ignores a future cookie, however it was written", () => {
+        expect(resolveMonth({ stored: "2026-10", now: NOW })).toBe("2026-09");
+        expect(
+            resolveMonth({ param: "2026-12", stored: "2026-10", now: NOW }),
+        ).toBe("2026-09");
+    });
+
+    it("still resolves a past parameter and a past cookie to themselves", () => {
+        expect(resolveMonth({ param: "2025-12", now: NOW })).toBe("2025-12");
+        expect(resolveMonth({ stored: "2026-08", now: NOW })).toBe("2026-08");
+    });
+
+    it("still resolves the current month to itself", () => {
+        expect(
+            resolveMonth({ param: "2026-09", stored: "2026-06", now: NOW }),
+        ).toBe("2026-09");
+        expect(resolveMonth({ stored: "2026-09", now: NOW })).toBe("2026-09");
+    });
+
+    it("judges the future by the CDMX clock, not UTC", () => {
+        // 03:00Z on 1 October is still 30 September in CDMX (UTC-6).
+        const lateSeptember = new Date("2026-10-01T03:00:00Z");
+        expect(resolveMonth({ param: "2026-10", now: lateSeptember })).toBe(
+            "2026-09",
+        );
+    });
+
+    it("opens the new month at CDMX midnight, not later", () => {
+        // 06:00Z on 1 October is 00:00 in CDMX: October has started. An offset
+        // larger than six hours would still call it September.
+        const cdmxMidnight = new Date("2026-10-01T06:00:00Z");
+        expect(resolveMonth({ param: "2026-10", now: cdmxMidnight })).toBe(
+            "2026-10",
+        );
+        // One second earlier it is still September.
+        expect(
+            resolveMonth({
+                param: "2026-10",
+                now: new Date("2026-10-01T05:59:59Z"),
+            }),
+        ).toBe("2026-09");
+    });
+});
+
 describe("monthCookieString", () => {
     it("is a session cookie: no Max-Age, so it dies with the browser", () => {
         const cookie = monthCookieString("2026-08")!;

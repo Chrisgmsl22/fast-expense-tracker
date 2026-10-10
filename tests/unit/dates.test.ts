@@ -6,6 +6,8 @@ import {
     getCurrentMonthCdmx,
     getMonthProgress,
     getMonthRangeUtc,
+    getTodayCdmx,
+    isAfterTodayCdmx,
     isValidMonth,
     shiftMonth,
     toDateInputValue,
@@ -123,5 +125,57 @@ describe("shiftMonth", () => {
         ["2026-06", -6, "2025-12"],
     ])("%s %+d → %s", (month, delta, expected) => {
         expect(shiftMonth(month, delta)).toBe(expected);
+    });
+});
+
+describe("getTodayCdmx", () => {
+    it("is still yesterday in CDMX before 06:00Z", () => {
+        expect(getTodayCdmx(new Date("2026-10-01T03:00:00Z"))).toBe(
+            "2026-09-30",
+        );
+        expect(getTodayCdmx(new Date("2026-10-01T05:59:59Z"))).toBe(
+            "2026-09-30",
+        );
+    });
+
+    it("turns over at CDMX midnight, 06:00Z", () => {
+        expect(getTodayCdmx(new Date("2026-10-01T06:00:00Z"))).toBe(
+            "2026-10-01",
+        );
+    });
+});
+
+describe("isAfterTodayCdmx — the capture date cap", () => {
+    // A form's `yyyy-mm-dd` coerces to UTC midnight, the frame the cap reads.
+    const day = (value: string) => new Date(value);
+
+    it("refuses 1 October while CDMX is still on 30 September", () => {
+        const lateSeptember = new Date("2026-10-01T03:00:00Z");
+        expect(isAfterTodayCdmx(day("2026-10-01"), lateSeptember)).toBe(true);
+        expect(isAfterTodayCdmx(day("2026-09-30"), lateSeptember)).toBe(false);
+    });
+
+    it("allows 1 October from CDMX midnight, and refuses the 2nd", () => {
+        const cdmxMidnight = new Date("2026-10-01T06:00:00Z");
+        expect(isAfterTodayCdmx(day("2026-10-01"), cdmxMidnight)).toBe(false);
+        expect(isAfterTodayCdmx(day("2026-10-02"), cdmxMidnight)).toBe(true);
+    });
+
+    it("caps by the date, not the month: later this month is still refused", () => {
+        const midMonth = new Date("2026-10-14T18:00:00Z");
+        expect(isAfterTodayCdmx(day("2026-10-14"), midMonth)).toBe(false);
+        expect(isAfterTodayCdmx(day("2026-10-15"), midMonth)).toBe(true);
+        expect(isAfterTodayCdmx(day("2025-03-02"), midMonth)).toBe(false);
+    });
+
+    it("reads a stored row's 06:00Z instant as its calendar day", () => {
+        const midMonth = new Date("2026-10-14T18:00:00Z");
+        expect(
+            isAfterTodayCdmx(new Date("2026-10-14T06:00:00Z"), midMonth),
+        ).toBe(false);
+    });
+
+    it("leaves an invalid date to the schema's own check", () => {
+        expect(isAfterTodayCdmx(new Date("not a date"))).toBe(false);
     });
 });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isValidMonth } from "@/lib/dates";
+import { captureDateSchema } from "@/lib/schemas/capture-date";
 
 /**
  * Validation for the income screen (slice 2.3). Form inputs arrive as strings,
@@ -12,7 +13,7 @@ import { isValidMonth } from "@/lib/dates";
 export const variableIncomeInputSchema = z.object({
     source: z.string().min(1, "Source is required").max(200),
     amount: z.coerce.number().positive("Amount must be greater than 0"),
-    date: z.coerce.date(),
+    date: captureDateSchema,
 });
 
 export type VariableIncomeInput = z.infer<typeof variableIncomeInputSchema>;

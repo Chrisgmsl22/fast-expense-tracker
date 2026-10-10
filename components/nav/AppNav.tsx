@@ -7,6 +7,7 @@ import {
     ArrowUpRight,
     Check,
     CircleDollarSign,
+    CreditCard,
     LayoutDashboard,
     Menu,
     PiggyBank,
@@ -93,6 +94,7 @@ function SidebarContents({
                           },
                       ]
                     : []),
+                { href: "/cards", label: "Card balances", Icon: CreditCard },
                 { href: savingsHref, label: "Savings", Icon: PiggyBank },
             ],
         },

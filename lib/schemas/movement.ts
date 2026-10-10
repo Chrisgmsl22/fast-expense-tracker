@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { TRANSFER_FUNDING_SOURCES } from "@/lib/domain/funding";
 import { PARTNER_DEBT_TYPES } from "@/lib/domain/movement";
+import { captureDateSchema } from "@/lib/schemas/capture-date";
 
 /**
  * Validation for logging money movements (ADR-0018). Form inputs
@@ -11,7 +12,7 @@ import { PARTNER_DEBT_TYPES } from "@/lib/domain/movement";
 
 /** Card payment — real money moving to a card, decoupled from any expense. */
 export const cardPaymentInputSchema = z.object({
-    date: z.coerce.date(),
+    date: captureDateSchema,
     amount: z.coerce.number().positive("Amount must be greater than 0"),
     cardId: z.string().min(1, "Card is required"),
     note: z.string().max(1000).optional(),
@@ -27,7 +28,7 @@ export type CardPaymentInput = z.infer<typeof cardPaymentInputSchema>;
  */
 export const transferInputSchema = z
     .object({
-        date: z.coerce.date(),
+        date: captureDateSchema,
         amount: z.coerce.number().positive("Amount must be greater than 0"),
         direction: z.enum(["gf_paid", "gf_received"]).default("gf_paid"),
         note: z.string().max(1000).optional(),
@@ -51,7 +52,7 @@ export type TransferInput = z.infer<typeof transferInputSchema>;
  * and use the full positive amount without a percentage split (spec 0007).
  */
 export const partnerDebtInputSchema = z.object({
-    date: z.coerce.date(),
+    date: captureDateSchema,
     amount: z.coerce.number().positive("Amount must be greater than 0"),
     // Omission means the legacy direction on create, or the stored direction on edit.
     direction: z.enum(PARTNER_DEBT_TYPES).optional(),

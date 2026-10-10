@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import {
+    describe,
+    it,
+    expect,
+    vi,
+    afterEach,
+    beforeEach,
+    type Mock,
+} from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("@/app/_actions/expense/add-partner-payment", () => ({
@@ -280,5 +288,23 @@ describe("TransferForm", () => {
             ).toBeDefined(),
         );
         expect(onSuccess).not.toHaveBeenCalled();
+    });
+});
+
+describe("TransferForm date cap", () => {
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        // 03:00Z on 15 October: still 14 October in CDMX.
+        vi.setSystemTime(new Date("2026-10-15T03:00:00Z"));
+    });
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("caps the date input at today in CDMX", () => {
+        render(<TransferForm partnerName="Brenda" />);
+        expect(screen.getByLabelText("Date").getAttribute("max")).toBe(
+            "2026-10-14",
+        );
     });
 });

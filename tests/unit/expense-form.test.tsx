@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import {
+    describe,
+    it,
+    expect,
+    vi,
+    afterEach,
+    beforeEach,
+    type Mock,
+} from "vitest";
 import {
     render,
     screen,
@@ -550,5 +558,35 @@ describe("ExpenseForm", () => {
                 screen.getByText(/doesn't count toward this month's budget/i),
             ).toBeDefined();
         });
+    });
+});
+
+describe("ExpenseForm date cap", () => {
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        // 03:00Z on 15 October: still 14 October in CDMX.
+        vi.setSystemTime(new Date("2026-10-15T03:00:00Z"));
+    });
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("caps the date input at today in CDMX", () => {
+        renderForm();
+        expect(screen.getByLabelText(/date/i).getAttribute("max")).toBe(
+            "2026-10-14",
+        );
+    });
+
+    it("keeps a stored future date on screen, flagged, so it can be moved back", () => {
+        renderForm({
+            expense: { ...editable, date: new Date("2027-01-05T06:00:00Z") },
+        });
+        const date = screen.getByLabelText(/date/i) as HTMLInputElement;
+        expect(date.value).toBe("2027-01-05");
+        expect(date.validity.rangeOverflow).toBe(true);
+
+        fireEvent.change(date, { target: { value: "2026-10-14" } });
+        expect(date.validity.rangeOverflow).toBe(false);
     });
 });

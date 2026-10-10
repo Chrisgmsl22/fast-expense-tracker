@@ -274,9 +274,10 @@ describe("SettlementViews", () => {
         expect(screen.queryByText(/has ended/)).toBeNull();
     });
 
-    it("does not call a future month empty when rows are already dated to it", () => {
-        // A user can date an expense forward, so a future month can hold rows
-        // at the very moment its "has not started" notice renders.
+    it("does not call a future month empty when rows written before the date cap sit in it", () => {
+        // Capture now refuses a date after today and no page opens a future
+        // month, so no new row can land here. Rows saved before that rule can,
+        // and the view must not call their month empty if it ever renders one.
         renderViews({ monthLabel: "October 2026", monthPosition: "future" });
         expect(
             screen.getByText(

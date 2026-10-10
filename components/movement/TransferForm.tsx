@@ -14,6 +14,7 @@ import { updateTransfer } from "@/app/_actions/movement/update-transfer";
 import { addPartnerPayment } from "@/app/_actions/expense/add-partner-payment";
 import { updatePartnerPayment } from "@/app/_actions/expense/update-partner-payment";
 import type { FieldErrors } from "@/lib/actions/result";
+import { getTodayCdmx } from "@/lib/dates";
 import type { TransferInput } from "@/lib/schemas/movement";
 
 type Direction = "gf_paid" | "gf_received";
@@ -178,6 +179,7 @@ export function TransferForm({
                         id="tr-date"
                         name="date"
                         type="date"
+                        max={getTodayCdmx()}
                         required
                         value={date}
                         onChange={(e) => setDate(e.target.value)}

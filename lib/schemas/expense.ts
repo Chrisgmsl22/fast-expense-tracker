@@ -6,6 +6,7 @@ import {
     TRANSFER_FUNDING_SOURCES,
     allowsReimbursed,
 } from "@/lib/domain/funding";
+import { captureDateSchema } from "@/lib/schemas/capture-date";
 
 /**
  * Validation for capturing an expense (slice 1.4).
@@ -16,7 +17,7 @@ import {
  */
 export const expenseInputSchema = z
     .object({
-        date: z.coerce.date(),
+        date: captureDateSchema,
         amount: z.coerce.number().positive("Amount must be greater than 0"),
         categoryId: z.string().min(1, "Category is required"),
         subcategoryId: z.string().min(1).optional(),
@@ -65,7 +66,7 @@ export const expenseFundingSchema = z
  * `actualExpenditure` equal. Category and subcategory are optional and default.
  */
 export const partnerPaymentInputSchema = z.object({
-    date: z.coerce.date(),
+    date: captureDateSchema,
     amount: z.coerce.number().positive("Amount must be greater than 0"),
     note: z.string().max(200).optional(),
     categoryId: z.string().min(1).optional(),
