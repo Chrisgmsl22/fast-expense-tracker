@@ -311,4 +311,12 @@ describe("runSeed", () => {
         expect(stored.startsWith("$2")).toBe(true);
         expect(bcrypt.compareSync(ADMIN.adminPassword, stored)).toBe(true);
     });
+
+    it("keys and stores the admin email in lowercase, trimmed form", async () => {
+        const { db, user } = makeDb();
+        await runSeed(db, { ...ADMIN, adminEmail: "  Admin@Example.COM " });
+        const args = user.upsert.mock.calls[0]![0];
+        expect(args.where.email).toBe("admin@example.com");
+        expect(args.create.email).toBe("admin@example.com");
+    });
 });

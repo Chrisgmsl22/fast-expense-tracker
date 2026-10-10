@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 
 import { db } from "@/lib/db";
+import { normalizeEmail } from "@/lib/domain/user";
 
 /**
  * User data layer + credential verification.
@@ -19,7 +20,7 @@ export type AuthUser = {
 };
 
 export async function getUserByEmail(email: string) {
-    return db.user.findUnique({ where: { email } });
+    return db.user.findUnique({ where: { email: normalizeEmail(email) } });
 }
 
 /**
