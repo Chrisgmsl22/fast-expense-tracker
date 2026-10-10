@@ -74,10 +74,22 @@
         {
             "id": "BUG-8",
             "name": "card-ownership",
-            "title": "Expense create and update accept a cardId that belongs to another user",
-            "description": "Expense create and update do not check that the submitted cardId belongs to the session user, so a crafted request can file an expense against another account's card. Found in the BUG-4 review, which closes the same hole for categories and subcategories. Severity is bounded while the app has one real user, but it becomes a live data-isolation bug once CHORE-8.d opens public signup. Blocks CHORE-8.d.",
+            "title": "Expense and card-payment writes accept a cardId that belongs to another user",
+            "description": "Four writes do not check that the submitted cardId belongs to the session user, so a crafted request can attach another account's card to the user's own rows: expense create (app/_actions/expense/create.ts, cardId: v.cardId), expense update (app/_actions/expense/update.ts), card-payment add (app/_actions/movement/add-card-payment.ts) and card-payment update (app/_actions/movement/update-card-payment.ts). The read side widens it: the dashboard card lookup (lib/repositories/dashboard.repository.ts, getCardSpends' card.findMany) filters by id only, so the foreign card's name and colour then render on the user's dashboard. The card owner also can no longer delete that card: the foreign key blocks it, while the app's reference count only counts the owner's own rows. Found in the BUG-4 review (scope widened 2026-10-09 by the friend-launch audit). Card ids are UUIDs, so exploitation needs a leaked id, but the impact is real once signup opens. Blocks CHORE-8.d.",
             "proposedSolution": "Fixed. The same hole was also open on card payments and on the dashboard card read, so all of them were fixed. createExpense, updateExpense, addCardPayment and updateCardPayment now look the card up with CardRepository.findByIdForUser, which is scoped by the session userId and injected into each action. A cardId the user does not own is refused (validation, field error on cardId) before any write. A null cardId (cash) skips the lookup, and the user's own card still saves whether it is active or archived. Check order is kept: another user's expense or card-payment id still answers not_found, and in updateExpense the closed-cycle and partner-payment guards run before the card check. PrismaDashboardRepository.getCardSpends now scopes its card lookup by userId, so another user's card name and color never reach the dashboard. Tests: unit tests at all four action seams cover the foreign-card refusal (nothing written) and the own-card save. Integration tests cover the refusal on create and update through the real repositories, and the dashboard read ignoring another user's card. Every foreign-card refusal test and the dashboard test fail against the pre-fix code. The own-card saves, the not_found ordering and the closed-cycle ordering are regression pins and passed before the fix too.",
             "status": "fixed",
+            "spec": null,
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "BUG-9",
+            "name": "setup-env-docs",
+            "priority": 10,
+            "title": "Setup docs name the wrong database variable for migrations",
+            "description": "prisma/schema.prisma reads directUrl from DATABASE_URL_UNPOOLED, and ADR-0004 sets it in the Vercel Production scope only. docs/operations/setup.md (the .env.local step and the Vercel step, which also says Production + Preview) and README.md still say DIRECT_URL. Anyone who follows setup.md to rebuild the environment, for example during a restore, sets a variable the schema never reads, and migrations fail.",
+            "proposedSolution": "Docs only. Rename DIRECT_URL to DATABASE_URL_UNPOOLED in setup.md and README.md, set the scope to Production only as ADR-0004 says, and check .env.example names the same variable. Grep the docs for any other DIRECT_URL mention.",
+            "status": "open",
             "spec": null,
             "pr": null,
             "issue": null

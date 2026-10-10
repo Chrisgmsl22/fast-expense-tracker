@@ -1,133 +1,56 @@
-# Execution plan — after the money rework
+# Execution plan — friend launch
 
-**Written 2026-09-17**, after PR #74 (settlement cycles, the payment-is-the-expense
-inversion) and PR #73 (funding source) both landed on `main`.
+**Written 2026-10-09.** Goal: friends can sign up and use the app with their
+data private. Mobile (native app or PWA) waits until after this.
 
-This is the **sequencing** document: which open items run together, in which
-order, and why. The items themselves live in
-[`chores.json`](./chores.json) and [`bugs.json`](./bugs.json) — this file does
-not repeat them, it says how they are grouped.
+This is the **sequencing** document. The items live in
+[`chores.json`](./chores.json) and [`bugs.json`](./bugs.json); this file says
+the order and why. Delete it once the launch gate is passed and the follow-ups
+are done.
 
-Delete this file once the three tiers are done. It describes one push, not a
-standing process.
+The previous plan (the money rework, three tiers) is complete: CHORE-12,
+the quick wins and the chin all merged.
 
----
+## Rules for this push
 
-## The one rule that shapes everything
+- **One PR per item, one problem per PR.** Owner decision: the safest shape.
+- **Run serially where files overlap.** CHORE-8.b and CHORE-27 both edit
+  `prisma/seed.ts` and the category defaults: never in parallel.
+- **Signup ships dark.** CHORE-8.d merges with the Global Config switch off.
+  Turning it on is the launch, and it waits for the gate below.
 
-**No two tiers may touch the same file.** Two branches editing
-`app/(dashboard)/dashboard/page.tsx` is how the last merge cost 28 conflicts and
-three defects that neither branch had alone. The grouping below is chosen for
-file isolation first and topic second.
+## Before the switch goes on
 
-| Tier | Runs in                         | Owns                                                    |
-| ---- | ------------------------------- | ------------------------------------------------------- |
-| 1    | the primary checkout, on `main` | the settlement service, its repositories, the migration |
-| 2    | worktree `fet-t2`               | auth config, one settlement component, two repositories |
-| 3    | worktree                        | the dashboard and expenses pages, and the chin          |
+| #   | Item          | Why it blocks                                                        |
+| --- | ------------- | -------------------------------------------------------------------- |
+| 1   | **BUG-8**     | Four writes accept another user's card id                            |
+| 2   | **CHORE-31**  | `Foo@x.com` and `foo@x.com` would become two accounts                |
+| 3   | **CHORE-8.b** | A new user has no categories, so cannot log an expense               |
+| 4   | **CHORE-8.d** | The signup page, the on/off switch and the user cap                  |
+| 5   | **CHORE-8.e** | The 8-step onboarding wizard, from `designs-screens/onboarding.html` |
+| 6   | **CHORE-32**  | No throttle on login or signup (ADR-0009's multi-user trigger)       |
+| 7   | **CHORE-33**  | No password change and no email reset, so a lost password needs SQL  |
 
----
+**Owner steps, not PRs:** close PR #67 once the CHORE-8.b rebuild opens;
+create and connect the Global Config store (CHORE-8.d documents it); protect
+`main` ([`setup.md §4`](../operations/setup.md)).
 
-## Tier 1 — CHORE-12, the only blocker
+**Launch:** set `signupEnabled` to true in Global Config.
 
-**The one item where the app fails at something the owner actually does, and the
-only one that rewrites production rows.**
+## Soon after the first friends
 
-Two halves that cannot be separated:
+| #   | Item         | What                                       |
+| --- | ------------ | ------------------------------------------ |
+| 8   | **CHORE-34** | Backup and restore runbook                 |
+| 9   | **CHORE-35** | Security headers, CSP in report-only first |
+| 10  | **BUG-9**    | Setup docs name the wrong DB variable      |
+| 11  | **CHORE-37** | A short privacy page                       |
 
-1. **`Expense.closedAt`** — a cycle squared by _paying_ the partner cannot be
-   closed. `closedAt` lives only on `Movement`, and after the inversion the
-   payment is an `Expense`, so there is no row to mark. The close option does
-   not even appear.
-2. **The data conversion** — legacy `gf_fronted` and `gf_paid` rows into the new
-   model, plus the subcategory rename and the cents backfill.
+Then **CHORE-27** (P30) resumes the owner's own backlog. **CHORE-36**
+(delete account) follows.
 
-They ship together because a `gf_paid` row carrying `closedAt` has nowhere to put
-its marker until half 1 lands.
+## Capacity
 
-### Rollout, and why it is different from everything else here
-
-`vercel.json` runs `prisma migrate deploy` on every production build, so
-**merging this IS the migration**. It gets a read-only production survey and a
-**Neon restore point** before the merge, both run by the owner.
-
-### Three traps, written out because each has already been paid for once
-
-- **The conversion MUST reuse the movement's id.** `withoutConvertedTwins`,
-  `computeFeedTotals`'s twin filter and ADR-0024 all assume it, and nothing
-  enforces it. New ids double every transfer.
-- **Rename the subcategory rows first**, then flip
-  `PARTNER_PAYMENT_SUBCATEGORY_NAME` and `prisma/seed.ts` together. The statement
-  finds the row **by name**, scoped to that account's `combined-expenses`
-  category, and updates it **in place** — no new row, so every expense keeps the
-  `subcategoryId` it points at. The seed matches by name too, so a half-done
-  rename creates a duplicate on the next re-seed.
-- **`Expense.closedAt` lands before the conversion**, not beside it.
-
-Source material is outside the repo, at
-`~/.claude/harness/tasks/fet-payment-is-the-expense/` — `plan.md`, the 206-line
-`deferred-data-migration.sql`, and two preserved test files.
-
----
-
-## Tier 2 — the quick wins
-
-One PR. None of it touches money logic, and no two items share a file.
-
-| Item                     | What                                                                                                 |
-| ------------------------ | ---------------------------------------------------------------------------------------------------- |
-| **BUG-3**                | Expire sessions after 30 minutes of inactivity and show the login notice                             |
-| **BUG-6**                | A future month labelled "a past month", and the open-settlement tab vanishing on any other month     |
-| **CHORE-16** (code half) | The duplicated close-set query, the untested `updateTransfer` guard, the serial `await` in `getById` |
-
-**CHORE-16's other half is not a PR.** Deleting stale branches and worktrees is a
-git operation with no diff. Done as an operation on 2026-09-17: nine worktrees
-down to two, thirty-three branches down to nine.
-
----
-
-## Tier 3 — the chin
-
-One PR, one worktree. **CHORE-13 belongs here, not in Tier 2** — it edits the
-same two pages as CHORE-14, and splitting them across parallel branches
-guarantees the conflict this plan exists to avoid.
-
-| Item         | What                                                                          |
-| ------------ | ----------------------------------------------------------------------------- |
-| **CHORE-13** | One shared month chooser that survives navigation                             |
-| **CHORE-14** | The breakdown modal, from `docs/designs-screens/Summary breakdown modal.html` |
-| **CHORE-19** | The unsettled-balance reminder on the Expenses chin                           |
-| **CHORE-18** | Savings-funded spend on the dashboard — _after_ 14 defines the breakdown      |
-
-### The decision that unblocked it
-
-**2026-09-17, option A: the chin's income total is GROSS.** The design showed
-`card spend from income + paid to partner from income − what she paid you`. That
-last term is wrong, and not only on the ledger rule: `What I really spent` is
-already the owner's share alone — verified on September, where
-`36,046.51 − 11,700.00 − 4,895.69 = 19,450.82` — so the partner's share was never
-in it, and subtracting her reimbursement removes money that was already excluded.
-
-The net-with-partner figure belongs on the **Settlement** page, where cash in and
-cash out are meant to meet.
-
----
-
-## Deferred, deliberately
-
-| Item                                                                  | Why                                                                                    |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **CHORE-17** — 108 files to the comment bar                           | `scripts/check-comment-size.sh` stops new ones. Hygiene, not value                     |
-| **CHORE-8.e** — onboarding wizard                                     | Pointless before signup exists                                                         |
-| **BUG-4** — the cross-user category leak                              | Harmless with one user, but **blocks CHORE-8.d**. Do it before signup, not before this |
-| **BUG-7** — the edit dialog retyping a payment's category and funding | Reachable only through the edit dialog; no figure is wrong today                       |
-| **CHORE-15** — the narrowed predicate and the stale-tab edit reads    | Unreachable through the app                                                            |
-| **PR #67** — CHORE-8.b                                                | Open since 28 July. Parked by decision, not forgotten                                  |
-
----
-
-## What still has no owner
-
-**The known gap closes with CHORE-12, and nothing else on this board makes the
-app wrong.** After the three tiers, the next real question is whether the signup
-track (CHORE-8.c / 8.d / 8.e) is wanted at all, and BUG-4 is its gate.
+Vercel, Neon and GlitchTip free tiers hold about 10 users, likely about 50
+(audit 2026-10-09: pooled Neon URL, one Prisma client, no runtime errors in
+the prior 7 days). No infrastructure change is needed for this launch.
