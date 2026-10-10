@@ -130,12 +130,12 @@
         {
             "id": "CHORE-8.e",
             "name": "onboarding-wizard",
-            "priority": 35,
+            "priority": 5,
             "title": "Signup onboarding wizard",
-            "description": "After a user signs up (8.d), walk them through a short multi-step onboarding (modal/wizard) to set up their account instead of dropping them on an empty dashboard. Built against a user-provided Claude design reference.",
-            "plan": "A multi-step wizard shown on first sign-in: welcome -> display name + fixed monthly income -> pick/confirm a card (from the starter kit) -> 'do you share expenses?' toggle (+ partner name + your % when on) -> budget rule (show the default 50/25/25 as a starting point) -> done. Persists via the existing settings / income / card paths (no new money model). Steps + visuals finalized against the shared design. Depends on 8.d (a just-signed-up user) + 8.a/8.b. Out of scope: re-running the wizard later (Settings already covers edits).",
+            "description": "After a user signs up (8.d), walk them through a short multi-step onboarding (modal/wizard) to set up their account instead of dropping them on an empty dashboard. Owner decision (2026-10-09): part of the friend launch, built right after 8.d and before the signup switch goes on. Design: docs/designs-screens/onboarding.html (2026-07-22), 8 steps, desktop and mobile.",
+            "plan": "Build against docs/designs-screens/onboarding.html; its sample data is not the financial model. Steps: 1 Welcome, 2 Name, 3 Sharing (toggle + partner name + your % when on), 4 Income (fixed monthly), 5 Budget (the Essentials/Discretionary/Savings split, default 50/25/25), 6 Cards (confirm the starter Cash card, add one), 7 Categories (READ-ONLY preview of the starter kit), 8 Done. (1) Each step saves through the existing paths, no new money model: display name, save-split-rule (CHORE-6.a), set-fixed income (CHORE-25), save-budget-rule (CHORE-23), card add (CHORE-6.c). (2) Schema: a nullable User.onboardedAt; the migration sets it for every existing user so the owner never sees the wizard. The wizard shows while onboardedAt is null; Done and Skip both set it. (3) Step 7 copy: the design says categories can be renamed, recoloured or limited in Settings; until CHORE-8.c ships, change that line to what Settings offers today. (4) Real-browser check at desktop and mobile sizes. Tests: a new user sees the wizard and an existing user does not; each step writes through its action; Skip and Done set onboardedAt; back and forward keep entered values; userId scope. Out of scope: re-running the wizard later (Settings covers edits), category editing (8.c). Depends on 8.d + 8.b.",
             "status": "open",
-            "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
+            "spec": "docs/designs-screens/onboarding.html",
             "pr": null,
             "issue": null
         },
@@ -319,7 +319,7 @@
         {
             "id": "CHORE-27",
             "name": "subcategory-relevance",
-            "priority": 11,
+            "priority": 30,
             "title": "Move Personal to Essentials and let a subcategory override its category's bucket",
             "description": "Owner decisions (2026-10-02): Personal moves to Essentials, so Disposable Income is the only Discretionary category. A subcategory can override its category's relevance, Essential or Discretionary only, and inherits it by default. Bucket membership applies to every month, past ones included.",
             "plan": "(1) Schema: keep Category.isRelevant; add a nullable Subcategory.isRelevant, where null means 'inherit from the category'. (2) Data migration: set Personal isRelevant = true for every user. (3) Every bucket read resolves an expense's bucket from the subcategory override, else the category flag. (4) Update prisma/seed.ts and docs/reference/domain-reference.md to match. The management controls ship with CHORE-8.c. Open at pickup: whether a subcategory under Savings or Unassigned may carry an override. Tests: override and inherit, a past month re-buckets after the change, the migration flips Personal for every user and nothing else, userId scope.",
@@ -367,7 +367,7 @@
         {
             "id": "CHORE-32",
             "name": "auth-rate-limit",
-            "priority": 5,
+            "priority": 6,
             "title": "Rate-limit login and signup attempts",
             "description": "Friend launch (2026-10-09). There is no throttle on login, and signup (8.d) adds a second public form. ADR-0009 deferred rate limiting and named 'move to multi-user' as the trigger to revisit; that trigger is now met. Login runs through the Auth.js credentials callback (/api/auth/callback/credentials) as well as the login action, and the proxy matcher skips /api, so a limit placed only in the action is bypassable. Must merge before the signup switch is turned on.",
             "plan": "Kicks off with an ADR that revisits ADR-0009 (docs/decisions is protected, sign-off first) and picks the store: a Postgres table (no new service, $0) or Upstash Redis through the Vercel Marketplace. (1) Limit failed logins per email and per IP inside the credentials authorize() path, so both entry points are covered. (2) Limit signup attempts per IP in the signup action. (3) A refused attempt returns the same generic message as a wrong password, so the limit does not reveal which emails exist. (4) Behind a port injected like the repositories, with a fake for tests. Tests: the Nth failure inside the window is refused, a success resets or does not count (decide at pickup), the window expires, the limiter fails open or closed as the ADR decides, and the callback route is covered, not only the action.",
@@ -379,7 +379,7 @@
         {
             "id": "CHORE-33",
             "name": "change-password",
-            "priority": 6,
+            "priority": 7,
             "title": "Change password from Settings",
             "description": "Friend launch (2026-10-09). There is no password change and no email provider, so password reset by email is not possible yet (Resend is in locked Phase 7). The Settings 'Account' section is a 'coming soon' placeholder (app/(dashboard)/settings/page.tsx). Without this, a friend who wants a new password, or whose password leaked, needs a manual database edit.",
             "plan": "(1) Settings Account section: current password, new password, confirm. An IDOR-safe server action mirroring save-split-rule: Zod (same strength rule as signup) -> auth() -> verify the current password with bcrypt -> hash and store the new one. (2) Sessions issued before the change stop working: store passwordChangedAt on User and refuse a JWT issued before it in the jwt callback (auth.config.ts). (3) docs/operations: a short runbook for a forgotten password (the owner sets a temporary password by hand until email reset exists). Tests: wrong current password refused; weak new password refused; success changes the hash; an older session is refused after a change; userId scope. Out of scope: reset by email.",
@@ -391,7 +391,7 @@
         {
             "id": "CHORE-34",
             "name": "recovery-runbook",
-            "priority": 7,
+            "priority": 8,
             "title": "Backup and restore runbook for the production database",
             "description": "Friend launch (2026-10-09). With other people's financial data in Neon there is no documented backup or restore path. The only restore guidance is a one-off 'take a Neon restore point' step inside one migration doc (docs/operations/partner-payment-conversion-migration.md), and the restore window of the current Neon plan is not written down anywhere. Production migrations run on every deploy (vercel.json), and a Vercel rollback does not reverse the schema.",
             "plan": "Docs only, no app code. (1) docs/operations/recovery.md: the Neon plan's restore window, how to restore to a point in time or a branch, and how to point the app at it. (2) A periodic logical backup the owner runs (pg_dump to a private location outside the repo, never committed). (3) A rule for migrations: additive only by default; take a restore point before any destructive change. (4) Link it from docs/operations/README.md.",
@@ -403,7 +403,7 @@
         {
             "id": "CHORE-35",
             "name": "security-headers",
-            "priority": 8,
+            "priority": 9,
             "title": "Add security headers",
             "description": "Friend launch (2026-10-09). next.config.ts sets no headers(): no Content-Security-Policy, no frame-ancestors, no X-Content-Type-Options, no Referrer-Policy. The login and signup pages are public once signup opens.",
             "plan": "(1) A headers() block in next.config.ts: frame-ancestors 'none' (or X-Frame-Options DENY), X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy that denies unused features. (2) CSP in report-only mode first, allowing what the app loads today (GlitchTip, Speed Insights); switch to enforcing in a later change once no violations show. Tests: a check that the config returns the headers; a real-browser check that login, dashboard and expenses still load with no CSP errors in the console.",
@@ -415,7 +415,7 @@
         {
             "id": "CHORE-36",
             "name": "delete-account",
-            "priority": 30,
+            "priority": 37,
             "title": "Let a user delete their account",
             "description": "Friend launch follow-up (2026-10-09). A user cannot delete their account, and no relation in prisma/schema.prisma uses onDelete: Cascade, so even a manual delete of a User row is blocked by the database. A JWT session also never checks that its user still exists.",
             "plan": "(1) A delete-account action in Settings Account: confirm with the current password, then remove every row the user owns in one transaction, in foreign-key order (or add cascades in a migration; decide at pickup). (2) The jwt callback refuses a session whose user no longer exists (pairs with CHORE-33's passwordChangedAt check). Tests: every owned table is empty for that user afterwards; another user's rows are untouched; wrong password refused; the old session is refused.",
@@ -427,7 +427,7 @@
         {
             "id": "CHORE-37",
             "name": "privacy-note",
-            "priority": 10,
+            "priority": 11,
             "title": "A short privacy page for friends' data",
             "description": "Friend launch (2026-10-09). Friends will store financial data in the owner's database with no statement of who can see it, where it lives, or how to get it removed. The Settings 'Privacy' entry is a placeholder.",
             "plan": "(1) A plain, short public page (app/(auth)/privacy or similar): what is stored, where (Neon, Vercel), who can read it (the owner as database admin), what error reports carry (verify GlitchTip events before writing the claim), and how to ask for deletion. (2) Link it from the signup page and from Settings. Content needs the owner's sign-off before merge. Tests: the page renders signed out; the links resolve.",

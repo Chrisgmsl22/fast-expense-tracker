@@ -21,14 +21,15 @@ the quick wins and the chin all merged.
 
 ## Before the switch goes on
 
-| #   | Item          | Why it blocks                                                       |
-| --- | ------------- | ------------------------------------------------------------------- |
-| 1   | **BUG-8**     | Four writes accept another user's card id                           |
-| 2   | **CHORE-31**  | `Foo@x.com` and `foo@x.com` would become two accounts               |
-| 3   | **CHORE-8.b** | A new user has no categories, so cannot log an expense              |
-| 4   | **CHORE-8.d** | The signup page, the on/off switch and the user cap                 |
-| 5   | **CHORE-32**  | No throttle on login or signup (ADR-0009's multi-user trigger)      |
-| 6   | **CHORE-33**  | No password change and no email reset, so a lost password needs SQL |
+| #   | Item          | Why it blocks                                                        |
+| --- | ------------- | -------------------------------------------------------------------- |
+| 1   | **BUG-8**     | Four writes accept another user's card id                            |
+| 2   | **CHORE-31**  | `Foo@x.com` and `foo@x.com` would become two accounts                |
+| 3   | **CHORE-8.b** | A new user has no categories, so cannot log an expense               |
+| 4   | **CHORE-8.d** | The signup page, the on/off switch and the user cap                  |
+| 5   | **CHORE-8.e** | The 8-step onboarding wizard, from `designs-screens/onboarding.html` |
+| 6   | **CHORE-32**  | No throttle on login or signup (ADR-0009's multi-user trigger)       |
+| 7   | **CHORE-33**  | No password change and no email reset, so a lost password needs SQL  |
 
 **Owner steps, not PRs:** close PR #67 once the CHORE-8.b rebuild opens;
 create and connect the Global Config store (CHORE-8.d documents it); protect
@@ -40,13 +41,13 @@ create and connect the Global Config store (CHORE-8.d documents it); protect
 
 | #   | Item         | What                                       |
 | --- | ------------ | ------------------------------------------ |
-| 7   | **CHORE-34** | Backup and restore runbook                 |
-| 8   | **CHORE-35** | Security headers, CSP in report-only first |
-| 9   | **BUG-9**    | Setup docs name the wrong DB variable      |
-| 10  | **CHORE-37** | A short privacy page                       |
+| 8   | **CHORE-34** | Backup and restore runbook                 |
+| 9   | **CHORE-35** | Security headers, CSP in report-only first |
+| 10  | **BUG-9**    | Setup docs name the wrong DB variable      |
+| 11  | **CHORE-37** | A short privacy page                       |
 
-Then **CHORE-27** (P11) resumes the owner's own backlog. **CHORE-36**
-(delete account) and **CHORE-8.e** (onboarding wizard, needs a design) follow.
+Then **CHORE-27** (P30) resumes the owner's own backlog. **CHORE-36**
+(delete account) follows.
 
 ## Capacity
 

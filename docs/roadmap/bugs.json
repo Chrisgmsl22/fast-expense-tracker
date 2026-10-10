@@ -86,7 +86,7 @@
         {
             "id": "BUG-9",
             "name": "setup-env-docs",
-            "priority": 9,
+            "priority": 10,
             "title": "Setup docs name the wrong database variable for migrations",
             "description": "prisma/schema.prisma reads directUrl from DATABASE_URL_UNPOOLED, and ADR-0004 sets it in the Vercel Production scope only. docs/operations/setup.md (the .env.local step and the Vercel step, which also says Production + Preview) and README.md still say DIRECT_URL. Anyone who follows setup.md to rebuild the environment, for example during a restore, sets a variable the schema never reads, and migrations fail.",
             "proposedSolution": "Docs only. Rename DIRECT_URL to DATABASE_URL_UNPOOLED in setup.md and README.md, set the scope to Production only as ADR-0004 says, and check .env.example names the same variable. Grep the docs for any other DIRECT_URL mention.",
