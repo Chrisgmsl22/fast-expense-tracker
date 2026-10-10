@@ -4,7 +4,15 @@ const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
 vi.mock("@/auth", () => ({ auth: authMock }));
 
 import { updateCardPayment } from "@/app/_actions/movement/update-card-payment";
+import { FakeCardRepository } from "@/tests/support/fake-card-repository";
 import { FakeMovementRepository } from "@/tests/support/fake-movement-repository";
+
+function ownCards() {
+    const cards = new FakeCardRepository();
+    cards.seed({ id: "card_1", userId: "u1" });
+    cards.seed({ id: "card_2", userId: "u1" });
+    return cards;
+}
 
 /** Seed a card_payment owned by u1 that the edit will target. */
 function seededRepo() {
@@ -35,6 +43,7 @@ describe("updateCardPayment (unit, injected fake repo)", () => {
                 note: "min payment",
             },
             repo,
+            ownCards(),
         );
 
         expect(res.ok).toBe(true);
@@ -104,9 +113,80 @@ describe("updateCardPayment (unit, injected fake repo)", () => {
         const res = await updateCardPayment(
             { id: "mv1", date: "2026-07-10", amount: "950", cardId: "card_1" },
             repo,
+            ownCards(),
         );
         expect(res.ok).toBe(false);
         if (res.ok) return;
         expect(res.code).toBe("db_error");
+    });
+
+    it("refuses another user's card, leaving the row unwritten", async () => {
+        const repo = seededRepo();
+        const cards = ownCards();
+        cards.seed({ id: "card-other", userId: "u2" });
+
+        const res = await updateCardPayment(
+            {
+                id: "mv1",
+                date: "2026-07-10",
+                amount: "950",
+                cardId: "card-other",
+            },
+            repo,
+            cards,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.cardId).toBeDefined();
+        expect(repo.updates).toHaveLength(0);
+    });
+
+    it("saves the user's own archived card", async () => {
+        const repo = seededRepo();
+        const cards = ownCards();
+        cards.seed({
+            id: "card-old",
+            userId: "u1",
+            archivedAt: new Date("2026-04-01"),
+        });
+
+        const res = await updateCardPayment(
+            {
+                id: "mv1",
+                date: "2026-07-10",
+                amount: "950",
+                cardId: "card-old",
+            },
+            repo,
+            cards,
+        );
+
+        expect(res.ok).toBe(true);
+        expect(repo.updates[0]?.data.cardId).toBe("card-old");
+    });
+
+    it("answers not_found for another user's row even when the card is foreign too", async () => {
+        const repo = seededRepo();
+        authMock.mockResolvedValue({ user: { id: "u2" } });
+        const cards = new FakeCardRepository();
+        cards.seed({ id: "card-other", userId: "u1" });
+
+        const res = await updateCardPayment(
+            {
+                id: "mv1",
+                date: "2026-07-10",
+                amount: "950",
+                cardId: "card-other",
+            },
+            repo,
+            cards,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("not_found");
+        expect(repo.updates).toHaveLength(0);
     });
 });

@@ -4,6 +4,7 @@ const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
 vi.mock("@/auth", () => ({ auth: authMock }));
 
 import { updateExpense } from "@/app/_actions/expense/update";
+import { FakeCardRepository } from "@/tests/support/fake-card-repository";
 import { FakeExpenseRepository } from "@/tests/support/fake-expense-repository";
 
 function validInput(over: Record<string, unknown> = {}) {
@@ -150,6 +151,84 @@ describe("updateExpense (unit, injected fake repo)", () => {
         expect(res.ok).toBe(false);
         if (res.ok) return;
         expect(res.code).toBe("not_found");
+    });
+
+    it("refuses another user's card, leaving the row unwritten", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.seedExpense("e1", "u1");
+        const cards = new FakeCardRepository();
+        cards.seed({ id: "card-other", userId: "u2" });
+
+        const res = await updateExpense(
+            validInput({ cardId: "card-other" }),
+            repo,
+            cards,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.cardId).toBeDefined();
+        expect(repo.updates).toHaveLength(0);
+    });
+
+    it.each([
+        ["active", null],
+        ["archived", new Date("2026-04-01")],
+    ])("saves the user's own %s card", async (_label, archivedAt) => {
+        const repo = new FakeExpenseRepository();
+        repo.seedExpense("e1", "u1");
+        const cards = new FakeCardRepository();
+        cards.seed({ id: "card-mine", userId: "u1", archivedAt });
+
+        const res = await updateExpense(
+            validInput({ cardId: "card-mine" }),
+            repo,
+            cards,
+        );
+
+        expect(res.ok).toBe(true);
+        expect(repo.updates[0]?.data.cardId).toBe("card-mine");
+    });
+
+    it("answers not_found for another user's row even when the card is foreign too", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.seedExpense("e1", "u2");
+        const cards = new FakeCardRepository();
+        cards.seed({ id: "card-other", userId: "u2" });
+
+        const res = await updateExpense(
+            validInput({ cardId: "card-other" }),
+            repo,
+            cards,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("not_found");
+    });
+
+    it("answers cycle_closed for a frozen row even when the card is foreign", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.seedExpense("e1", "u1", {
+            isShared: true,
+            yourPercentage: 0.5,
+            actualExpenditure: 500,
+            cycleClosedAt: new Date("2026-05-31"),
+        });
+        const cards = new FakeCardRepository();
+        cards.seed({ id: "card-other", userId: "u2" });
+
+        const res = await updateExpense(
+            validInput({ cardId: "card-other" }),
+            repo,
+            cards,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("cycle_closed");
+        expect(repo.updates).toHaveLength(0);
     });
 
     it("maps a repository write failure to db_error", async () => {

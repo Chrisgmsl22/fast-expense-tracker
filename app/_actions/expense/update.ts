@@ -13,7 +13,8 @@ import {
     SPLIT_INTO_CLOSED_CYCLE_FIELD_ERROR,
     SPLIT_INTO_CLOSED_CYCLE_MESSAGE,
 } from "@/lib/domain/frozen-row";
-import { expenseRepository } from "@/lib/repositories";
+import { cardRepository, expenseRepository } from "@/lib/repositories";
+import type { CardRepository } from "@/lib/repositories/card.repository";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
 import {
     expenseFundingSchema,
@@ -51,6 +52,7 @@ export type UpdateExpenseResult = ActionResult<
 export async function updateExpense(
     input: unknown,
     repo: ExpenseRepository = expenseRepository,
+    cards: CardRepository = cardRepository,
 ): Promise<UpdateExpenseResult> {
     const parsed = expenseInputSchema.safeParse(input);
     if (!parsed.success) {
@@ -240,6 +242,15 @@ export async function updateExpense(
                     },
                 };
             }
+        }
+
+        if (v.cardId && !(await cards.findByIdForUser(userId, v.cardId))) {
+            return {
+                ok: false,
+                code: "validation",
+                message: "Invalid expense",
+                fieldErrors: { cardId: ["Card not found"] },
+            };
         }
 
         const count = await repo.updateForUser(id, userId, {
