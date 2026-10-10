@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { isValidMonth } from "@/lib/dates";
 import { isValidHex } from "@/lib/palette";
 
 /**
@@ -54,7 +55,13 @@ export const cardIdInputSchema = z.object({
     id: z.string().min(1, "Card is required"),
 });
 
+/** One card's history for one `YYYY-MM` month. */
+export const cardHistoryInputSchema = cardIdInputSchema.extend({
+    month: z.string().refine(isValidMonth, "Pick a month"),
+});
+
 export type CardType = z.infer<typeof cardTypeSchema>;
 export type AddCardInput = z.infer<typeof addCardInputSchema>;
 export type UpdateCardInput = z.infer<typeof updateCardInputSchema>;
 export type CardIdInput = z.infer<typeof cardIdInputSchema>;
+export type CardHistoryInput = z.infer<typeof cardHistoryInputSchema>;

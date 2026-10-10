@@ -1,11 +1,43 @@
 import { describe, it, expect } from "vitest";
 
 import {
+    formatBalance,
     formatMxn,
+    formatMxnCompact,
     formatMxnWhole,
     formatExpenseDate,
     formatMonthLabel,
+    formatMonthName,
 } from "@/lib/format";
+
+describe("formatMonthName", () => {
+    it("names the month alone, without shifting it a day", () => {
+        expect(formatMonthName("2026-09")).toBe("September");
+        expect(formatMonthName("2027-01")).toBe("January");
+    });
+});
+
+describe("formatBalance", () => {
+    it.each([
+        [6130, "$6,130.00"],
+        [0, "$0.00"],
+        [-1889.25, "+$1,889.25"],
+    ])("formats %s as %s", (balance, text) => {
+        expect(formatBalance(balance)).toBe(text);
+    });
+});
+
+describe("formatMxnCompact", () => {
+    it.each([
+        [270, "$270"],
+        [999.6, "$1k"],
+        [12000, "$12k"],
+        [18400, "$18.4k"],
+        [-1889.25, "$1.9k"],
+    ])("shortens %s to %s", (amount, text) => {
+        expect(formatMxnCompact(amount)).toBe(text);
+    });
+});
 
 describe("formatMxn", () => {
     it("formats an amount with thousands grouping and two decimals", () => {

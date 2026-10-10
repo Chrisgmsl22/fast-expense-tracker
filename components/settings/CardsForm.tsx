@@ -598,7 +598,11 @@ export function CardsForm({ cards }: { cards: CardSettingsItem[] }) {
     const atCap = active.length >= MAX_ACTIVE_CARDS;
 
     return (
-        <section aria-label="Cards" className="rounded-xl border p-5">
+        <section
+            id="cards"
+            aria-label="Cards"
+            className="scroll-mt-20 rounded-xl border p-5"
+        >
             <div className="flex items-center justify-between gap-3">
                 <h2 className="font-semibold">Cards</h2>
                 <Button

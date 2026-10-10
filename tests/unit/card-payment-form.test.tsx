@@ -87,6 +87,65 @@ describe("CardPaymentForm", () => {
         expect(addMock).not.toHaveBeenCalled();
     });
 
+    it("starts on the default card and shows its balance before and after", () => {
+        render(
+            <CardPaymentForm
+                cards={cards}
+                defaultCardId="card2"
+                balances={{ card2: 6130 }}
+            />,
+        );
+
+        const preview = screen.getByText("BBVA balance").parentElement!;
+        expect(preview.textContent).toContain("$6,130.00");
+        fireEvent.change(screen.getByLabelText(/Amount/), {
+            target: { value: "3000" },
+        });
+        expect(preview.textContent).toContain("$3,130.00");
+        fireEvent.change(screen.getByLabelText(/Amount/), {
+            target: { value: "7000" },
+        });
+        expect(preview.textContent).toContain("+$870.00");
+    });
+
+    it("fills the balance with Pay full", () => {
+        render(
+            <CardPaymentForm
+                cards={cards}
+                defaultCardId="card2"
+                balances={{ card2: 1215.6 }}
+            />,
+        );
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "Pay full $1,215.60" }),
+        );
+
+        expect(
+            (screen.getByLabelText(/Amount/) as HTMLInputElement).value,
+        ).toBe("1215.60");
+    });
+
+    it.each([0, -20])("hides Pay full when the balance is %s", (balance) => {
+        render(
+            <CardPaymentForm
+                cards={cards}
+                defaultCardId="card2"
+                balances={{ card2: balance }}
+            />,
+        );
+
+        expect(screen.queryByRole("button", { name: /Pay full/ })).toBeNull();
+        expect(screen.getByText("BBVA balance")).toBeDefined();
+    });
+
+    it("shows no balance line without balances", () => {
+        render(<CardPaymentForm cards={cards} defaultCardId="card2" />);
+
+        expect(screen.queryByText(/balance/)).toBeNull();
+        expect(screen.queryByRole("button", { name: /Pay full/ })).toBeNull();
+    });
+
     it("surfaces a field error and does not call onSuccess on failure", async () => {
         updateMock.mockResolvedValue({
             ok: false,

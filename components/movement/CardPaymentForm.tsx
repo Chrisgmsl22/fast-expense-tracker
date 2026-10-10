@@ -19,6 +19,8 @@ import {
     type UpdateCardPaymentResult,
 } from "@/app/_actions/movement/update-card-payment";
 import type { FieldErrors } from "@/lib/actions/result";
+import { balanceAfterPayment, payFullAmount } from "@/lib/domain/card-balance";
+import { formatBalance, formatMxn } from "@/lib/format";
 import type { CardPaymentInput } from "@/lib/schemas/movement";
 import type { CardOption } from "@/components/expense/ExpenseForm";
 
@@ -35,6 +37,10 @@ type Props = {
     cards: CardOption[];
     /** When present, the form edits this card payment instead of creating one. */
     payment?: CardPaymentEditable;
+    /** The card a new payment starts on. */
+    defaultCardId?: string;
+    /** Current balance per card id: enables "Pay full" and the before → after line. */
+    balances?: Readonly<Record<string, number>>;
     onSuccess?: () => void;
     onCancel?: () => void;
 };
@@ -48,12 +54,16 @@ type Props = {
 export function CardPaymentForm({
     cards,
     payment,
+    defaultCardId,
+    balances,
     onSuccess,
     onCancel,
 }: Props) {
     const [date, setDate] = useState(payment?.date ?? "");
     const [amount, setAmount] = useState(payment?.amount ?? "");
-    const [cardId, setCardId] = useState(payment?.cardId ?? "");
+    const [cardId, setCardId] = useState(
+        payment?.cardId ?? defaultCardId ?? "",
+    );
     const [note, setNote] = useState(payment?.note ?? "");
 
     const [pending, startTransition] = useTransition();
@@ -61,6 +71,12 @@ export function CardPaymentForm({
     const [formError, setFormError] = useState<string | null>(null);
 
     const selectedCard = cards.find((c) => c.id === cardId);
+    const balance = balances?.[cardId];
+    const fullAmount = balance === undefined ? null : payFullAmount(balance);
+    const balanceAfter =
+        balance === undefined
+            ? null
+            : balanceAfterPayment(balance, Number(amount || 0));
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -153,6 +169,17 @@ export function CardPaymentForm({
                             className="pl-7"
                         />
                     </div>
+                    {fullAmount !== null ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            className="mt-2 rounded-full"
+                            onClick={() => setAmount(fullAmount.toFixed(2))}
+                        >
+                            Pay full {formatMxn(fullAmount)}
+                        </Button>
+                    ) : null}
                     {fieldError("amount")}
                 </div>
             </div>
@@ -219,6 +246,25 @@ export function CardPaymentForm({
                     className="mt-1.5"
                 />
             </div>
+
+            {selectedCard && balance !== undefined && balanceAfter !== null ? (
+                <div className="space-y-1.5">
+                    <p className="flex items-center gap-2 rounded-lg bg-payment-tint px-3 py-2.5 text-sm tabular-nums">
+                        <span>{selectedCard.name} balance</span>
+                        <span className="ml-auto">
+                            {formatBalance(balance)}
+                        </span>
+                        <span aria-hidden>→</span>
+                        <span className="sr-only">after this payment</span>
+                        <b>{formatBalance(balanceAfter)}</b>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        Cash you sent to the card. Your spending figures
+                        don&apos;t change: the expenses were already counted
+                        when you charged them.
+                    </p>
+                </div>
+            ) : null}
 
             {formError && (
                 <p className="text-sm text-destructive" role="alert">
