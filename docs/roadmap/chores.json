@@ -94,11 +94,10 @@
         {
             "id": "CHORE-8.b",
             "name": "starter-kit",
-            "priority": 3,
             "title": "New-user starter kit — default categories/subcategories/cards/settings",
             "description": "A single provisioning routine that seeds a fresh account's starting data so a new user lands in a working, private tracker. Shared by the owner seed AND signup (8.d) so the two never drift. Depends on CHORE-8.a (per-user categories). Friend launch (2026-10-09): without it a new account has no categories, and an expense needs one, so a new user cannot log anything. The seed is the only way to create a user today, and it copies the owner's identity into the account: the name, his five cards and a fixed income.",
             "plan": "REBUILD on current main; do not rebase PR #67 (open since 2026-07-28; prisma/seed.ts changed 7 times on main since). Use #67's lib/domain/starter-kit.ts and lib/repositories/user-provisioning.repository.ts as a reference only; the owner closes #67 once this PR opens. (1) A provisionNewUser(userId) routine behind a repository, one transaction, all userId-scoped: the default categories + subcategories from the current seed (including the combined-expenses 'Covered for me' subcategory that partner payments need), one Cash card (REQUIRED, Cash is un-addable via the UI since 6.c), and a Solo Settings row (sharesExpenses=false, defaultSharePercentage=0.5 written explicitly, not the owner's 0.68 schema default). (2) The kit carries NO owner data: no name, no owner cards, no income rows. (3) Refactor prisma/seed.ts so the owner is provisioned through the same routine, then the owner-only extras (his cards, income) are layered on in the seed alone. (4) Tests: a provisioned user has the full default set and nothing of another user's; the kit holds no owner card names or income; provisioning twice is refused or idempotent (decide at pickup); seed still works. Coordinate with CHORE-27, which edits the same seed and category defaults: run one after the other, never in parallel. Depends on 8.a.",
-            "status": "open",
+            "status": "shipped",
             "spec": "docs/specs/0006-settings-standalone-shared-modes.md",
             "pr": null,
             "issue": null
