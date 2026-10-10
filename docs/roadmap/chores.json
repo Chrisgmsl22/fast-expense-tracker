@@ -360,7 +360,7 @@
             "plan": "(1) Normalise email with trim + lowercase in the Zod schemas for login and for any account-creation input, so every write and every lookup uses the same form. (2) Migration: lowercase existing User.email rows, with a fail-fast guard that aborts if two rows collide on lower(email) (mirror the CHORE-8.a backfill guard). (3) The seed writes lowercase too. Tests: login with mixed case finds the user; the schema lowercases; the migration guard aborts on a collision; the owner row is unchanged when already lowercase.",
             "status": "shipped",
             "spec": null,
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/93",
             "issue": null
         },
         {
