@@ -5,7 +5,8 @@ import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { computeActualExpenditure } from "@/lib/domain/expense";
-import { expenseRepository } from "@/lib/repositories";
+import { cardRepository, expenseRepository } from "@/lib/repositories";
+import type { CardRepository } from "@/lib/repositories/card.repository";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
 import {
     expenseFundingSchema,
@@ -25,10 +26,10 @@ export type CreateExpenseResult = ActionResult<
 /**
  * Create an expense for the signed-in user.
  *
- * Orchestration only: validate → authenticate → check the category and
- * subcategory belong to the user → persist → map failures. The money math
- * (`computeActualExpenditure`), the CDMX→UTC date, and the DB writes each live
- * in their own unit.
+ * Orchestration only: validate → authenticate → check the category,
+ * subcategory, and card belong to the user → persist → map failures. The money
+ * math (`computeActualExpenditure`), the CDMX→UTC date, and the DB writes each
+ * live in their own unit.
  *
  * `actualExpenditure` is computed server-side and stored, never trusted from the
  * client (spec 0001 §3). `paidBy` is persisted as-is — netting lives in the
@@ -37,6 +38,7 @@ export type CreateExpenseResult = ActionResult<
 export async function createExpense(
     input: unknown,
     repo: ExpenseRepository = expenseRepository,
+    cards: CardRepository = cardRepository,
 ): Promise<CreateExpenseResult> {
     const parsed = expenseInputSchema.safeParse(input);
     if (!parsed.success) {
@@ -106,6 +108,15 @@ export async function createExpense(
                     },
                 };
             }
+        }
+
+        if (v.cardId && !(await cards.findByIdForUser(userId, v.cardId))) {
+            return {
+                ok: false,
+                code: "validation",
+                message: "Invalid expense",
+                fieldErrors: { cardId: ["Card not found"] },
+            };
         }
 
         const created = await repo.insert(userId, {

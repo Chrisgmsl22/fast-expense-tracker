@@ -9,6 +9,7 @@ import { updateCardPayment } from "@/app/_actions/movement/update-card-payment";
 import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
 import { updateTransfer } from "@/app/_actions/movement/update-transfer";
 import type { MovementType } from "@/lib/domain/movement";
+import { FakeCardRepository } from "@/tests/support/fake-card-repository";
 import { FakeMovementRepository } from "@/tests/support/fake-movement-repository";
 
 const CLOSED = new Date("2026-06-30T12:00:00Z");
@@ -170,8 +171,15 @@ describe("the edit read refuses exactly the movements the write refuses", () => 
     ) {
         const base = { id: "mv1", date: "2026-06-10", amount: 300 };
         switch (type) {
-            case "card_payment":
-                return updateCardPayment({ ...base, cardId: "card1" }, repo);
+            case "card_payment": {
+                const cards = new FakeCardRepository();
+                cards.seed({ id: "card1", userId: "u1" });
+                return updateCardPayment(
+                    { ...base, cardId: "card1" },
+                    repo,
+                    cards,
+                );
+            }
             case "gf_paid":
             case "gf_received":
                 return updateTransfer(

@@ -143,7 +143,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
             .map((g) => g.cardId)
             .filter((id): id is string => id !== null);
         const cards = await this.db.card.findMany({
-            where: { id: { in: cardIds } },
+            where: { id: { in: cardIds }, userId },
             select: { id: true, name: true, color: true },
         });
         const meta = new Map(cards.map((c) => [c.id, c]));
@@ -151,8 +151,8 @@ export class PrismaDashboardRepository implements DashboardRepository {
         return grouped
             .map((g) => {
                 const spent = g._sum.actualExpenditure ?? 0;
-                // null cardId = cash. The `?? CASH` below is just defensive — an
-                // FK guarantees a non-null cardId resolves to a card row.
+                // null cardId = cash. A card that is not the user's never resolves,
+                // so its name and color never reach this user.
                 const card = g.cardId ? meta.get(g.cardId) : undefined;
                 return {
                     id: g.cardId ?? CASH_ID,

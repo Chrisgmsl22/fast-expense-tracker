@@ -4,7 +4,8 @@ import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
-import { movementRepository } from "@/lib/repositories";
+import { cardRepository, movementRepository } from "@/lib/repositories";
+import type { CardRepository } from "@/lib/repositories/card.repository";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
 import {
     cardPaymentInputSchema,
@@ -31,6 +32,7 @@ export type AddCardPaymentResult = ActionResult<
 export async function addCardPayment(
     input: unknown,
     repo: MovementRepository = movementRepository,
+    cards: CardRepository = cardRepository,
 ): Promise<AddCardPaymentResult> {
     const parsed = cardPaymentInputSchema.safeParse(input);
     if (!parsed.success) {
@@ -54,6 +56,15 @@ export async function addCardPayment(
 
     const v = parsed.data;
     try {
+        if (!(await cards.findByIdForUser(userId, v.cardId))) {
+            return {
+                ok: false,
+                code: "validation",
+                message: "Invalid card payment",
+                fieldErrors: { cardId: ["Card not found"] },
+            };
+        }
+
         const created = await repo.insert(userId, {
             date: cdmxCalendarDateToUtc(v.date),
             amount: v.amount,

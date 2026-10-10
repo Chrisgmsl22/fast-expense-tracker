@@ -8,7 +8,14 @@ import { addTransfer } from "@/app/_actions/movement/add-transfer";
 import { deleteMovement } from "@/app/_actions/movement/delete";
 import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
 import { updateTransfer } from "@/app/_actions/movement/update-transfer";
+import { FakeCardRepository } from "@/tests/support/fake-card-repository";
 import { FakeMovementRepository } from "@/tests/support/fake-movement-repository";
+
+function ownCards() {
+    const cards = new FakeCardRepository();
+    cards.seed({ id: "card_1", userId: "u1" });
+    return cards;
+}
 
 describe("movement actions (unit, injected fake repo)", () => {
     beforeEach(() => {
@@ -26,6 +33,7 @@ describe("movement actions (unit, injected fake repo)", () => {
                     cardId: "card_1",
                 },
                 repo,
+                ownCards(),
             );
 
             expect(res.ok).toBe(true);
@@ -74,11 +82,49 @@ describe("movement actions (unit, injected fake repo)", () => {
             const res = await addCardPayment(
                 { date: "2026-06-20", amount: "1000", cardId: "card_1" },
                 repo,
+                ownCards(),
             );
 
             expect(res.ok).toBe(false);
             if (res.ok) return;
             expect(res.code).toBe("db_error");
+        });
+
+        it("refuses another user's card, writing nothing", async () => {
+            const repo = new FakeMovementRepository();
+            const cards = new FakeCardRepository();
+            cards.seed({ id: "card-other", userId: "u2" });
+
+            const res = await addCardPayment(
+                { date: "2026-06-20", amount: "1000", cardId: "card-other" },
+                repo,
+                cards,
+            );
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.code).toBe("validation");
+            expect(res.fieldErrors?.cardId).toBeDefined();
+            expect(repo.inserts).toHaveLength(0);
+        });
+
+        it("persists a payment to the user's own archived card", async () => {
+            const repo = new FakeMovementRepository();
+            const cards = new FakeCardRepository();
+            cards.seed({
+                id: "card-old",
+                userId: "u1",
+                archivedAt: new Date("2026-04-01"),
+            });
+
+            const res = await addCardPayment(
+                { date: "2026-06-20", amount: "1000", cardId: "card-old" },
+                repo,
+                cards,
+            );
+
+            expect(res.ok).toBe(true);
+            expect(repo.inserts[0]?.cardId).toBe("card-old");
         });
     });
 

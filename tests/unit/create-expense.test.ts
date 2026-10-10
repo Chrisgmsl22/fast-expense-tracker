@@ -6,6 +6,7 @@ const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
 vi.mock("@/auth", () => ({ auth: authMock }));
 
 import { createExpense } from "@/app/_actions/expense/create";
+import { FakeCardRepository } from "@/tests/support/fake-card-repository";
 import { FakeExpenseRepository } from "@/tests/support/fake-expense-repository";
 
 function validInput(over: Record<string, unknown> = {}) {
@@ -136,6 +137,42 @@ describe("createExpense (unit, injected fake repo)", () => {
         expect(res.code).toBe("validation");
         expect(res.fieldErrors?.subcategoryId).toBeDefined();
         expect(repo.inserts).toHaveLength(0);
+    });
+
+    it("refuses another user's card, writing nothing", async () => {
+        const repo = new FakeExpenseRepository();
+        const cards = new FakeCardRepository();
+        cards.seed({ id: "card-other", userId: "u2" });
+
+        const res = await createExpense(
+            validInput({ cardId: "card-other" }),
+            repo,
+            cards,
+        );
+
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.fieldErrors?.cardId).toBeDefined();
+        expect(repo.inserts).toHaveLength(0);
+    });
+
+    it.each([
+        ["active", null],
+        ["archived", new Date("2026-04-01")],
+    ])("persists the user's own %s card", async (_label, archivedAt) => {
+        const repo = new FakeExpenseRepository();
+        const cards = new FakeCardRepository();
+        cards.seed({ id: "card-mine", userId: "u1", archivedAt });
+
+        const res = await createExpense(
+            validInput({ cardId: "card-mine" }),
+            repo,
+            cards,
+        );
+
+        expect(res.ok).toBe(true);
+        expect(repo.inserts[0]?.cardId).toBe("card-mine");
     });
 
     it("maps a repository write failure to db_error", async () => {
