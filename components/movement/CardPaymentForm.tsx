@@ -20,9 +20,10 @@ import {
 } from "@/app/_actions/movement/update-card-payment";
 import type { FieldErrors } from "@/lib/actions/result";
 import { balanceAfterPayment, payFullAmount } from "@/lib/domain/card-balance";
-import { formatBalance, formatMxn } from "@/lib/format";
+import { formatBalance, formatMonthLabel, formatMxn } from "@/lib/format";
 import type { CardPaymentInput } from "@/lib/schemas/movement";
 import type { CardOption } from "@/components/expense/ExpenseForm";
+import { cn } from "@/lib/utils";
 
 /** Prefilled fields when the form edits an existing payment (strings for inputs). */
 export type CardPaymentEditable = {
@@ -41,6 +42,8 @@ type Props = {
     defaultCardId?: string;
     /** Current balance per card id: enables "Pay full" and the before → after line. */
     balances?: Readonly<Record<string, number>>;
+    /** "2026-09": the month on screen, so a payment dated outside it says so. */
+    viewingMonth?: string;
     onSuccess?: () => void;
     onCancel?: () => void;
 };
@@ -56,6 +59,7 @@ export function CardPaymentForm({
     payment,
     defaultCardId,
     balances,
+    viewingMonth,
     onSuccess,
     onCancel,
 }: Props) {
@@ -77,6 +81,12 @@ export function CardPaymentForm({
         balance === undefined
             ? null
             : balanceAfterPayment(balance, Number(amount || 0));
+    // Saving refreshes the month on screen, so a payment dated elsewhere looks
+    // like nothing happened. Name where it will land instead.
+    const outsideMonthNote =
+        viewingMonth && date.length === 10 && date.slice(0, 7) !== viewingMonth
+            ? `Lands in ${formatMonthLabel(date.slice(0, 7))}. You are viewing ${formatMonthLabel(viewingMonth)}, so this balance will not change.`
+            : null;
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -143,8 +153,23 @@ export function CardPaymentForm({
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
                         className="mt-1.5"
+                        aria-describedby={
+                            outsideMonthNote ? "cp-date-note" : undefined
+                        }
                     />
                     {fieldError("date")}
+                    {/* Always in the tree: a live region that only appears when
+                        it has text is announced inconsistently. */}
+                    <p
+                        id="cp-date-note"
+                        role="status"
+                        className={cn(
+                            "text-xs text-muted-foreground",
+                            outsideMonthNote && "mt-1.5",
+                        )}
+                    >
+                        {outsideMonthNote}
+                    </p>
                 </div>
                 <div className="sm:col-span-2">
                     <Label htmlFor="cp-amount">Amount (MXN)</Label>
@@ -247,7 +272,12 @@ export function CardPaymentForm({
                 />
             </div>
 
-            {selectedCard && balance !== undefined && balanceAfter !== null ? (
+            {/* A balance the payment will not reach has no "after": a date in
+                another month withholds the preview, as a past month does. */}
+            {selectedCard &&
+            balance !== undefined &&
+            balanceAfter !== null &&
+            !outsideMonthNote ? (
                 <div className="space-y-1.5">
                     <p className="flex items-center gap-2 rounded-lg bg-payment-tint px-3 py-2.5 text-sm tabular-nums">
                         <span>{selectedCard.name} balance</span>

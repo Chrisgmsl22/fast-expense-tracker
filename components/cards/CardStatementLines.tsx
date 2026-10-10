@@ -22,7 +22,15 @@ export function CardStatementLines({ statement, monthName, className }: Props) {
             <dt className="text-muted-foreground">Charged in {monthName}</dt>
             <dd className="text-right">+ {formatMxn(statement.charged)}</dd>
             <dt className="text-muted-foreground">Paid in {monthName}</dt>
-            <dd className="text-right text-payment">
+            {/* The payment tint marks money that moved: a zero reads like any other. */}
+            <dd
+                className={cn(
+                    "text-right",
+                    statement.paid > 0
+                        ? "text-payment"
+                        : "text-muted-foreground",
+                )}
+            >
                 − {formatMxn(statement.paid)}
             </dd>
             <dt className="text-muted-foreground">Redeemed in {monthName}</dt>

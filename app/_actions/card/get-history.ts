@@ -27,10 +27,6 @@ export type GetCardHistoryResult = ActionResult<
     GetCardHistoryCode
 >;
 
-/**
- * One card's month: the balance it opened with, then the month's charges and
- * payments, newest first, each with the running balance from that opening.
- */
 export async function getCardHistory(
     input: unknown,
     repo: CardRepository = cardRepository,

@@ -139,6 +139,52 @@ describe("CardPaymentForm", () => {
         expect(screen.getByText("BBVA balance")).toBeDefined();
     });
 
+    it("withholds the before → after line when the date lands in another month", () => {
+        render(
+            <CardPaymentForm
+                cards={cards}
+                defaultCardId="card2"
+                balances={{ card2: 4199 }}
+                viewingMonth="2026-10"
+            />,
+        );
+        const date = screen.getByLabelText("Date");
+
+        fireEvent.change(date, { target: { value: "2026-10-15" } });
+        expect(screen.getByText("BBVA balance")).toBeDefined();
+
+        fireEvent.change(date, { target: { value: "2026-09-15" } });
+        expect(
+            screen.getByText(
+                "Lands in September 2026. You are viewing October 2026, so this balance will not change.",
+            ),
+        ).toBeDefined();
+        expect(screen.queryByText("BBVA balance")).toBeNull();
+
+        fireEvent.change(date, { target: { value: "2026-10-16" } });
+        expect(screen.getByText("BBVA balance")).toBeDefined();
+    });
+
+    it("describes the date field with the cue, and only while it is shown", () => {
+        render(
+            <CardPaymentForm
+                cards={cards}
+                defaultCardId="card2"
+                viewingMonth="2026-10"
+            />,
+        );
+        const date = screen.getByLabelText("Date");
+
+        expect(date.getAttribute("aria-describedby")).toBeNull();
+
+        fireEvent.change(date, { target: { value: "2026-09-15" } });
+
+        const describedBy = date.getAttribute("aria-describedby")!;
+        const note = document.getElementById(describedBy)!;
+        expect(note.textContent).toContain("Lands in September 2026");
+        expect(note.getAttribute("role")).toBe("status");
+    });
+
     it("shows no balance line without balances", () => {
         render(<CardPaymentForm cards={cards} defaultCardId="card2" />);
 

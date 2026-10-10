@@ -11,11 +11,19 @@ import { monthCookieString } from "@/lib/month-scope";
 export function MonthPicker({
     month,
     remember = false,
+    rememberFuture = true,
     currentMonth,
 }: {
     month: string;
     /** Also remember the choice (`lib/month-scope.ts`), so it survives navigation. */
     remember?: boolean;
+    /**
+     * Whether a month after `currentMonth` is remembered as well. On by default, so
+     * every existing caller keeps the behaviour it has. `/cards` turns it off: a
+     * month that has not happened is a URL-only state there, so stepping forward
+     * never leaves the other month-scoped pages parked in the future.
+     */
+    rememberFuture?: boolean;
     /**
      * The live month, supplied by the server so the control never disagrees with the
      * render's clock. When it differs from `month`, a back-to-current button appears.
@@ -32,7 +40,10 @@ export function MonthPicker({
         // URL are written together only for a value both can hold.
         const cookie = monthCookieString(next);
         if (!cookie) return;
-        if (remember) document.cookie = cookie;
+        // `YYYY-MM` sorts lexicographically, so one comparison against the
+        // render's clock tells a future month from the rest.
+        const isFuture = currentMonth !== undefined && next > currentMonth;
+        if (remember && (rememberFuture || !isFuture)) document.cookie = cookie;
         router.push(`${pathname}?month=${encodeURIComponent(next)}`);
     }
 

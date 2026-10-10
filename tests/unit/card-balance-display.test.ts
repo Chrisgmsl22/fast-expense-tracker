@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
     cardTypeLabel,
+    headlineState,
+    isSettled,
     namesInState,
     owedBreakdown,
     stateLabel,
@@ -37,6 +39,40 @@ describe("stateLabel", () => {
             "Owed at end of September",
         );
         expect(stateLabel("paid", "September")).toBe("Paid in full");
+    });
+
+    it("names the month on an untouched card", () => {
+        expect(stateLabel("untouched")).toBe("No activity");
+        expect(stateLabel("untouched", "March")).toBe("No activity in March");
+    });
+});
+
+describe("headlineState", () => {
+    it("reads a zero balance with no opening and no rows as untouched", () => {
+        expect(headlineState(view({ name: "Gold" }))).toBe("untouched");
+    });
+
+    it.each([
+        ["a charge paid off", { charged: 500, paid: 500 }],
+        ["an opening balance paid off", { opening: 500, paid: 500 }],
+        ["points that cleared it", { opening: 500, redeemed: 500 }],
+    ])("still reads %s as paid in full", (_case, over) => {
+        expect(headlineState(view({ name: "Gold", ...over }))).toBe("paid");
+    });
+
+    it.each(["owed", "credit"] as const)("passes %s through", (state) => {
+        expect(headlineState(view({ name: "Gold", state }))).toBe(state);
+    });
+});
+
+describe("isSettled", () => {
+    it.each([
+        ["paid", true],
+        ["credit", true],
+        ["owed", false],
+        ["untouched", false],
+    ] as const)("reads %s as settled: %s", (state, expected) => {
+        expect(isSettled(state)).toBe(expected);
     });
 });
 

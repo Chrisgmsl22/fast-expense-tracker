@@ -66,6 +66,37 @@ describe("MonthPicker", () => {
         expect(document.cookie).not.toContain("fet_scoped_month=2026-08");
     });
 
+    it("remembers a month that has not happened, unless the screen opts out", () => {
+        // The default holds /expenses, /income, /dashboard and /settlement
+        // exactly where they were; only /cards opts out.
+        document.cookie = "fet_scoped_month=; path=/; max-age=0";
+        render(<MonthPicker month="2026-09" remember currentMonth="2026-09" />);
+        fireEvent.click(screen.getByRole("button", { name: /next month/i }));
+        expect(document.cookie).toContain("fet_scoped_month=2026-10");
+    });
+
+    it("writes no cookie for a month after the current one when asked not to", () => {
+        document.cookie = "fet_scoped_month=; path=/; max-age=0";
+        render(
+            <MonthPicker
+                month="2026-09"
+                remember
+                rememberFuture={false}
+                currentMonth="2026-09"
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: /next month/i }));
+
+        // The URL still goes there; only the shared memory is withheld.
+        expect(pushMock).toHaveBeenCalledWith("/expenses?month=2026-10");
+        expect(document.cookie).not.toContain("fet_scoped_month=2026-10");
+
+        fireEvent.click(
+            screen.getByRole("button", { name: /previous month/i }),
+        );
+        expect(document.cookie).toContain("fet_scoped_month=2026-08");
+    });
+
     it("offers the back-to-current button only while looking at another month", () => {
         const { rerender } = render(
             <MonthPicker month="2026-08" currentMonth="2026-09" />,

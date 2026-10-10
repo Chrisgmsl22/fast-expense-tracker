@@ -15,6 +15,8 @@ type Props = {
     card: CardBalanceView | null;
     cards: CardOption[];
     balances?: Readonly<Record<string, number>>;
+    /** "2026-09": the month the page is showing. */
+    month: string;
     onClose: () => void;
     onSuccess: () => void;
     /** Where focus lands when the dialog closes; null keeps the default. */
@@ -27,6 +29,7 @@ export function LogCardPaymentDialog({
     card,
     cards,
     balances,
+    month,
     onClose,
     onSuccess,
     returnFocus,
@@ -51,6 +54,7 @@ export function LogCardPaymentDialog({
                         cards={cards}
                         defaultCardId={card.id}
                         balances={balances}
+                        viewingMonth={month}
                         onCancel={onClose}
                         onSuccess={onSuccess}
                     />

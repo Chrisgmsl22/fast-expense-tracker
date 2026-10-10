@@ -101,10 +101,7 @@ export interface CardRepository {
     deleteForUser(userId: string, id: string): Promise<number>;
     /** True when the card is the user's locked `type:"cash"` card. */
     isCash(userId: string, id: string): Promise<boolean>;
-    /**
-     * Every active card that can carry a balance, A→Z, with its charged and paid
-     * sums before `month` (CDMX) and inside it. Redemptions are not tracked yet, so 0.
-     */
+    /** A→Z, split at `month` (CDMX). Redemptions are not tracked yet, so 0. */
     listBalances(userId: string, month: string): Promise<CardBalanceRow[]>;
     /** One active balance card's month history; null for any other card. */
     getHistory(

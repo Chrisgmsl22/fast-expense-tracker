@@ -9,6 +9,8 @@ import { formatBalance, formatExpenseDate, formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
     cardTypeLabel,
+    headlineState,
+    isSettled,
     stateLabel,
     type CardBalanceView,
 } from "./card-balance-display";
@@ -150,6 +152,7 @@ export function CardBalanceDrawer({
     onClose,
     onLogPayment,
 }: Props) {
+    const head = card ? headlineState(card) : null;
     return (
         <Sheet
             open={open}
@@ -161,7 +164,7 @@ export function CardBalanceDrawer({
                 side="right"
                 className="w-full max-w-full gap-0 overflow-x-hidden overflow-y-auto p-0 sm:w-[500px]"
             >
-                {card ? (
+                {card && head ? (
                     <>
                         <div className="flex flex-col gap-3.5 border-b px-5 py-4">
                             <div className="flex items-center gap-2.5 pr-8">
@@ -182,12 +185,12 @@ export function CardBalanceDrawer({
                                     <p
                                         className={cn(
                                             "text-[11px] font-semibold tracking-wide uppercase",
-                                            card.state === "owed"
-                                                ? "text-muted-foreground"
-                                                : "text-positive",
+                                            isSettled(head)
+                                                ? "text-positive"
+                                                : "text-muted-foreground",
                                         )}
                                     >
-                                        {stateLabel(card.state, monthName)}
+                                        {stateLabel(head, monthName)}
                                     </p>
                                     <p
                                         className={cn(
@@ -199,11 +202,13 @@ export function CardBalanceDrawer({
                                         {formatBalance(card.balance)}
                                     </p>
                                 </div>
-                                <CardStatementLines
-                                    statement={card}
-                                    monthName={monthName}
-                                    className="ml-auto"
-                                />
+                                {head === "untouched" ? null : (
+                                    <CardStatementLines
+                                        statement={card}
+                                        monthName={monthName}
+                                        className="ml-auto"
+                                    />
+                                )}
                             </div>
                             <Button
                                 type="button"

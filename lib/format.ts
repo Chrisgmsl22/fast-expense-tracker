@@ -14,10 +14,10 @@ export function formatBalance(balance: number): string {
         : formatMxn(balance);
 }
 
-/** "$18.4k", "$270": a short figure for a one-line breakdown on a narrow screen. */
-export function formatMxnCompact(amount: number): string {
+/** "$18.4k", "$250.50": a short, unsigned magnitude, exact to the centavo below 1,000 so a breakdown adds up. */
+export function formatMxnCompactAbs(amount: number): string {
     const abs = Math.abs(amount);
-    if (Math.round(abs) < 1000) return `$${abs.toFixed(0)}`;
+    if (Math.round(abs) < 1000) return formatMxn(abs);
     return `$${(abs / 1000).toFixed(1).replace(/\.0$/, "")}k`;
 }
 

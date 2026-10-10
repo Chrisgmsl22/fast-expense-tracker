@@ -1,25 +1,28 @@
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatBalance, formatMxnCompact } from "@/lib/format";
+import { formatBalance, formatMxnCompactAbs } from "@/lib/format";
 import {
     cardTypeLabel,
+    headlineState,
+    isSettled,
     stateLabel,
     type CardBalanceView,
 } from "./card-balance-display";
 
 type Props = {
     card: CardBalanceView;
-    onOpen: (card: CardBalanceView) => void;
+    /** `trigger` is the clicked control, so focus can return to it. */
+    onOpen: (card: CardBalanceView, trigger: HTMLElement) => void;
 };
 
 /** The mobile card row: one tap opens the detail drawer. */
 export function CardBalanceRow({ card, onOpen }: Props) {
+    const head = headlineState(card);
     return (
         <button
             type="button"
-            data-card-trigger={card.id}
-            aria-label={`${card.name}, ${formatBalance(card.balance)}, ${stateLabel(card.state)}`}
-            onClick={() => onOpen(card)}
+            aria-label={`${card.name}, ${formatBalance(card.balance)}, ${stateLabel(head)}`}
+            onClick={(e) => onOpen(card, e.currentTarget)}
             className="flex min-h-[88px] w-full flex-col gap-2 rounded-xl border bg-card px-3.5 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
             <span className="flex w-full items-center gap-2.5">
@@ -46,21 +49,25 @@ export function CardBalanceRow({ card, onOpen }: Props) {
             </span>
             <span className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
                 <span>{cardTypeLabel(card.type)}</span>
-                <span aria-hidden>·</span>
-                <span>
-                    {card.opening < 0 ? "−" : ""}
-                    {formatMxnCompact(card.opening)} +{" "}
-                    {formatMxnCompact(card.charged)} −{" "}
-                    {formatMxnCompact(card.paid)} −{" "}
-                    {formatMxnCompact(card.redeemed)}
-                </span>
+                {head === "untouched" ? null : (
+                    <>
+                        <span aria-hidden>·</span>
+                        <span>
+                            {card.opening < 0 ? "−" : ""}
+                            {formatMxnCompactAbs(card.opening)} +{" "}
+                            {formatMxnCompactAbs(card.charged)} −{" "}
+                            {formatMxnCompactAbs(card.paid)} −{" "}
+                            {formatMxnCompactAbs(card.redeemed)}
+                        </span>
+                    </>
+                )}
                 <span
                     className={cn(
                         "ml-auto text-[10px] font-semibold tracking-wide whitespace-nowrap uppercase",
-                        card.state !== "owed" && "text-positive",
+                        isSettled(head) && "text-positive",
                     )}
                 >
-                    {stateLabel(card.state)}
+                    {stateLabel(head)}
                 </span>
             </span>
         </button>

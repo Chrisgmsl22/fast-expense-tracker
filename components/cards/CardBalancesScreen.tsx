@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { CreditCard } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { getCardHistory } from "@/app/_actions/card/get-history";
-import { formatMxn } from "@/lib/format";
+import { formatMonthName, formatMxn } from "@/lib/format";
 import { MonthPicker } from "@/components/expense/MonthPicker";
 import {
     namesInState,
@@ -18,6 +18,7 @@ import { CardBalanceTile } from "./CardBalanceTile";
 import { CardBalanceRow } from "./CardBalanceRow";
 import { CardBalanceDrawer, type CardHistoryState } from "./CardBalanceDrawer";
 import { CardBalanceNotice } from "./CardBalanceNotice";
+import { FutureMonthNotice } from "./FutureMonthNotice";
 import { LogCardPaymentDialog } from "./LogCardPaymentDialog";
 
 type Props = {
@@ -146,24 +147,6 @@ function CompactTotals({ summary, monthName }: TotalsProps) {
     );
 }
 
-// The tile and the mobile row for one card both carry this; only one is shown.
-function visibleCardTrigger(cardId: string): HTMLElement | null {
-    const triggers = document.querySelectorAll<HTMLElement>(
-        "[data-card-trigger]",
-    );
-    return (
-        [...triggers].find(
-            (el) =>
-                el.dataset.cardTrigger === cardId &&
-                (el.checkVisibility?.() ?? true),
-        ) ?? null
-    );
-}
-
-/**
- * Card balances: a tile per active card (a compact row on a phone), a detail
- * drawer with history, and the payment dialog.
- */
 export function CardBalancesScreen({
     summary,
     month,
@@ -181,6 +164,11 @@ export function CardBalancesScreen({
         null,
     );
     const latestRequest = useRef(0);
+    // Where focus goes when a dialog closes. Each card renders a trigger on a
+    // tile and another on the mobile row, so the control the user actually
+    // clicked — not a lookup by card id — is the one that is on screen.
+    const drawerTrigger = useRef<HTMLElement | null>(null);
+    const paymentTrigger = useRef<HTMLElement | null>(null);
 
     const { cards } = summary;
     // Pay full and the before → after line read today's balance, so only the
@@ -188,7 +176,8 @@ export function CardBalancesScreen({
     const isCurrentMonth = month === currentMonth;
     const balances = Object.fromEntries(cards.map((c) => [c.id, c.balance]));
 
-    async function openDrawer(card: CardBalanceView) {
+    async function openDrawer(card: CardBalanceView, trigger: HTMLElement) {
+        drawerTrigger.current = trigger;
         setDrawerCard(card);
         setDrawerOpen(true);
         setHistory({ status: "loading" });
@@ -205,12 +194,17 @@ export function CardBalancesScreen({
                     ? { status: "ready", ...res.data }
                     : { status: "error", message: res.message },
             );
-        } catch {
+        } catch (e) {
+            console.error("getCardHistory: request failed", e);
             if (request === latestRequest.current) setHistory(failed);
         }
     }
 
-    function openPayment(card: CardBalanceView) {
+    // `trigger` is null from inside the drawer: opening the payment form closes
+    // the drawer, so its button is gone by the time focus has to return. The
+    // control that opened the drawer is still there.
+    function openPayment(card: CardBalanceView, trigger: HTMLElement | null) {
+        paymentTrigger.current = trigger ?? drawerTrigger.current;
         setDrawerOpen(false);
         setPaymentCard(card);
         setPaymentOpen(true);
@@ -219,6 +213,34 @@ export function CardBalancesScreen({
     function onPaid() {
         setPaymentOpen(false);
         router.refresh();
+    }
+
+    const picker = (
+        <MonthPicker
+            month={month}
+            remember
+            // A month that has not happened stays in the URL and out of the
+            // shared month cookie, so stepping forward here never parks
+            // /expenses, /income, /dashboard or /settlement in the future.
+            rememberFuture={false}
+            currentMonth={currentMonth}
+        />
+    );
+
+    // A future month has no rows, so every card would carry the previous
+    // month's closing balance forward and print it as a real figure. It holds
+    // only if nothing is charged and nothing is paid between now and then.
+    // Refuse the figures; the picker keeps the way back on screen.
+    if (month > currentMonth) {
+        return (
+            <div className="flex flex-col gap-3.5">
+                {picker}
+                <FutureMonthNotice
+                    monthName={monthName}
+                    currentMonthName={formatMonthName(currentMonth)}
+                />
+            </div>
+        );
     }
 
     if (cards.length === 0) {
@@ -232,7 +254,7 @@ export function CardBalancesScreen({
 
     return (
         <div className="flex flex-col gap-3.5">
-            <MonthPicker month={month} remember currentMonth={currentMonth} />
+            {picker}
             <CardBalanceNotice />
             <Totals summary={summary} monthName={monthName} />
             <CompactTotals summary={summary} monthName={monthName} />
@@ -264,17 +286,20 @@ export function CardBalancesScreen({
                 monthName={monthName}
                 history={history}
                 onClose={() => setDrawerOpen(false)}
-                onLogPayment={openPayment}
+                onLogPayment={(card) => openPayment(card, null)}
             />
             <LogCardPaymentDialog
                 open={paymentOpen}
                 card={paymentCard}
                 cards={cards}
                 balances={isCurrentMonth ? balances : undefined}
+                month={month}
                 onClose={() => setPaymentOpen(false)}
                 onSuccess={onPaid}
                 returnFocus={() =>
-                    paymentCard ? visibleCardTrigger(paymentCard.id) : null
+                    paymentTrigger.current?.isConnected
+                        ? paymentTrigger.current
+                        : null
                 }
             />
         </div>

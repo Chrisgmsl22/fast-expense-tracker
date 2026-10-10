@@ -5,26 +5,35 @@ import { formatBalance, formatMxn } from "@/lib/format";
 import { CardStatementLines } from "./CardStatementLines";
 import {
     cardTypeLabel,
+    headlineState,
+    isSettled,
     stateLabel,
     type CardBalanceView,
+    type CardHeadlineState,
 } from "./card-balance-display";
 
 type Props = {
     card: CardBalanceView;
     monthName: string;
-    onOpen: (card: CardBalanceView) => void;
-    onLogPayment: (card: CardBalanceView) => void;
+    /** `trigger` is the clicked control, so focus can return to it. */
+    onOpen: (card: CardBalanceView, trigger: HTMLElement) => void;
+    onLogPayment: (card: CardBalanceView, trigger: HTMLElement) => void;
 };
 
-function footnote(card: CardBalanceView, monthName: string): string | null {
-    if (card.state === "paid") return `Nothing owed at end of ${monthName}`;
-    if (card.state === "credit")
+function footnote(
+    card: CardBalanceView,
+    monthName: string,
+    head: CardHeadlineState,
+): string | null {
+    if (head === "paid") return `Nothing owed at end of ${monthName}`;
+    if (head === "credit")
         return `You paid ${formatMxn(Math.abs(card.balance))} more than you owed`;
     return null;
 }
 
-// The name's ::after stretches over the whole tile, so a click anywhere opens the
-// drawer, while "Log a payment" sits above it (z-10) as its own button.
+// This ::after stretches over the whole tile, so a click anywhere opens the
+// drawer, while "Log a payment" sits above it (z-10) as its own button. It lives
+// on the row, not the name: `truncate` there would clip it to the name's box.
 const STRETCHED = "after:absolute after:inset-0 after:rounded-xl";
 
 export function CardBalanceTile({
@@ -33,7 +42,8 @@ export function CardBalanceTile({
     onOpen,
     onLogPayment,
 }: Props) {
-    const foot = footnote(card, monthName);
+    const head = headlineState(card);
+    const foot = footnote(card, monthName, head);
     return (
         <article
             aria-label={card.name}
@@ -41,10 +51,12 @@ export function CardBalanceTile({
         >
             <button
                 type="button"
-                data-card-trigger={card.id}
-                onClick={() => onOpen(card)}
+                onClick={(e) => onOpen(card, e.currentTarget)}
                 aria-label={`${card.name} details`}
-                className="flex items-center gap-2.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                className={cn(
+                    "flex min-w-0 items-center gap-2.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    STRETCHED,
+                )}
             >
                 {/* The swatch takes the card's own colour from data, never a theme token. */}
                 <span
@@ -52,27 +64,27 @@ export function CardBalanceTile({
                     className="h-5 w-[30px] shrink-0 rounded"
                     style={{ backgroundColor: card.color }}
                 />
-                <span className={cn("text-sm font-semibold", STRETCHED)}>
+                <span className="min-w-0 truncate text-sm font-semibold">
                     {card.name}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
                     {cardTypeLabel(card.type)}
                 </span>
                 <ChevronRight
                     aria-hidden
-                    className="ml-auto size-4 text-muted-foreground"
+                    className="ml-auto size-4 shrink-0 text-muted-foreground"
                 />
             </button>
             <div>
                 <p
                     className={cn(
                         "text-[11px] font-semibold tracking-wide uppercase",
-                        card.state === "owed"
-                            ? "text-muted-foreground"
-                            : "text-positive",
+                        isSettled(head)
+                            ? "text-positive"
+                            : "text-muted-foreground",
                     )}
                 >
-                    {stateLabel(card.state, monthName)}
+                    {stateLabel(head, monthName)}
                 </p>
                 <p
                     className={cn(
@@ -88,16 +100,19 @@ export function CardBalanceTile({
                     </p>
                 ) : null}
             </div>
-            <CardStatementLines
-                statement={card}
-                monthName={monthName}
-                className="border-t pt-3"
-            />
+            {/* Four zero lines say nothing a month with no rows has not said. */}
+            {head === "untouched" ? null : (
+                <CardStatementLines
+                    statement={card}
+                    monthName={monthName}
+                    className="border-t pt-3"
+                />
+            )}
             <Button
                 type="button"
                 variant="outline"
                 className="relative z-10"
-                onClick={() => onLogPayment(card)}
+                onClick={(e) => onLogPayment(card, e.currentTarget)}
                 aria-label={`Log a payment on ${card.name}`}
             >
                 Log a payment

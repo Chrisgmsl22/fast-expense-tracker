@@ -1,7 +1,4 @@
-/**
- * Pure card-balance math: what each card is owed, from logged charges and card
- * payments. Every sum runs in whole centavos so Float columns never drift.
- */
+/** Every sum runs in whole centavos so Float columns never drift. */
 
 /** A card's sums over some dates. `charged` is the full `Expense.amount`, never a split share. */
 export type CardTotals = {
@@ -113,10 +110,7 @@ export function balanceAfterPayment(
 
 export type CardHistoryKind = "charge" | "payment";
 
-/**
- * One history line. `amount` is positive; `kind` gives its sign. A charge carries
- * its description and category; a payment carries its note as `detail`.
- */
+/** `detail` is a charge's category, or a payment's note. */
 export type CardHistoryEntry = {
     id: string;
     kind: CardHistoryKind;
@@ -143,10 +137,7 @@ function chronological(a: CardHistoryEntry, b: CardHistoryEntry): number {
     );
 }
 
-/**
- * Newest first, each line carrying the balance right after it. Built oldest
- * first from `opening`, so the newest line's balance is the period's end balance.
- */
+/** Built oldest first from `opening`, then reversed. */
 export function withRunningBalance(
     entries: readonly CardHistoryEntry[],
     opening = 0,
