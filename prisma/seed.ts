@@ -13,6 +13,8 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+import { normalizeEmail } from "../lib/domain/user.ts";
+
 // Card colours come from the shared palette (spec 0006 §6) so the seed, the
 // login-page dots, and the in-app picker can never drift apart again. Relative
 // `.ts` import (not the `@/` alias) so `node prisma/seed.ts` resolves it.
@@ -254,10 +256,11 @@ export async function runSeed(
     // The owner is created first: categories/subcategories are now per-user
     // (ADR-0022), so they need the owner's id to be stamped on each row.
     const passwordHash = await bcrypt.hash(adminPassword, BCRYPT_ROUNDS);
+    const email = normalizeEmail(adminEmail);
     const admin = await db.user.upsert({
-        where: { email: adminEmail },
+        where: { email },
         create: {
-            email: adminEmail,
+            email,
             name: "Christian",
             password: passwordHash,
         },

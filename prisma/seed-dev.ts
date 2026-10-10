@@ -12,6 +12,8 @@
 
 import { PrismaClient } from "@prisma/client";
 
+import { normalizeEmail } from "../lib/domain/user.ts";
+
 // CDMX is UTC-6 (no DST). Capture stores a calendar day as that day's local
 // midnight in UTC (06:00Z), so month-boundary queries land in the right month —
 // match that here.
@@ -195,7 +197,7 @@ async function main(): Promise<void> {
     const db = new PrismaClient();
     try {
         const admin = await db.user.findUnique({
-            where: { email: adminEmail },
+            where: { email: normalizeEmail(adminEmail) },
         });
         if (!admin) {
             throw new Error(
