@@ -4,16 +4,23 @@ import { describe, it, expect } from "vitest";
 import { loginSchema } from "@/lib/schemas/auth";
 
 describe("loginSchema", () => {
-    it("accepts a valid email + password and trims (but does not lowercase) the email", () => {
+    it("accepts a valid email + password and trims and lowercases the email", () => {
         const res = loginSchema.safeParse({
-            email: "  Admin@Example.com ",
+            email: "  Admin@Example.COM ",
             password: "hunter2",
         });
         expect(res.success).toBe(true);
         if (res.success) {
-            // Trimmed, case preserved — must match the verbatim seeded email.
-            expect(res.data.email).toBe("Admin@Example.com");
+            expect(res.data.email).toBe("admin@example.com");
         }
+    });
+
+    it("still rejects an email that is only whitespace", () => {
+        const res = loginSchema.safeParse({
+            email: "   ",
+            password: "hunter2",
+        });
+        expect(res.success).toBe(false);
     });
 
     it("rejects a malformed email", () => {

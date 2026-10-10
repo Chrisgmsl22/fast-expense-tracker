@@ -24,6 +24,14 @@ describe("getUserByEmail (integration)", () => {
         expect(await getUserByEmail("admin@example.com")).not.toBeNull();
         expect(await getUserByEmail("nobody@example.com")).toBeNull();
     });
+
+    it("finds a stored lowercase email from a mixed-case lookup", async () => {
+        await seedUser("owner@example.com", "hunter2");
+
+        expect(await getUserByEmail("OWNER@example.com")).toMatchObject({
+            email: "owner@example.com",
+        });
+    });
 });
 
 describe("verifyCredentials (integration)", () => {
@@ -44,6 +52,18 @@ describe("verifyCredentials (integration)", () => {
         expect(
             await verifyCredentials("admin@example.com", "wrong"),
         ).toBeNull();
+    });
+
+    it("matches a stored lowercase email whatever case or spacing is typed", async () => {
+        const user = await seedUser("owner@example.com", "hunter2");
+
+        const res = await verifyCredentials("  Owner@Example.COM ", "hunter2");
+
+        expect(res).toEqual({
+            id: user.id,
+            email: "owner@example.com",
+            name: "Christian",
+        });
     });
 
     it("returns null for an unknown email", async () => {
