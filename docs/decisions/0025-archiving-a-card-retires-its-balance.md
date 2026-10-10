@@ -21,9 +21,8 @@ read as a decision. The owner was asked and chose the new behaviour:
 > "if I archive a card, I should simply not see it on the cards section. If I have
 > a pending balance, it doesn't matter, the user decided to do it."
 
-This is not hypothetical: on the owner's own data, archived cards with balances in
-the tens of thousands of pesos are hidden today, and their total leaves the figure
-the page exists to show.
+This is not hypothetical: on the owner's own data, archived cards that still carry
+balances are hidden today, and their total leaves the figure the page exists to show.
 
 ## Decision
 
