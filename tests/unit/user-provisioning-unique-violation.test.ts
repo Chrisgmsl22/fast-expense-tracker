@@ -21,7 +21,7 @@ function createWith(error: unknown) {
     ).createUserWithStarterKit({
         name: "Ana Example",
         email: "ana@example.com",
-        password: "invented-pass-123",
+        password: "Invented-pass-123",
     });
 }
 

@@ -1,9 +1,10 @@
-# Keep every default gitleaks rule. The one allowlisted value is an invented
-# test fixture password used by the signup tests, never a real credential.
+# Keep every default gitleaks rule. The allowlisted values are invented test
+# fixture passwords used by the signup tests, never a real credential. The
+# lowercase one stays because earlier commits on a branch still carry it.
 
 [extend]
 useDefault = true
 
 [allowlist]
-description = "Invented test fixture password"
-regexes = ['''^invented-pass-123$''']
+description = "Invented test fixture passwords"
+regexes = ['''^(?:invented-pass-123|Invented-pass-123)$''']

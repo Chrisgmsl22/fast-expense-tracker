@@ -10,3 +10,7 @@ export const AUTH_ERROR_CLASS = "text-sm text-red-400 md:text-destructive";
 export const AUTH_SUBMIT_CLASS =
     "mt-1 h-11 w-full bg-white text-foreground hover:bg-white/90 " +
     "md:bg-primary md:text-primary-foreground md:hover:bg-primary/90";
+
+export const AUTH_MUTED_CLASS = "text-white/50 md:text-muted-foreground";
+
+export const AUTH_POSITIVE_CLASS = "text-green-400 md:text-positive";

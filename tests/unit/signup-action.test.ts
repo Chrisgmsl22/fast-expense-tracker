@@ -17,7 +17,7 @@ import { signup } from "@/lib/auth/signup";
 import { FakeSignupGate } from "@/tests/support/fake-signup-gate";
 import { FakeUserProvisioningRepository } from "@/tests/support/fake-user-provisioning-repository";
 
-const PASSWORD = "invented-pass-123";
+const PASSWORD = "Invented-pass-123";
 const input = {
     name: "  Ana Example ",
     email: " Ana@Example.com ",

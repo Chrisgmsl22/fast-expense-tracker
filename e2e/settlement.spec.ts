@@ -17,7 +17,7 @@ function todayIso(): string {
 async function login(page: Page) {
     await page.goto("/login");
     await page.getByLabel("Email").fill(EMAIL);
-    await page.getByLabel("Password").fill(PASSWORD);
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/dashboard");
 }
