@@ -20,8 +20,11 @@ type Props = Pick<StepNav, "headingRef"> & {
 };
 
 export function DoneStep({ headingRef, name, onFinished }: Props) {
-    const { pending, formError, submit } =
-        useStepSubmit<Record<string, never>>(NO_FIELDS);
+    // The wizard refreshes once its close animation ends, so the dashboard never jumps under it.
+    const { pending, formError, submit } = useStepSubmit<Record<string, never>>(
+        NO_FIELDS,
+        { refreshOnSave: false },
+    );
 
     return (
         <StepFrame

@@ -10,6 +10,8 @@ const UNEXPECTED = "Something went wrong. Please try again.";
 type Options = {
     /** Codes whose message already shows on a field, so it is not repeated for the form. */
     fieldOnlyCodes?: readonly string[];
+    /** Off when the caller refreshes later itself. */
+    refreshOnSave?: boolean;
 };
 
 /** Fixed when a submit fails, so later edits never move focus or re-announce. */
@@ -27,7 +29,7 @@ type Failure<TField> = {
  */
 export function useStepSubmit<TInput>(
     fields: readonly (keyof TInput & string)[],
-    { fieldOnlyCodes = [] }: Options = {},
+    { fieldOnlyCodes = [], refreshOnSave = true }: Options = {},
 ) {
     type Field = keyof TInput & string;
 
@@ -64,7 +66,7 @@ export function useStepSubmit<TInput>(
                 startTransition(() => {
                     if (res.ok) {
                         onOk(res.data);
-                        router.refresh();
+                        if (refreshOnSave) router.refresh();
                         return;
                     }
                     const fieldErrors: FieldErrors<TInput> = {

@@ -1,4 +1,12 @@
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import {
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+    type Mock,
+} from "vitest";
 import {
     act,
     fireEvent,
@@ -134,6 +142,56 @@ async function goTo(step: number) {
         await expectStep(at + 1);
     }
 }
+
+/**
+ * Gives every element one running animation that ends only on `release`.
+ * jsdom has no Web Animations API, so otherwise every step change and the
+ * close finish at once.
+ */
+function holdAnimations() {
+    let running: Array<() => void> = [];
+    Object.defineProperty(Element.prototype, "getAnimations", {
+        configurable: true,
+        value: () => [
+            { finished: new Promise<void>((end) => running.push(end)) },
+        ],
+    });
+    const release = () => {
+        const ending = running;
+        running = [];
+        for (const end of ending) end();
+    };
+    return {
+        release,
+        /** Ends what is running now and lets the wizard react. */
+        finish: () =>
+            act(async () => {
+                release();
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            }),
+    };
+}
+
+function preferReducedMotion() {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+    }));
+}
+
+const progressStep = () =>
+    screen.getByRole("progressbar").getAttribute("aria-valuenow");
+
+afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, "getAnimations");
+    vi.unstubAllGlobals();
+});
 
 beforeEach(() => {
     refreshMock.mockReset();
@@ -1336,5 +1394,115 @@ describe("Done step", () => {
         );
         expect(dialog()).toBeTruthy();
         expect(refreshMock).not.toHaveBeenCalled();
+    });
+});
+
+describe("Transitions", () => {
+    it("fades the step out, then in, and focuses the new heading once it shows", async () => {
+        await renderWizard();
+        const animations = holdAnimations();
+
+        fireEvent.click(button("Get started"));
+        expect(progressStep()).toBe("1");
+        expect(heading().textContent).toBe("Welcome to Fast Expense");
+
+        await animations.finish();
+        expect(progressStep()).toBe("2");
+        expect(heading().textContent).toBe("What's your name?");
+        expect(document.activeElement).not.toBe(heading());
+
+        await animations.finish();
+        expect(document.activeElement).toBe(heading());
+    });
+
+    it("ignores Continue, Back and Get started while a step is changing", async () => {
+        await renderWizard();
+        const animations = holdAnimations();
+
+        fireEvent.click(button("Get started"));
+        fireEvent.click(button("Get started"));
+        await animations.finish();
+        fireEvent.click(button("Continue"));
+        await animations.finish();
+        expect(progressStep()).toBe("2");
+
+        fireEvent.click(button("Continue"));
+        fireEvent.click(button("Continue"));
+        fireEvent.click(button("Back"));
+        await animations.finish();
+        await animations.finish();
+        await animations.finish();
+
+        expect(progressStep()).toBe("3");
+        expect(nameMock).not.toHaveBeenCalled();
+    });
+
+    it("saves once when Continue is pressed again as the step fades out", async () => {
+        await renderWizard();
+        // The budget step saves on every Continue, even when nothing changed.
+        await goTo(5);
+        const animations = holdAnimations();
+
+        fireEvent.click(button("Continue"));
+        // The save is back and the step is fading out, so Continue is live again.
+        await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
+        await waitFor(() =>
+            expect((button("Continue") as HTMLButtonElement).disabled).toBe(
+                false,
+            ),
+        );
+        expect(progressStep()).toBe("5");
+        fireEvent.click(button("Continue"));
+        await animations.finish();
+        await animations.finish();
+
+        expect(progressStep()).toBe("6");
+        expect(budgetMock).toHaveBeenCalledTimes(1);
+        expect(refreshMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("refreshes the page only after the close fade ends, and finishes once", async () => {
+        await renderWizard();
+        await goTo(8);
+        const animations = holdAnimations();
+        const popup = () =>
+            document.querySelector('[data-slot="dialog-content"]');
+        const openApp = () =>
+            screen.getByRole("button", { name: "Open the app", hidden: true });
+
+        fireEvent.click(openApp());
+        await waitFor(() =>
+            expect(popup()?.hasAttribute("data-ending-style")).toBe(true),
+        );
+        await act(
+            () =>
+                new Promise<void>((resolve) =>
+                    requestAnimationFrame(() => resolve()),
+                ),
+        );
+        fireEvent.click(openApp());
+
+        expect(popup()).not.toBeNull();
+        expect(completeMock).toHaveBeenCalledTimes(1);
+        expect(refreshMock).not.toHaveBeenCalled();
+
+        await waitFor(() => {
+            animations.release();
+            expect(popup()).toBeNull();
+        });
+        expect(refreshMock).toHaveBeenCalledTimes(1);
+        expect(completeMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("changes step at once and focuses its heading under reduced motion", async () => {
+        preferReducedMotion();
+        holdAnimations();
+        await renderWizard();
+
+        fireEvent.click(button("Get started"));
+
+        expect(progressStep()).toBe("2");
+        expect(heading().textContent).toBe("What's your name?");
+        expect(document.activeElement).toBe(heading());
     });
 });
