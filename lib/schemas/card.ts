@@ -31,7 +31,7 @@ const cardColorSchema = z
     .string()
     .trim()
     .toLowerCase()
-    .refine(isValidHex, "Enter a valid #RRGGBB colour");
+    .refine(isValidHex, "Enter a valid #RRGGBB color");
 
 export const addCardInputSchema = z.object({
     name: cardNameSchema,
