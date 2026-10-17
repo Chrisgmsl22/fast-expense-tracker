@@ -89,6 +89,36 @@ describe("AppNav", () => {
             screen.getByRole("link", { name: "Settings" }).getAttribute("href"),
         ).toBe("/settings");
     });
+    it("links Card balances in the Money group with the chosen month, active on its page", () => {
+        route.pathname = "/cards";
+        render(<AppNav {...props} />);
+        const link = screen.getByRole("link", { name: "Card balances" });
+
+        expect(link.getAttribute("href")).toBe("/cards?month=2026-04");
+        expect(link.getAttribute("aria-current")).toBe("page");
+        const money = screen.getByText("Money").parentElement!;
+        expect(
+            within(money)
+                .getAllByRole("link")
+                .map((l) => l.textContent),
+        ).toEqual([
+            "Income",
+            expect.stringContaining("Settlement"),
+            "Card balances",
+            "Savings",
+        ]);
+    });
+    it("shows Card balances in the mobile drawer too", async () => {
+        render(<AppNav {...props} />);
+        fireEvent.click(screen.getByRole("button", { name: "Open menu" }));
+        const drawer = await screen.findByRole("dialog", {
+            name: "Navigation",
+        });
+
+        expect(
+            within(drawer).getByRole("link", { name: "Card balances" }),
+        ).toBeDefined();
+    });
     it("leaves an invalid URL month to the destination server resolver", () => {
         route.month = "invalid";
         render(<AppNav {...props} />);
