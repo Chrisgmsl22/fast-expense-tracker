@@ -9,7 +9,7 @@ import {
     partnerPaymentDescription,
 } from "@/lib/domain/expense";
 import { SOLO_PARTNER_FALLBACK } from "@/lib/domain/settings";
-import { CATEGORY_SEED } from "@/prisma/seed";
+import { STARTER_CATEGORIES } from "@/lib/domain/starter-kit";
 
 /**
  * The CHORE-12 conversion writes three strings that the running app matches on:
@@ -63,7 +63,7 @@ describe("the conversion migration's literals track the code", () => {
     it("seeds the same name the migration renames rows to", () => {
         // The trap PR #74 reverted: the seed matches BY NAME, so a seed carrying
         // a name no row holds provisions a duplicate instead of finding the row.
-        const combined = CATEGORY_SEED.find(
+        const combined = STARTER_CATEGORIES.find(
             (c) => c.slug === "combined-expenses",
         );
 

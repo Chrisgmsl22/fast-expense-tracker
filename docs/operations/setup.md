@@ -119,9 +119,11 @@ pnpm db:seed:prod                                               # runs the seed 
 rm .env.production.local                                        # don't leave prod creds on disk
 ```
 
-- The seed is **idempotent**, so re-run `pnpm db:seed:prod` whenever the
-  category/card list in `docs/reference/domain-reference.md` changes — existing
-  rows are left untouched, only new ones are added.
+- The seed is **idempotent**. A re-run adds missing categories, subcategories
+  and the Cash card, and refreshes the owner's own cards, but it never changes
+  the name, color or relevance of an existing category.
+- To change existing rows, write a migration (BUG-2's category colour backfill
+  is the precedent).
 - `.env.production.local` is gitignored (`.env.*.local`); it holds **real prod
   credentials** — pull it only when seeding and delete it after.
 - This writes directly to the production database. Double-check the pulled

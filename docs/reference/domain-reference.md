@@ -41,9 +41,9 @@ of subcategories.
 
 [^1]:
     Renamed from "Purchases made by girlfriend" by CHORE-12 — the row is his
-    share of a payment he sent, not a purchase she made. The seed matches
+    share of a payment he sent, not a purchase she made. Provisioning matches
     subcategories BY NAME, so the rows, `PARTNER_PAYMENT_SUBCATEGORY_NAME` and
-    `prisma/seed.ts` flip together in
+    the starter kit (`lib/domain/starter-kit.ts`) flip together in
     `20260916230000_convert_partner_payments`; apart, the next re-seed creates a
     duplicate instead of finding the renamed row.
 

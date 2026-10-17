@@ -69,8 +69,8 @@ export function movesSettlementBalance(e: SettlementRelevance): boolean {
 export const PARTNER_PAYMENT_CATEGORY_SLUG = "combined-expenses";
 
 /**
- * Where a payment to the partner is filed (spec 0007 §6a). The seed and
- * `getPartnerPaymentDefaults` both match BY NAME, so this constant, `prisma/seed.ts`
+ * Where a payment to the partner is filed (spec 0007 §6a). Provisioning and
+ * `getPartnerPaymentDefaults` both match BY NAME, so this constant, `lib/domain/starter-kit.ts`
  * and the row rename in `20260916230000_convert_partner_payments` flip together —
  * apart, the next re-seed creates a duplicate instead of finding the renamed row.
  */

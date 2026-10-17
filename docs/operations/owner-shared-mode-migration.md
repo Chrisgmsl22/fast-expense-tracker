@@ -51,10 +51,12 @@ render in color.
 
 > **Do not use `pnpm db:seed:prod` for this.** An earlier revision of this
 > section said to re-seed production. That is retracted. The seed also upserts
-> `Card` rows, and it matches them **by name**: `prisma/seed.ts:301-321` does
+> `Card` rows, and it matches them **by name**: for the owner's cards
+> (`OWNER_CARDS` in `prisma/seed.ts`; Cash comes from `lib/domain/starter-kit.ts`) it does
 > `findFirst({ name })`, then either `update({ color, type })` or `create`. So a
-> re-seed rewrites every card's `color`/`type`, and any card the owner **renamed**
-> in Settings is not found and is **re-created as a duplicate**. The owner has
+> re-seed rewrites the `color` and `type` of the four owner cards (`OWNER_CARDS`),
+> and any of them the owner **renamed** in Settings is not found and is
+> **re-created as a duplicate**. Cash is never rewritten. The owner has
 > edited cards since CHORE-6.c shipped, so a re-seed would damage real data to
 > fix a color.
 
@@ -84,7 +86,7 @@ delete until then.
 ## Notes
 
 - Note the seed's find-then-create for cards means re-seeding will **re-create**
-  an "Amex Gold" card (it's in `CARD_SEED`). If you delete it in 2b, also remove
-  it from `CARD_SEED` in `prisma/seed.ts` first (or the next `db:seed:prod` brings
+  an "Amex Gold" card (it's in `OWNER_CARDS`). If you delete it in 2b, also remove
+  it from `OWNER_CARDS` in `prisma/seed.ts` first (or the next `db:seed:prod` brings
   it back). Coordinate 2b with a seed edit, or defer 2b to CHORE-6.c's card
   management. Decide at run time.
