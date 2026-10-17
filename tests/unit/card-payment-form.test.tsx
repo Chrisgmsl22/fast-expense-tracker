@@ -147,9 +147,32 @@ describe("CardPaymentForm", () => {
         expect(screen.getByText("BBVA balance")).toBeDefined();
     });
 
-    it("keeps the before → after line for a date in an earlier month, with no note", () => {
-        // The closing balance on screen opens with every earlier row, so a
-        // payment dated last month lowers it too.
+    it("hides Pay full while the date lands in another month than the one viewed", () => {
+        render(
+            <CardPaymentForm
+                cards={cards}
+                defaultCardId="card2"
+                balances={{ card2: 2750 }}
+                viewingMonth="2026-09"
+            />,
+        );
+        const date = screen.getByLabelText("Date");
+        const payFull = () =>
+            screen.queryByRole("button", { name: "Pay full $2,750.00" });
+        expect(payFull()).not.toBeNull();
+
+        fireEvent.change(date, { target: { value: "2026-10-03" } });
+        expect(payFull()).toBeNull();
+        expect(screen.getByText(/Lands in October 2026/)).toBeDefined();
+
+        fireEvent.change(date, { target: { value: "2026-08-30" } });
+        expect(payFull()).toBeNull();
+
+        fireEvent.change(date, { target: { value: "2026-09-20" } });
+        expect(payFull()).not.toBeNull();
+    });
+
+    it("keeps the before → after line for a date in the viewed month, with no note", () => {
         render(
             <CardPaymentForm
                 cards={cards}
@@ -163,7 +186,7 @@ describe("CardPaymentForm", () => {
             target: { value: "600" },
         });
 
-        fireEvent.change(date, { target: { value: "2026-09-15" } });
+        fireEvent.change(date, { target: { value: "2026-10-01" } });
 
         const preview = screen.getByText("BBVA balance").parentElement!;
         expect(preview.textContent).toContain("$2,750.00");
@@ -172,7 +195,7 @@ describe("CardPaymentForm", () => {
         expect(date.getAttribute("aria-describedby")).toBeNull();
     });
 
-    it("withholds the before → after line for a date in a later month, and says why", () => {
+    it("withholds the before → after line for a date in another month, and says why", () => {
         render(
             <CardPaymentForm
                 cards={cards}
@@ -194,7 +217,16 @@ describe("CardPaymentForm", () => {
         ).toBeDefined();
         expect(screen.queryByText("BBVA balance")).toBeNull();
 
+        // Each month is its own statement, so an earlier month misses it too.
         fireEvent.change(date, { target: { value: "2026-08-30" } });
+        expect(
+            screen.getByText(
+                "Lands in August 2026. You are viewing September 2026, so this balance will not change.",
+            ),
+        ).toBeDefined();
+        expect(screen.queryByText("BBVA balance")).toBeNull();
+
+        fireEvent.change(date, { target: { value: "2026-09-01" } });
         expect(screen.getByText("BBVA balance")).toBeDefined();
         expect(screen.queryByText(/Lands in/)).toBeNull();
     });

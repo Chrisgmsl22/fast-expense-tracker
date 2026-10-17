@@ -426,6 +426,67 @@ describe("CardsForm", () => {
         );
     });
 
+    it("shows a colour error under the colour field when saving an edit", async () => {
+        updateMock.mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Please fix the highlighted fields.",
+            fieldErrors: { color: ["Enter a valid #RRGGBB color"] },
+        });
+        render(
+            <CardsForm
+                cards={[card({ id: "c1", name: "BBVA", color: "blue" })]}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Edit BBVA" }));
+        fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+        const error = await screen.findByText("Enter a valid #RRGGBB color");
+        expect(error.id).toBe("edit-card-c1-color-error");
+        const hex = screen.getByLabelText("HEX color");
+        expect(hex.getAttribute("aria-invalid")).toBe("true");
+        expect(hex.getAttribute("aria-describedby")).toBe(error.id);
+        expect(
+            screen
+                .getByRole("group", { name: "Color swatches" })
+                .getAttribute("aria-describedby"),
+        ).toBe(error.id);
+    });
+
+    it("shows a colour error under the colour field on add", async () => {
+        addMock.mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Please fix the highlighted fields.",
+            fieldErrors: { color: ["Enter a valid #RRGGBB color"] },
+        });
+        render(<CardsForm cards={[]} />);
+        fireEvent.click(screen.getByRole("button", { name: "Add card" }));
+        const form = screen.getByRole("form", { name: "Add card" });
+        fireEvent.click(within(form).getByRole("button", { name: "Add card" }));
+
+        const error = await within(form).findByText(
+            "Enter a valid #RRGGBB color",
+        );
+        expect(error.id).toBe("add-card-color-error");
+        expect(
+            within(form)
+                .getByRole("group", { name: "Color swatches" })
+                .getAttribute("aria-describedby"),
+        ).toBe("add-card-color-error");
+    });
+
+    it("leaves the colour field undescribed when there is no colour error", () => {
+        render(<CardsForm cards={[card({ id: "c1", name: "NU" })]} />);
+        fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
+
+        expect(
+            screen
+                .getByRole("group", { name: "Color swatches" })
+                .getAttribute("aria-describedby"),
+        ).toBeNull();
+    });
+
     it("surfaces a has_references message when a delete is refused", async () => {
         deleteMock.mockResolvedValue({
             ok: false,

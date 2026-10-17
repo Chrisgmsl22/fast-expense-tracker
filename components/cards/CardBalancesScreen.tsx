@@ -9,8 +9,7 @@ import { getCardHistory } from "@/app/_actions/card/get-history";
 import { formatMxn } from "@/lib/format";
 import { MonthPicker } from "@/components/expense/MonthPicker";
 import {
-    namesInState,
-    owedBreakdown,
+    breakdownInState,
     type CardBalanceView,
     type CardBalancesView,
 } from "./card-balance-display";
@@ -79,7 +78,7 @@ function EmptyState() {
 }
 
 function Totals({ summary, monthName }: TotalsProps) {
-    const breakdown = owedBreakdown(summary.cards);
+    const breakdown = breakdownInState(summary.cards, "owed");
     return (
         <section
             aria-label="Totals"
@@ -87,25 +86,25 @@ function Totals({ summary, monthName }: TotalsProps) {
         >
             <div className="border-b px-5 py-4 md:min-w-[300px] md:border-r md:border-b-0">
                 <p className="text-[11px] text-muted-foreground">
-                    Total owed at end of {monthName}
+                    Owed for {monthName}
                 </p>
                 <p className="mt-0.5 text-3xl font-bold tracking-tight tabular-nums">
                     {formatMxn(summary.totalOwed)}
                 </p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {breakdown || "Nothing owed on any card"}
+                    {breakdown || `Nothing owed for ${monthName}`}
                 </p>
             </div>
             {summary.totalCredit > 0 ? (
                 <div className="border-b px-5 py-4 md:border-r md:border-b-0">
                     <p className="text-[11px] text-muted-foreground">
-                        A card owes you
+                        Paid more than charged in {monthName}
                     </p>
-                    <p className="mt-1.5 text-lg font-bold text-positive tabular-nums">
+                    <p className="mt-1.5 text-lg font-bold tabular-nums">
                         {formatMxn(summary.totalCredit)}
                     </p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {namesInState(summary.cards, "credit")}, overpaid · not
+                        {breakdownInState(summary.cards, "credit")} · not
                         subtracted above
                     </p>
                 </div>
@@ -115,8 +114,6 @@ function Totals({ summary, monthName }: TotalsProps) {
                     How a balance is made
                 </p>
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                    <span className="font-semibold">Opening balance</span>
-                    <span className="text-muted-foreground">+</span>
                     <span className="font-semibold">Charged</span>
                     <span className="text-muted-foreground">
                         full amount, even when split
@@ -137,12 +134,12 @@ function CompactTotals({ summary, monthName }: TotalsProps) {
     const credits = summary.cards.filter((c) => c.state === "credit");
     return (
         <section
-            aria-label="Total owed"
+            aria-label={`Owed for ${monthName}`}
             className="flex flex-col gap-3 sm:hidden"
         >
             <div className="rounded-xl border bg-card px-4 py-3.5">
                 <p className="text-[11px] text-muted-foreground">
-                    Total owed at end of {monthName}
+                    Owed for {monthName}
                 </p>
                 <p className="text-3xl font-bold tracking-tight tabular-nums">
                     {formatMxn(summary.totalOwed)}
@@ -152,20 +149,16 @@ function CompactTotals({ summary, monthName }: TotalsProps) {
                         key={card.id}
                         className="mt-2 flex items-center gap-1.5 border-t pt-2 text-xs"
                     >
-                        <span
-                            aria-hidden
-                            className="size-[7px] rounded-full bg-positive"
-                        />
-                        {card.name} owes you
-                        <span className="ml-auto font-bold text-positive tabular-nums">
+                        Paid more than charged in {monthName}: {card.name}
+                        <span className="ml-auto font-bold tabular-nums">
                             {formatMxn(Math.abs(card.balance))}
                         </span>
                     </p>
                 ))}
             </div>
             <p className="px-0.5 text-[11px] text-muted-foreground">
-                Opening balance + charged (full amount, even when split) −
-                payments − points redeemed
+                Charged (full amount, even when split) − payments − points
+                redeemed
             </p>
         </section>
     );
@@ -195,8 +188,8 @@ export function CardBalancesScreen({
     const paymentTrigger = useRef<HTMLElement | null>(null);
 
     const { cards } = summary;
-    // Pay full and the before → after line read today's balance, so only the
-    // current month offers them.
+    // Pay full and the before → after line are offered only for the current
+    // month, the one a payment logged now usually lands in.
     const isCurrentMonth = month === currentMonth;
     const balances = Object.fromEntries(cards.map((c) => [c.id, c.balance]));
 

@@ -43,7 +43,7 @@ type Props = {
     defaultCardId?: string;
     /** Current balance per card id: enables "Pay full" and the before → after line. */
     balances?: Readonly<Record<string, number>>;
-    /** "2026-09": the month on screen, so a payment dated after it says so. */
+    /** "2026-09": the month on screen, so a payment dated in any other month says so. */
     viewingMonth?: string;
     onSuccess?: () => void;
     onCancel?: () => void;
@@ -77,19 +77,20 @@ export function CardPaymentForm({
 
     const selectedCard = cards.find((c) => c.id === cardId);
     const balance = balances?.[cardId];
-    const fullAmount = balance === undefined ? null : payFullAmount(balance);
+    // The balance on screen counts only the viewed month's rows, so a payment
+    // dated in any other month leaves it unchanged. Name where that one lands,
+    // since saving would look like nothing happened.
+    const otherMonthNote =
+        viewingMonth && date.length === 10 && date.slice(0, 7) !== viewingMonth
+            ? `Lands in ${formatMonthLabel(date.slice(0, 7))}. You are viewing ${formatMonthLabel(viewingMonth)}, so this balance will not change.`
+            : null;
+    // That month's balance is not the one on screen, so "Pay full" has no amount to offer.
+    const fullAmount =
+        balance === undefined || otherMonthNote ? null : payFullAmount(balance);
     const balanceAfter =
         balance === undefined
             ? null
             : balanceAfterPayment(balance, Number(amount || 0));
-    // The balance on screen is the month's closing balance, and its opening
-    // carries every earlier row. So a payment dated in this month or before it
-    // lowers that balance; only one dated in a later month leaves it unchanged.
-    // Name where that one lands, since saving would look like nothing happened.
-    const laterMonthNote =
-        viewingMonth && date.length === 10 && date.slice(0, 7) > viewingMonth
-            ? `Lands in ${formatMonthLabel(date.slice(0, 7))}. You are viewing ${formatMonthLabel(viewingMonth)}, so this balance will not change.`
-            : null;
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -158,7 +159,7 @@ export function CardPaymentForm({
                         onChange={(e) => setDate(e.target.value)}
                         className="mt-1.5"
                         aria-describedby={
-                            laterMonthNote ? "cp-date-note" : undefined
+                            otherMonthNote ? "cp-date-note" : undefined
                         }
                     />
                     {fieldError("date")}
@@ -169,10 +170,10 @@ export function CardPaymentForm({
                         role="status"
                         className={cn(
                             "text-xs text-muted-foreground",
-                            laterMonthNote && "mt-1.5",
+                            otherMonthNote && "mt-1.5",
                         )}
                     >
-                        {laterMonthNote}
+                        {otherMonthNote}
                     </p>
                 </div>
                 <div className="sm:col-span-2">
@@ -277,11 +278,11 @@ export function CardPaymentForm({
             </div>
 
             {/* A balance the payment will not reach has no "after": a date in
-                a later month withholds the preview. */}
+                another month withholds the preview. */}
             {selectedCard &&
             balance !== undefined &&
             balanceAfter !== null &&
-            !laterMonthNote ? (
+            !otherMonthNote ? (
                 <div className="space-y-1.5">
                     <p className="flex items-center gap-2 rounded-lg bg-payment-tint px-3 py-2.5 text-sm tabular-nums">
                         <span>{selectedCard.name} balance</span>

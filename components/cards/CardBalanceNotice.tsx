@@ -24,7 +24,9 @@ export function CardBalanceNotice() {
                 <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
                 <span>
                     <strong>Work in progress:</strong> balances may not match
-                    your bank yet. They count only the card payments you logged.
+                    your bank yet. Each month shows only the charges and card
+                    payments you logged in that month. An unpaid amount stays in
+                    its own month.
                 </span>
             </p>
             <Collapsible className="mt-2 pl-6">

@@ -1,11 +1,12 @@
+import { getMonthRangeUtc } from "@/lib/dates";
 import {
     NO_BALANCE_CARD_TYPES,
-    type CardPeriodTotals,
+    type CardHistoryEntry,
+    type CardTotals,
 } from "@/lib/domain/card-balance";
 import type {
     CardBalanceRow,
     CardCreate,
-    CardMonthHistory,
     CardPickerItem,
     CardRepository,
     CardSettingsItem,
@@ -19,7 +20,13 @@ const isBalanceCard = (card: {
     card.archivedAt === null &&
     !(NO_BALANCE_CARD_TYPES as readonly string[]).includes(card.type);
 
-const NONE = { charged: 0, paid: 0, redeemed: 0 };
+function totalsOf(entries: readonly CardHistoryEntry[]): CardTotals {
+    const sum = (kind: CardHistoryEntry["kind"]) =>
+        entries
+            .filter((e) => e.kind === kind)
+            .reduce((total, e) => total + e.amount, 0);
+    return { charged: sum("charge"), paid: sum("payment"), redeemed: 0 };
+}
 
 type StoredCard = {
     id: string;
@@ -49,11 +56,12 @@ export class FakeCardRepository implements CardRepository {
     /** Flip on to make the next read throw, simulating a DB failure. */
     failOnRead = false;
 
-    /** Arrange helper: sums before and during the month per card id, for `listBalances`. */
-    readonly periods = new Map<string, CardPeriodTotals>();
-
-    /** Arrange helper: the month history per card id, for `getHistory`. */
-    readonly histories = new Map<string, CardMonthHistory>();
+    /**
+     * Arrange helper: a card's charges and payments in any month, per card id.
+     * Like the real adapter, `listBalances` and `getHistory` read only the
+     * entries dated inside the month asked for.
+     */
+    readonly entries = new Map<string, CardHistoryEntry[]>();
 
     /** Every month a read asked for, in order. */
     readonly monthsRead: string[] = [];
@@ -213,7 +221,7 @@ export class FakeCardRepository implements CardRepository {
                 name,
                 color,
                 type,
-                ...(this.periods.get(id) ?? { before: NONE, during: NONE }),
+                ...totalsOf(this.entriesIn(id, month)),
             }));
     }
 
@@ -221,13 +229,20 @@ export class FakeCardRepository implements CardRepository {
         userId: string,
         cardId: string,
         month: string,
-    ): Promise<CardMonthHistory | null> {
+    ): Promise<CardHistoryEntry[] | null> {
         if (this.failOnRead) throw new Error("fake: getHistory failed");
         this.monthsRead.push(month);
         const card = this.cards.get(cardId);
         if (!card || card.userId !== userId || !isBalanceCard(card)) {
             return null;
         }
-        return this.histories.get(cardId) ?? { before: NONE, entries: [] };
+        return this.entriesIn(cardId, month);
+    }
+
+    private entriesIn(cardId: string, month: string): CardHistoryEntry[] {
+        const { start, end } = getMonthRangeUtc(month);
+        return (this.entries.get(cardId) ?? []).filter(
+            (e) => e.date >= start && e.date < end,
+        );
     }
 }

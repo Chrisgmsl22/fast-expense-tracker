@@ -114,20 +114,25 @@ function ColorField({
     color,
     onColor,
     idPrefix,
+    error,
 }: {
     color: string;
     onColor: (value: string) => void;
     idPrefix: string;
+    error?: string;
 }) {
     const normalized = color.trim().toLowerCase();
     const previewValid = isValidHex(normalized);
     const [showCustom, setShowCustom] = useState(() => !isPaletteColor(color));
+    const errorId = `${idPrefix}-color-error`;
+    const describedBy = error ? errorId : undefined;
     return (
         <div>
-            <span className="text-sm font-medium">Colour</span>
+            <span className="text-sm font-medium">Color</span>
             <div
                 role="group"
-                aria-label="Colour swatches"
+                aria-label="Color swatches"
+                aria-describedby={describedBy}
                 className="mt-1.5 flex flex-wrap gap-2"
             >
                 {CARD_PALETTE.map((swatch) => (
@@ -186,10 +191,13 @@ function ColorField({
                         value={color}
                         onChange={(e) => onColor(e.target.value)}
                         placeholder="#RRGGBB"
+                        aria-invalid={Boolean(error)}
+                        aria-describedby={describedBy}
                         className="w-32 font-mono"
                     />
                 </div>
             )}
+            <FieldError id={errorId} message={error} />
         </div>
     );
 }
@@ -253,7 +261,12 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
 
             <TypeField id="add-card-type" value={type} onType={setType} />
 
-            <ColorField color={color} onColor={setColor} idPrefix="add-card" />
+            <ColorField
+                color={color}
+                onColor={setColor}
+                idPrefix="add-card"
+                error={errors.color?.[0]}
+            />
 
             {formError && (
                 <p className="text-sm text-destructive" role="alert">
@@ -393,6 +406,7 @@ function EditCardRow({
                     color={color}
                     onColor={setColor}
                     idPrefix={`edit-card-${card.id}`}
+                    error={errors.color?.[0]}
                 />
 
                 {formError && (
