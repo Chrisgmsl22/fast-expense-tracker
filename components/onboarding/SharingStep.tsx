@@ -5,7 +5,10 @@ import type { FormEvent } from "react";
 import { saveSplitRule } from "@/app/_actions/settings/save-split-rule";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { SplitRuleInput } from "@/lib/schemas/settings";
+import {
+    PARTNER_NAME_MAX_LENGTH,
+    type SplitRuleInput,
+} from "@/lib/schemas/settings";
 
 import { FieldMessage } from "./FieldMessage";
 import {
@@ -50,12 +53,16 @@ export function SharingStep({
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         if (!choice) return;
+        const sharing = choice === "yes";
         // The name and share travel with "Just me" too, so Settings keeps them for later.
+        // A name over the limit stays behind, so a hidden field cannot block the save.
+        const keepName =
+            sharing || partnerName.trim().length <= PARTNER_NAME_MAX_LENGTH;
         submit(
             () =>
                 saveSplitRule({
-                    sharesExpenses: choice === "yes",
-                    partnerName,
+                    sharesExpenses: sharing,
+                    ...(keepName && { partnerName }),
                     sharePercentage: sharePercentToSave(values),
                 }),
             () => onNext(),
@@ -104,6 +111,7 @@ export function SharingStep({
                             id="onboarding-partner"
                             name="partnerName"
                             value={partnerName}
+                            maxLength={PARTNER_NAME_MAX_LENGTH}
                             onChange={(e) =>
                                 onChange({
                                     ...values,

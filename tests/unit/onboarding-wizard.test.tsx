@@ -194,7 +194,7 @@ describe("OnboardingWizard shell", () => {
         expect(dialogRootProps.at(-1)?.disablePointerDismissal).toBe(true);
     });
 
-    it("stays open on a click outside it once an onOpenChange is wired", async () => {
+    it("stays open on an outside click", async () => {
         await renderWizard();
         const overlay = document.querySelector<HTMLElement>(
             '[data-slot="dialog-overlay"]',
@@ -465,6 +465,36 @@ describe("Sharing step", () => {
         expect(splitMock).toHaveBeenCalledWith({
             sharesExpenses: false,
             partnerName: "",
+            sharePercentage: 50,
+        });
+    });
+
+    it("caps the partner name input at the schema limit", async () => {
+        await renderWizard();
+        await goTo(3);
+        fireEvent.click(screen.getByRole("radio", { name: /Yes/ }));
+
+        expect(
+            (screen.getByLabelText("Partner's name") as HTMLInputElement)
+                .maxLength,
+        ).toBe(80);
+    });
+
+    it("leaves a too-long partner name behind on Just me and still saves", async () => {
+        await renderWizard();
+        await goTo(3);
+        fireEvent.click(screen.getByRole("radio", { name: /Yes/ }));
+        fireEvent.change(screen.getByLabelText("Partner's name"), {
+            target: { value: "a".repeat(81) },
+        });
+        fireEvent.click(screen.getByRole("radio", { name: /Just me/ }));
+
+        fireEvent.click(button("Continue"));
+
+        await expectStep(4);
+        expect(splitMock).toHaveBeenCalledTimes(1);
+        expect(splitMock.mock.lastCall?.[0]).toStrictEqual({
+            sharesExpenses: false,
             sharePercentage: 50,
         });
     });

@@ -55,7 +55,13 @@ export async function runSeed(
     const email = normalizeEmail(adminEmail);
     const admin = await db.user.upsert({
         where: { email },
-        create: { email, name: "Christian", password: passwordHash },
+        // Onboarded on create so the seeded login skips the wizard.
+        create: {
+            email,
+            name: "Christian",
+            password: passwordHash,
+            onboardedAt: new Date(),
+        },
         // Don't reset the password on re-seed; keep any rotated value.
         update: {},
     });

@@ -96,6 +96,16 @@ describe("runSeed against a real database", () => {
         ).toMatchObject({ name: "Super", color: "#101010", isRelevant: false });
     });
 
+    it("Should seed the owner as onboarded and keep that date on a re-run", async () => {
+        await runSeed(db, OPTIONS);
+        const { onboardedAt } = await owner();
+        expect(onboardedAt).toBeInstanceOf(Date);
+
+        await runSeed(db, OPTIONS);
+
+        expect((await owner()).onboardedAt).toEqual(onboardedAt);
+    });
+
     it("Should keep the password and refresh the owner cards' color on a re-run", async () => {
         await runSeed(db, OPTIONS);
         const user = await owner();
