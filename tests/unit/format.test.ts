@@ -1,11 +1,63 @@
 import { describe, it, expect } from "vitest";
 
 import {
+    formatBalance,
     formatMxn,
+    formatMxnCompactAbs,
     formatMxnWhole,
     formatExpenseDate,
     formatMonthLabel,
+    formatMonthName,
 } from "@/lib/format";
+
+describe("formatMonthName", () => {
+    it("names the month alone, without shifting it a day", () => {
+        expect(formatMonthName("2026-09")).toBe("September");
+        expect(formatMonthName("2027-01")).toBe("January");
+    });
+});
+
+describe("formatBalance", () => {
+    it.each([
+        [6130, "$6,130.00"],
+        [0, "$0.00"],
+        [-1889.25, "+$1,889.25"],
+    ])("formats %s as %s", (balance, text) => {
+        expect(formatBalance(balance)).toBe(text);
+    });
+});
+
+describe("formatMxnCompactAbs", () => {
+    it.each([
+        [270, "$270.00"],
+        [250.5, "$250.50"],
+        [0, "$0.00"],
+        [999.6, "$1k"],
+        [12000, "$12k"],
+        [18400, "$18.4k"],
+        [-1889.25, "$1.9k"],
+    ])("shortens %s to %s", (amount, text) => {
+        expect(formatMxnCompactAbs(amount)).toBe(text);
+    });
+
+    it("keeps a sub-1,000 breakdown adding up to the balance above it", () => {
+        // opening 600 + charged 250.50 − paid 100 − redeemed 0 = 750.50.
+        expect([600, 250.5, 100, 0].map(formatMxnCompactAbs)).toEqual([
+            "$600.00",
+            "$250.50",
+            "$100.00",
+            "$0.00",
+        ]);
+
+        const shown = (n: number) =>
+            Number(formatMxnCompactAbs(n).replace(/[$,]/g, ""));
+        expect(shown(600) + shown(250.5) - shown(100) - shown(0)).toBe(750.5);
+    });
+
+    it("drops the sign, as its name says", () => {
+        expect(formatMxnCompactAbs(-250.5)).toBe(formatMxnCompactAbs(250.5));
+    });
+});
 
 describe("formatMxn", () => {
     it("formats an amount with thousands grouping and two decimals", () => {

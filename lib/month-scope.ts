@@ -1,7 +1,8 @@
 /**
- * The month a month-scoped screen shows: `?month=`, then the remembered month, then
- * the current CDMX month. The store is a COOKIE, not client state — these are server
- * components, and `localStorage` would flash the wrong month first.
+ * The month a month-scoped screen shows: `?month=`, then the remembered month,
+ * then the current CDMX month, and never a month after it. The store is a
+ * COOKIE, not client state — these are server components, and `localStorage`
+ * would flash the wrong month first.
  */
 
 import { getCurrentMonthCdmx, isValidMonth } from "@/lib/dates";
@@ -21,12 +22,18 @@ export type MonthSources = {
 
 /**
  * Pure resolution of the three sources. The cookie is user-editable, so anything
- * malformed is ignored rather than trusted.
+ * malformed is ignored rather than trusted. A month after the current one has
+ * not happened, so no page shows it: a future `?month=` clamps to the current
+ * month, the nearest month that exists, and a future cookie is ignored.
  */
 export function resolveMonth({ param, stored, now }: MonthSources): string {
-    if (param && isValidMonth(param)) return param;
-    if (stored && isValidMonth(stored)) return stored;
-    return getCurrentMonthCdmx(now ?? new Date());
+    const currentMonth = getCurrentMonthCdmx(now ?? new Date());
+    // `YYYY-MM` sorts lexicographically, so one comparison finds a future month.
+    if (param && isValidMonth(param)) {
+        return param <= currentMonth ? param : currentMonth;
+    }
+    if (stored && isValidMonth(stored) && stored <= currentMonth) return stored;
+    return currentMonth;
 }
 
 /**

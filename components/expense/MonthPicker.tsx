@@ -18,9 +18,10 @@ export function MonthPicker({
     remember?: boolean;
     /**
      * The live month, supplied by the server so the control never disagrees with the
-     * render's clock. When it differs from `month`, a back-to-current button appears.
+     * render's clock. It is the latest month the control reaches. When it differs
+     * from `month`, a back-to-current button appears.
      */
-    currentMonth?: string;
+    currentMonth: string;
 }) {
     const router = useRouter();
     // Stay on the current route (e.g. /expenses or /income) — only the month
@@ -31,7 +32,9 @@ export function MonthPicker({
         // The helper refuses anything that is not a month, so the store and the
         // URL are written together only for a value both can hold.
         const cookie = monthCookieString(next);
-        if (!cookie) return;
+        // `YYYY-MM` sorts lexicographically. A month that has not happened is
+        // refused here too, for a browser that ignores the input's `max`.
+        if (!cookie || next > currentMonth) return;
         if (remember) document.cookie = cookie;
         router.push(`${pathname}?month=${encodeURIComponent(next)}`);
     }
@@ -57,6 +60,7 @@ export function MonthPicker({
             <input
                 type="month"
                 value={month}
+                max={currentMonth}
                 onChange={handleChange}
                 aria-label="Filter by month"
                 // text-base on mobile so iOS Safari doesn't auto-zoom on focus.
@@ -66,11 +70,12 @@ export function MonthPicker({
                 variant="outline"
                 size="icon-sm"
                 onClick={() => go(shiftMonth(month, 1))}
+                disabled={month >= currentMonth}
                 aria-label="Next month"
             >
                 <ChevronRight />
             </Button>
-            {currentMonth && currentMonth !== month && (
+            {currentMonth !== month && (
                 <Button
                     variant="secondary"
                     size="sm"
