@@ -1,0 +1,9 @@
+# Keep every default gitleaks rule. The one allowlisted value is an invented
+# test fixture password used by the signup tests, never a real credential.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Invented test fixture password"
+regexes = ['''^invented-pass-123$''']
