@@ -12,31 +12,43 @@ type Options = {
     fieldOnlyCodes?: readonly string[];
 };
 
+/** Fixed when a submit fails, so later edits never move focus or re-announce. */
+type Failure<TField> = {
+    focus?: TField;
+    announce?: TField;
+};
+
 /**
  * One save per step, with the signup form's error rules: field errors beside
  * their inputs, one announcement per failed submit, and focus on the first
- * invalid field. A successful save refreshes the page behind the wizard.
+ * invalid field. Editing a field clears its error and the form error. A
+ * successful save refreshes the page behind the wizard.
  * `fields` lists the inputs in screen order, by their `name`.
  */
 export function useStepSubmit<TInput>(
     fields: readonly (keyof TInput & string)[],
     { fieldOnlyCodes = [] }: Options = {},
 ) {
+    type Field = keyof TInput & string;
+
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<TInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
+    const [failure, setFailure] = useState<Failure<Field> | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
 
-    const firstInvalid = fields.find((field) => errors[field]?.length);
-    const announcedField = formError ? undefined : firstInvalid;
+    const announcedField =
+        failure?.announce && errors[failure.announce]?.length
+            ? failure.announce
+            : undefined;
 
-    // Each failed submit sets a fresh errors object, so this runs once per failure.
+    // Each failed submit sets a fresh failure object, so this runs once per failure.
     useEffect(() => {
-        if (!firstInvalid) return;
-        const field = formRef.current?.elements.namedItem(firstInvalid);
+        if (!failure?.focus) return;
+        const field = formRef.current?.elements.namedItem(failure.focus);
         if (field instanceof HTMLElement) field.focus();
-    }, [errors, firstInvalid]);
+    }, [failure]);
 
     function submit<TData, TCode extends string>(
         run: () => Promise<ActionResult<TData, TInput, TCode>>,
@@ -44,6 +56,7 @@ export function useStepSubmit<TInput>(
     ) {
         setErrors({});
         setFormError(null);
+        setFailure(null);
         startTransition(async () => {
             try {
                 const res = await run();
@@ -54,10 +67,19 @@ export function useStepSubmit<TInput>(
                         router.refresh();
                         return;
                     }
-                    setErrors({ ...res.fieldErrors });
-                    if (!fieldOnlyCodes.includes(res.code)) {
-                        setFormError(res.message);
-                    }
+                    const fieldErrors: FieldErrors<TInput> = {
+                        ...res.fieldErrors,
+                    };
+                    const showsFormError = !fieldOnlyCodes.includes(res.code);
+                    const first = fields.find(
+                        (field) => fieldErrors[field]?.length,
+                    );
+                    setErrors(fieldErrors);
+                    setFormError(showsFormError ? res.message : null);
+                    setFailure({
+                        focus: first,
+                        announce: showsFormError ? undefined : first,
+                    });
                 });
             } catch {
                 startTransition(() => setFormError(UNEXPECTED));
@@ -65,7 +87,15 @@ export function useStepSubmit<TInput>(
         });
     }
 
-    function fieldError(field: keyof TInput & string): string | undefined {
+    /** Call from a field's change handler: its error and the form error are now stale. */
+    function edited(field: Field) {
+        setFormError(null);
+        setErrors((prev) =>
+            prev[field] ? { ...prev, [field]: undefined } : prev,
+        );
+    }
+
+    function fieldError(field: Field): string | undefined {
         return errors[field]?.[0];
     }
 
@@ -75,6 +105,7 @@ export function useStepSubmit<TInput>(
         formRef,
         announcedField,
         fieldError,
+        edited,
         submit,
     };
 }

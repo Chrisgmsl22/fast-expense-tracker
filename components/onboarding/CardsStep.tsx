@@ -25,6 +25,7 @@ import {
     WIZARD_FAINT_TEXT_CLASS,
     WIZARD_FIELD_CLASS,
     WIZARD_LABEL_CLASS,
+    WIZARD_SELECT_CLASS,
 } from "./onboarding-styles";
 import { ResponsiveText } from "./ResponsiveText";
 import { StepFooter } from "./StepFooter";
@@ -32,6 +33,7 @@ import { StepFrame } from "./StepFrame";
 import { useStepSubmit } from "./use-step-submit";
 
 const FIELDS = ["name"] as const;
+const DEFAULT_CARD_TYPE: AddCardType = "credit";
 
 type Props = StepNav & {
     cards: readonly OnboardingCard[];
@@ -46,12 +48,19 @@ export function CardsStep({
     onAdded,
 }: Props) {
     const [name, setName] = useState("");
-    const [type, setType] = useState<AddCardType>("credit");
+    const [type, setType] = useState<AddCardType>(DEFAULT_CARD_TYPE);
     const [color, setColor] = useState(DEFAULT_CARD_COLOR);
-    const { pending, formError, formRef, announcedField, fieldError, submit } =
-        useStepSubmit<AddCardInput>(FIELDS, {
-            fieldOnlyCodes: ["duplicate_name"],
-        });
+    const {
+        pending,
+        formError,
+        formRef,
+        announcedField,
+        fieldError,
+        edited,
+        submit,
+    } = useStepSubmit<AddCardInput>(FIELDS, {
+        fieldOnlyCodes: ["duplicate_name"],
+    });
     const error = fieldError("name");
 
     function saveCard(then?: () => void) {
@@ -60,6 +69,8 @@ export function CardsStep({
             (data) => {
                 onAdded({ name: data.name, color: normalizeHex(color) });
                 setName("");
+                setType(DEFAULT_CARD_TYPE);
+                setColor(DEFAULT_CARD_COLOR);
                 then?.();
             },
         );
@@ -115,7 +126,10 @@ export function CardsStep({
                         id="onboarding-card-name"
                         name="name"
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                            edited("name");
+                            setName(e.target.value);
+                        }}
                         placeholder="e.g. Amex Gold"
                         aria-invalid={error ? true : undefined}
                         aria-describedby={
@@ -132,14 +146,22 @@ export function CardsStep({
                 <CardTypeField
                     id="onboarding-card-type"
                     value={type}
-                    onType={setType}
+                    onType={(next) => {
+                        edited("type");
+                        setType(next);
+                    }}
                     labelClassName={WIZARD_LABEL_CLASS}
+                    triggerClassName={WIZARD_SELECT_CLASS}
                 />
                 <div>
                     <span className={WIZARD_LABEL_CLASS}>Colour</span>
                     <CardSwatchGrid
                         selected={color}
-                        onColor={setColor}
+                        onColor={(next) => {
+                            edited("color");
+                            setColor(next);
+                        }}
+                        layout="grid"
                         className="mt-1.5"
                     />
                 </div>

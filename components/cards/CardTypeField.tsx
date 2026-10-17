@@ -7,6 +7,7 @@ import {
     SelectItem,
     SelectTrigger,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 import {
     ADD_TYPE_OPTIONS,
@@ -19,10 +20,17 @@ type Props = {
     value: AddCardType;
     onType: (value: AddCardType) => void;
     labelClassName?: string;
+    triggerClassName?: string;
 };
 
 /** Credit/Debit picker shared by the card add and edit forms (Cash is never offered). */
-export function CardTypeField({ id, value, onType, labelClassName }: Props) {
+export function CardTypeField({
+    id,
+    value,
+    onType,
+    labelClassName,
+    triggerClassName,
+}: Props) {
     return (
         <div>
             <Label htmlFor={id} className={labelClassName}>
@@ -40,7 +48,7 @@ export function CardTypeField({ id, value, onType, labelClassName }: Props) {
                 <SelectTrigger
                     id={id}
                     aria-label="Card type"
-                    className="mt-1.5 w-full"
+                    className={cn("mt-1.5 w-full", triggerClassName)}
                 >
                     {typeLabel(value)}
                 </SelectTrigger>

@@ -36,8 +36,15 @@ export function NameStep({
     onChange,
     onSaved,
 }: Props) {
-    const { pending, formError, formRef, announcedField, fieldError, submit } =
-        useStepSubmit<DisplayNameInput>(FIELDS);
+    const {
+        pending,
+        formError,
+        formRef,
+        announcedField,
+        fieldError,
+        edited,
+        submit,
+    } = useStepSubmit<DisplayNameInput>(FIELDS);
     const error = fieldError("name");
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -85,7 +92,10 @@ export function NameStep({
                     name="name"
                     autoComplete="name"
                     value={value}
-                    onChange={(e) => onChange(e.target.value)}
+                    onChange={(e) => {
+                        edited("name");
+                        onChange(e.target.value);
+                    }}
                     aria-invalid={error ? true : undefined}
                     aria-describedby={
                         error ? "onboarding-name-error" : undefined

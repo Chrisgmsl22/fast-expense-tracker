@@ -397,6 +397,41 @@ describe("Name step", () => {
         await expectStep(2);
     });
 
+    it("clears the field error once the name is edited", async () => {
+        nameMock.mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Check the highlighted field.",
+            fieldErrors: { name: ["Name is required"] },
+        });
+        await renderWizard();
+        await goTo(2);
+        const input = screen.getByLabelText("Your name");
+        fireEvent.change(input, { target: { value: " " } });
+        fireEvent.click(button("Continue"));
+        await screen.findByText("Name is required");
+
+        fireEvent.change(input, { target: { value: "Gu" } });
+
+        expect(screen.queryByText("Name is required")).toBeNull();
+        expect(input.getAttribute("aria-invalid")).toBeNull();
+        expect(input.getAttribute("aria-describedby")).toBeNull();
+    });
+
+    it("clears the form message once the name is edited", async () => {
+        nameMock.mockRejectedValue(new Error("network"));
+        await renderWizard();
+        await goTo(2);
+        const input = screen.getByLabelText("Your name");
+        fireEvent.change(input, { target: { value: "Otra" } });
+        fireEvent.click(button("Continue"));
+        await screen.findByRole("alert");
+
+        fireEvent.change(input, { target: { value: "Otra B" } });
+
+        expect(screen.queryByRole("alert")).toBeNull();
+    });
+
     it("shows a form message when the action throws", async () => {
         nameMock.mockRejectedValue(new Error("network"));
         await renderWizard();
@@ -523,6 +558,71 @@ describe("Sharing step", () => {
             "Please fix the highlighted fields.",
         );
         await expectStep(3);
+    });
+
+    it("clears the partner name error and the form message once the name is typed", async () => {
+        splitMock.mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Please fix the highlighted fields.",
+            fieldErrors: {
+                partnerName: ["Add your partner's name to share expenses"],
+            },
+        });
+        await renderWizard();
+        await goTo(3);
+        fireEvent.click(screen.getByRole("radio", { name: /Yes/ }));
+        fireEvent.click(button("Continue"));
+        const input = screen.getByLabelText("Partner's name");
+        await waitFor(() => expect(document.activeElement).toBe(input));
+
+        fireEvent.change(input, { target: { value: "T" } });
+
+        expect(
+            screen.queryByText("Add your partner's name to share expenses"),
+        ).toBeNull();
+        expect(screen.queryByRole("alert")).toBeNull();
+        expect(input.getAttribute("aria-invalid")).toBeNull();
+    });
+
+    it("clears the share error once the slider moves, and keeps the name error", async () => {
+        splitMock.mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Please fix the highlighted fields.",
+            fieldErrors: {
+                partnerName: ["Add your partner's name to share expenses"],
+                sharePercentage: ["Enter your share (1–100%)"],
+            },
+        });
+        await renderWizard();
+        await goTo(3);
+        fireEvent.click(screen.getByRole("radio", { name: /Yes/ }));
+        fireEvent.click(button("Continue"));
+        await screen.findByText("Enter your share (1–100%)");
+        const slider = screen.getByRole("slider");
+
+        fireEvent.change(slider, { target: { value: "60" } });
+
+        expect(screen.queryByText("Enter your share (1–100%)")).toBeNull();
+        expect(slider.getAttribute("aria-invalid")).toBeNull();
+        expect(
+            screen.getByText("Add your partner's name to share expenses"),
+        ).toBeTruthy();
+        expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("clears the form message once the choice changes", async () => {
+        splitMock.mockRejectedValue(new Error("network"));
+        await renderWizard();
+        await goTo(3);
+        fireEvent.click(screen.getByRole("radio", { name: /Just me/ }));
+        fireEvent.click(button("Continue"));
+        await screen.findByRole("alert");
+
+        fireEvent.click(screen.getByRole("radio", { name: /Yes/ }));
+
+        expect(screen.queryByRole("alert")).toBeNull();
     });
 
     it("prefills a saved split when resuming", async () => {
@@ -691,6 +791,26 @@ describe("Income step", () => {
         await waitFor(() => expect(document.activeElement).toBe(input));
         await expectStep(4);
     });
+
+    it("clears the amount error once the amount is edited", async () => {
+        incomeMock.mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Invalid amount",
+            fieldErrors: { amount: ["Amount can't be negative"] },
+        });
+        await renderWizard();
+        await goTo(4);
+        const input = screen.getByLabelText("Monthly income (MXN)");
+        fireEvent.change(input, { target: { value: "-5" } });
+        fireEvent.click(button("Continue"));
+        await screen.findByText("Amount can't be negative");
+
+        fireEvent.change(input, { target: { value: "5" } });
+
+        expect(screen.queryByText("Amount can't be negative")).toBeNull();
+        expect(input.getAttribute("aria-invalid")).toBeNull();
+    });
 });
 
 describe("Budget step", () => {
@@ -761,6 +881,59 @@ describe("Budget step", () => {
         await expectStep(5);
     });
 
+    it("clears the total message once the user fixes the buckets", async () => {
+        budgetMock.mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "The three buckets must add up to 100%",
+            fieldErrors: {},
+        });
+        await renderWizard();
+        await goTo(5);
+        const essentials = screen.getByLabelText("Essentials");
+        fireEvent.change(essentials, { target: { value: "60" } });
+        fireEvent.click(button("Continue"));
+        await screen.findByRole("alert");
+
+        fireEvent.change(essentials, { target: { value: "50" } });
+
+        expect(screen.getByText("Total 100%")).toBeTruthy();
+        expect(screen.queryByRole("alert")).toBeNull();
+        expect(
+            screen.queryByText("The three buckets must add up to 100%"),
+        ).toBeNull();
+    });
+
+    it("clears only the edited bucket's error and leaves focus where the user is", async () => {
+        budgetMock.mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Please fix the highlighted fields.",
+            fieldErrors: {
+                discretionary: ["Use a whole number"],
+                savings: ["Use a whole number"],
+            },
+        });
+        await renderWizard();
+        await goTo(5);
+        fireEvent.click(button("Continue"));
+        const discretionary = screen.getByLabelText("Discretionary");
+        await waitFor(() => expect(document.activeElement).toBe(discretionary));
+
+        fireEvent.change(discretionary, { target: { value: "20" } });
+
+        expect(discretionary.getAttribute("aria-invalid")).toBeNull();
+        expect(
+            screen
+                .getByLabelText("Investing / Savings")
+                .getAttribute("aria-invalid"),
+        ).toBe("true");
+        expect(screen.getAllByText("Use a whole number")).toHaveLength(1);
+        expect(screen.queryByRole("alert")).toBeNull();
+        await act(async () => {});
+        expect(document.activeElement).toBe(discretionary);
+    });
+
     it("labels Skip as keeping the default and writes nothing", async () => {
         await renderWizard();
         await goTo(5);
@@ -779,6 +952,34 @@ describe("Cards step", () => {
         });
         if (swatch) fireEvent.click(button(swatch));
         fireEvent.click(button("Add card"));
+    }
+
+    async function chooseType(label: "Credit" | "Debit") {
+        fireEvent.click(screen.getByLabelText("Card type"));
+        const option = await screen.findByRole("option", { name: label });
+        // Base UI selects on the full press, not on a bare click event.
+        fireEvent.pointerDown(option);
+        fireEvent.mouseDown(option);
+        fireEvent.pointerUp(option);
+        fireEvent.mouseUp(option);
+        fireEvent.click(option);
+        await waitFor(() =>
+            expect(screen.getByLabelText("Card type").textContent).toContain(
+                label,
+            ),
+        );
+    }
+
+    function expectDefaultCardForm() {
+        expect(
+            (screen.getByLabelText("Card name") as HTMLInputElement).value,
+        ).toBe("");
+        expect(screen.getByLabelText("Card type").textContent).toContain(
+            "Credit",
+        );
+        expect(button("Slate").getAttribute("aria-pressed")).toBe("true");
+        expect(button("Blue").getAttribute("aria-pressed")).toBe("false");
+        expect(button("Gold").getAttribute("aria-pressed")).toBe("false");
     }
 
     it("adds several cards and marks each as added", async () => {
@@ -894,6 +1095,112 @@ describe("Cards step", () => {
             ),
         ).toBeNull();
         expect(screen.queryByRole("list", { name: "Added cards" })).toBeNull();
+    });
+
+    it("clears the duplicate name error once the name is cleared", async () => {
+        addCardMock.mockResolvedValue({
+            ok: false,
+            code: "duplicate_name",
+            message: "You already have an active card with that name.",
+            fieldErrors: { name: ["A card with that name already exists"] },
+        });
+        await renderWizard();
+        await goTo(6);
+        addOne("Invented Blue");
+        await screen.findByRole("alert");
+        const input = screen.getByLabelText("Card name");
+
+        fireEvent.change(input, { target: { value: "" } });
+
+        expect(
+            screen.queryByText("A card with that name already exists"),
+        ).toBeNull();
+        expect(input.getAttribute("aria-invalid")).toBeNull();
+        expect(input.getAttribute("aria-describedby")).toBeNull();
+    });
+
+    it("clears a form message once the colour changes", async () => {
+        addCardMock.mockResolvedValue({
+            ok: false,
+            code: "limit_reached",
+            message:
+                "You can have at most 10 active cards. Archive one to add another.",
+        });
+        await renderWizard();
+        await goTo(6);
+        addOne("Invented Blue");
+        await screen.findByRole("alert");
+
+        fireEvent.click(button("Gold"));
+
+        expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("clears a form message once the type changes", async () => {
+        addCardMock.mockResolvedValue({
+            ok: false,
+            code: "limit_reached",
+            message:
+                "You can have at most 10 active cards. Archive one to add another.",
+        });
+        await renderWizard();
+        await goTo(6);
+        addOne("Invented Blue");
+        await screen.findByRole("alert");
+
+        await chooseType("Debit");
+
+        expect(
+            screen.queryByText(
+                "You can have at most 10 active cards. Archive one to add another.",
+            ),
+        ).toBeNull();
+    });
+
+    it("resets the type and colour to the defaults after Add card", async () => {
+        await renderWizard();
+        await goTo(6);
+        await chooseType("Debit");
+        addOne("Invented Blue", "Blue");
+        await screen.findByText("Invented Blue");
+
+        expect(addCardMock).toHaveBeenCalledWith({
+            name: "Invented Blue",
+            type: "debit",
+            color: "#2563eb",
+        });
+        expectDefaultCardForm();
+    });
+
+    it("resets the type and colour to the defaults after a Continue save", async () => {
+        await renderWizard();
+        await goTo(6);
+        await chooseType("Debit");
+        fireEvent.change(screen.getByLabelText("Card name"), {
+            target: { value: "Invented Gold" },
+        });
+        fireEvent.click(button("Gold"));
+
+        fireEvent.click(button("Continue"));
+        await expectStep(7);
+        fireEvent.click(button("Back"));
+        await expectStep(6);
+
+        expect(addCardMock).toHaveBeenCalledWith({
+            name: "Invented Gold",
+            type: "debit",
+            color: "#ca8a04",
+        });
+        expectDefaultCardForm();
+    });
+
+    it("sets the colour swatches in even rows of five", async () => {
+        await renderWizard();
+        await goTo(6);
+
+        const group = screen.getByRole("group", { name: "Colour swatches" });
+        expect(group.className).toContain("grid-cols-5");
+        expect(button("Slate").className).toContain("size-9");
     });
 
     it("shows the card limit as a form message", async () => {

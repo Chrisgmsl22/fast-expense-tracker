@@ -44,8 +44,15 @@ export function SharingStep({
     values,
     onChange,
 }: Props) {
-    const { pending, formError, formRef, announcedField, fieldError, submit } =
-        useStepSubmit<SplitRuleInput>(FIELDS);
+    const {
+        pending,
+        formError,
+        formRef,
+        announcedField,
+        fieldError,
+        edited,
+        submit,
+    } = useStepSubmit<SplitRuleInput>(FIELDS);
     const { choice, partnerName, percent } = values;
     const nameError = fieldError("partnerName");
     const percentError = fieldError("sharePercentage");
@@ -97,7 +104,10 @@ export function SharingStep({
                     label="Do you share expenses?"
                     options={OPTIONS}
                     value={choice}
-                    onChange={(next) => onChange({ ...values, choice: next })}
+                    onChange={(next) => {
+                        edited("sharesExpenses");
+                        onChange({ ...values, choice: next });
+                    }}
                 />
                 {choice === "yes" && (
                     <>
@@ -112,12 +122,13 @@ export function SharingStep({
                             name="partnerName"
                             value={partnerName}
                             maxLength={PARTNER_NAME_MAX_LENGTH}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                                edited("partnerName");
                                 onChange({
                                     ...values,
                                     partnerName: e.target.value,
-                                })
-                            }
+                                });
+                            }}
                             aria-invalid={nameError ? true : undefined}
                             aria-describedby={
                                 nameError
@@ -136,13 +147,14 @@ export function SharingStep({
                                 id="onboarding-share"
                                 percent={percent}
                                 partnerName={partnerName}
-                                onChange={(next) =>
+                                onChange={(next) => {
+                                    edited("sharePercentage");
                                     onChange({
                                         ...values,
                                         percent: next,
                                         sliderMoved: true,
-                                    })
-                                }
+                                    });
+                                }}
                                 errorId={
                                     percentError
                                         ? "onboarding-share-error"

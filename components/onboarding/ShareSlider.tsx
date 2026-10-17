@@ -21,6 +21,11 @@ const THUMB_CLASS =
     "[&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:bg-background " +
     "[&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:bg-background";
 
+// The focus ring sits on the thumb, so the track stays a flat bar.
+const THUMB_FOCUS_CLASS =
+    "focus-visible:[&::-webkit-slider-thumb]:ring-3 focus-visible:[&::-webkit-slider-thumb]:ring-ring/50 " +
+    "focus-visible:[&::-moz-range-thumb]:ring-3 focus-visible:[&::-moz-range-thumb]:ring-ring/50";
+
 /** Your share of a shared expense, 1-100%, with the partner's remainder beside it. */
 export function ShareSlider({
     id,
@@ -59,8 +64,9 @@ export function ShareSlider({
                     background: `linear-gradient(to right, var(--primary) ${percent}%, var(--muted) ${percent}%)`,
                 }}
                 className={cn(
-                    "h-1.5 w-full cursor-pointer appearance-none rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "h-1.5 w-full cursor-pointer appearance-none rounded-full border-0 outline-none",
                     THUMB_CLASS,
+                    THUMB_FOCUS_CLASS,
                 )}
             />
             <div

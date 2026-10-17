@@ -39,8 +39,15 @@ export function IncomeStep({
     onChange,
     onSaved,
 }: Props) {
-    const { pending, formError, formRef, announcedField, fieldError, submit } =
-        useStepSubmit<FixedIncomeInput>(FIELDS);
+    const {
+        pending,
+        formError,
+        formRef,
+        announcedField,
+        fieldError,
+        edited,
+        submit,
+    } = useStepSubmit<FixedIncomeInput>(FIELDS);
     const error = fieldError("amount");
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -96,7 +103,10 @@ export function IncomeStep({
                     id="onboarding-income"
                     name="amount"
                     value={value}
-                    onChange={onChange}
+                    onChange={(next) => {
+                        edited("amount");
+                        onChange(next);
+                    }}
                     errorId={error ? "onboarding-income-error" : undefined}
                 />
                 <FieldMessage

@@ -38,8 +38,15 @@ export function BudgetStep({
     draft,
     onChange,
 }: Props) {
-    const { pending, formError, formRef, announcedField, fieldError, submit } =
-        useStepSubmit<BudgetRuleInput>(FIELDS);
+    const {
+        pending,
+        formError,
+        formRef,
+        announcedField,
+        fieldError,
+        edited,
+        submit,
+    } = useStepSubmit<BudgetRuleInput>(FIELDS);
     const total = budgetDraftTotal(draft);
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -116,12 +123,13 @@ export function BudgetStep({
                                         max="100"
                                         step="1"
                                         value={draft[key]}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
+                                            edited(key);
                                             onChange({
                                                 ...draft,
                                                 [key]: e.target.value,
-                                            })
-                                        }
+                                            });
+                                        }}
                                         aria-invalid={error ? true : undefined}
                                         aria-describedby={
                                             error ? errorId : undefined
