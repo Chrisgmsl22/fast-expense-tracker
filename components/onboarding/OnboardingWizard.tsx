@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -41,9 +41,11 @@ export function OnboardingWizard({ data }: { data: OnboardingData }) {
     const [savedIncome, setSavedIncome] = useState(data.fixedIncome);
     const headingRef = useRef<HTMLHeadingElement>(null);
 
-    useEffect(() => {
-        if (settled) headingRef.current?.focus();
-    }, [step, settled]);
+    // The old step unmounts in the same commit, so focus moves before paint and
+    // never rests on <body>. A fading-in heading is still exposed to assistive tech.
+    useLayoutEffect(() => {
+        headingRef.current?.focus();
+    }, [step]);
 
     const update = <K extends keyof WizardValues>(
         key: K,

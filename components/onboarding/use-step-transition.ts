@@ -19,6 +19,9 @@ function prefersReducedMotion(): boolean {
     );
 }
 
+/** A fade runs 150 ms; past this the step settles even if an animation never ends. */
+const SETTLE_TIMEOUT_MS = 1000;
+
 /** The same completion check Base UI runs before it unmounts a closing popup. */
 function animationsFinished(element: HTMLElement): Promise<void> {
     return Promise.all(
@@ -39,7 +42,8 @@ export function ignoreClick(event: MouseEvent) {
  * Moves between wizard steps: the current content fades out, the next step
  * mounts and fades in, and only then is it `settled`. A move asked for while
  * one runs is dropped. With reduced motion, or without Web Animations support,
- * the step changes at once.
+ * the step changes at once. A fade that never ends settles after a timeout, so
+ * the wizard cannot lock.
  */
 export function useStepTransition() {
     const [step, setStep] = useState(1);
@@ -66,9 +70,11 @@ export function useStepTransition() {
     useEffect(() => {
         const content = contentRef.current;
         if (phase === "idle" || !content) return;
-        let cancelled = false;
-        void animationsFinished(content).then(() => {
-            if (cancelled) return;
+        let done = false;
+        const settle = () => {
+            if (done) return;
+            done = true;
+            clearTimeout(timeout);
             if (phase === "leaving") {
                 setStep((current) => stepAfter(current, deltaRef.current));
                 setPhase("entering");
@@ -76,9 +82,12 @@ export function useStepTransition() {
             }
             busyRef.current = false;
             setPhase("idle");
-        });
+        };
+        const timeout = setTimeout(settle, SETTLE_TIMEOUT_MS);
+        void animationsFinished(content).then(settle);
         return () => {
-            cancelled = true;
+            done = true;
+            clearTimeout(timeout);
         };
     }, [phase]);
 

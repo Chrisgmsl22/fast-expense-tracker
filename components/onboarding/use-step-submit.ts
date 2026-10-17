@@ -23,8 +23,9 @@ type Failure<TField> = {
 /**
  * One save per step, with the signup form's error rules: field errors beside
  * their inputs, one announcement per failed submit, and focus on the first
- * invalid field. Editing a field clears its error and the form error. A
- * successful save refreshes the page behind the wizard.
+ * invalid field. Editing a field clears its error and the form error. By
+ * default (`refreshOnSave`) a successful save refreshes the page behind the
+ * wizard.
  * `fields` lists the inputs in screen order, by their `name`.
  */
 export function useStepSubmit<TInput>(

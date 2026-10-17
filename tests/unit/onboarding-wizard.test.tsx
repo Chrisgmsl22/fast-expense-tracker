@@ -172,6 +172,43 @@ function holdAnimations() {
     };
 }
 
+/** Gives every element animations whose `finished` comes from `finished`. */
+function animateWith(finished: () => Array<Promise<void>>) {
+    Object.defineProperty(Element.prototype, "getAnimations", {
+        configurable: true,
+        value: () => finished().map((done) => ({ finished: done })),
+    });
+}
+
+/** Lets every pending fade end and the wizard react. */
+const flushFades = () =>
+    act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+/**
+ * Records each element that takes focus, and whether focus rests on <body>
+ * once the DOM has changed.
+ */
+function trackFocus() {
+    const focused: Element[] = [];
+    let restedOnBody = false;
+    const onFocusIn = (event: FocusEvent) =>
+        focused.push(event.target as Element);
+    const observer = new MutationObserver(() => {
+        if (document.activeElement === document.body) restedOnBody = true;
+    });
+    document.addEventListener("focusin", onFocusIn);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return {
+        stop: () => {
+            observer.disconnect();
+            document.removeEventListener("focusin", onFocusIn);
+            return { focused, restedOnBody };
+        },
+    };
+}
+
 function preferReducedMotion() {
     vi.stubGlobal("matchMedia", (query: string) => ({
         matches: query === "(prefers-reduced-motion: reduce)",
@@ -191,6 +228,7 @@ const progressStep = () =>
 afterEach(() => {
     Reflect.deleteProperty(Element.prototype, "getAnimations");
     vi.unstubAllGlobals();
+    vi.useRealTimers();
 });
 
 beforeEach(() => {
@@ -1398,9 +1436,10 @@ describe("Done step", () => {
 });
 
 describe("Transitions", () => {
-    it("fades the step out, then in, and focuses the new heading once it shows", async () => {
+    it("fades the step out, then in, and focuses the new heading as it arrives", async () => {
         await renderWizard();
         const animations = holdAnimations();
+        const focus = trackFocus();
 
         fireEvent.click(button("Get started"));
         expect(progressStep()).toBe("1");
@@ -1408,11 +1447,67 @@ describe("Transitions", () => {
 
         await animations.finish();
         expect(progressStep()).toBe("2");
-        expect(heading().textContent).toBe("What's your name?");
-        expect(document.activeElement).not.toBe(heading());
+        const arrived = heading();
+        expect(arrived.textContent).toBe("What's your name?");
+        expect(document.activeElement).toBe(arrived);
 
         await animations.finish();
+        expect(document.activeElement).toBe(arrived);
+        expect(focus.stop()).toEqual({
+            focused: [arrived],
+            restedOnBody: false,
+        });
+    });
+
+    it("still changes step and unlocks when a fade is cancelled", async () => {
+        await renderWizard();
+        animateWith(() => [
+            Promise.reject(
+                new DOMException("The animation was aborted.", "AbortError"),
+            ),
+        ]);
+
+        fireEvent.click(button("Get started"));
+        await flushFades();
+        expect(progressStep()).toBe("2");
         expect(document.activeElement).toBe(heading());
+
+        fireEvent.click(button("Continue"));
+        await flushFades();
+        expect(progressStep()).toBe("3");
+    });
+
+    it("still changes step and unlocks when there is nothing to animate", async () => {
+        await renderWizard();
+        animateWith(() => []);
+
+        fireEvent.click(button("Get started"));
+        await flushFades();
+        expect(progressStep()).toBe("2");
+        expect(document.activeElement).toBe(heading());
+
+        fireEvent.click(button("Continue"));
+        await flushFades();
+        expect(progressStep()).toBe("3");
+    });
+
+    it("settles a step change whose fade never ends after a second", async () => {
+        await renderWizard();
+        holdAnimations();
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+        const wait = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
+
+        fireEvent.click(button("Get started"));
+        await wait(999);
+        expect(progressStep()).toBe("1");
+        await wait(1);
+        expect(progressStep()).toBe("2");
+        expect(document.activeElement).toBe(heading());
+
+        await wait(1000);
+        fireEvent.click(button("Continue"));
+        await wait(1000);
+        expect(progressStep()).toBe("3");
     });
 
     it("ignores Continue, Back and Get started while a step is changing", async () => {
