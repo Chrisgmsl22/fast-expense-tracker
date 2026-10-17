@@ -625,6 +625,35 @@ describe("Sharing step", () => {
         expect(screen.queryByRole("alert")).toBeNull();
     });
 
+    it("drops a Yes save's partner name error once the choice changes", async () => {
+        splitMock.mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Please fix the highlighted fields.",
+            fieldErrors: {
+                partnerName: ["Add your partner's name to share expenses"],
+            },
+        });
+        await renderWizard();
+        await goTo(3);
+        fireEvent.click(screen.getByRole("radio", { name: /Yes/ }));
+        fireEvent.click(button("Continue"));
+        await screen.findByText("Add your partner's name to share expenses");
+
+        fireEvent.click(screen.getByRole("radio", { name: /Just me/ }));
+        fireEvent.click(screen.getByRole("radio", { name: /Yes/ }));
+
+        expect(
+            screen.queryByText("Add your partner's name to share expenses"),
+        ).toBeNull();
+        expect(screen.queryByRole("alert")).toBeNull();
+        expect(
+            screen
+                .getByLabelText("Partner's name")
+                .getAttribute("aria-invalid"),
+        ).toBeNull();
+    });
+
     it("prefills a saved split when resuming", async () => {
         await renderWizard(
             data({

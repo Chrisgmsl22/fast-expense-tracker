@@ -51,6 +51,7 @@ export function SharingStep({
         announcedField,
         fieldError,
         edited,
+        clearErrors,
         submit,
     } = useStepSubmit<SplitRuleInput>(FIELDS);
     const { choice, partnerName, percent } = values;
@@ -105,7 +106,7 @@ export function SharingStep({
                     options={OPTIONS}
                     value={choice}
                     onChange={(next) => {
-                        edited("sharesExpenses");
+                        clearErrors();
                         onChange({ ...values, choice: next });
                     }}
                 />

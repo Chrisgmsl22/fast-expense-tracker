@@ -95,6 +95,12 @@ export function useStepSubmit<TInput>(
         );
     }
 
+    /** Call when a change hides or reframes the fields: every error on the step is stale. */
+    function clearErrors() {
+        setFormError(null);
+        setErrors({});
+    }
+
     function fieldError(field: Field): string | undefined {
         return errors[field]?.[0];
     }
@@ -106,6 +112,7 @@ export function useStepSubmit<TInput>(
         announcedField,
         fieldError,
         edited,
+        clearErrors,
         submit,
     };
 }
