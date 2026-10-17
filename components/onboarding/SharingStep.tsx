@@ -41,6 +41,8 @@ export function SharingStep({
     headingRef,
     onBack,
     onNext,
+    onNextAfterSave,
+    leavingAfterSave,
     values,
     onChange,
 }: Props) {
@@ -73,7 +75,7 @@ export function SharingStep({
                     ...(keepName && { partnerName }),
                     sharePercentage: sharePercentToSave(values),
                 }),
-            () => onNext(),
+            () => onNextAfterSave(),
         );
     }
 
@@ -93,7 +95,7 @@ export function SharingStep({
                     onSkip={onNext}
                     primaryLabel="Continue"
                     pendingLabel="Saving…"
-                    pending={pending}
+                    pending={pending || leavingAfterSave}
                     primaryDisabled={!choice}
                     formId={FORM_ID}
                 />

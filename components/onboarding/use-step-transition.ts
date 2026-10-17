@@ -48,11 +48,12 @@ export function ignoreClick(event: MouseEvent) {
 export function useStepTransition() {
     const [step, setStep] = useState(1);
     const [phase, setPhase] = useState<Phase>("idle");
+    const [afterSave, setAfterSave] = useState(false);
     const contentRef = useRef<HTMLDivElement>(null);
     const busyRef = useRef(false);
     const deltaRef = useRef(0);
 
-    function move(delta: number) {
+    function move(delta: number, saved = false) {
         if (busyRef.current) return;
         const content = contentRef.current;
         if (
@@ -64,6 +65,7 @@ export function useStepTransition() {
         }
         busyRef.current = true;
         deltaRef.current = delta;
+        setAfterSave(saved);
         setPhase("leaving");
     }
 
@@ -95,6 +97,8 @@ export function useStepTransition() {
         step,
         /** The step on screen has finished appearing. */
         settled: phase === "idle",
+        /** A save started the move and its step is still fading out. */
+        leavingAfterSave: phase === "leaving" && afterSave,
         contentRef,
         // The arriving step starts transparent (@starting-style); leaving fades to 0.
         contentClassName: cn(
@@ -104,5 +108,6 @@ export function useStepTransition() {
         ),
         next: () => move(1),
         back: () => move(-1),
+        nextAfterSave: () => move(1, true),
     };
 }

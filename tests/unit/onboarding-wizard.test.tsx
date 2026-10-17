@@ -1731,28 +1731,49 @@ describe("Transitions", () => {
         expect(nameMock).not.toHaveBeenCalled();
     });
 
-    it("saves once when Continue is pressed again as the step fades out", async () => {
+    it("keeps Continue busy until the next step appears, and saves once", async () => {
         await renderWizard();
         // The budget step saves on every Continue, even when nothing changed.
         await goTo(5);
         const animations = holdAnimations();
 
         fireEvent.click(button("Continue"));
-        // The save is back and the step is fading out, so Continue is live again.
+        // The save is back and the step is fading out.
         await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
-        await waitFor(() => {
-            const proceed = button("Continue") as HTMLButtonElement;
-            expect(proceed.getAttribute("aria-disabled")).not.toBe("true");
-            expect(proceed.disabled).toBe(false);
-        });
+        await waitFor(() =>
+            expect(heading().closest(".opacity-0")).not.toBeNull(),
+        );
+        await flushFades();
         expect(progressStep()).toBe("5");
-        fireEvent.click(button("Continue"));
-        await animations.finish();
-        await animations.finish();
+        const proceed = button("Saving…");
+        expectBusy(proceed);
+        expectBusy(button("Back"));
+        expectBusy(button(/^Skip/));
+        fireEvent.click(proceed);
 
+        await animations.finish();
         expect(progressStep()).toBe("6");
+        expect(button("Continue").getAttribute("aria-disabled")).toBeNull();
+        await animations.finish();
         expect(budgetMock).toHaveBeenCalledTimes(1);
         expect(refreshMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("leaves Continue as it is while a skipped step fades out", async () => {
+        await renderWizard();
+        await goTo(5);
+        const animations = holdAnimations();
+
+        fireEvent.click(button(/^Skip/));
+        await waitFor(() =>
+            expect(heading().closest(".opacity-0")).not.toBeNull(),
+        );
+        expect(progressStep()).toBe("5");
+        expect(button("Continue").getAttribute("aria-disabled")).toBeNull();
+
+        await animations.finish();
+        expect(progressStep()).toBe("6");
+        expect(budgetMock).not.toHaveBeenCalled();
     });
 
     it("refreshes the page and focuses it only after the close fade ends, and finishes once", async () => {

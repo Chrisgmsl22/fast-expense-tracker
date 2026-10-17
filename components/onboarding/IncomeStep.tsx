@@ -34,6 +34,8 @@ export function IncomeStep({
     headingRef,
     onBack,
     onNext,
+    onNextAfterSave,
+    leavingAfterSave,
     value,
     savedIncome,
     onChange,
@@ -61,7 +63,7 @@ export function IncomeStep({
             () => setFixedIncome({ amount }),
             (data) => {
                 onSaved(data.amount);
-                onNext();
+                onNextAfterSave();
             },
         );
     }
@@ -87,7 +89,7 @@ export function IncomeStep({
                     onSkip={onNext}
                     primaryLabel="Continue"
                     pendingLabel="Saving…"
-                    pending={pending}
+                    pending={pending || leavingAfterSave}
                     formId={FORM_ID}
                 />
             }

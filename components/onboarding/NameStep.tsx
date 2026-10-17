@@ -31,6 +31,8 @@ export function NameStep({
     headingRef,
     onBack,
     onNext,
+    onNextAfterSave,
+    leavingAfterSave,
     value,
     savedName,
     onChange,
@@ -58,7 +60,7 @@ export function NameStep({
             () => withSessionLock(() => updateDisplayName({ name: value })),
             (data) => {
                 onSaved(data.name);
-                onNext();
+                onNextAfterSave();
             },
         );
     }
@@ -78,7 +80,7 @@ export function NameStep({
                     onBack={onBack}
                     primaryLabel="Continue"
                     pendingLabel="Saving…"
-                    pending={pending}
+                    pending={pending || leavingAfterSave}
                     formId={FORM_ID}
                 />
             }

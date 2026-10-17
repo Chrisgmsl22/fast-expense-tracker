@@ -35,6 +35,8 @@ export function BudgetStep({
     headingRef,
     onBack,
     onNext,
+    onNextAfterSave,
+    leavingAfterSave,
     draft,
     onChange,
 }: Props) {
@@ -53,7 +55,7 @@ export function BudgetStep({
         e.preventDefault();
         submit(
             () => saveBudgetRule(draft),
-            () => onNext(),
+            () => onNextAfterSave(),
         );
     }
 
@@ -79,7 +81,7 @@ export function BudgetStep({
                     }
                     primaryLabel="Continue"
                     pendingLabel="Saving…"
-                    pending={pending}
+                    pending={pending || leavingAfterSave}
                     formId={FORM_ID}
                 />
             }

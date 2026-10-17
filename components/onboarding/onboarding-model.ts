@@ -127,4 +127,7 @@ export type StepNav = {
     headingRef: Ref<HTMLHeadingElement>;
     onBack: () => void;
     onNext: () => void;
+    /** Moves on after a successful save, keeping the footer busy until the step changes. */
+    onNextAfterSave: () => void;
+    leavingAfterSave: boolean;
 };

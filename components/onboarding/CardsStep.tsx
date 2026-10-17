@@ -45,6 +45,8 @@ export function CardsStep({
     headingRef,
     onBack,
     onNext,
+    onNextAfterSave,
+    leavingAfterSave,
     cards,
     onAdded,
 }: Props) {
@@ -85,7 +87,7 @@ export function CardsStep({
     // A typed but unadded card is saved on the way out, never dropped.
     function handleContinue() {
         if (name.trim() === "") onNext();
-        else saveCard(onNext);
+        else saveCard(onNextAfterSave);
     }
 
     return (
@@ -103,7 +105,7 @@ export function CardsStep({
                     onBack={onBack}
                     onSkip={onNext}
                     primaryLabel="Continue"
-                    pending={pending}
+                    pending={pending || leavingAfterSave}
                     onPrimary={handleContinue}
                 />
             }

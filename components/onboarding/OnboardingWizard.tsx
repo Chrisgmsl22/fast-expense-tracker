@@ -48,8 +48,16 @@ export function OnboardingWizard({ data }: { data: OnboardingData }) {
     const router = useRouter();
     const [open, setOpen] = useState(true);
     // `data` only seeds this state, so the refresh after each save keeps the step and values.
-    const { step, settled, contentRef, contentClassName, next, back } =
-        useStepTransition();
+    const {
+        step,
+        settled,
+        leavingAfterSave,
+        contentRef,
+        contentClassName,
+        next,
+        nextAfterSave,
+        back,
+    } = useStepTransition();
     const [values, setValues] = useState<WizardValues>(() =>
         initialValues(data),
     );
@@ -68,7 +76,13 @@ export function OnboardingWizard({ data }: { data: OnboardingData }) {
         value: WizardValues[K],
     ) => setValues((current) => ({ ...current, [key]: value }));
 
-    const nav = { headingRef, onBack: back, onNext: next };
+    const nav = {
+        headingRef,
+        onBack: back,
+        onNext: next,
+        onNextAfterSave: nextAfterSave,
+        leavingAfterSave,
+    };
 
     return (
         <Dialog
