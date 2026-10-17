@@ -10,6 +10,12 @@ import { loginAction, type LoginResult } from "@/app/_actions/auth/login";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { LoginInput } from "@/lib/schemas/auth";
 import { withSessionLock } from "@/lib/auth/session-lock";
+import {
+    AUTH_ERROR_CLASS,
+    AUTH_INPUT_CLASS,
+    AUTH_LABEL_CLASS,
+    AUTH_SUBMIT_CLASS,
+} from "./auth-form-styles";
 import { SessionExpiredNotice } from "./SessionExpiredNotice";
 
 /** Submit credentials and navigate after the server confirms success. */
@@ -53,19 +59,11 @@ export function LoginForm({
     const fieldError = (name: keyof LoginInput) => {
         const msg = errors[name]?.[0];
         return msg ? (
-            <p
-                className="mt-1.5 text-sm text-red-400 md:text-destructive"
-                role="alert"
-            >
+            <p className={`mt-1.5 ${AUTH_ERROR_CLASS}`} role="alert">
                 {msg}
             </p>
         ) : null;
     };
-
-    const labelClass = "text-white/70 md:text-foreground";
-    const inputClass =
-        "border-white/10 bg-white/5 text-white placeholder:text-white/30 " +
-        "md:border-input md:bg-background md:text-foreground md:placeholder:text-muted-foreground";
 
     return (
         <form
@@ -75,7 +73,7 @@ export function LoginForm({
         >
             {sessionExpired && <SessionExpiredNotice />}
             <div>
-                <Label htmlFor="email" className={labelClass}>
+                <Label htmlFor="email" className={AUTH_LABEL_CLASS}>
                     Email
                 </Label>
                 <Input
@@ -84,13 +82,13 @@ export function LoginForm({
                     type="email"
                     autoComplete="username"
                     required
-                    className={`mt-2 ${inputClass}`}
+                    className={AUTH_INPUT_CLASS}
                 />
                 {fieldError("email")}
             </div>
 
             <div>
-                <Label htmlFor="password" className={labelClass}>
+                <Label htmlFor="password" className={AUTH_LABEL_CLASS}>
                     Password
                 </Label>
                 <Input
@@ -99,16 +97,13 @@ export function LoginForm({
                     type="password"
                     autoComplete="current-password"
                     required
-                    className={`mt-2 ${inputClass}`}
+                    className={AUTH_INPUT_CLASS}
                 />
                 {fieldError("password")}
             </div>
 
             {formError && (
-                <p
-                    className="text-sm text-red-400 md:text-destructive"
-                    role="alert"
-                >
+                <p className={AUTH_ERROR_CLASS} role="alert">
                     {formError}
                 </p>
             )}
@@ -116,7 +111,7 @@ export function LoginForm({
             <Button
                 type="submit"
                 disabled={pending}
-                className="mt-1 h-11 w-full bg-white text-foreground hover:bg-white/90 md:bg-primary md:text-primary-foreground md:hover:bg-primary/90"
+                className={AUTH_SUBMIT_CLASS}
             >
                 {pending ? "Signing in…" : "Sign in"}
             </Button>

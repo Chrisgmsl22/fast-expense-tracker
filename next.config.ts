@@ -3,6 +3,8 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
     /* config options here */
+    // The dev server would otherwise print server-action arguments, passwords included.
+    logging: { serverFunctions: false },
 };
 
 export default withSentryConfig(nextConfig, {

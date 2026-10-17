@@ -1,11 +1,15 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import { describe, it, expect } from "vitest";
 
 import { db } from "@/lib/db";
 import { PARTNER_PAYMENT_SUBCATEGORY_NAME } from "@/lib/domain/expense";
 import { STARTER_CATEGORIES } from "@/lib/domain/starter-kit";
 import { CASH_COLOR } from "@/lib/palette";
-import { PrismaUserProvisioningRepository } from "@/lib/repositories/user-provisioning.repository";
+import {
+    EmailTakenError,
+    PrismaUserProvisioningRepository,
+} from "@/lib/repositories/user-provisioning.repository";
 import { STARTER_SUBCATEGORY_COUNT } from "@/tests/support/fake-user-provisioning-repository";
 
 const repo = new PrismaUserProvisioningRepository(db);
@@ -41,8 +45,8 @@ async function snapshot(userId: string) {
     };
 }
 
-/** A client whose transaction fails at the settings write, after the other writes ran. */
-function failingAtSettings(): PrismaClient {
+/** A client whose transaction fails at `model`'s `createMany`, after the earlier writes ran. */
+function failingAt(model: "subcategory" | "settings"): PrismaClient {
     return new Proxy(db, {
         get(target, prop) {
             if (prop !== "$transaction") return Reflect.get(target, prop);
@@ -51,11 +55,19 @@ function failingAtSettings(): PrismaClient {
                     fn(
                         new Proxy(tx, {
                             get(t, p) {
-                                if (p !== "settings") return Reflect.get(t, p);
-                                return {
-                                    createMany: () =>
-                                        Promise.reject(new Error("injected")),
-                                };
+                                const delegate = Reflect.get(t, p);
+                                if (p !== model) return delegate;
+                                return new Proxy(delegate, {
+                                    get(d, method) {
+                                        if (method !== "createMany") {
+                                            return Reflect.get(d, method);
+                                        }
+                                        return () =>
+                                            Promise.reject(
+                                                new Error("injected"),
+                                            );
+                                    },
+                                });
                             },
                         }),
                     ),
@@ -275,7 +287,7 @@ describe("PrismaUserProvisioningRepository.provisionNewUser", () => {
     it("Should roll back every write when one step fails", async () => {
         const user = await createUser();
         const failing = new PrismaUserProvisioningRepository(
-            failingAtSettings(),
+            failingAt("settings"),
         );
 
         await expect(failing.provisionNewUser(user.id)).rejects.toThrow(
@@ -298,5 +310,139 @@ describe("PrismaUserProvisioningRepository.provisionNewUser", () => {
         expect(await db.category.count()).toBe(0);
         expect(await db.card.count()).toBe(0);
         expect(await db.settings.count()).toBe(0);
+    });
+});
+
+const account = {
+    name: "  Ana Example ",
+    email: " Ana@Example.COM ",
+    password: "invented-pass-123",
+};
+
+describe("PrismaUserProvisioningRepository.createUserWithStarterKit", () => {
+    it("Should store a normalised email, a trimmed name and a cost-10 bcrypt hash", async () => {
+        const { userId } = await repo.createUserWithStarterKit(account);
+
+        const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
+        expect(user.email).toBe("ana@example.com");
+        expect(user.name).toBe("Ana Example");
+        expect(user.password).not.toContain(account.password);
+        expect(bcrypt.getRounds(user.password)).toBe(10);
+        await expect(
+            bcrypt.compare(account.password, user.password),
+        ).resolves.toBe(true);
+    });
+
+    it("Should give the new user exactly the starter kit", async () => {
+        const { userId } = await repo.createUserWithStarterKit(account);
+
+        const mine = await snapshot(userId);
+        expect(mine.categories).toHaveLength(STARTER_CATEGORIES.length);
+        expect(mine.subcategories).toHaveLength(STARTER_SUBCATEGORY_COUNT);
+        expect(mine.cards).toEqual([
+            expect.objectContaining({ name: "Cash", type: "cash" }),
+        ]);
+        expect(mine.settings).toEqual([
+            expect.objectContaining({
+                sharesExpenses: false,
+                partnerName: null,
+                defaultSharePercentage: 0.5,
+            }),
+        ]);
+        expect(await db.income.count()).toBe(0);
+        expect(await db.expense.count()).toBe(0);
+        expect(await db.movement.count()).toBe(0);
+    });
+
+    it("Should hold nothing of another user's and leave that user's rows untouched", async () => {
+        const owner = await createUser();
+        await repo.provisionNewUser(owner.id);
+        await db.card.create({
+            data: {
+                userId: owner.id,
+                name: "Invented Gold",
+                color: "#c79a3b",
+                type: "credit",
+            },
+        });
+        const ownerBefore = await snapshot(owner.id);
+
+        const { userId } = await repo.createUserWithStarterKit(account);
+
+        expect(await snapshot(owner.id)).toEqual(ownerBefore);
+        const mine = await snapshot(userId);
+        const ownerIds = new Set(
+            [
+                ...ownerBefore.categories,
+                ...ownerBefore.subcategories,
+                ...ownerBefore.cards,
+            ].map((row) => row.id),
+        );
+        expect(
+            [...mine.categories, ...mine.subcategories, ...mine.cards].some(
+                (row) => ownerIds.has(row.id),
+            ),
+        ).toBe(false);
+        expect(mine.cards.map((c) => c.name)).toEqual(["Cash"]);
+        const myCategoryIds = new Set(mine.categories.map((c) => c.id));
+        expect(
+            mine.subcategories.every((s) => myCategoryIds.has(s.categoryId)),
+        ).toBe(true);
+    });
+
+    it.each([
+        ["the same case", "ana@example.com"],
+        ["a different case", "ANA@Example.com"],
+        ["surrounding spaces", "  ana@example.com  "],
+    ])(
+        "Should throw EmailTakenError and add nothing when the email is taken in %s",
+        async (_case, email) => {
+            await repo.createUserWithStarterKit(account);
+            const before = {
+                users: await db.user.count(),
+                categories: await db.category.count(),
+                cards: await db.card.count(),
+            };
+
+            await expect(
+                repo.createUserWithStarterKit({ ...account, email }),
+            ).rejects.toBeInstanceOf(EmailTakenError);
+
+            expect({
+                users: await db.user.count(),
+                categories: await db.category.count(),
+                cards: await db.card.count(),
+            }).toEqual(before);
+        },
+    );
+
+    it.each(["subcategory", "settings"] as const)(
+        "Should leave no user and no kit rows when the %s write fails mid-kit",
+        async (model) => {
+            const failing = new PrismaUserProvisioningRepository(
+                failingAt(model),
+            );
+
+            await expect(
+                failing.createUserWithStarterKit(account),
+            ).rejects.toThrow("injected");
+
+            expect(await db.user.count()).toBe(0);
+            expect(await db.category.count()).toBe(0);
+            expect(await db.subcategory.count()).toBe(0);
+            expect(await db.card.count()).toBe(0);
+            expect(await db.settings.count()).toBe(0);
+        },
+    );
+});
+
+describe("PrismaUserProvisioningRepository.countUsers", () => {
+    it("Should count every account", async () => {
+        expect(await repo.countUsers()).toBe(0);
+
+        await createUser();
+        await repo.createUserWithStarterKit(account);
+
+        expect(await repo.countUsers()).toBe(2);
     });
 });

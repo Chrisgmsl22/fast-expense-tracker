@@ -41,6 +41,11 @@ import {
     PrismaUserProvisioningRepository,
     type UserProvisioningRepository,
 } from "./user-provisioning.repository";
+import {
+    GlobalConfigSignupGate,
+    readGlobalConfigStore,
+    type SignupGate,
+} from "./signup-gate";
 
 /**
  * Composition root — the single place the concrete Prisma adapters are wired to
@@ -81,3 +86,8 @@ export const budgetRuleRepository: BudgetRuleRepository =
 
 export const userProvisioningRepository: UserProvisioningRepository =
     new PrismaUserProvisioningRepository(db);
+
+export const signupGate: SignupGate = new GlobalConfigSignupGate(
+    process.env,
+    readGlobalConfigStore,
+);
