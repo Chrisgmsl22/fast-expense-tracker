@@ -599,6 +599,28 @@ describe("Name step", () => {
         );
         await expectStep(2);
     });
+
+    it("lets the user retry after the action throws and then moves on", async () => {
+        nameMock.mockRejectedValueOnce(new Error("network"));
+        await renderWizard();
+        await goTo(2);
+        fireEvent.change(screen.getByLabelText("Your name"), {
+            target: { value: "Guadalupe" },
+        });
+        fireEvent.click(button("Continue"));
+        expect((await screen.findByRole("alert")).textContent).toBe(
+            "Something went wrong. Please try again.",
+        );
+        await waitFor(() =>
+            expect(button("Continue").getAttribute("aria-disabled")).toBeNull(),
+        );
+
+        fireEvent.click(button("Continue"));
+
+        await expectStep(3);
+        expect(nameMock).toHaveBeenCalledTimes(2);
+        expect(nameMock).toHaveBeenLastCalledWith({ name: "Guadalupe" });
+    });
 });
 
 describe("Sharing step", () => {
@@ -1008,7 +1030,9 @@ describe("Income step", () => {
         expectBusyWithFocus(proceed, "Saving…");
         fireEvent.click(proceed);
         expect(fireEvent.keyDown(proceed, { key: "Enter" })).toBe(false);
-        // Enter in the field submits the form, as the busy button is not `disabled`.
+        expect(fireEvent.keyDown(proceed, { key: " " })).toBe(false);
+        expect(fireEvent.keyDown(proceed, { key: "Tab" })).toBe(true);
+        // A programmatic submit still saves only once.
         fireEvent.submit(input.closest("form")!);
         expectBusy(button("Back"));
         expectBusy(button(/^Skip/));
@@ -1243,7 +1267,9 @@ describe("Cards step", () => {
         expectBusyWithFocus(add, "Adding…");
         fireEvent.click(add);
         expect(fireEvent.keyDown(add, { key: "Enter" })).toBe(false);
-        // Enter in the name field submits the form, as the busy button is not `disabled`.
+        expect(fireEvent.keyDown(add, { key: " " })).toBe(false);
+        expect(fireEvent.keyDown(add, { key: "Tab" })).toBe(true);
+        // A programmatic submit still adds only once.
         fireEvent.submit(screen.getByRole("form", { name: "Add a card" }));
         fireEvent.click(button("Continue"));
         expect(addCardMock).toHaveBeenCalledTimes(1);
@@ -1585,6 +1611,8 @@ describe("Done step", () => {
         expectBusyWithFocus(openApp, "Finishing…");
         fireEvent.click(openApp);
         expect(fireEvent.keyDown(openApp, { key: "Enter" })).toBe(false);
+        expect(fireEvent.keyDown(openApp, { key: " " })).toBe(false);
+        expect(fireEvent.keyDown(openApp, { key: "Tab" })).toBe(true);
         expect(completeMock).toHaveBeenCalledTimes(1);
 
         await act(async () => finish.resolve({ ok: true, data: undefined }));
@@ -1632,7 +1660,7 @@ describe("Transitions", () => {
 
         await animations.finish();
         expect(document.activeElement).toBe(arrived);
-        // jsdom cannot see the layout-effect timing; a real-browser focus recorder covers that.
+        // jsdom cannot see the layout-effect timing; verified in a manual real-browser check on 2026-10-17 (PR #97).
         expect(focus.stop()).toEqual({
             focused: [arrived],
             restedOnBody: false,
@@ -1733,33 +1761,69 @@ describe("Transitions", () => {
         expect(nameMock).not.toHaveBeenCalled();
     });
 
-    it("keeps Continue busy until the next step appears, and saves once", async () => {
-        await renderWizard();
+    it.each([
+        {
+            name: "Name",
+            at: 2,
+            save: nameMock,
+            fill: () =>
+                fireEvent.change(screen.getByLabelText("Your name"), {
+                    target: { value: "Guadalupe" },
+                }),
+        },
+        {
+            name: "Sharing",
+            at: 3,
+            save: splitMock,
+            fill: () =>
+                fireEvent.click(screen.getByRole("radio", { name: /Just me/ })),
+        },
+        {
+            name: "Income",
+            at: 4,
+            save: incomeMock,
+            fill: () =>
+                fireEvent.change(
+                    screen.getByLabelText("Monthly income (MXN)"),
+                    { target: { value: "44000" } },
+                ),
+        },
         // The budget step saves on every Continue, even when nothing changed.
-        await goTo(5);
-        const animations = holdAnimations();
+        { name: "Budget", at: 5, save: budgetMock, fill: () => {} },
+    ])(
+        "keeps Continue busy on the $name step until the next step appears, and saves once",
+        async ({ at, save, fill }) => {
+            await renderWizard();
+            await goTo(at);
+            fill();
+            const animations = holdAnimations();
 
-        fireEvent.click(button("Continue"));
-        // The save is back and the step is fading out.
-        await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
-        await waitFor(() =>
-            expect(heading().closest(".opacity-0")).not.toBeNull(),
-        );
-        await flushFades();
-        expect(progressStep()).toBe("5");
-        const proceed = button("Saving…");
-        expectBusy(proceed);
-        expectBusy(button("Back"));
-        expectBusy(button(/^Skip/));
-        fireEvent.click(proceed);
+            fireEvent.click(button("Continue"));
+            // The save is back and the step is fading out.
+            await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
+            await waitFor(() =>
+                expect(heading().closest(".opacity-0")).not.toBeNull(),
+            );
+            await flushFades();
+            expect(progressStep()).toBe(String(at));
+            const proceed = button("Saving…");
+            expectBusy(proceed);
+            expectBusy(button("Back"));
+            // The name step offers no Skip.
+            for (const skip of screen.queryAllByRole("button", {
+                name: /^Skip/,
+            }))
+                expectBusy(skip);
+            fireEvent.click(proceed);
 
-        await animations.finish();
-        expect(progressStep()).toBe("6");
-        expect(button("Continue").getAttribute("aria-disabled")).toBeNull();
-        await animations.finish();
-        expect(budgetMock).toHaveBeenCalledTimes(1);
-        expect(refreshMock).toHaveBeenCalledTimes(1);
-    });
+            await animations.finish();
+            expect(progressStep()).toBe(String(at + 1));
+            expect(button("Continue").getAttribute("aria-disabled")).toBeNull();
+            await animations.finish();
+            expect(save).toHaveBeenCalledTimes(1);
+            expect(refreshMock).toHaveBeenCalledTimes(1);
+        },
+    );
 
     it("leaves Continue as it is while a skipped step fades out", async () => {
         await renderWizard();

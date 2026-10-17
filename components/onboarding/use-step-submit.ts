@@ -58,7 +58,7 @@ export function useStepSubmit<TInput>(
         run: () => Promise<ActionResult<TData, TInput, TCode>>,
         onOk: (data: TData) => void,
     ) {
-        // Busy buttons stay focusable, so Enter in a field can still submit the form.
+        // One save at a time, even through a programmatic submit that no button state blocks.
         if (savingRef.current) return;
         savingRef.current = true;
         setErrors({});
@@ -67,7 +67,6 @@ export function useStepSubmit<TInput>(
         startTransition(async () => {
             try {
                 const res = await run();
-                savingRef.current = false;
                 // Updates after an await leave the transition, so wrap them again.
                 startTransition(() => {
                     if (res.ok) {
@@ -90,8 +89,9 @@ export function useStepSubmit<TInput>(
                     });
                 });
             } catch {
-                savingRef.current = false;
                 startTransition(() => setFormError(UNEXPECTED));
+            } finally {
+                savingRef.current = false;
             }
         });
     }

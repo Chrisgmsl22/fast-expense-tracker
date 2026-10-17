@@ -11,5 +11,15 @@ export const WIZARD_FAINT_TEXT_CLASS = "text-muted-foreground/70";
 
 export const WIZARD_PANEL_CLASS = "rounded-xl bg-muted/60";
 
-/** The disabled look for a busy button, which stays focusable through `aria-disabled`. */
-export const WIZARD_BUSY_BUTTON_CLASS = "aria-disabled:opacity-50";
+/**
+ * The disabled look for a busy button, which stays focusable through `aria-disabled`,
+ * so the button's own `disabled:` styles never apply: faded, and no press.
+ */
+export const WIZARD_BUSY_BUTTON_CLASS =
+    "aria-disabled:opacity-50 aria-disabled:active:not-aria-[haspopup]:translate-y-0";
+
+/** A busy ghost button also keeps its idle background on hover. */
+export const WIZARD_BUSY_GHOST_BUTTON_CLASS = `${WIZARD_BUSY_BUTTON_CLASS} aria-disabled:hover:bg-transparent`;
+
+/** A busy outline button also keeps its idle background on hover. */
+export const WIZARD_BUSY_OUTLINE_BUTTON_CLASS = `${WIZARD_BUSY_BUTTON_CLASS} aria-disabled:hover:bg-background dark:aria-disabled:hover:bg-input/30`;

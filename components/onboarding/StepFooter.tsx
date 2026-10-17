@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 import {
     WIZARD_BUSY_BUTTON_CLASS,
+    WIZARD_BUSY_GHOST_BUTTON_CLASS,
     WIZARD_FAINT_TEXT_CLASS,
 } from "./onboarding-styles";
 
@@ -26,7 +27,7 @@ type Props = {
 
 const TEXT_BUTTON_CLASS = cn(
     "h-10 px-2 text-sm font-semibold",
-    WIZARD_BUSY_BUTTON_CLASS,
+    WIZARD_BUSY_GHOST_BUTTON_CLASS,
 );
 
 /**
@@ -53,7 +54,10 @@ export function StepFooter({
                     onClick={onBack}
                     disabled={pending}
                     focusableWhenDisabled
-                    className={cn(TEXT_BUTTON_CLASS, "text-muted-foreground")}
+                    className={cn(
+                        TEXT_BUTTON_CLASS,
+                        "text-muted-foreground aria-disabled:hover:text-muted-foreground",
+                    )}
                 >
                     Back
                 </Button>
@@ -65,7 +69,11 @@ export function StepFooter({
                     onClick={onSkip}
                     disabled={pending}
                     focusableWhenDisabled
-                    className={cn(TEXT_BUTTON_CLASS, WIZARD_FAINT_TEXT_CLASS)}
+                    className={cn(
+                        TEXT_BUTTON_CLASS,
+                        WIZARD_FAINT_TEXT_CLASS,
+                        "aria-disabled:hover:text-muted-foreground/70",
+                    )}
                 >
                     {skipLabel}
                 </Button>
