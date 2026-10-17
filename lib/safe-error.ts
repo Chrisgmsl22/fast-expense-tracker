@@ -1,9 +1,7 @@
 export type SafeErrorSummary = { name: string; code?: string };
 
-/**
- * The class name and error code only. A Prisma or Auth.js message can echo the
- * query arguments, which on signup hold an email and a password hash.
- */
+// The class name and error code only. A Prisma or Auth.js message can echo the
+// query arguments, which on signup hold an email and a password hash.
 export function safeErrorSummary(error: unknown): SafeErrorSummary {
     if (!(error instanceof Error)) return { name: typeof error };
     const code =

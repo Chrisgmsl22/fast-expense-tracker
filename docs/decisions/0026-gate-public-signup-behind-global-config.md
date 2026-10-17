@@ -1,4 +1,4 @@
-# ADR-0025: Gate public signup behind a Vercel Global Config switch
+# ADR-0026: Gate public signup behind a Vercel Global Config switch
 
 Date: 2026-10-10
 Status: Accepted
@@ -22,9 +22,10 @@ screen or a manual SQL edit.
    with a Global Config adapter (`@vercel/global-config` 1.5.1) and a fake for tests.
 3. Fail closed. A missing store, a missing or malformed key, or a read error
    means signup is off.
-4. Local development has no store. When `GLOBAL_CONFIG` is unset and `NODE_ENV`
-   is not `production`, the adapter reads `SIGNUP_ENABLED` and `MAX_USERS` from
-   the environment. A production build never falls back.
+4. Local development has no store. When neither `GLOBAL_CONFIG` nor
+   `EDGE_CONFIG` is set (an empty value counts as unset) and `NODE_ENV` is not
+   `production`, the adapter reads `SIGNUP_ENABLED` and `MAX_USERS` from the
+   environment. A production build never falls back.
 5. Only the signup page and the signup action read the gate. Login, the proxy
    and every other request never read it.
 6. The cap counts `User` rows before the insert. The user and its starter kit

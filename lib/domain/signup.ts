@@ -6,7 +6,7 @@ export type SignupGateState =
 export const SIGNUP_CLOSED: SignupGateState = { open: false };
 
 /**
- * Fails closed (ADR-0025): only a `true` switch and a positive whole cap open
+ * Fails closed (ADR-0026): only a `true` switch and a positive whole cap open
  * signup. Takes `unknown` because the values come from an external store.
  */
 export function toSignupGateState(

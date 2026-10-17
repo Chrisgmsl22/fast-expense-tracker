@@ -172,7 +172,7 @@ Only needed when Phase 7 (Email Summary) is in flight. Many months out.
 ## 9. Open or close signup
 
 `/signup` reads two keys from a Vercel Global Config store
-([ADR-0025](../decisions/0025-gate-public-signup-behind-global-config.md)).
+([ADR-0026](../decisions/0026-gate-public-signup-behind-global-config.md)).
 Signup stays closed until the store exists and both keys are valid.
 
 - [ ] In the Vercel dashboard, open **Storage** and create a **Global Config** store. Name it `fast-expense-tracker-signup`

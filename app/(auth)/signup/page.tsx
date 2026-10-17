@@ -2,7 +2,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { signupGate } from "@/lib/repositories";
 
-// The owner flips the switch at runtime (ADR-0025), so never prerender it.
+// The owner flips the switch at runtime (ADR-0026), so never prerender it.
 export const dynamic = "force-dynamic";
 
 export default async function SignupPage() {

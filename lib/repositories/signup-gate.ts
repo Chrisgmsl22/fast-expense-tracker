@@ -9,7 +9,7 @@ import {
 } from "@/lib/domain/signup";
 import { safeErrorSummary } from "@/lib/safe-error";
 
-/** The owner's signup switch and account cap (ADR-0025). */
+/** The owner's signup switch and account cap (ADR-0026). */
 export interface SignupGate {
     /** Never throws: any failure to read the switch reads as closed. */
     read(): Promise<SignupGateState>;
@@ -33,7 +33,7 @@ export const SIGNUP_STORE_KEYS = ["signupEnabled", "maxUsers"];
 
 /**
  * The real store read. `staleIfError: false` stops the client from serving a
- * cached "open" for up to a week while the store errors (ADR-0025 decision 3).
+ * cached "open" for up to a week while the store errors (ADR-0026 decision 3).
  */
 export const readGlobalConfigStore: SignupStoreReader = (connectionString) =>
     createClient(connectionString, { staleIfError: false }).getAll(

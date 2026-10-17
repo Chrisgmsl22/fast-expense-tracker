@@ -3,7 +3,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 
 // The route gate in auth.config.ts bounces an already-signed-in visitor to
 // /dashboard, so this only renders when logged out. It never reads the signup
-// switch (ADR-0025): the signup page shows the closed message itself.
+// switch (ADR-0026): the signup page shows the closed message itself.
 export default async function LoginPage({
     searchParams,
 }: {

@@ -201,7 +201,7 @@ scoping. _Depends on 6.a (the Settings page shell)._
 ## 8. Out of scope / deferred
 
 - **Public signup.** ~~Accounts stay manually created.~~ **Shipped in CHORE-8.d
-  (2026-10-10), [ADR-0025](../decisions/0025-gate-public-signup-behind-global-config.md).**
+  (2026-10-10), [ADR-0026](../decisions/0026-gate-public-signup-behind-global-config.md).**
   `/signup` creates an account and its starter kit in one transaction, then signs
   it in. Two Vercel Global Config keys gate it: `signupEnabled` opens or closes it
   with no redeploy, and `maxUsers` caps the account count (10 at launch). Any

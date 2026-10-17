@@ -32,7 +32,7 @@ const SIGNUP_MESSAGES = {
 
 /**
  * Create an account with its starter kit, then sign it in. The switch and the
- * cap are checked before any write (ADR-0025).
+ * cap are checked before any write (ADR-0026).
  *
  * Kept out of the `"use server"` module: every parameter of an exported server
  * action is client-supplied, so the gate and the repository cannot be
