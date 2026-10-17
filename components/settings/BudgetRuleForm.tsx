@@ -20,7 +20,7 @@ import {
 import type { FieldErrors } from "@/lib/actions/result";
 import type { BucketKey } from "@/lib/domain/dashboard";
 import { DEFAULT_BUDGET_RULE, type BudgetRule } from "@/lib/domain/budget-rule";
-import { formatMonthLabel } from "@/lib/format";
+import { formatBudgetTotal, formatMonthLabel } from "@/lib/format";
 import type { BudgetRuleInput } from "@/lib/schemas/budget-rule";
 
 type Props = {
@@ -52,13 +52,6 @@ function toDraft(rule: BudgetRule): Draft {
         discretionary: String(rule.discretionary),
         savings: String(rule.savings),
     };
-}
-
-function totalLine(total: number): string {
-    if (total === 100) return "Total 100%";
-    return total < 100
-        ? `Total ${total}% · ${100 - total}% left to assign`
-        : `Total ${total}% · ${total - 100}% over 100%`;
 }
 
 export function BudgetRuleForm({ rule, monthLabel }: Props) {
@@ -195,7 +188,7 @@ export function BudgetRuleForm({ rule, monthLabel }: Props) {
                 className={`mt-3 text-sm tabular-nums ${total === 100 ? "text-muted-foreground" : "text-destructive"}`}
                 aria-live="polite"
             >
-                {totalLine(total)}
+                {formatBudgetTotal(total)}
             </p>
 
             {formError && (

@@ -28,16 +28,22 @@ export const PASSWORD_MAX_BYTES = 72;
 
 const utf8 = new TextEncoder();
 
+const nameField = z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(
+        NAME_MAX_LENGTH,
+        `Name must be ${NAME_MAX_LENGTH} characters or fewer`,
+    );
+
+export const displayNameSchema = z.object({ name: nameField });
+
+export type DisplayNameInput = z.infer<typeof displayNameSchema>;
+
 export const signupSchema = z
     .object({
-        name: z
-            .string()
-            .trim()
-            .min(1, "Name is required")
-            .max(
-                NAME_MAX_LENGTH,
-                `Name must be ${NAME_MAX_LENGTH} characters or fewer`,
-            ),
+        name: nameField,
         email: emailField,
         password: z
             .string()

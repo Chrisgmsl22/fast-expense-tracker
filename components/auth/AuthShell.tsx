@@ -1,26 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-import { CARD_PALETTE } from "@/lib/palette";
-
-// Card-method colors: Amex Platinum · Amex Gold · NU · BBVA · Cash — the first
-// five palette swatches are exactly the seeded card colours (spec 0006 §6).
-// Sourced from the shared palette so these brand dots can't drift from the seed.
-const CARD_DOT_COLORS = CARD_PALETTE.slice(0, 5).map((swatch) => swatch.hex);
-
-function CardDots() {
-    return (
-        <div className="flex items-center gap-2" aria-hidden="true">
-            {CARD_DOT_COLORS.map((color) => (
-                <span
-                    key={color}
-                    className="size-2.5 rounded-full"
-                    style={{ backgroundColor: color }}
-                />
-            ))}
-        </div>
-    );
-}
+import { CardDots } from "./CardDots";
 
 type Props = {
     /** Desktop form heading, e.g. "Log in". */

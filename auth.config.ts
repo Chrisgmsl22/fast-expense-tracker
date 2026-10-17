@@ -7,6 +7,7 @@ import {
     IDLE_TIMEOUT_SECONDS,
     isIdleElapsed,
 } from "@/lib/auth/idle-session";
+import { displayNameSchema } from "@/lib/schemas/auth";
 
 /**
  * Shared Auth.js base config.
@@ -102,6 +103,14 @@ export const authConfig = {
                     token.idleExpiresAt,
                     now - session.idleForMs + IDLE_TIMEOUT_MS,
                 );
+            }
+            // A client can post an update too, so the name passes the same rule as a saved one.
+            const rename =
+                trigger === "update"
+                    ? displayNameSchema.safeParse({ name: session?.user?.name })
+                    : undefined;
+            if (rename?.success) {
+                token.name = rename.data.name;
             }
             return token;
         },

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
     formatBalance,
+    formatBudgetTotal,
     formatMxn,
     formatMxnCompactAbs,
     formatMxnWhole,
@@ -98,5 +99,16 @@ describe("formatMxnWhole", () => {
 
     it("rounds rather than truncating", () => {
         expect(formatMxnWhole(1234.6)).toMatch(/1,235/);
+    });
+});
+
+describe("formatBudgetTotal", () => {
+    it.each([
+        [100, "Total 100%"],
+        [90, "Total 90% · 10% left to assign"],
+        [0, "Total 0% · 100% left to assign"],
+        [115, "Total 115% · 15% over 100%"],
+    ])("formats a total of %i", (total, line) => {
+        expect(formatBudgetTotal(total)).toBe(line);
     });
 });

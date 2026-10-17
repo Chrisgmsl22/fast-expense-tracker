@@ -26,12 +26,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String // bcrypt hash — never plaintext
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String    @id @default(uuid())
+  email       String    @unique
+  password    String // bcrypt hash — never plaintext
+  name        String
+  // Null until the onboarding wizard is finished; the wizard shows while null.
+  onboardedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   expenses        Expense[]
   cards           Card[]

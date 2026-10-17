@@ -41,6 +41,7 @@ import {
     PrismaUserProvisioningRepository,
     type UserProvisioningRepository,
 } from "./user-provisioning.repository";
+import { PrismaUserRepository, type UserRepository } from "./user.repository";
 import {
     GlobalConfigSignupGate,
     readGlobalConfigStore,
@@ -86,6 +87,8 @@ export const budgetRuleRepository: BudgetRuleRepository =
 
 export const userProvisioningRepository: UserProvisioningRepository =
     new PrismaUserProvisioningRepository(db);
+
+export const userRepository: UserRepository = new PrismaUserRepository(db);
 
 export const signupGate: SignupGate = new GlobalConfigSignupGate(
     process.env,

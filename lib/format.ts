@@ -65,3 +65,11 @@ const monthNameFormatter = new Intl.DateTimeFormat("en-US", {
 export function formatMonthName(month: string): string {
     return monthNameFormatter.format(new Date(`${month}-01T12:00:00Z`));
 }
+
+/** The live line under a budget split's three inputs: the total and what is left or over. */
+export function formatBudgetTotal(total: number): string {
+    if (total === 100) return "Total 100%";
+    return total < 100
+        ? `Total ${total}% · ${100 - total}% left to assign`
+        : `Total ${total}% · ${total - 100}% over 100%`;
+}

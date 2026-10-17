@@ -11,12 +11,16 @@ import { restoreCard } from "@/app/_actions/card/restore";
 import { updateCard } from "@/app/_actions/card/update";
 import type { FieldErrors } from "@/lib/actions/result";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
-import { CARD_PALETTE, isPaletteColor, isValidHex } from "@/lib/palette";
 import type { CardSettingsItem } from "@/lib/repositories/card.repository";
 import type { AddCardInput, UpdateCardInput } from "@/lib/schemas/card";
-import { cn } from "@/lib/utils";
+import {
+    DEFAULT_CARD_COLOR,
+    typeLabel,
+    type AddCardType,
+} from "@/components/cards/card-type-options";
+import { CardColorField } from "@/components/cards/CardColorField";
+import { CardTypeField } from "@/components/cards/CardTypeField";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     Dialog,
     DialogContent,
@@ -27,32 +31,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-} from "@/components/ui/select";
-
-const DEFAULT_COLOR = CARD_PALETTE[0]?.hex ?? "#6b7280";
-
-/** Display labels for every card type (Cash is a locked, non-addable system card). */
-const CARD_TYPE_LABELS: Record<string, string> = {
-    credit: "Credit",
-    debit: "Debit",
-    cash: "Cash",
-};
-
-/** Types a user may add — Cash is excluded on purpose (see `addCardTypeSchema`). */
-type AddCardType = AddCardInput["type"];
-const ADD_TYPE_OPTIONS: ReadonlyArray<{ value: AddCardType; label: string }> = [
-    { value: "credit", label: "Credit" },
-    { value: "debit", label: "Debit" },
-];
-
-function typeLabel(type: string): string {
-    return CARD_TYPE_LABELS[type] ?? type;
-}
 
 function FieldError({ id, message }: { id: string; message?: string }) {
     if (!message) return null;
@@ -63,143 +41,12 @@ function FieldError({ id, message }: { id: string; message?: string }) {
     );
 }
 
-/** Credit/Debit picker shared by the add + edit forms (Cash is never offered). */
-function TypeField({
-    id,
-    value,
-    onType,
-}: {
-    id: string;
-    value: AddCardType;
-    onType: (value: AddCardType) => void;
-}) {
-    return (
-        <div>
-            <Label htmlFor={id}>Type</Label>
-            <Select
-                value={value}
-                onValueChange={(v) =>
-                    onType(
-                        ADD_TYPE_OPTIONS.find((o) => o.value === v)?.value ??
-                            "credit",
-                    )
-                }
-            >
-                <SelectTrigger
-                    id={id}
-                    aria-label="Card type"
-                    className="mt-1.5 w-full"
-                >
-                    {typeLabel(value)}
-                </SelectTrigger>
-                <SelectContent>
-                    {ADD_TYPE_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                            {o.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
-}
-
-/**
- * Swatch grid over the shared palette, with the custom `#RRGGBB` field behind an
- * opt-in "advanced" checkbox. The checkbox starts checked when the initial colour
- * isn't a palette swatch (editing a card that already has a custom hex), so the
- * user sees their value; otherwise the hex input stays hidden.
- */
-function ColorField({
-    color,
-    onColor,
-    idPrefix,
-}: {
-    color: string;
-    onColor: (value: string) => void;
-    idPrefix: string;
-}) {
-    const normalized = color.trim().toLowerCase();
-    const previewValid = isValidHex(normalized);
-    const [showCustom, setShowCustom] = useState(() => !isPaletteColor(color));
-    return (
-        <div>
-            <span className="text-sm font-medium">Colour</span>
-            <div
-                role="group"
-                aria-label="Colour swatches"
-                className="mt-1.5 flex flex-wrap gap-2"
-            >
-                {CARD_PALETTE.map((swatch) => (
-                    <button
-                        key={swatch.hex}
-                        type="button"
-                        aria-label={swatch.name}
-                        aria-pressed={normalized === swatch.hex}
-                        onClick={() => onColor(swatch.hex)}
-                        style={{ backgroundColor: swatch.hex }}
-                        className={cn(
-                            "size-7 rounded-md border border-black/10 transition",
-                            normalized === swatch.hex &&
-                                "ring-2 ring-ring ring-offset-2 ring-offset-background",
-                        )}
-                    />
-                ))}
-            </div>
-
-            <div className="mt-3 flex items-center gap-2">
-                <Checkbox
-                    id={`${idPrefix}-custom-toggle`}
-                    checked={showCustom}
-                    onCheckedChange={(checked) => {
-                        const on = checked === true;
-                        setShowCustom(on);
-                        // Unchecking hides the hex field, so snap the value back to
-                        // a definite swatch — otherwise a now-invisible custom hex
-                        // would still be what gets submitted, with no swatch shown
-                        // as selected.
-                        if (!on) onColor(DEFAULT_COLOR);
-                    }}
-                />
-                <Label
-                    htmlFor={`${idPrefix}-custom-toggle`}
-                    className="text-sm"
-                >
-                    Enter a custom color (HEX)
-                </Label>
-            </div>
-
-            {showCustom && (
-                <div className="mt-2 flex items-center gap-2">
-                    <span
-                        aria-hidden
-                        className="size-6 shrink-0 rounded-md border"
-                        style={{
-                            backgroundColor: previewValid
-                                ? normalized
-                                : "transparent",
-                        }}
-                    />
-                    <Input
-                        id={`${idPrefix}-color`}
-                        aria-label="HEX color"
-                        value={color}
-                        onChange={(e) => onColor(e.target.value)}
-                        placeholder="#RRGGBB"
-                        className="w-32 font-mono"
-                    />
-                </div>
-            )}
-        </div>
-    );
-}
-
 /** The revealed "Add card" form: name + type + colour. */
 function AddCardForm({ onDone }: { onDone: () => void }) {
     const router = useRouter();
     const [name, setName] = useState("");
     const [type, setType] = useState<AddCardType>("credit");
-    const [color, setColor] = useState(DEFAULT_COLOR);
+    const [color, setColor] = useState(DEFAULT_CARD_COLOR);
     const [errors, setErrors] = useState<FieldErrors<AddCardInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
     const [pending, startTransition] = useTransition();
@@ -251,9 +98,13 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
                 />
             </div>
 
-            <TypeField id="add-card-type" value={type} onType={setType} />
+            <CardTypeField id="add-card-type" value={type} onType={setType} />
 
-            <ColorField color={color} onColor={setColor} idPrefix="add-card" />
+            <CardColorField
+                color={color}
+                onColor={setColor}
+                idPrefix="add-card"
+            />
 
             {formError && (
                 <p className="text-sm text-destructive" role="alert">
@@ -383,13 +234,13 @@ function EditCardRow({
                     />
                 </div>
 
-                <TypeField
+                <CardTypeField
                     id={`edit-card-type-${card.id}`}
                     value={type}
                     onType={setType}
                 />
 
-                <ColorField
+                <CardColorField
                     color={color}
                     onColor={setColor}
                     idPrefix={`edit-card-${card.id}`}
