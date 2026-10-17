@@ -110,9 +110,32 @@ describe("SignupForm", () => {
         expect(
             screen
                 .getByRole("button", { name: `Hide ${subject}` })
-                .getAttribute("aria-pressed"),
-        ).toBe("true");
+                .hasAttribute("aria-pressed"),
+        ).toBe(false);
         expect(signupActionMock).not.toHaveBeenCalled();
+    });
+
+    it("Should hide both password fields before the request goes out", async () => {
+        const typesAtRequest: (string | null)[] = [];
+        signupActionMock.mockImplementation(async () => {
+            for (const label of ["Password", "Confirm password"]) {
+                typesAtRequest.push(
+                    screen.getByLabelText(label).getAttribute("type"),
+                );
+            }
+            return { ok: true, data: undefined };
+        });
+        render(<SignupForm />);
+        fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+        fireEvent.click(
+            screen.getByRole("button", { name: "Show confirm password" }),
+        );
+
+        fillAndSubmit();
+
+        await waitFor(() => expect(replaceMock).toHaveBeenCalled());
+        expect(typesAtRequest).toEqual(["password", "password"]);
+        expect(signupActionMock).toHaveBeenCalledWith(entered);
     });
 
     it("Should show the password checklist only once the user types", () => {

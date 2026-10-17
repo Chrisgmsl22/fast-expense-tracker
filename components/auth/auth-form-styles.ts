@@ -13,4 +13,8 @@ export const AUTH_SUBMIT_CLASS =
 
 export const AUTH_MUTED_CLASS = "text-white/50 md:text-muted-foreground";
 
-export const AUTH_POSITIVE_CLASS = "text-green-400 md:text-positive";
+// --positive passes 3:1 for an icon on the white panel but not 4.5:1 for text,
+// so met text turns green only on the dark column.
+export const AUTH_POSITIVE_ICON_CLASS = "text-green-400 md:text-positive";
+
+export const AUTH_POSITIVE_TEXT_CLASS = "text-green-400 md:text-foreground";

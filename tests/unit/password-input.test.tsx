@@ -4,7 +4,14 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 
 function renderInForm(props: { toggleSubject?: string } = {}) {
-    const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+    const typeAtSubmit: (string | null)[] = [];
+    const onSubmit = vi.fn((e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        typeAtSubmit.push(
+            e.currentTarget.querySelector("input")?.getAttribute("type") ??
+                null,
+        );
+    });
     render(
         <form onSubmit={onSubmit}>
             <label htmlFor="pw">Password</label>
@@ -16,17 +23,21 @@ function renderInForm(props: { toggleSubject?: string } = {}) {
             />
         </form>,
     );
-    return { onSubmit, input: screen.getByLabelText("Password") };
+    return {
+        onSubmit,
+        typeAtSubmit,
+        input: screen.getByLabelText("Password"),
+    };
 }
 
 describe("PasswordInput", () => {
-    it("Should start hidden with a show button that is not pressed", () => {
+    it("Should start hidden with a show button that names its action", () => {
         const { input } = renderInForm();
 
         expect(input.getAttribute("type")).toBe("password");
         const toggle = screen.getByRole("button", { name: "Show password" });
         expect(toggle.getAttribute("type")).toBe("button");
-        expect(toggle.getAttribute("aria-pressed")).toBe("false");
+        expect(toggle.hasAttribute("aria-pressed")).toBe(false);
         expect(toggle.getAttribute("aria-controls")).toBe("pw");
     });
 
@@ -38,7 +49,8 @@ describe("PasswordInput", () => {
 
         expect(input.getAttribute("type")).toBe("text");
         const hide = screen.getByRole("button", { name: "Hide password" });
-        expect(hide.getAttribute("aria-pressed")).toBe("true");
+        expect(hide.hasAttribute("aria-pressed")).toBe(false);
+        expect(hide.getAttribute("aria-controls")).toBe("pw");
         expect((input as HTMLInputElement).value).toBe("Invented-pass-123");
 
         fireEvent.click(hide);
@@ -49,6 +61,23 @@ describe("PasswordInput", () => {
         ).toBeTruthy();
         expect((input as HTMLInputElement).value).toBe("Invented-pass-123");
         expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it("Should hide the value again before the form's submit handler runs", () => {
+        const { input, onSubmit, typeAtSubmit } = renderInForm();
+        fireEvent.change(input, { target: { value: "Invented-pass-123" } });
+        fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+        expect(input.getAttribute("type")).toBe("text");
+
+        fireEvent.submit(input.closest("form")!);
+
+        expect(onSubmit).toHaveBeenCalledTimes(1);
+        expect(typeAtSubmit).toEqual(["password"]);
+        expect(input.getAttribute("type")).toBe("password");
+        expect(
+            screen.getByRole("button", { name: "Show password" }),
+        ).toBeTruthy();
+        expect((input as HTMLInputElement).value).toBe("Invented-pass-123");
     });
 
     it("Should keep the autocomplete hint when the value is shown", () => {

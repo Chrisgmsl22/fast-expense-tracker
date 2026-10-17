@@ -46,6 +46,37 @@ describe("PasswordChecklist", () => {
         );
     });
 
+    it("Should colour a met rule's icon green but keep its text readable on the white panel", () => {
+        render(<PasswordChecklist password="abc" />);
+
+        const met = screen.getByText("One lowercase letter").closest("li");
+        if (!met) throw new Error("No met item");
+        expect(met.className).toContain("md:text-foreground");
+        expect(met.className).not.toContain("md:text-positive");
+        expect(met.querySelector("svg")?.getAttribute("class")).toContain(
+            "md:text-positive",
+        );
+
+        const unmet = screen.getByText("One number").closest("li");
+        if (!unmet) throw new Error("No unmet item");
+        expect(unmet.innerHTML).not.toContain("positive");
+    });
+
+    it("Should rate a password over the length limit as fair even with every rule met", () => {
+        const { container } = render(
+            <PasswordChecklist
+                password={"Invented-pass-123".padEnd(100, "x")}
+            />,
+        );
+
+        expect(itemStates().every((text) => text?.endsWith("(met)"))).toBe(
+            true,
+        );
+        expect(strengthRegion(container).textContent).toBe(
+            "Password strength: Fair",
+        );
+    });
+
     it("Should never colour an unmet rule red", () => {
         render(<PasswordChecklist password="a" />);
 

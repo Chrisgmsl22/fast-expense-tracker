@@ -1,6 +1,13 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type ComponentProps } from "react";
+import {
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+    type ComponentProps,
+} from "react";
+import { flushSync } from "react-dom";
 import { Eye, EyeOff } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -32,6 +39,16 @@ export function PasswordInput({
         }
     }, [visible]);
 
+    // Hide the value again on submit, before the form's own handler reads it,
+    // so the browser never records the shown text.
+    useEffect(() => {
+        const form = inputRef.current?.form;
+        if (!form) return;
+        const hide = () => flushSync(() => setVisible(false));
+        form.addEventListener("submit", hide);
+        return () => form.removeEventListener("submit", hide);
+    }, []);
+
     function toggle() {
         const input = inputRef.current;
         if (input) {
@@ -56,7 +73,6 @@ export function PasswordInput({
                 // Keeps focus, and so the caret, in the field on a pointer click.
                 onMouseDown={(e) => e.preventDefault()}
                 aria-label={`${visible ? "Hide" : "Show"} ${toggleSubject}`}
-                aria-pressed={visible}
                 aria-controls={props.id}
                 className={cn(
                     "absolute right-1 bottom-1 flex size-8 items-center justify-center rounded-md outline-none",

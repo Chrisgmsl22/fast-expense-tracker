@@ -172,6 +172,24 @@ describe("login password toggle", () => {
         expect(password.getAttribute("type")).toBe("password");
         expect(loginActionMock).not.toHaveBeenCalled();
     });
+
+    it("Should hide the password before the request goes out", async () => {
+        const typesAtRequest: (string | null)[] = [];
+        loginActionMock.mockImplementation(async () => {
+            typesAtRequest.push(
+                screen.getByLabelText("Password").getAttribute("type"),
+            );
+            return { ok: true, data: undefined };
+        });
+        render(<LoginForm />);
+        fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+
+        fillAndSubmit();
+
+        await waitFor(() => expect(replaceMock).toHaveBeenCalled());
+        expect(typesAtRequest).toEqual(["password"]);
+        expect(loginActionMock).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe("expired login notice", () => {

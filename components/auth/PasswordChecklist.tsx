@@ -6,7 +6,11 @@ import {
     type PasswordStrength,
 } from "@/lib/domain/password-rules";
 import { cn } from "@/lib/utils";
-import { AUTH_MUTED_CLASS, AUTH_POSITIVE_CLASS } from "./auth-form-styles";
+import {
+    AUTH_MUTED_CLASS,
+    AUTH_POSITIVE_ICON_CLASS,
+    AUTH_POSITIVE_TEXT_CLASS,
+} from "./auth-form-styles";
 
 const NEUTRAL_FILL = "bg-white/60 md:bg-muted-foreground";
 
@@ -75,12 +79,15 @@ export function PasswordChecklist({ password }: { password: string }) {
                                 className={cn(
                                     "flex items-center gap-2 text-xs",
                                     met
-                                        ? AUTH_POSITIVE_CLASS
+                                        ? AUTH_POSITIVE_TEXT_CLASS
                                         : AUTH_MUTED_CLASS,
                                 )}
                             >
                                 <Icon
-                                    className="size-3.5 shrink-0"
+                                    className={cn(
+                                        "size-3.5 shrink-0",
+                                        met && AUTH_POSITIVE_ICON_CLASS,
+                                    )}
                                     aria-hidden="true"
                                 />
                                 {rule.label}

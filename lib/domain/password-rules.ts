@@ -62,25 +62,28 @@ export function passwordRuleStatuses(password: string): PasswordRuleStatus[] {
     return PASSWORD_RULES.map((rule) => ({ rule, met: rule.test(password) }));
 }
 
-export type PasswordStrength = "weak" | "fair" | "strong";
-
-export function passwordStrength(password: string): PasswordStrength {
-    const met = PASSWORD_RULES.filter((rule) => rule.test(password)).length;
-    if (met === PASSWORD_RULES.length) return "strong";
-    return met >= 3 ? "fair" : "weak";
-}
-
 const utf8 = new TextEncoder();
 
 /** The message for the first rule the password misses, then the bcrypt limit; `undefined` when it passes. */
 export function firstPasswordProblem(password: string): string | undefined {
     const unmet = PASSWORD_RULES.find((rule) => !rule.test(password));
     if (unmet) return unmet.message;
-    if (password.length > PASSWORD_MAX_BYTES) {
+    if (Array.from(password).length > PASSWORD_MAX_BYTES) {
         return `Password must be ${PASSWORD_MAX_BYTES} characters or fewer`;
     }
     if (utf8.encode(password).length > PASSWORD_MAX_BYTES) {
         return "Password is too long. Use fewer accented letters or symbols.";
     }
     return undefined;
+}
+
+export type PasswordStrength = "weak" | "fair" | "strong";
+
+/** "strong" only when signup would accept the password, so a too-long one stays "fair". */
+export function passwordStrength(password: string): PasswordStrength {
+    const met = PASSWORD_RULES.filter((rule) => rule.test(password)).length;
+    if (met === PASSWORD_RULES.length) {
+        return firstPasswordProblem(password) ? "fair" : "strong";
+    }
+    return met >= 3 ? "fair" : "weak";
 }

@@ -98,6 +98,28 @@ describe("signup", () => {
         expect(signInMock).not.toHaveBeenCalled();
     });
 
+    it("Should refuse a weak password that matches its confirmation before reading the gate", async () => {
+        const weak = PASSWORD.toLowerCase();
+
+        const result = await signup(
+            { ...input, password: weak, confirmPassword: weak },
+            gate,
+            accounts,
+        );
+
+        expect(result).toEqual({
+            ok: false,
+            code: "validation",
+            message: "Check the highlighted fields.",
+            fieldErrors: {
+                password: ["Password must include an uppercase letter"],
+            },
+        });
+        expect(gate.reads).toBe(0);
+        expect(accounts.createdAccounts).toEqual([]);
+        expect(signInMock).not.toHaveBeenCalled();
+    });
+
     it("Should refuse as closed before counting or creating when the gate is closed", async () => {
         gate.state = { open: false };
         const countUsers = vi.spyOn(accounts, "countUsers");
