@@ -27,6 +27,15 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-10-16 — Base UI dialogs set their first focus one frame after opening
+
+- **Symptom:** an onboarding-wizard test that checks focus on an invalid field failed most runs of the whole file and passed alone.
+- **Root cause:** Base UI's `FloatingFocusManager` applies `initialFocus` on the next animation frame. The test opened the dialog, typed and submitted inside that frame, so the late initial focus stole focus back to the heading. jsdom shares one frame timer across tests, so the outcome depended on earlier tests. No person can act within one frame, so users were not affected.
+- **Fix / decision:** the tests render through a helper that waits one microtask and one animation frame before interacting.
+- **Lesson for next time:** in any test of a Base UI dialog, wait one frame after it opens before you assert focus or interact.
+
+---
+
 ### 2026-10-02 — A pull that changes schema.prisma needs prisma generate
 
 - **Symptom:** After a pull that changed `schema.prisma`, the dev server threw `PrismaClientValidationError` on `Income.effectiveMonth`.
