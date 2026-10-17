@@ -10,3 +10,6 @@ export const WIZARD_SELECT_CLASS = "data-[size=default]:h-[46px]";
 export const WIZARD_FAINT_TEXT_CLASS = "text-muted-foreground/70";
 
 export const WIZARD_PANEL_CLASS = "rounded-xl bg-muted/60";
+
+/** The disabled look for a busy button, which stays focusable through `aria-disabled`. */
+export const WIZARD_BUSY_BUTTON_CLASS = "aria-disabled:opacity-50";

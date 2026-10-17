@@ -111,13 +111,16 @@ function data(over: Partial<OnboardingData> = {}): OnboardingData {
  */
 async function renderWizard(
     wizardData: OnboardingData = data(),
-    { withPage = false } = {},
+    {
+        withPage = false,
+        mainTabIndex,
+    }: { withPage?: boolean; mainTabIndex?: number } = {},
 ) {
     const wizard = <OnboardingWizard data={wizardData} />;
     const view = render(
         withPage ? (
             <>
-                <main>
+                <main tabIndex={mainTabIndex}>
                     <h1>Dashboard</h1>
                 </main>
                 {wizard}
@@ -247,7 +250,37 @@ function preferReducedMotion() {
 const progressStep = () =>
     screen.getByRole("progressbar").getAttribute("aria-valuenow");
 
+/** Settles what a test left open: React holds later transitions behind a pending async action. */
+const openDeferreds: Array<() => void> = [];
+
+/** An action result the test settles by hand, so the step stays pending until then. */
+function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((done) => {
+        resolve = done;
+    });
+    openDeferreds.push(() =>
+        resolve({ ok: false, code: "unsettled", message: "" } as T),
+    );
+    return { promise, resolve };
+}
+
+/** Busy, still focusable, and still holding focus. */
+function expectBusyWithFocus(target: HTMLElement, label: string) {
+    expect(target.textContent).toContain(label);
+    expect(document.activeElement).toBe(target);
+    expectBusy(target);
+}
+
+/** Blocked, yet focusable: `aria-disabled` instead of `disabled`. */
+function expectBusy(target: HTMLElement) {
+    expect(target.getAttribute("aria-disabled")).toBe("true");
+    expect(target.hasAttribute("disabled")).toBe(false);
+}
+
 afterEach(() => {
+    for (const settle of openDeferreds.splice(0)) settle();
+    vi.restoreAllMocks();
     for (const detach of focusTrackers.splice(0)) detach();
     Reflect.deleteProperty(Element.prototype, "getAnimations");
     vi.unstubAllGlobals();
@@ -959,6 +992,40 @@ describe("Income step", () => {
         expect(screen.queryByText("Amount can't be negative")).toBeNull();
         expect(input.getAttribute("aria-invalid")).toBeNull();
     });
+
+    it("keeps focus on Continue while saving and saves once", async () => {
+        const save = deferred<unknown>();
+        incomeMock.mockReturnValue(save.promise);
+        await renderWizard();
+        await goTo(4);
+        const input = screen.getByLabelText("Monthly income (MXN)");
+        fireEvent.change(input, { target: { value: "44000" } });
+        const proceed = button("Continue");
+        act(() => proceed.focus());
+
+        fireEvent.click(proceed);
+
+        expectBusyWithFocus(proceed, "Saving…");
+        fireEvent.click(proceed);
+        expect(fireEvent.keyDown(proceed, { key: "Enter" })).toBe(false);
+        // Enter in the field submits the form, as the busy button is not `disabled`.
+        fireEvent.submit(input.closest("form")!);
+        expectBusy(button("Back"));
+        expectBusy(button(/^Skip/));
+        fireEvent.click(button("Back"));
+        fireEvent.click(button(/^Skip/));
+        expect(incomeMock).toHaveBeenCalledTimes(1);
+
+        await act(async () =>
+            save.resolve({
+                ok: true,
+                data: { amount: 44000, effectiveMonth: "2026-10" },
+            }),
+        );
+        await expectStep(5);
+        expect(incomeMock).toHaveBeenCalledTimes(1);
+        expect(refreshMock).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe("Budget step", () => {
@@ -1157,6 +1224,36 @@ describe("Cards step", () => {
         ).toBe("");
         expect(screen.getByText("Cash is always included.")).toBeTruthy();
         expect(refreshMock).toHaveBeenCalledTimes(2);
+        await expectStep(6);
+    });
+
+    it("keeps focus on Add card while adding and adds once", async () => {
+        const save = deferred<unknown>();
+        addCardMock.mockReturnValue(save.promise);
+        await renderWizard();
+        await goTo(6);
+        fireEvent.change(screen.getByLabelText("Card name"), {
+            target: { value: "Invented Blue" },
+        });
+        const add = button("Add card");
+        act(() => add.focus());
+
+        fireEvent.click(add);
+
+        expectBusyWithFocus(add, "Adding…");
+        fireEvent.click(add);
+        expect(fireEvent.keyDown(add, { key: "Enter" })).toBe(false);
+        // Enter in the name field submits the form, as the busy button is not `disabled`.
+        fireEvent.submit(screen.getByRole("form", { name: "Add a card" }));
+        fireEvent.click(button("Continue"));
+        expect(addCardMock).toHaveBeenCalledTimes(1);
+
+        await act(async () =>
+            save.resolve({ ok: true, data: { name: "Invented Blue" } }),
+        );
+        const list = await screen.findByRole("list", { name: "Added cards" });
+        expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+        expect(addCardMock).toHaveBeenCalledTimes(1);
         await expectStep(6);
     });
 
@@ -1442,6 +1539,7 @@ describe("Done step", () => {
     it("lands focus on the page once closed, focusable only until focus leaves", async () => {
         await renderWizard(data(), { withPage: true });
         await goTo(8);
+        const focusSpy = vi.spyOn(HTMLElement.prototype, "focus");
 
         fireEvent.click(button("Open the app"));
 
@@ -1450,9 +1548,49 @@ describe("Done step", () => {
         expect(document.activeElement).toBe(main);
         expect(main.getAttribute("tabindex")).toBe("-1");
         expect(refreshMock).toHaveBeenCalledTimes(1);
+        const mainFocus = focusSpy.mock.contexts.indexOf(main);
+        expect(focusSpy.mock.calls[mainFocus]).toEqual([
+            { preventScroll: true },
+        ]);
 
         act(() => main.blur());
         expect(main.hasAttribute("tabindex")).toBe(false);
+    });
+
+    it("lands focus on a page that is already focusable and keeps its tabindex", async () => {
+        await renderWizard(data(), { withPage: true, mainTabIndex: 0 });
+        await goTo(8);
+
+        fireEvent.click(button("Open the app"));
+
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+        const main = screen.getByRole("main");
+        expect(document.activeElement).toBe(main);
+        expect(main.getAttribute("tabindex")).toBe("0");
+
+        act(() => main.blur());
+        expect(main.getAttribute("tabindex")).toBe("0");
+    });
+
+    it("keeps focus on Open the app while finishing and finishes once", async () => {
+        const finish = deferred<unknown>();
+        completeMock.mockReturnValue(finish.promise);
+        await renderWizard();
+        await goTo(8);
+        const openApp = button("Open the app");
+        act(() => openApp.focus());
+
+        fireEvent.click(openApp);
+
+        expectBusyWithFocus(openApp, "Finishing…");
+        fireEvent.click(openApp);
+        expect(fireEvent.keyDown(openApp, { key: "Enter" })).toBe(false);
+        expect(completeMock).toHaveBeenCalledTimes(1);
+
+        await act(async () => finish.resolve({ ok: true, data: undefined }));
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+        expect(completeMock).toHaveBeenCalledTimes(1);
+        expect(refreshMock).toHaveBeenCalledTimes(1);
     });
 
     it("stays open with a message when finishing fails", async () => {
@@ -1492,6 +1630,7 @@ describe("Transitions", () => {
 
         await animations.finish();
         expect(document.activeElement).toBe(arrived);
+        // jsdom cannot see the layout-effect timing; a real-browser focus recorder covers that.
         expect(focus.stop()).toEqual({
             focused: [arrived],
             restedOnBody: false,
@@ -1601,11 +1740,11 @@ describe("Transitions", () => {
         fireEvent.click(button("Continue"));
         // The save is back and the step is fading out, so Continue is live again.
         await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
-        await waitFor(() =>
-            expect((button("Continue") as HTMLButtonElement).disabled).toBe(
-                false,
-            ),
-        );
+        await waitFor(() => {
+            const proceed = button("Continue") as HTMLButtonElement;
+            expect(proceed.getAttribute("aria-disabled")).not.toBe("true");
+            expect(proceed.disabled).toBe(false);
+        });
         expect(progressStep()).toBe("5");
         fireEvent.click(button("Continue"));
         await animations.finish();

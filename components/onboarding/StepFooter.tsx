@@ -5,7 +5,10 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { WIZARD_FAINT_TEXT_CLASS } from "./onboarding-styles";
+import {
+    WIZARD_BUSY_BUTTON_CLASS,
+    WIZARD_FAINT_TEXT_CLASS,
+} from "./onboarding-styles";
 
 type Props = {
     onBack?: () => void;
@@ -21,8 +24,14 @@ type Props = {
     fullWidth?: boolean;
 };
 
-const TEXT_BUTTON_CLASS = "h-10 px-2 text-sm font-semibold";
+const TEXT_BUTTON_CLASS = cn(
+    "h-10 px-2 text-sm font-semibold",
+    WIZARD_BUSY_BUTTON_CLASS,
+);
 
+/**
+ * Busy buttons stay focusable (`aria-disabled`, not `disabled`) so focus never drops to <body>.
+ */
 export function StepFooter({
     onBack,
     onSkip,
@@ -43,6 +52,7 @@ export function StepFooter({
                     variant="ghost"
                     onClick={onBack}
                     disabled={pending}
+                    focusableWhenDisabled
                     className={cn(TEXT_BUTTON_CLASS, "text-muted-foreground")}
                 >
                     Back
@@ -54,6 +64,7 @@ export function StepFooter({
                     variant="ghost"
                     onClick={onSkip}
                     disabled={pending}
+                    focusableWhenDisabled
                     className={cn(TEXT_BUTTON_CLASS, WIZARD_FAINT_TEXT_CLASS)}
                 >
                     {skipLabel}
@@ -64,8 +75,10 @@ export function StepFooter({
                 form={formId}
                 onClick={formId ? undefined : onPrimary}
                 disabled={pending || primaryDisabled}
+                focusableWhenDisabled={pending}
                 className={cn(
                     "h-[46px] rounded-xl px-6 text-[15px] font-semibold",
+                    WIZARD_BUSY_BUTTON_CLASS,
                     fullWidth ? "w-full" : "ml-auto",
                 )}
             >

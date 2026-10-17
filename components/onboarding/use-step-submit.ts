@@ -40,6 +40,7 @@ export function useStepSubmit<TInput>(
     const [formError, setFormError] = useState<string | null>(null);
     const [failure, setFailure] = useState<Failure<Field> | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
+    const savingRef = useRef(false);
 
     const announcedField =
         failure?.announce && errors[failure.announce]?.length
@@ -57,12 +58,16 @@ export function useStepSubmit<TInput>(
         run: () => Promise<ActionResult<TData, TInput, TCode>>,
         onOk: (data: TData) => void,
     ) {
+        // Busy buttons stay focusable, so Enter in a field can still submit the form.
+        if (savingRef.current) return;
+        savingRef.current = true;
         setErrors({});
         setFormError(null);
         setFailure(null);
         startTransition(async () => {
             try {
                 const res = await run();
+                savingRef.current = false;
                 // Updates after an await leave the transition, so wrap them again.
                 startTransition(() => {
                     if (res.ok) {
@@ -85,6 +90,7 @@ export function useStepSubmit<TInput>(
                     });
                 });
             } catch {
+                savingRef.current = false;
                 startTransition(() => setFormError(UNEXPECTED));
             }
         });

@@ -22,6 +22,7 @@ import { AddedCardList } from "./AddedCardList";
 import { FieldMessage } from "./FieldMessage";
 import type { StepNav } from "./onboarding-model";
 import {
+    WIZARD_BUSY_BUTTON_CLASS,
     WIZARD_FAINT_TEXT_CLASS,
     WIZARD_FIELD_CLASS,
     WIZARD_LABEL_CLASS,
@@ -170,7 +171,11 @@ export function CardsStep({
                     type="submit"
                     variant="outline"
                     disabled={pending}
-                    className="h-10 w-full rounded-xl"
+                    focusableWhenDisabled
+                    className={cn(
+                        "h-10 w-full rounded-xl",
+                        WIZARD_BUSY_BUTTON_CLASS,
+                    )}
                 >
                     <Plus aria-hidden="true" />
                     {pending ? "Adding…" : "Add card"}

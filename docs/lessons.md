@@ -27,6 +27,15 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-10-17 — Mutation tests in a scratch copy must not go through pnpm
+
+- **Symptom:** a subagent copied the worktree to a scratch directory, symlinked `node_modules`, and ran `pnpm -C <copy> test`. pnpm tried to purge the modules directory instead of running the tests.
+- **Root cause:** `pnpm -C` runs pnpm's dependency check first. The copy does not match pnpm's install state, so pnpm wants to purge and reinstall, and the modules directory it would purge is the real worktree's, behind the symlink.
+- **Fix / decision:** call the worktree's vitest binary directly: `<worktree>/node_modules/.bin/vitest run --root <copy> <test file>`.
+- **Lesson for next time:** in a scratch copy with a symlinked `node_modules`, never run `pnpm -C <copy>`; run the tool binary from the worktree with `--root <copy>`.
+
+---
+
 ### 2026-10-16 — Base UI dialogs set their first focus one frame after opening
 
 - **Symptom:** an onboarding-wizard test that checks focus on an invalid field failed most runs of the whole file and passed alone.
