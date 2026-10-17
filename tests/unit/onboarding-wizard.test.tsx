@@ -109,8 +109,23 @@ function data(over: Partial<OnboardingData> = {}): OnboardingData {
  * initial element on the next animation frame, over any focus set before then,
  * so a test that acts sooner than a person could races it.
  */
-async function renderWizard(wizardData: OnboardingData = data()) {
-    const view = render(<OnboardingWizard data={wizardData} />);
+async function renderWizard(
+    wizardData: OnboardingData = data(),
+    { withPage = false } = {},
+) {
+    const wizard = <OnboardingWizard data={wizardData} />;
+    const view = render(
+        withPage ? (
+            <>
+                <main>
+                    <h1>Dashboard</h1>
+                </main>
+                {wizard}
+            </>
+        ) : (
+            wizard
+        ),
+    );
     await act(async () => {
         // Let Base UI queue its focus frame first, then wait for that frame.
         await Promise.resolve();
@@ -186,6 +201,9 @@ const flushFades = () =>
         await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
+/** Detaches every focus tracker, so a failed assertion cannot leak one. */
+const focusTrackers: Array<() => void> = [];
+
 /**
  * Records each element that takes focus, and whether focus rests on <body>
  * once the DOM has changed.
@@ -200,10 +218,14 @@ function trackFocus() {
     });
     document.addEventListener("focusin", onFocusIn);
     observer.observe(document.body, { childList: true, subtree: true });
+    const detach = () => {
+        observer.disconnect();
+        document.removeEventListener("focusin", onFocusIn);
+    };
+    focusTrackers.push(detach);
     return {
         stop: () => {
-            observer.disconnect();
-            document.removeEventListener("focusin", onFocusIn);
+            detach();
             return { focused, restedOnBody };
         },
     };
@@ -226,6 +248,7 @@ const progressStep = () =>
     screen.getByRole("progressbar").getAttribute("aria-valuenow");
 
 afterEach(() => {
+    for (const detach of focusTrackers.splice(0)) detach();
     Reflect.deleteProperty(Element.prototype, "getAnimations");
     vi.unstubAllGlobals();
     vi.useRealTimers();
@@ -1416,6 +1439,22 @@ describe("Done step", () => {
         expect(refreshMock).toHaveBeenCalledTimes(1);
     });
 
+    it("lands focus on the page once closed, focusable only until focus leaves", async () => {
+        await renderWizard(data(), { withPage: true });
+        await goTo(8);
+
+        fireEvent.click(button("Open the app"));
+
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+        const main = screen.getByRole("main");
+        expect(document.activeElement).toBe(main);
+        expect(main.getAttribute("tabindex")).toBe("-1");
+        expect(refreshMock).toHaveBeenCalledTimes(1);
+
+        act(() => main.blur());
+        expect(main.hasAttribute("tabindex")).toBe(false);
+    });
+
     it("stays open with a message when finishing fails", async () => {
         completeMock.mockResolvedValue({
             ok: false,
@@ -1459,6 +1498,20 @@ describe("Transitions", () => {
         });
     });
 
+    it("leaves focus where the user put it when the new step finishes fading in", async () => {
+        await renderWizard();
+        const animations = holdAnimations();
+
+        fireEvent.click(button("Get started"));
+        await animations.finish();
+        expect(document.activeElement).toBe(heading());
+        const field = screen.getByRole("textbox");
+        act(() => field.focus());
+
+        await animations.finish();
+        expect(document.activeElement).toBe(field);
+    });
+
     it("still changes step and unlocks when a fade is cancelled", async () => {
         await renderWizard();
         animateWith(() => [
@@ -1493,7 +1546,7 @@ describe("Transitions", () => {
 
     it("settles a step change whose fade never ends after a second", async () => {
         await renderWizard();
-        holdAnimations();
+        const animations = holdAnimations();
         vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
         const wait = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
 
@@ -1503,6 +1556,13 @@ describe("Transitions", () => {
         await wait(1);
         expect(progressStep()).toBe("2");
         expect(document.activeElement).toBe(heading());
+
+        // The fade-out the timeout gave up on ends late: it must not move again.
+        await act(async () => {
+            animations.release();
+            await vi.advanceTimersByTimeAsync(0);
+        });
+        expect(progressStep()).toBe("2");
 
         await wait(1000);
         fireEvent.click(button("Continue"));
@@ -1556,9 +1616,10 @@ describe("Transitions", () => {
         expect(refreshMock).toHaveBeenCalledTimes(1);
     });
 
-    it("refreshes the page only after the close fade ends, and finishes once", async () => {
-        await renderWizard();
+    it("refreshes the page and focuses it only after the close fade ends, and finishes once", async () => {
+        await renderWizard(data(), { withPage: true });
         await goTo(8);
+        const main = document.querySelector("main");
         const animations = holdAnimations();
         const popup = () =>
             document.querySelector('[data-slot="dialog-content"]');
@@ -1580,11 +1641,13 @@ describe("Transitions", () => {
         expect(popup()).not.toBeNull();
         expect(completeMock).toHaveBeenCalledTimes(1);
         expect(refreshMock).not.toHaveBeenCalled();
+        expect(document.activeElement).not.toBe(main);
 
         await waitFor(() => {
             animations.release();
             expect(popup()).toBeNull();
         });
+        expect(document.activeElement).toBe(main);
         expect(refreshMock).toHaveBeenCalledTimes(1);
         expect(completeMock).toHaveBeenCalledTimes(1);
     });

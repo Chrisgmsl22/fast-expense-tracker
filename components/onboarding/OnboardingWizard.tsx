@@ -24,6 +24,22 @@ const CLOSE_FADE_CLASS =
     "transition-opacity duration-200 ease-out data-ending-style:opacity-0 motion-reduce:transition-none";
 
 /**
+ * The wizard opened on its own, so there is no trigger to hand focus back to:
+ * it goes to the page's <main>, which stays focusable only until focus leaves.
+ */
+function focusPage() {
+    const main = document.querySelector<HTMLElement>("main");
+    if (!main) return;
+    if (!main.hasAttribute("tabindex")) {
+        main.setAttribute("tabindex", "-1");
+        main.addEventListener("blur", () => main.removeAttribute("tabindex"), {
+            once: true,
+        });
+    }
+    main.focus({ preventScroll: true });
+}
+
+/**
  * The first-run setup. It cannot be dismissed: only "Open the app" on the last
  * step finishes it, and until then it shows on every visit, prefilled with
  * whatever was already saved.
@@ -41,8 +57,8 @@ export function OnboardingWizard({ data }: { data: OnboardingData }) {
     const [savedIncome, setSavedIncome] = useState(data.fixedIncome);
     const headingRef = useRef<HTMLHeadingElement>(null);
 
-    // The old step unmounts in the same commit, so focus moves before paint and
-    // never rests on <body>. A fading-in heading is still exposed to assistive tech.
+    // A layout effect, so focus never rests on <body>: Base UI would pull it back to the popup.
+    // A fading-in heading is still exposed to assistive tech.
     useLayoutEffect(() => {
         headingRef.current?.focus();
     }, [step]);
@@ -59,7 +75,9 @@ export function OnboardingWizard({ data }: { data: OnboardingData }) {
             open={open}
             disablePointerDismissal
             onOpenChangeComplete={(isOpen) => {
-                if (!isOpen) router.refresh();
+                if (isOpen) return;
+                focusPage();
+                router.refresh();
             }}
         >
             <DialogContent

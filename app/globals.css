@@ -146,6 +146,10 @@
     * {
         border-color: var(--border);
     }
+    /* <main> takes focus only by script (after onboarding closes) and shows no ring. */
+    main:focus {
+        outline: none;
+    }
 }
 
 body {
