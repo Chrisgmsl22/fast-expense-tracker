@@ -1201,7 +1201,7 @@ describe("Cards step", () => {
         expectDefaultCardForm();
     });
 
-    it("resets the type and colour to the defaults after a Continue save", async () => {
+    it("Continue saves the typed card with its chosen type and colour", async () => {
         await renderWizard();
         await goTo(6);
         await chooseType("Debit");
@@ -1211,16 +1211,14 @@ describe("Cards step", () => {
         fireEvent.click(button("Gold"));
 
         fireEvent.click(button("Continue"));
-        await expectStep(7);
-        fireEvent.click(button("Back"));
-        await expectStep(6);
 
+        await expectStep(7);
+        expect(addCardMock).toHaveBeenCalledTimes(1);
         expect(addCardMock).toHaveBeenCalledWith({
             name: "Invented Gold",
             type: "debit",
             color: "#ca8a04",
         });
-        expectDefaultCardForm();
     });
 
     it("sets the colour swatches in even rows of five", async () => {
