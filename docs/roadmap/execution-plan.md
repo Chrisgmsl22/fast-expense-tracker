@@ -49,6 +49,29 @@ create and connect the Global Config store (CHORE-8.d documents it); protect
 Then **CHORE-27** (P30) resumes the owner's own backlog. **CHORE-36**
 (delete account) follows.
 
+## Auth module migration
+
+Spec [0009](../specs/0009-auth-module-better-auth.md), decided in
+[ADR-0027](../decisions/0027-replace-authjs-with-better-auth.md) and
+[ADR-0028](../decisions/0028-native-clients-use-oauth-with-pkce.md). It moves
+login to Better Auth and prepares the iOS client. Run it in this order, one PR
+at a time, because every step edits the same auth files:
+
+| #   | Item          | What                                                    |
+| --- | ------------- | ------------------------------------------------------- |
+| A   | **CHORE-8.e** | Land first; it edits the same auth code                 |
+| B   | **CHORE-34**  | Backup runbook; the restore points below depend on it   |
+| C   | **CHORE-39**  | One seam for the signed-in user; no data change         |
+| D   | **CHORE-40**  | Add the Better Auth tables; restore point first         |
+| E   | **CHORE-41**  | Switch to Better Auth; restore point first              |
+| F   | **CHORE-42**  | OAuth provider and the iOS client entry                 |
+| G   | **CHORE-43**  | Drop `User.password` after 2 clean weeks; restore point |
+
+CHORE-41 turns on the Better Auth rate limiter, which covers **CHORE-32**.
+Build **CHORE-33** (change password) on Better Auth after CHORE-41, not on
+Auth.js. Owner decision pending: whether this block runs before the launch
+switch or right after it.
+
 ## Capacity
 
 Vercel, Neon and GlitchTip free tiers hold about 10 users, likely about 50
