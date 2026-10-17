@@ -5,7 +5,9 @@ import {
     balanceState,
     cardBalance,
     cardStatement,
+    isQuietCard,
     payFullAmount,
+    quietCardsLast,
     summarizeCardBalances,
     totalCredit,
     totalOwed,
@@ -80,53 +82,112 @@ const T = (charged: number, paid: number, redeemed = 0) => ({
 });
 
 describe("cardStatement", () => {
-    it("adds the month to the opening balance, like a bank statement", () => {
-        expect(
-            cardStatement({ before: T(1000, 400), during: T(250.5, 100) }),
-        ).toEqual({
-            opening: 600,
-            charged: 250.5,
-            paid: 100,
+    it("reads the month on its own: charged − paid − redeemed", () => {
+        expect(cardStatement(T(1300, 416))).toEqual({
+            charged: 1300,
+            paid: 416,
             redeemed: 0,
-            balance: 750.5,
+            balance: 884,
             state: "owed",
         });
     });
 
-    it("ends in credit when the month's payments pass what was owed", () => {
-        expect(
-            cardStatement({ before: T(500, 0), during: T(0, 700, 20) }),
-        ).toMatchObject({ opening: 500, balance: -220, state: "credit" });
+    it("ends in credit when the month's payments pass its charges", () => {
+        expect(cardStatement(T(0, 700, 20))).toMatchObject({
+            balance: -720,
+            state: "credit",
+        });
     });
 
-    it("opens in credit and keeps centavos exact", () => {
-        expect(
-            cardStatement({ before: T(0.1, 0.3), during: T(0.2, 0) }),
-        ).toMatchObject({
-            opening: -0.2,
-            charged: 0.2,
+    it("keeps centavos exact", () => {
+        expect(cardStatement(T(0.3, 0.1, 0.2))).toEqual({
+            charged: 0.3,
+            paid: 0.1,
+            redeemed: 0.2,
             balance: 0,
             state: "paid",
         });
     });
 });
 
-describe("summarizeCardBalances", () => {
-    it("gives each card its month statement and totals the month's end", () => {
-        const summary = summarizeCardBalances([
-            { name: "BBVA", before: T(100, 40), during: T(30, 0) },
-            { name: "Plat", before: T(10, 30), during: T(0, 0) },
-            { name: "NU", before: T(5, 0), during: T(0, 5) },
+describe("isQuietCard", () => {
+    it("is quiet with no charge, payment or redemption", () => {
+        expect(isQuietCard(T(0, 0))).toBe(true);
+        expect(isQuietCard(T(0.004, 0))).toBe(true);
+    });
+
+    it.each([
+        ["a charge", T(830, 0)],
+        ["a payment", T(0, 416)],
+        ["a redemption", T(0, 0, 20)],
+        ["activity that nets to 0", T(500, 500)],
+    ])("is not quiet with %s", (_, totals) => {
+        expect(isQuietCard(totals)).toBe(false);
+    });
+});
+
+describe("quietCardsLast", () => {
+    it("puts quiet cards after the rest, keeping the A→Z order it was given", () => {
+        const sorted = quietCardsLast([
+            { name: "Amex", ...T(0, 0) },
+            { name: "BBVA", ...T(830, 0) },
+            { name: "Gold", ...T(0, 30) },
+            { name: "NU", ...T(500, 500) },
+            { name: "Plat", ...T(0, 0) },
         ]);
 
-        expect(
-            summary.cards.map((c) => [c.name, c.opening, c.balance, c.state]),
-        ).toEqual([
-            ["BBVA", 60, 90, "owed"],
-            ["Plat", -20, -20, "credit"],
-            ["NU", 5, 0, "paid"],
+        expect(sorted.map((c) => c.name)).toEqual([
+            "BBVA",
+            "Gold",
+            "NU",
+            "Amex",
+            "Plat",
         ]);
-        expect(summary.cards[0]).not.toHaveProperty("before");
+    });
+
+    it("never re-sorts inside a group: the order received is kept", () => {
+        const sorted = quietCardsLast([
+            { name: "Zeta", ...T(1, 0) },
+            { name: "zulu", ...T(0, 0) },
+            { name: "Alpha", ...T(1, 0) },
+            { name: "Able", ...T(0, 0) },
+        ]);
+
+        expect(sorted.map((c) => c.name)).toEqual([
+            "Zeta",
+            "Alpha",
+            "zulu",
+            "Able",
+        ]);
+    });
+
+    it("leaves the input untouched", () => {
+        const cards = [
+            { name: "B", ...T(0, 0) },
+            { name: "A", ...T(1, 0) },
+        ];
+
+        quietCardsLast(cards);
+
+        expect(cards.map((c) => c.name)).toEqual(["B", "A"]);
+    });
+});
+
+describe("summarizeCardBalances", () => {
+    it("gives each card its month statement, quiet cards last, and totals the month", () => {
+        const summary = summarizeCardBalances([
+            { name: "Amex", ...T(0, 0) },
+            { name: "BBVA", ...T(90, 0) },
+            { name: "NU", ...T(5, 5) },
+            { name: "Plat", ...T(0, 20) },
+        ]);
+
+        expect(summary.cards.map((c) => [c.name, c.balance, c.state])).toEqual([
+            ["BBVA", 90, "owed"],
+            ["NU", 0, "paid"],
+            ["Plat", -20, "credit"],
+            ["Amex", 0, "paid"],
+        ]);
         expect(summary.totalOwed).toBe(90);
         expect(summary.totalCredit).toBe(20);
     });
@@ -231,23 +292,20 @@ describe("withRunningBalance", () => {
         ]);
     });
 
-    it("continues the running balance from an opening balance", () => {
-        const lines = withRunningBalance(
-            [
-                entry({ id: "c", amount: 250.5 }),
-                entry({
-                    id: "p",
-                    kind: "payment",
-                    amount: 100,
-                    date: new Date("2026-09-20T06:00:00Z"),
-                }),
-            ],
-            600,
-        );
+    it("starts the running balance at 0 and can run into credit", () => {
+        const lines = withRunningBalance([
+            entry({ id: "c", amount: 250.5 }),
+            entry({
+                id: "p",
+                kind: "payment",
+                amount: 600,
+                date: new Date("2026-09-20T06:00:00Z"),
+            }),
+        ]);
 
         expect(lines.map((l) => [l.id, l.balanceAfter])).toEqual([
-            ["p", 750.5],
-            ["c", 850.5],
+            ["p", -349.5],
+            ["c", 250.5],
         ]);
     });
 

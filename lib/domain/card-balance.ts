@@ -7,9 +7,6 @@ export type CardTotals = {
     redeemed: number;
 };
 
-/** A card's sums for the rows dated before a month and for the rows inside it. */
-export type CardPeriodTotals = { before: CardTotals; during: CardTotals };
-
 /** owed: you owe the card · paid: nothing either way · credit: the card owes you. */
 export type CardBalanceState = "owed" | "paid" | "credit";
 
@@ -45,30 +42,45 @@ export function totalCredit(balances: readonly number[]): number {
     );
 }
 
-/** One month read like a bank statement: opening + charged − paid − redeemed = balance. */
+/**
+ * One month on its own: charged − paid − redeemed = balance. Nothing carries in
+ * from an earlier month, so an unpaid amount stays in the month it was charged.
+ */
 export type CardStatement = CardTotals & {
-    opening: number;
     balance: number;
     state: CardBalanceState;
 };
 
-export function cardStatement({
-    before,
-    during,
-}: CardPeriodTotals): CardStatement {
-    const opening = cardBalance(before);
-    const balance = fromCents(toCents(opening) + toCents(cardBalance(during)));
+export function cardStatement(totals: CardTotals): CardStatement {
+    const balance = cardBalance(totals);
     return {
-        opening,
-        charged: fromCents(toCents(during.charged)),
-        paid: fromCents(toCents(during.paid)),
-        redeemed: fromCents(toCents(during.redeemed)),
+        charged: fromCents(toCents(totals.charged)),
+        paid: fromCents(toCents(totals.paid)),
+        redeemed: fromCents(toCents(totals.redeemed)),
         balance,
         state: balanceState(balance),
     };
 }
 
-export type WithStatement<T> = Omit<T, keyof CardPeriodTotals> & CardStatement;
+/** No charge, payment or redemption in the month, so the balance is 0 too. */
+export function isQuietCard({ charged, paid, redeemed }: CardTotals): boolean {
+    return (
+        toCents(charged) === 0 && toCents(paid) === 0 && toCents(redeemed) === 0
+    );
+}
+
+/**
+ * Cards with activity first, quiet cards after them. Each group keeps the order
+ * it arrived in, so the repository's A→Z stays the one ordering.
+ */
+export function quietCardsLast<T extends CardTotals>(cards: readonly T[]): T[] {
+    return [
+        ...cards.filter((c) => !isQuietCard(c)),
+        ...cards.filter(isQuietCard),
+    ];
+}
+
+export type WithStatement<T> = Omit<T, keyof CardStatement> & CardStatement;
 
 export type CardBalanceSummary<T> = {
     cards: WithStatement<T>[];
@@ -76,15 +88,12 @@ export type CardBalanceSummary<T> = {
     totalCredit: number;
 };
 
-/** Each card's month statement, plus what is owed either way at the month's end. */
-export function summarizeCardBalances<T extends CardPeriodTotals>(
+/** Each card's month statement, quiet cards last, plus what is owed either way. */
+export function summarizeCardBalances<T extends CardTotals>(
     cards: readonly T[],
 ): CardBalanceSummary<T> {
-    const statements: WithStatement<T>[] = cards.map(
-        ({ before, during, ...card }) => ({
-            ...card,
-            ...cardStatement({ before, during }),
-        }),
+    const statements: WithStatement<T>[] = quietCardsLast(
+        cards.map((card) => ({ ...card, ...cardStatement(card) })),
     );
     const balances = statements.map((c) => c.balance);
     return {
@@ -137,12 +146,11 @@ function chronological(a: CardHistoryEntry, b: CardHistoryEntry): number {
     );
 }
 
-/** Built oldest first from `opening`, then reversed. */
+/** Built oldest first from 0, then reversed. */
 export function withRunningBalance(
     entries: readonly CardHistoryEntry[],
-    opening = 0,
 ): CardHistoryLine[] {
-    let runningCents = toCents(opening);
+    let runningCents = 0;
     return [...entries]
         .sort(chronological)
         .map((entry) => {

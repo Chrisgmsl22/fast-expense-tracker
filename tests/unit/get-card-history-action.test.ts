@@ -12,46 +12,42 @@ describe("getCardHistory (unit, injected fake repo)", () => {
         authMock.mockResolvedValue({ user: { id: "u1" } });
     });
 
-    it("returns the opening balance and the month newest first, running from it", async () => {
+    it("returns the month newest first, its running balance starting at 0", async () => {
         const repo = new FakeCardRepository();
         const id = repo.seed({ userId: "u1", name: "BBVA" });
-        repo.histories.set(id, {
-            before: { charged: 1000, paid: 400, redeemed: 0 },
-            entries: [
-                {
-                    id: "e1",
-                    kind: "charge",
-                    date: new Date("2026-09-01T06:00:00Z"),
-                    createdAt: new Date("2026-09-01T06:00:00Z"),
-                    description: "Costco",
-                    detail: "Groceries",
-                    isShared: false,
-                    amount: 500,
-                },
-                {
-                    id: "m1",
-                    kind: "payment",
-                    date: new Date("2026-09-05T06:00:00Z"),
-                    createdAt: new Date("2026-09-05T06:00:00Z"),
-                    description: null,
-                    detail: null,
-                    isShared: false,
-                    amount: 200,
-                },
-            ],
-        });
+        repo.entries.set(id, [
+            {
+                id: "e1",
+                kind: "charge",
+                date: new Date("2026-09-01T06:00:00Z"),
+                createdAt: new Date("2026-09-01T06:00:00Z"),
+                description: "Costco",
+                detail: "Groceries",
+                isShared: false,
+                amount: 500,
+            },
+            {
+                id: "m1",
+                kind: "payment",
+                date: new Date("2026-09-05T06:00:00Z"),
+                createdAt: new Date("2026-09-05T06:00:00Z"),
+                description: null,
+                detail: null,
+                isShared: false,
+                amount: 200,
+            },
+        ]);
 
         const res = await getCardHistory({ id, month: "2026-09" }, repo);
 
         expect(res.ok).toBe(true);
         if (!res.ok) return;
         expect(repo.monthsRead).toEqual(["2026-09"]);
-        expect(res.data.opening).toBe(600);
         expect(
             res.data.lines.map((l) => [l.id, l.signedAmount, l.balanceAfter]),
         ).toEqual([
-            ["m1", -200, 900],
-            ["e1", 500, 1100],
+            ["m1", -200, 300],
+            ["e1", 500, 500],
         ]);
     });
 

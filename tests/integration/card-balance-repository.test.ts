@@ -119,7 +119,7 @@ describe("PrismaCardRepository.listBalances (integration)", () => {
 
         const [row] = await repo.listBalances(user.id, SEP);
 
-        expect(row?.during.charged).toBe(1000);
+        expect(row?.charged).toBe(1000);
     });
 
     it("counts reimbursed and savings-funded charges", async () => {
@@ -143,7 +143,7 @@ describe("PrismaCardRepository.listBalances (integration)", () => {
 
         const [row] = await repo.listBalances(user.id, SEP);
 
-        expect(row?.during.charged).toBe(400);
+        expect(row?.charged).toBe(400);
     });
 
     it("leaves out cash and cardless rows", async () => {
@@ -168,9 +168,7 @@ describe("PrismaCardRepository.listBalances (integration)", () => {
         const rows = await repo.listBalances(user.id, SEP);
 
         expect(rows.map((r) => r.name)).toEqual(["BBVA"]);
-        expect(rows[0]).toMatchObject({
-            during: { charged: 300, paid: 0, redeemed: 0 },
-        });
+        expect(rows[0]).toMatchObject({ charged: 300, paid: 0, redeemed: 0 });
     });
 
     it("subtracts card payments and ignores other movement types", async () => {
@@ -191,8 +189,8 @@ describe("PrismaCardRepository.listBalances (integration)", () => {
 
         const [row] = await repo.listBalances(user.id, SEP);
 
-        expect(row?.during).toMatchObject({ charged: 18400, paid: 12000 });
-        expect(cardBalance(row!.during)).toBe(6400);
+        expect(row).toMatchObject({ charged: 18400, paid: 12000 });
+        expect(cardBalance(row!)).toBe(6400);
     });
 
     it("never shows another user's cards or rows", async () => {
@@ -217,7 +215,8 @@ describe("PrismaCardRepository.listBalances (integration)", () => {
         expect(rows).toHaveLength(1);
         expect(rows[0]).toMatchObject({
             name: "BBVA",
-            during: { charged: 100, paid: 0 },
+            charged: 100,
+            paid: 0,
         });
     });
 
@@ -263,7 +262,7 @@ describe("PrismaCardRepository.listBalances (integration)", () => {
 
         const [row] = await repo.listBalances(user.id, SEP);
 
-        expect(row?.during.charged).toBe(320);
+        expect(row?.charged).toBe(320);
     });
 
     it("leaves out debit cards like cash", async () => {
@@ -293,7 +292,7 @@ describe("PrismaCardRepository.listBalances (integration)", () => {
 });
 
 describe("PrismaCardRepository.listBalances by month (integration)", () => {
-    it("reads the opening, the month and the end, and ignores rows after the month", async () => {
+    it("reads only the month's own rows, none from before or after it", async () => {
         const user = await seedUser();
         const groceries = await seedCategory(user.id);
         const savings = await seedCategory(user.id, "Savings", SAVINGS_SLUG);
@@ -337,11 +336,12 @@ describe("PrismaCardRepository.listBalances by month (integration)", () => {
         const rows = await repo.listBalances(user.id, SEP);
 
         expect(rows[0]).toMatchObject({
-            before: { charged: 1000, paid: 400, redeemed: 0 },
-            during: { charged: 250.5, paid: 100, redeemed: 0 },
+            charged: 250.5,
+            paid: 100,
+            redeemed: 0,
         });
         const [statement] = summarizeCardBalances(rows).cards;
-        expect(statement).toMatchObject({ opening: 600, balance: 750.5 });
+        expect(statement).toMatchObject({ balance: 150.5, state: "owed" });
     });
 
     it("files a row by its CDMX date at both month boundaries", async () => {
@@ -355,15 +355,18 @@ describe("PrismaCardRepository.listBalances by month (integration)", () => {
         await charge(5, "2026-10-01T05:59:59Z");
         await charge(9, "2026-10-01T06:00:00Z");
 
-        const [row] = await repo.listBalances(user.id, SEP);
+        const [august] = await repo.listBalances(user.id, "2026-08");
+        const [september] = await repo.listBalances(user.id, SEP);
+        const [october] = await repo.listBalances(user.id, "2026-10");
 
-        expect(row?.before.charged).toBe(70);
-        expect(row?.during.charged).toBe(35);
+        expect(august?.charged).toBe(70);
+        expect(september?.charged).toBe(35);
+        expect(october?.charged).toBe(9);
     });
 });
 
 describe("PrismaCardRepository.getHistory (integration)", () => {
-    it("opens with the balance before the month and lists only the month's rows", async () => {
+    it("lists only the month's rows, its running balance starting at 0", async () => {
         const user = await seedUser();
         const category = await seedCategory(user.id);
         const card = await seedCard(user.id);
@@ -392,12 +395,10 @@ describe("PrismaCardRepository.getHistory (integration)", () => {
         });
 
         const history = await repo.getHistory(user.id, card.id, SEP);
-        const opening = cardBalance(history!.before);
-        const lines = withRunningBalance(history!.entries, opening);
+        const lines = withRunningBalance(history!);
 
-        expect(opening).toBe(600);
         expect(lines.map((l) => [l.description, l.balanceAfter])).toEqual([
-            ["September", 850],
+            ["September", 250],
         ]);
     });
 
@@ -428,7 +429,7 @@ describe("PrismaCardRepository.getHistory (integration)", () => {
         });
 
         const history = await repo.getHistory(user.id, card.id, SEP);
-        const lines = withRunningBalance(history!.entries);
+        const lines = withRunningBalance(history!);
 
         expect(
             lines.map((l) => [
@@ -461,9 +462,7 @@ describe("PrismaCardRepository.getHistory (integration)", () => {
             type: "gf_received",
         });
 
-        expect((await repo.getHistory(user.id, card.id, SEP))?.entries).toEqual(
-            [],
-        );
+        expect(await repo.getHistory(user.id, card.id, SEP)).toEqual([]);
     });
 
     it("leaves Savings-category rows out of the history", async () => {
@@ -485,7 +484,34 @@ describe("PrismaCardRepository.getHistory (integration)", () => {
 
         const history = await repo.getHistory(user.id, card.id, SEP);
 
-        expect(history?.entries.map((e) => e.description)).toEqual(["Costco"]);
+        expect(history?.map((e) => e.description)).toEqual(["Costco"]);
+    });
+
+    it("files a card payment at a month boundary by its CDMX date", async () => {
+        const user = await seedUser();
+        const card = await seedCard(user.id);
+        const lastOfAugust = await seedMovement(user.id, {
+            cardId: card.id,
+            amount: 70,
+            date: "2026-09-01T05:59:59Z",
+        });
+        const firstOfSeptember = await seedMovement(user.id, {
+            cardId: card.id,
+            amount: 30,
+            date: "2026-09-01T06:00:00Z",
+        });
+
+        const august = await repo.getHistory(user.id, card.id, "2026-08");
+        const september = await repo.getHistory(user.id, card.id, SEP);
+
+        expect(august?.map((e) => [e.kind, e.id])).toEqual([
+            ["payment", lastOfAugust.id],
+        ]);
+        expect(september?.map((e) => [e.kind, e.id])).toEqual([
+            ["payment", firstOfSeptember.id],
+        ]);
+        const [row] = await repo.listBalances(user.id, SEP);
+        expect(row).toMatchObject({ charged: 0, paid: 30 });
     });
 
     it("returns null for an archived card, even one with charges", async () => {
@@ -512,5 +538,82 @@ describe("PrismaCardRepository.getHistory (integration)", () => {
         expect(await repo.getHistory(other.id, card.id, SEP)).toBeNull();
         expect(await repo.getHistory(user.id, cash.id, SEP)).toBeNull();
         expect(await repo.getHistory(user.id, debit.id, SEP)).toBeNull();
+    });
+});
+
+describe("Every month is its own statement (integration)", () => {
+    async function seedOwnerExample() {
+        const user = await seedUser();
+        const category = await seedCategory(user.id);
+        const card = await seedCard(user.id, { name: "NU" });
+        await seedCharge(user.id, category.id, {
+            cardId: card.id,
+            description: "Unpaid in September",
+            amount: 830,
+            date: "2026-09-20T06:00:00Z",
+        });
+        await seedCharge(user.id, category.id, {
+            cardId: card.id,
+            description: "Shared dinner",
+            amount: 1300,
+            isShared: true,
+            yourPercentage: 0.5,
+            actualExpenditure: 650,
+            date: "2026-10-02T06:00:00Z",
+        });
+        await seedMovement(user.id, {
+            cardId: card.id,
+            amount: 416,
+            date: "2026-10-04T06:00:00Z",
+        });
+        return { user, card };
+    }
+
+    async function statementFor(userId: string, month: string) {
+        const rows = await repo.listBalances(userId, month);
+        return summarizeCardBalances(rows).cards[0];
+    }
+
+    it("keeps September's unpaid charge in September", async () => {
+        const { user, card } = await seedOwnerExample();
+
+        expect(await statementFor(user.id, SEP)).toMatchObject({
+            charged: 830,
+            paid: 0,
+            balance: 830,
+        });
+        const history = await repo.getHistory(user.id, card.id, SEP);
+        expect(history?.map((e) => e.description)).toEqual([
+            "Unpaid in September",
+        ]);
+    });
+
+    it("reads October from its own rows only, the shared charge at full amount", async () => {
+        const { user, card } = await seedOwnerExample();
+
+        expect(await statementFor(user.id, "2026-10")).toMatchObject({
+            charged: 1300,
+            paid: 416,
+            balance: 884,
+        });
+        const lines = withRunningBalance(
+            (await repo.getHistory(user.id, card.id, "2026-10"))!,
+        );
+        expect(lines.map((l) => [l.kind, l.balanceAfter])).toEqual([
+            ["payment", 884],
+            ["charge", 1300],
+        ]);
+    });
+
+    it("carries nothing into November", async () => {
+        const { user, card } = await seedOwnerExample();
+
+        expect(await statementFor(user.id, "2026-11")).toMatchObject({
+            charged: 0,
+            paid: 0,
+            redeemed: 0,
+            balance: 0,
+        });
+        expect(await repo.getHistory(user.id, card.id, "2026-11")).toEqual([]);
     });
 });

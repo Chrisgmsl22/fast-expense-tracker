@@ -1,5 +1,5 @@
 import type { CardStatement } from "@/lib/domain/card-balance";
-import { formatBalance, formatMxn } from "@/lib/format";
+import { formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -8,7 +8,7 @@ type Props = {
     className?: string;
 };
 
-/** Opening balance + charged − paid − redeemed for the month, as on a bank statement. */
+/** Charged − paid − redeemed for the month: the lines behind its balance. */
 export function CardStatementLines({ statement, monthName, className }: Props) {
     return (
         <dl
@@ -17,8 +17,6 @@ export function CardStatementLines({ statement, monthName, className }: Props) {
                 className,
             )}
         >
-            <dt className="text-muted-foreground">Opening balance</dt>
-            <dd className="text-right">{formatBalance(statement.opening)}</dd>
             <dt className="text-muted-foreground">Charged in {monthName}</dt>
             <dd
                 className={cn(

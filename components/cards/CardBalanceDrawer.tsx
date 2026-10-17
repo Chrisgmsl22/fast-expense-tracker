@@ -8,6 +8,7 @@ import type { CardHistoryLine } from "@/lib/domain/card-balance";
 import { formatBalance, formatExpenseDate, formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
+    balanceFootnote,
     cardTypeLabel,
     headlineState,
     isSettled,
@@ -19,7 +20,7 @@ import { CardStatementLines } from "./CardStatementLines";
 export type CardHistoryState =
     | { status: "loading" }
     | { status: "error"; message: string }
-    | { status: "ready"; opening: number; lines: CardHistoryLine[] };
+    | { status: "ready"; lines: CardHistoryLine[] };
 
 type Props = {
     open: boolean;
@@ -82,15 +83,6 @@ function HistoryRow({ line }: { line: CardHistoryLine }) {
     );
 }
 
-function OpeningRow({ opening }: { opening: number }) {
-    return (
-        <li className="flex items-center justify-between py-2.5 text-sm tabular-nums">
-            <span className="font-semibold">Opening balance</span>
-            <span className="font-bold">{formatBalance(opening)}</span>
-        </li>
-    );
-}
-
 function History({
     history,
     monthName,
@@ -121,7 +113,6 @@ function History({
                 {shown.map((line) => (
                     <HistoryRow key={`${line.kind}-${line.id}`} line={line} />
                 ))}
-                {hidden === 0 ? <OpeningRow opening={history.opening} /> : null}
             </ul>
             {history.lines.length === 0 ? (
                 <p className="py-1 text-sm text-muted-foreground">
@@ -153,6 +144,8 @@ export function CardBalanceDrawer({
     onLogPayment,
 }: Props) {
     const head = card ? headlineState(card) : null;
+    const quiet = head === "untouched";
+    const foot = card && head ? balanceFootnote(card, monthName, head) : null;
     return (
         <Sheet
             open={open}
@@ -192,17 +185,18 @@ export function CardBalanceDrawer({
                                     >
                                         {stateLabel(head, monthName)}
                                     </p>
-                                    <p
-                                        className={cn(
-                                            "text-3xl font-bold tracking-tight tabular-nums",
-                                            card.state === "credit" &&
-                                                "text-positive",
-                                        )}
-                                    >
-                                        {formatBalance(card.balance)}
-                                    </p>
+                                    {quiet ? null : (
+                                        <p className="text-3xl font-bold tracking-tight tabular-nums">
+                                            {formatBalance(card.balance)}
+                                        </p>
+                                    )}
+                                    {foot ? (
+                                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                            {foot}
+                                        </p>
+                                    ) : null}
                                 </div>
-                                {head === "untouched" ? null : (
+                                {quiet ? null : (
                                     <CardStatementLines
                                         statement={card}
                                         monthName={monthName}
@@ -218,9 +212,10 @@ export function CardBalanceDrawer({
                                 Log a payment
                             </Button>
                             <p className="text-[11px] text-muted-foreground">
-                                Based on logged expenses and card payments. If
-                                your bank shows a different number, an entry is
-                                missing here.
+                                Each month shows only that month&apos;s charges
+                                and card payments. An unpaid amount stays in its
+                                own month, so your bank&apos;s balance can
+                                differ.
                             </p>
                         </div>
                         <div className="flex flex-col px-5 pt-3.5 pb-4">

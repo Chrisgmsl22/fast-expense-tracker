@@ -1,15 +1,15 @@
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { formatBalance, formatMxn } from "@/lib/format";
+import { formatBalance } from "@/lib/format";
 import { CardStatementLines } from "./CardStatementLines";
 import {
+    balanceFootnote,
     cardTypeLabel,
     headlineState,
     isSettled,
     stateLabel,
     type CardBalanceView,
-    type CardHeadlineState,
 } from "./card-balance-display";
 
 type Props = {
@@ -19,17 +19,6 @@ type Props = {
     onOpen: (card: CardBalanceView, trigger: HTMLElement) => void;
     onLogPayment: (card: CardBalanceView, trigger: HTMLElement) => void;
 };
-
-function footnote(
-    card: CardBalanceView,
-    monthName: string,
-    head: CardHeadlineState,
-): string | null {
-    if (head === "paid") return `Nothing owed at end of ${monthName}`;
-    if (head === "credit")
-        return `You paid ${formatMxn(Math.abs(card.balance))} more than you owed`;
-    return null;
-}
 
 // This ::after stretches over the whole tile, so a click anywhere opens the
 // drawer, while "Log a payment" sits above it (z-10) as its own button. It lives
@@ -43,7 +32,8 @@ export function CardBalanceTile({
     onLogPayment,
 }: Props) {
     const head = headlineState(card);
-    const foot = footnote(card, monthName, head);
+    const quiet = head === "untouched";
+    const foot = balanceFootnote(card, monthName, head);
     return (
         <article
             aria-label={card.name}
@@ -65,7 +55,12 @@ export function CardBalanceTile({
                     className="h-5 w-[30px] shrink-0 rounded"
                     style={{ backgroundColor: card.color }}
                 />
-                <span className="min-w-0 truncate text-sm font-semibold">
+                <span
+                    className={cn(
+                        "min-w-0 truncate text-sm font-semibold",
+                        quiet && "text-muted-foreground",
+                    )}
+                >
                     {card.name}
                 </span>
                 <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
@@ -87,14 +82,12 @@ export function CardBalanceTile({
                 >
                     {stateLabel(head, monthName)}
                 </p>
-                <p
-                    className={cn(
-                        "mt-0.5 text-[28px] font-bold tracking-tight tabular-nums",
-                        card.state === "credit" && "text-positive",
-                    )}
-                >
-                    {formatBalance(card.balance)}
-                </p>
+                {/* A quiet card's $0.00 would read as paid off: the label says it all. */}
+                {quiet ? null : (
+                    <p className="mt-0.5 text-[28px] font-bold tracking-tight tabular-nums">
+                        {formatBalance(card.balance)}
+                    </p>
+                )}
                 {foot ? (
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
                         {foot}
@@ -102,7 +95,7 @@ export function CardBalanceTile({
                 ) : null}
             </div>
             {/* Four zero lines say nothing a month with no rows has not said. */}
-            {head === "untouched" ? null : (
+            {quiet ? null : (
                 <CardStatementLines
                     statement={card}
                     monthName={monthName}
