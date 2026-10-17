@@ -443,6 +443,66 @@
             "spec": "docs/specs/0007-funding-source-and-settlement-cycles.md",
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "CHORE-39",
+            "name": "session-seam",
+            "priority": 39,
+            "title": "Auth PR 1: read the signed-in user through one seam",
+            "description": "Spec 0009 §8 PR 1 (ADR-0027). 45 non-test files call auth() from Auth.js directly, and about 40 tests mock it. A single seam makes the library swap (CHORE-41) touch one file instead of 45. No behavior change and no database change.",
+            "plan": "Full Plan required (auth). (1) lib/auth: getSessionUserId() returns the signed-in user id or null, backed by auth() for now. (2) Replace auth() in the 7 dashboard pages, app/(dashboard)/layout.tsx and the 30 data actions; keep the unauthenticated result codes unchanged. (3) Tests mock the seam instead of @/auth. (4) Pins: every data action still refuses a missing session and still scopes queries by the session user id. Land after CHORE-8.e, which edits the same auth files.",
+            "status": "open",
+            "spec": "docs/specs/0009-auth-module-better-auth.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-40",
+            "name": "auth-expand-schema",
+            "priority": 40,
+            "title": "Auth PR 2: add the Better Auth tables, additive only",
+            "description": "Spec 0009 §5 and §8 PR 2 (ADR-0027). Adds account, session, verification and rateLimit, User.emailVerified (default false) and User.image (nullable), and makes User.password nullable. No money table, no User.id, no foreign key changes. Merging deploys and runs prisma migrate deploy, so the owner takes a Neon restore point first.",
+            "plan": "Full Plan required (migration). Needs CHORE-34 (backup runbook) merged first. (1) Prisma models for the Better Auth core tables, mapped to the existing User model. (2) One migration, additive only. (3) Integration test that runs the migration SQL on invented users and checks every existing row is unchanged. (4) docs/operations/better-auth-migration.md: read-only before and after surveys (user count, credential-row count, users without a credential row). (5) Reviewer review is mandatory (migration).",
+            "status": "open",
+            "spec": "docs/specs/0009-auth-module-better-auth.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-41",
+            "name": "better-auth-switch",
+            "priority": 41,
+            "title": "Auth PR 3: switch login to Better Auth and copy the password hashes",
+            "description": "Spec 0009 §6, §7 and §8 PR 3 (ADR-0027). Better Auth goes live and next-auth is removed. Users log in once after the deploy; passwords do not change. User.password keeps every hash, so a Vercel rollback to the CHORE-40 build still works. Answer the 7 open questions in spec 0009 §10 before starting.",
+            "plan": "Full Plan required (auth, migration). (1) Better Auth config: Prisma adapter, bcrypt cost 10 hash and verify, generateId uuid, database sessions with expiresIn 1800 and disableSessionRefresh, rate limit with database storage. (2) app/api/auth/[...all], login, logout, signup and renew-idle actions, proxy gate with the new cookie name, IdleSessionGuard client calls. (3) Migration: idempotent credential backfill with a count guard (spec 0009 For agents). (4) seed.ts and user-provisioning write the credential row too. (5) Keep the BUG-3 test titles as the idle contract. (6) Reviewer review and a real-browser check of login, idle expiry, logout and signup (gate on locally). Owner takes a Neon restore point before merge and runs the surveys after.",
+            "status": "open",
+            "spec": "docs/specs/0009-auth-module-better-auth.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-42",
+            "name": "oauth-provider",
+            "priority": 42,
+            "title": "Auth PR 4: OAuth 2.1 provider and the iOS client entry",
+            "description": "Spec 0009 §4 and §8 PR 4 (ADR-0028). Turns this app into the authorization server a native client logs in to with PKCE. Adds tables only; the web login does not change.",
+            "plan": "Full Plan required (auth, migration). (1) jwt() and oauthProvider() plugins, their migration, the JWKS endpoint. (2) Consent page in the existing auth shell. (3) Register the iOS app as a public client: no secret, PKCE required, a private-use redirect URI. (4) Tests: authorize and token round trip with PKCE, a wrong verifier is refused, a reused refresh token ends its family.",
+            "status": "open",
+            "spec": "docs/specs/0009-auth-module-better-auth.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-43",
+            "name": "auth-contract",
+            "priority": 43,
+            "title": "Auth PR 6: drop User.password after the waiting period",
+            "description": "Spec 0009 §7 and §8 PR 6 (ADR-0027). The only destructive auth step. It waits for 2 weeks of clean use after CHORE-41 and clean surveys. After it, only the Neon restore point can undo the change.",
+            "plan": "Full Plan required (migration). (1) Migration drops User.password, guarded: abort if any user lacks a credential row. (2) Remove the transition code (any dual-write hook) and the User.password writes in seed.ts and user-provisioning. (3) Integration test on invented users. (4) Owner takes a Neon restore point before merge and runs the surveys after.",
+            "status": "open",
+            "spec": "docs/specs/0009-auth-module-better-auth.md",
+            "pr": null,
+            "issue": null
         }
     ]
 }
