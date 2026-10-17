@@ -316,7 +316,7 @@ describe("PrismaUserProvisioningRepository.provisionNewUser", () => {
 const account = {
     name: "  Ana Example ",
     email: " Ana@Example.COM ",
-    password: "invented-pass-123",
+    password: "Invented-pass-123",
 };
 
 describe("PrismaUserProvisioningRepository.createUserWithStarterKit", () => {

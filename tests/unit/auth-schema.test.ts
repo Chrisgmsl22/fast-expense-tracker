@@ -49,17 +49,27 @@ describe("loginSchema", () => {
         }
     });
 
+    it("Should accept a short legacy password that the signup rules would reject", () => {
+        const res = loginSchema.safeParse({
+            email: "admin@example.com",
+            password: "abc",
+        });
+        expect(res.success).toBe(true);
+    });
+
     it("rejects a missing email", () => {
         const res = loginSchema.safeParse({ password: "hunter2" });
         expect(res.success).toBe(false);
     });
 });
 
+const PASSWORD = "Invented-pass-123";
+
 const validSignup = {
     name: "  Ana Example  ",
     email: "  Ana@Example.COM ",
-    password: "correct-horse",
-    confirmPassword: "correct-horse",
+    password: PASSWORD,
+    confirmPassword: PASSWORD,
 };
 
 function signupFieldErrors(input: Record<string, unknown>) {
@@ -76,8 +86,8 @@ describe("signupSchema", () => {
             expect(res.data).toEqual({
                 name: "Ana Example",
                 email: "ana@example.com",
-                password: "correct-horse",
-                confirmPassword: "correct-horse",
+                password: PASSWORD,
+                confirmPassword: PASSWORD,
             });
         }
     });
@@ -113,27 +123,66 @@ describe("signupSchema", () => {
     );
 
     it.each([
+        ["empty", "", "Password must be at least 8 characters"],
         [
             "7 characters",
-            "a".repeat(7),
+            "Aa1!" + "x".repeat(3),
             "Password must be at least 8 characters",
         ],
         [
+            "no uppercase letter",
+            PASSWORD.toLowerCase(),
+            "Password must include an uppercase letter",
+        ],
+        [
+            "no lowercase letter",
+            PASSWORD.toUpperCase(),
+            "Password must include a lowercase letter",
+        ],
+        [
+            "no number",
+            PASSWORD.replace(/\d/g, "x"),
+            "Password must include a number",
+        ],
+        [
+            "no special character",
+            PASSWORD.replaceAll("-", "x"),
+            "Password must include a special character",
+        ],
+        [
             "73 characters",
-            "a".repeat(73),
+            "Aa1!" + "x".repeat(69),
             "Password must be 72 characters or fewer",
         ],
-    ])("Should reject a password of %s", (_case, password, message) => {
-        const errors = signupFieldErrors({
-            ...validSignup,
-            password,
-            confirmPassword: password,
-        });
-        expect(errors.password?.[0]).toBe(message);
+        [
+            "under 72 characters that bcrypt would truncate",
+            "Aa1!" + "ñ".repeat(35),
+            "Password is too long. Use fewer accented letters or symbols.",
+        ],
+    ])(
+        "Should report only the first problem with a password of %s",
+        (_case, password, message) => {
+            const errors = signupFieldErrors({
+                ...validSignup,
+                password,
+                confirmPassword: password,
+            });
+            expect(errors.password).toEqual([message]);
+        },
+    );
+
+    it("Should report the length before the other rules", () => {
+        expect(
+            signupFieldErrors({
+                ...validSignup,
+                password: "abc",
+                confirmPassword: "abc",
+            }).password,
+        ).toEqual(["Password must be at least 8 characters"]);
     });
 
     it.each([8, 72])("Should accept a password of %i characters", (length) => {
-        const password = "a".repeat(length);
+        const password = "Aa1!" + "x".repeat(length - 4);
         expect(
             signupSchema.safeParse({
                 ...validSignup,
@@ -143,24 +192,22 @@ describe("signupSchema", () => {
         ).toBe(true);
     });
 
-    it("Should reject a password under 72 characters that bcrypt would truncate", () => {
-        const password = "ñ".repeat(40);
+    it("Should accept a space as the special character", () => {
+        const password = PASSWORD.replaceAll("-", " ");
         expect(
-            signupFieldErrors({
+            signupSchema.safeParse({
                 ...validSignup,
                 password,
                 confirmPassword: password,
-            }).password,
-        ).toEqual([
-            "Password is too long. Use fewer accented letters or symbols.",
-        ]);
+            }).success,
+        ).toBe(true);
     });
 
     it("Should put a mismatched confirmation on the confirm field", () => {
         expect(
             signupFieldErrors({
                 ...validSignup,
-                confirmPassword: "correct-horsf",
+                confirmPassword: `${PASSWORD}x`,
             }),
         ).toEqual({ confirmPassword: ["Passwords do not match"] });
     });

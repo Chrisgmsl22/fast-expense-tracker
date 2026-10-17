@@ -17,7 +17,7 @@ import { signup } from "@/lib/auth/signup";
 import { FakeSignupGate } from "@/tests/support/fake-signup-gate";
 import { FakeUserProvisioningRepository } from "@/tests/support/fake-user-provisioning-repository";
 
-const PASSWORD = "invented-pass-123";
+const PASSWORD = "Invented-pass-123";
 const input = {
     name: "  Ana Example ",
     email: " Ana@Example.com ",
@@ -92,6 +92,28 @@ describe("signup", () => {
             code: "validation",
             message: "Check the highlighted fields.",
             fieldErrors: { confirmPassword: ["Passwords do not match"] },
+        });
+        expect(gate.reads).toBe(0);
+        expect(accounts.createdAccounts).toEqual([]);
+        expect(signInMock).not.toHaveBeenCalled();
+    });
+
+    it("Should refuse a weak password that matches its confirmation before reading the gate", async () => {
+        const weak = PASSWORD.toLowerCase();
+
+        const result = await signup(
+            { ...input, password: weak, confirmPassword: weak },
+            gate,
+            accounts,
+        );
+
+        expect(result).toEqual({
+            ok: false,
+            code: "validation",
+            message: "Check the highlighted fields.",
+            fieldErrors: {
+                password: ["Password must include an uppercase letter"],
+            },
         });
         expect(gate.reads).toBe(0);
         expect(accounts.createdAccounts).toEqual([]);

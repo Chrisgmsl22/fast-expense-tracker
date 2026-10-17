@@ -30,7 +30,7 @@ function fillAndSubmit(email = "user@example.com", password = "hunter2") {
     fireEvent.change(screen.getByLabelText(/email/i), {
         target: { value: email },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText("Password"), {
         target: { value: password },
     });
     fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
@@ -152,6 +152,43 @@ describe("LoginForm", () => {
             expect(replaceMock).toHaveBeenCalledExactlyOnceWith("/dashboard"),
         );
         expect(screen.queryByRole("alert")).toBeNull();
+    });
+});
+
+describe("login password toggle", () => {
+    it("Should show and hide the password without submitting", () => {
+        render(<LoginForm />);
+        const password = screen.getByLabelText("Password");
+        fireEvent.change(password, { target: { value: "hunter2" } });
+
+        fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+
+        expect(password.getAttribute("type")).toBe("text");
+        expect(password.getAttribute("autocomplete")).toBe("current-password");
+        expect((password as HTMLInputElement).value).toBe("hunter2");
+
+        fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
+
+        expect(password.getAttribute("type")).toBe("password");
+        expect(loginActionMock).not.toHaveBeenCalled();
+    });
+
+    it("Should hide the password before the request goes out", async () => {
+        const typesAtRequest: (string | null)[] = [];
+        loginActionMock.mockImplementation(async () => {
+            typesAtRequest.push(
+                screen.getByLabelText("Password").getAttribute("type"),
+            );
+            return { ok: true, data: undefined };
+        });
+        render(<LoginForm />);
+        fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+
+        fillAndSubmit();
+
+        await waitFor(() => expect(replaceMock).toHaveBeenCalled());
+        expect(typesAtRequest).toEqual(["password"]);
+        expect(loginActionMock).toHaveBeenCalledTimes(1);
     });
 });
 

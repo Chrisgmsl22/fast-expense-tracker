@@ -16,6 +16,7 @@ import {
     AUTH_LABEL_CLASS,
     AUTH_SUBMIT_CLASS,
 } from "./auth-form-styles";
+import { PasswordInput } from "./PasswordInput";
 import { SessionExpiredNotice } from "./SessionExpiredNotice";
 
 /** Submit credentials and navigate after the server confirms success. */
@@ -91,10 +92,9 @@ export function LoginForm({
                 <Label htmlFor="password" className={AUTH_LABEL_CLASS}>
                     Password
                 </Label>
-                <Input
+                <PasswordInput
                     id="password"
                     name="password"
-                    type="password"
                     autoComplete="current-password"
                     required
                     className={AUTH_INPUT_CLASS}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { firstPasswordProblem } from "@/lib/domain/password-rules";
 import { normalizeEmail } from "@/lib/domain/user";
 
 /**
@@ -22,11 +23,6 @@ export const loginSchema = z.object({
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const NAME_MAX_LENGTH = 50;
-export const PASSWORD_MIN_LENGTH = 8;
-/** bcrypt ignores every byte past the 72nd, so a longer password would match its own prefix. */
-export const PASSWORD_MAX_BYTES = 72;
-
-const utf8 = new TextEncoder();
 
 const nameField = z
     .string()
@@ -45,21 +41,10 @@ export const signupSchema = z
     .object({
         name: nameField,
         email: emailField,
-        password: z
-            .string()
-            .min(
-                PASSWORD_MIN_LENGTH,
-                `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
-            )
-            .max(
-                PASSWORD_MAX_BYTES,
-                `Password must be ${PASSWORD_MAX_BYTES} characters or fewer`,
-            )
-            .refine(
-                (password) =>
-                    utf8.encode(password).length <= PASSWORD_MAX_BYTES,
-                "Password is too long. Use fewer accented letters or symbols.",
-            ),
+        password: z.string().superRefine((password, ctx) => {
+            const problem = firstPasswordProblem(password);
+            if (problem) ctx.addIssue({ code: "custom", message: problem });
+        }),
         confirmPassword: z.string().min(1, "Confirm your password"),
     })
     .refine((input) => input.password === input.confirmPassword, {

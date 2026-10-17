@@ -22,6 +22,8 @@ import {
     AUTH_LABEL_CLASS,
     AUTH_SUBMIT_CLASS,
 } from "./auth-form-styles";
+import { PasswordChecklist } from "./PasswordChecklist";
+import { PasswordInput } from "./PasswordInput";
 
 type Field = {
     name: keyof SignupInput;
@@ -59,6 +61,7 @@ export function SignupForm() {
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<SignupInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
+    const [password, setPassword] = useState("");
     const formRef = useRef<HTMLFormElement>(null);
 
     // One live announcement per failed submit: the form summary, or, when a
@@ -119,21 +122,33 @@ export function SignupForm() {
             {FIELDS.map(({ name, label, type, autoComplete }) => {
                 const message = errors[name]?.[0];
                 const errorId = `${name}-error`;
+                const inputProps = {
+                    id: name,
+                    name,
+                    autoComplete,
+                    required: true,
+                    "aria-invalid": message ? true : undefined,
+                    "aria-describedby": message ? errorId : undefined,
+                    className: AUTH_INPUT_CLASS,
+                };
                 return (
                     <div key={name}>
                         <Label htmlFor={name} className={AUTH_LABEL_CLASS}>
                             {label}
                         </Label>
-                        <Input
-                            id={name}
-                            name={name}
-                            type={type}
-                            autoComplete={autoComplete}
-                            required
-                            aria-invalid={message ? true : undefined}
-                            aria-describedby={message ? errorId : undefined}
-                            className={AUTH_INPUT_CLASS}
-                        />
+                        {type === "password" ? (
+                            <PasswordInput
+                                {...inputProps}
+                                toggleSubject={label.toLowerCase()}
+                                onChange={
+                                    name === "password"
+                                        ? (e) => setPassword(e.target.value)
+                                        : undefined
+                                }
+                            />
+                        ) : (
+                            <Input {...inputProps} type={type} />
+                        )}
                         {message && (
                             <p
                                 id={errorId}
@@ -146,6 +161,9 @@ export function SignupForm() {
                             >
                                 {message}
                             </p>
+                        )}
+                        {name === "password" && (
+                            <PasswordChecklist password={password} />
                         )}
                     </div>
                 );

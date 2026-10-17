@@ -26,7 +26,7 @@ describe("Phase 1 page shells", async () => {
     it("Should render the login email + password fields and submit", async () => {
         render(await LoginPage({ searchParams: Promise.resolve({}) }));
         expect(screen.getByLabelText(/email/i)).toBeDefined();
-        expect(screen.getByLabelText(/password/i)).toBeDefined();
+        expect(screen.getByLabelText("Password")).toBeDefined();
         expect(screen.getByRole("button", { name: /sign in/i })).toBeDefined();
     });
 

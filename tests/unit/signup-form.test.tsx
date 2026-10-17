@@ -33,8 +33,8 @@ function validationFailure(values: Record<keyof SignupInput, string>) {
 const entered = {
     name: "Ana Example",
     email: "ana@example.com",
-    password: "invented-pass-123",
-    confirmPassword: "invented-pass-123",
+    password: "Invented-pass-123",
+    confirmPassword: "Invented-pass-123",
 };
 
 beforeEach(() => {
@@ -90,6 +90,110 @@ describe("SignupForm", () => {
             expect(input.getAttribute("type")).toBe("password");
             expect(input.getAttribute("autocomplete")).toBe("new-password");
         }
+    });
+
+    it.each([
+        ["Password", "password"],
+        ["Confirm password", "confirm password"],
+    ])("Should toggle the %s field without submitting", (label, subject) => {
+        render(<SignupForm />);
+        const input = screen.getByLabelText(label);
+        fireEvent.change(input, { target: { value: entered.password } });
+
+        fireEvent.click(
+            screen.getByRole("button", { name: `Show ${subject}` }),
+        );
+
+        expect(input.getAttribute("type")).toBe("text");
+        expect(input.getAttribute("autocomplete")).toBe("new-password");
+        expect((input as HTMLInputElement).value).toBe(entered.password);
+        expect(
+            screen
+                .getByRole("button", { name: `Hide ${subject}` })
+                .hasAttribute("aria-pressed"),
+        ).toBe(false);
+        expect(signupActionMock).not.toHaveBeenCalled();
+    });
+
+    it("Should hide both password fields before the request goes out", async () => {
+        const typesAtRequest: (string | null)[] = [];
+        signupActionMock.mockImplementation(async () => {
+            for (const label of ["Password", "Confirm password"]) {
+                typesAtRequest.push(
+                    screen.getByLabelText(label).getAttribute("type"),
+                );
+            }
+            return { ok: true, data: undefined };
+        });
+        render(<SignupForm />);
+        fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+        fireEvent.click(
+            screen.getByRole("button", { name: "Show confirm password" }),
+        );
+
+        fillAndSubmit();
+
+        await waitFor(() => expect(replaceMock).toHaveBeenCalled());
+        expect(typesAtRequest).toEqual(["password", "password"]);
+        expect(signupActionMock).toHaveBeenCalledWith(entered);
+    });
+
+    it("Should show the password checklist only once the user types", () => {
+        render(<SignupForm />);
+        const password = screen.getByLabelText("Password");
+        expect(
+            screen.queryByRole("list", { name: "Password requirements" }),
+        ).toBeNull();
+
+        fireEvent.change(password, { target: { value: "abc" } });
+
+        const list = screen.getByRole("list", {
+            name: "Password requirements",
+        });
+        expect(list.textContent).toContain("One lowercase letter (met)");
+        expect(screen.getByText("Weak")).toBeTruthy();
+
+        fireEvent.change(password, { target: { value: entered.password } });
+
+        expect(screen.getByText("Strong")).toBeTruthy();
+
+        fireEvent.change(password, { target: { value: "" } });
+
+        expect(
+            screen.queryByRole("list", { name: "Password requirements" }),
+        ).toBeNull();
+    });
+
+    it("Should leave the checklist out of the confirm field", () => {
+        render(<SignupForm />);
+
+        fireEvent.change(screen.getByLabelText("Confirm password"), {
+            target: { value: "abc" },
+        });
+
+        expect(
+            screen.queryByRole("list", { name: "Password requirements" }),
+        ).toBeNull();
+    });
+
+    it("Should report the first unmet password rule on submit", async () => {
+        const lower = entered.password.toLowerCase();
+        const weak = { ...entered, password: lower, confirmPassword: lower };
+        signupActionMock.mockResolvedValue(validationFailure(weak));
+        render(<SignupForm />);
+        const password = screen.getByLabelText("Password");
+
+        fillAndSubmit(weak);
+
+        await waitFor(() => expect(document.activeElement).toBe(password));
+        expect(
+            document.getElementById(
+                password.getAttribute("aria-describedby") ?? "",
+            )?.textContent,
+        ).toBe("Password must include an uppercase letter");
+        expect(screen.getAllByRole("alert").map((a) => a.textContent)).toEqual([
+            SUMMARY,
+        ]);
     });
 
     it("Should submit every field and go to the dashboard on success", async () => {
