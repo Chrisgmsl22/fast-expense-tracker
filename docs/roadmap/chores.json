@@ -133,7 +133,7 @@
             "plan": "Build against docs/designs-screens/onboarding.html; its sample data is not the financial model. Steps: 1 Welcome, 2 Name, 3 Sharing (toggle + partner name + your % when on), 4 Income (fixed monthly), 5 Budget (the Essentials/Discretionary/Savings split, default 50/25/25), 6 Cards (confirm the starter Cash card, add one), 7 Categories (READ-ONLY preview of the starter kit), 8 Done. (1) Each step saves through the existing paths, no new money model: display name, save-split-rule (CHORE-6.a), set-fixed income (CHORE-25), save-budget-rule (CHORE-23), card add (CHORE-6.c). (2) Schema: a nullable User.onboardedAt; the migration sets it for every existing user so the owner never sees the wizard. The wizard shows while onboardedAt is null; only the final \"Open the app\" sets it, and Skip skips one step. (3) Step 7 copy: the design says categories can be renamed, recoloured or limited in Settings; until CHORE-8.c ships, change that line to what Settings offers today. (4) Real-browser check at desktop and mobile sizes. Tests: a new user sees the wizard and an existing user does not; each step writes through its action; Skip writes nothing and only Done sets onboardedAt; back and forward keep entered values; userId scope. Out of scope: re-running the wizard later (Settings covers edits), category editing (8.c). Depends on 8.d + 8.b.",
             "status": "shipped",
             "spec": "docs/designs-screens/onboarding.html",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/97",
             "issue": null
         },
         {
