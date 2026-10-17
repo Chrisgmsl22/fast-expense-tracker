@@ -166,3 +166,20 @@ Only needed when Phase 7 (Email Summary) is in flight. Many months out.
 - [ ] (Recommended) Verify a domain you own for the `from` address. Otherwise emails arrive with a `via resend.dev` suffix
 - [ ] Add to `.env.local` and Vercel env: `RESEND_API_KEY="<key>"`
 - [ ] Generate a `CRON_SECRET` (`openssl rand -hex 32`); add to `.env.local` + Vercel. Used by slice 7.3 to authenticate Vercel's cron requests.
+
+---
+
+## 9. Open or close signup
+
+`/signup` reads two keys from a Vercel Global Config store
+([ADR-0026](../decisions/0026-gate-public-signup-behind-global-config.md)).
+Signup stays closed until the store exists and both keys are valid.
+
+- [ ] In the Vercel dashboard, open **Storage** and create a **Global Config** store. Name it `fast-expense-tracker-signup`
+- [ ] Connect it to the project for the **Production** environment only. Vercel may add `GLOBAL_CONFIG` or, for an older store, `EDGE_CONFIG` to Production. Both work. Preview deployments get no store, so signup stays closed there
+- [ ] Add two items: `signupEnabled` = `false` and `maxUsers` = `10`. Use JSON types: a boolean and a number, not strings
+- [ ] To open signup, set `signupEnabled` to `true`. To close it, set it back to `false`. No redeploy is needed
+- [ ] To change the cap, edit `maxUsers`. Signup refuses a new account once the `User` count reaches it
+
+Local development has no store. Set `SIGNUP_ENABLED="true"` and `MAX_USERS="10"`
+in `.env.local` to open signup on your machine. A production build ignores both.

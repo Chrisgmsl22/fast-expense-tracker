@@ -1,11 +1,15 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
-// Relative `.ts` import: `prisma/seed.ts` loads this module under plain Node.
+// Relative `.ts` imports: `prisma/seed.ts` loads this module under plain Node.
 import {
     STARTER_CARDS,
     STARTER_CATEGORIES,
     STARTER_SETTINGS,
 } from "../domain/starter-kit.ts";
+import { normalizeEmail } from "../domain/user.ts";
+
+const BCRYPT_ROUNDS = 10;
 
 /** What one run wrote. All zero / false means the user already had everything. */
 export type ProvisionSummary = {
@@ -14,6 +18,21 @@ export type ProvisionSummary = {
     cardsCreated: number;
     settingsCreated: boolean;
 };
+
+/** A signup's account details; `password` is plain text and is stored only as a hash. */
+export type NewAccount = {
+    name: string;
+    email: string;
+    password: string;
+};
+
+/** The email already belongs to an account. */
+export class EmailTakenError extends Error {
+    constructor() {
+        super("An account with this email already exists");
+        this.name = "EmailTakenError";
+    }
+}
 
 /**
  * Gives an account its starter kit (`lib/domain/starter-kit.ts`): categories,
@@ -25,6 +44,14 @@ export interface UserProvisioningRepository {
      * existing row, so a second run writes nothing and the user's edits survive.
      */
     provisionNewUser(userId: string): Promise<ProvisionSummary>;
+
+    countUsers(): Promise<number>;
+
+    /**
+     * Creates the user and its starter kit in one transaction, so a failure leaves
+     * no account behind. Throws `EmailTakenError` when the email is in use.
+     */
+    createUserWithStarterKit(account: NewAccount): Promise<{ userId: string }>;
 }
 
 type Tx = Prisma.TransactionClient;
@@ -45,13 +72,79 @@ export class PrismaUserProvisioningRepository implements UserProvisioningReposit
     }
 
     async provisionNewUser(userId: string): Promise<ProvisionSummary> {
-        return this.db.$transaction(async (tx) => ({
-            categoriesCreated: await createMissingCategories(tx, userId),
-            subcategoriesCreated: await createMissingSubcategories(tx, userId),
-            cardsCreated: await createMissingCards(tx, userId),
-            settingsCreated: await createSettingsIfAbsent(tx, userId),
-        }));
+        return this.db.$transaction((tx) => provisionKit(tx, userId));
     }
+
+    async countUsers(): Promise<number> {
+        return this.db.user.count();
+    }
+
+    async createUserWithStarterKit({
+        name,
+        email,
+        password,
+    }: NewAccount): Promise<{ userId: string }> {
+        // Hash before the transaction opens, so the slow bcrypt work holds no locks.
+        const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+        return this.db.$transaction(async (tx) => {
+            const userId = await createUser(tx, {
+                email: normalizeEmail(email),
+                name: name.trim(),
+                password: passwordHash,
+            });
+            await provisionKit(tx, userId);
+            return { userId };
+        });
+    }
+}
+
+async function provisionKit(tx: Tx, userId: string): Promise<ProvisionSummary> {
+    return {
+        categoriesCreated: await createMissingCategories(tx, userId),
+        subcategoriesCreated: await createMissingSubcategories(tx, userId),
+        cardsCreated: await createMissingCards(tx, userId),
+        settingsCreated: await createSettingsIfAbsent(tx, userId),
+    };
+}
+
+async function createUser(
+    tx: Tx,
+    data: { email: string; name: string; password: string },
+): Promise<string> {
+    try {
+        const user = await tx.user.create({ data, select: { id: true } });
+        return user.id;
+    } catch (error) {
+        if (isEmailUniqueViolation(error)) throw new EmailTakenError();
+        throw error;
+    }
+}
+
+/**
+ * Prisma's unique-constraint code (P2002) on the `email` column. Duck-typed so
+ * this module keeps a type-only Prisma import. `meta.target` is a field list,
+ * or a constraint name such as `User_email_key`.
+ */
+function isEmailUniqueViolation(error: unknown): boolean {
+    if (
+        typeof error !== "object" ||
+        error === null ||
+        !("code" in error) ||
+        error.code !== "P2002" ||
+        !("meta" in error) ||
+        typeof error.meta !== "object" ||
+        error.meta === null ||
+        !("target" in error.meta)
+    ) {
+        return false;
+    }
+    const { target } = error.meta;
+    const fields = Array.isArray(target)
+        ? target
+        : typeof target === "string"
+          ? target.split(/[^A-Za-z0-9]+/)
+          : [];
+    return fields.includes("email");
 }
 
 async function createMissingCategories(tx: Tx, userId: string) {

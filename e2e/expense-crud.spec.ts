@@ -12,7 +12,7 @@ function todayIso(): string {
 async function login(page: Page) {
     await page.goto("/login");
     await page.getByLabel("Email").fill(EMAIL);
-    await page.getByLabel("Password").fill(PASSWORD);
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
     // Login lands on the dashboard (post-login landing, slice 2.4a); the
     // create/edit/delete controls live on the Expenses page.

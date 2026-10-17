@@ -26,7 +26,7 @@ describe("Phase 1 page shells", async () => {
     it("Should render the login email + password fields and submit", async () => {
         render(await LoginPage({ searchParams: Promise.resolve({}) }));
         expect(screen.getByLabelText(/email/i)).toBeDefined();
-        expect(screen.getByLabelText(/password/i)).toBeDefined();
+        expect(screen.getByLabelText("Password")).toBeDefined();
         expect(screen.getByRole("button", { name: /sign in/i })).toBeDefined();
     });
 
@@ -37,13 +37,12 @@ describe("Phase 1 page shells", async () => {
         expect(screen.getAllByText(/fast expense/i).length).toBeGreaterThan(0);
     });
 
-    it("Should render Sign up as a non-interactive coming-soon placeholder", async () => {
+    it("Should link Sign up to the signup page", async () => {
         render(await LoginPage({ searchParams: Promise.resolve({}) }));
-        const signUp = screen.getByText(/sign up/i);
-        expect(signUp.getAttribute("aria-disabled")).toBe("true");
-        // It must not be a real link/button that could navigate or submit.
-        expect(screen.queryByRole("button", { name: /sign up/i })).toBeNull();
-        expect(screen.queryByRole("link", { name: /sign up/i })).toBeNull();
+        const signUp = screen.getByRole("link", { name: "Sign up" });
+        expect(signUp.getAttribute("href")).toBe("/signup");
+        expect(signUp.getAttribute("aria-disabled")).toBeNull();
+        expect(screen.queryByText(/coming soon/i)).toBeNull();
     });
 });
 

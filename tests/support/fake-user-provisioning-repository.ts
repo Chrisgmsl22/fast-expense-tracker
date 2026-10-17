@@ -1,7 +1,10 @@
 import { STARTER_CARDS, STARTER_CATEGORIES } from "@/lib/domain/starter-kit";
-import type {
-    ProvisionSummary,
-    UserProvisioningRepository,
+import { normalizeEmail } from "@/lib/domain/user";
+import {
+    EmailTakenError,
+    type NewAccount,
+    type ProvisionSummary,
+    type UserProvisioningRepository,
 } from "@/lib/repositories/user-provisioning.repository";
 
 export const STARTER_SUBCATEGORY_COUNT = STARTER_CATEGORIES.reduce(
@@ -16,12 +19,25 @@ export const STARTER_SUBCATEGORY_COUNT = STARTER_CATEGORIES.reduce(
  */
 export class FakeUserProvisioningRepository implements UserProvisioningRepository {
     private readonly provisionedUsers = new Set<string>();
+    private readonly emails = new Set<string>();
 
     /** User ids passed to `provisionNewUser`, in call order. */
     readonly calls: string[] = [];
 
+    /** Accounts `createUserWithStarterKit` stored, in call order. */
+    readonly createdAccounts: NewAccount[] = [];
+
+    /** The number `countUsers` reports; each created account adds one. */
+    userCount = 0;
+
     /** Flip on to make the next call throw, simulating a rolled-back transaction. */
     failOnWrite = false;
+
+    /** Seed an existing account so a signup with the same email is refused. */
+    addExistingEmail(email: string): void {
+        this.emails.add(normalizeEmail(email));
+        this.userCount += 1;
+    }
 
     async provisionNewUser(userId: string): Promise<ProvisionSummary> {
         this.calls.push(userId);
@@ -35,5 +51,24 @@ export class FakeUserProvisioningRepository implements UserProvisioningRepositor
             cardsCreated: firstRun ? STARTER_CARDS.length : 0,
             settingsCreated: firstRun,
         };
+    }
+
+    async countUsers(): Promise<number> {
+        return this.userCount;
+    }
+
+    async createUserWithStarterKit(
+        account: NewAccount,
+    ): Promise<{ userId: string }> {
+        if (this.failOnWrite) throw new Error("fake: account creation failed");
+        const email = normalizeEmail(account.email);
+        if (this.emails.has(email)) throw new EmailTakenError();
+
+        this.emails.add(email);
+        this.createdAccounts.push(account);
+        this.userCount += 1;
+        const userId = `fake-user-${this.userCount}`;
+        this.provisionedUsers.add(userId);
+        return { userId };
     }
 }

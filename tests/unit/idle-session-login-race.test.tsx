@@ -51,7 +51,7 @@ it("Should keep login behind an unfinished sign-out even after the visible expir
     fireEvent.change(screen.getByLabelText(/email/i), {
         target: { value: "invented@example.com" },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText("Password"), {
         target: { value: "invented-password" },
     });
     fireEvent.click(screen.getByRole("button", { name: /sign in/i }));

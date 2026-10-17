@@ -49,6 +49,7 @@
         "@base-ui/react": "^1.5.0",
         "@prisma/client": "^6",
         "@sentry/nextjs": "^10.62.0",
+        "@vercel/global-config": "1.5.1",
         "@vercel/speed-insights": "^2.0.0",
         "bcryptjs": "^3.0.3",
         "class-variance-authority": "^0.7.1",

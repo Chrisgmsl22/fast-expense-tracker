@@ -21,6 +21,7 @@ import {
  * shallow-override and silently drop `authorized`.
  */
 const LOGIN_PATH = "/login";
+const SIGNUP_PATH = "/signup";
 const DEFAULT_AUTHED_PATH = "/dashboard";
 
 export const authConfig = {
@@ -38,10 +39,12 @@ export const authConfig = {
         // `/api/auth/*` never reaches here — it's excluded by the proxy matcher.
         authorized({ auth, request }) {
             const isLoggedIn = Boolean(auth?.user);
-            const isOnLogin = request.nextUrl.pathname === LOGIN_PATH;
+            const { pathname } = request.nextUrl;
+            const isOnAuthPage =
+                pathname === LOGIN_PATH || pathname === SIGNUP_PATH;
 
-            if (isOnLogin) {
-                // Don't strand a signed-in user on the login screen.
+            if (isOnAuthPage) {
+                // Don't strand a signed-in user on the login or signup screen.
                 return isLoggedIn
                     ? Response.redirect(
                           new URL(DEFAULT_AUTHED_PATH, request.nextUrl),

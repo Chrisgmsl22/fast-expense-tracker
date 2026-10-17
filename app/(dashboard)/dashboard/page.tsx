@@ -20,6 +20,7 @@ import { SpendByCard } from "@/components/dashboard/SpendByCard";
 import { SpendRadar } from "@/components/dashboard/SpendRadar";
 import { StatStrip } from "@/components/dashboard/StatStrip";
 import { SavingsSpendCard } from "@/components/dashboard/SavingsSpendCard";
+import { IncomeNudge } from "@/components/dashboard/IncomeNudge";
 
 // Per-request, DB-backed data — never prerender at build (no DB in preview builds, ADR-0004).
 export const dynamic = "force-dynamic";
@@ -84,6 +85,10 @@ export default async function DashboardPage({
             <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]">
                 {/* Main column */}
                 <div className="space-y-4">
+                    <IncomeNudge
+                        incomeTotal={summary.income.total}
+                        month={month}
+                    />
                     <BucketsHero buckets={summary.buckets} />
                     <SavingsSpendCard
                         expenses={expenses}

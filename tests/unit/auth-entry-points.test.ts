@@ -76,3 +76,49 @@ it("Should allow the first login page without a session or an expiry notice", ()
         }),
     ).toBe(true);
 });
+
+const signedIn = {
+    user: { id: "user-1" },
+    expires: "2099-01-01T00:00:00.000Z",
+};
+const staleSessionCookie = "authjs.session-token=expired-invented";
+
+it.each(["/login", "/signup"])(
+    "Should let a signed-out visitor reach %s",
+    (path) => {
+        expect(
+            authConfig.callbacks.authorized({
+                auth: null,
+                request: new NextRequest(`http://localhost${path}`),
+            }),
+        ).toBe(true);
+    },
+);
+it.each(["/login", "/signup"])(
+    "Should let a visitor with an expired session cookie reach %s without the expiry redirect",
+    (path) => {
+        expect(
+            authConfig.callbacks.authorized({
+                auth: null,
+                request: new NextRequest(`http://localhost${path}`, {
+                    headers: { cookie: staleSessionCookie },
+                }),
+            }),
+        ).toBe(true);
+    },
+);
+it.each(["/login", "/signup"])(
+    "Should send a signed-in user on %s to the dashboard",
+    (path) => {
+        const result = authConfig.callbacks.authorized({
+            auth: signedIn,
+            request: new NextRequest(`http://localhost${path}`),
+        });
+        expect(result).toBeInstanceOf(Response);
+        if (result instanceof Response) {
+            expect(new URL(result.headers.get("location")!).pathname).toBe(
+                "/dashboard",
+            );
+        }
+    },
+);
