@@ -30,6 +30,15 @@ function renderInForm(props: { toggleSubject?: string } = {}) {
     };
 }
 
+/** A form outside the rendered tree, joined through the input's `form` attribute. */
+function externalForm(id: string) {
+    const form = document.createElement("form");
+    form.id = id;
+    form.addEventListener("submit", (e) => e.preventDefault());
+    document.body.append(form);
+    return form;
+}
+
 describe("PasswordInput", () => {
     it("Should start hidden with a show button that names its action", () => {
         const { input } = renderInForm();
@@ -78,6 +87,59 @@ describe("PasswordInput", () => {
             screen.getByRole("button", { name: "Show password" }),
         ).toBeTruthy();
         expect((input as HTMLInputElement).value).toBe("Invented-pass-123");
+    });
+
+    it("Should leave a hidden field hidden and its value intact on submit", () => {
+        const { input, onSubmit, typeAtSubmit } = renderInForm();
+        fireEvent.change(input, { target: { value: "Invented-pass-123" } });
+
+        fireEvent.submit(input.closest("form")!);
+
+        expect(onSubmit).toHaveBeenCalledTimes(1);
+        expect(typeAtSubmit).toEqual(["password"]);
+        expect(input.getAttribute("type")).toBe("password");
+        expect(
+            screen.getByRole("button", { name: "Show password" }),
+        ).toBeTruthy();
+        expect((input as HTMLInputElement).value).toBe("Invented-pass-123");
+    });
+
+    it("Should remove its submit listener on unmount", () => {
+        const form = externalForm("outside");
+        const add = vi.spyOn(form, "addEventListener");
+        const remove = vi.spyOn(form, "removeEventListener");
+        const { unmount } = render(
+            <PasswordInput aria-label="Password" form="outside" />,
+        );
+        const added = add.mock.calls.find(([type]) => type === "submit");
+        expect(added).toBeDefined();
+
+        unmount();
+
+        expect(remove).toHaveBeenCalledWith("submit", added![1]);
+        expect(() => fireEvent.submit(form)).not.toThrow();
+        form.remove();
+    });
+
+    it("Should follow the input to another form when its form attribute changes", () => {
+        const first = externalForm("first");
+        const second = externalForm("second");
+        const { rerender } = render(
+            <PasswordInput aria-label="Password" form="first" />,
+        );
+        const input = screen.getByLabelText("Password");
+
+        rerender(<PasswordInput aria-label="Password" form="second" />);
+        fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+
+        fireEvent.submit(first);
+        expect(input.getAttribute("type")).toBe("text");
+
+        fireEvent.submit(second);
+        expect(input.getAttribute("type")).toBe("password");
+
+        first.remove();
+        second.remove();
     });
 
     it("Should keep the autocomplete hint when the value is shown", () => {

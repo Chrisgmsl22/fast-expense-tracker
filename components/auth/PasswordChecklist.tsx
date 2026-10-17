@@ -1,6 +1,8 @@
 import { Check, Circle } from "lucide-react";
 
 import {
+    firstPasswordProblem,
+    PASSWORD_MAX_BYTES,
     passwordRuleStatuses,
     passwordStrength,
     type PasswordStrength,
@@ -29,9 +31,16 @@ const STRENGTH: Record<
 
 const SEGMENTS = [1, 2, 3] as const;
 
+const LENGTH_LIMIT_LABEL = `${PASSWORD_MAX_BYTES} characters or fewer (accents and emoji count extra)`;
+
 /** Live password rules and a weak / fair / strong bar, shown once the user types. */
 export function PasswordChecklist({ password }: { password: string }) {
     const strength = password ? STRENGTH[passwordStrength(password)] : null;
+    const statuses = passwordRuleStatuses(password);
+    // The limit only shows once it is the one thing keeping the password from "Strong".
+    const overLimit =
+        statuses.every(({ met }) => met) &&
+        firstPasswordProblem(password) !== undefined;
 
     return (
         <div>
@@ -71,34 +80,40 @@ export function PasswordChecklist({ password }: { password: string }) {
                     aria-label="Password requirements"
                     className="mt-2 space-y-1"
                 >
-                    {passwordRuleStatuses(password).map(({ rule, met }) => {
-                        const Icon = met ? Check : Circle;
-                        return (
-                            <li
-                                key={rule.id}
-                                className={cn(
-                                    "flex items-center gap-2 text-xs",
-                                    met
-                                        ? AUTH_POSITIVE_TEXT_CLASS
-                                        : AUTH_MUTED_CLASS,
-                                )}
-                            >
-                                <Icon
-                                    className={cn(
-                                        "size-3.5 shrink-0",
-                                        met && AUTH_POSITIVE_ICON_CLASS,
-                                    )}
-                                    aria-hidden="true"
-                                />
-                                {rule.label}
-                                <span className="sr-only">
-                                    {met ? " (met)" : " (not met)"}
-                                </span>
-                            </li>
-                        );
-                    })}
+                    {statuses.map(({ rule, met }) => (
+                        <ChecklistItem
+                            key={rule.id}
+                            label={rule.label}
+                            met={met}
+                        />
+                    ))}
+                    {overLimit && (
+                        <ChecklistItem label={LENGTH_LIMIT_LABEL} met={false} />
+                    )}
                 </ul>
             )}
         </div>
+    );
+}
+
+function ChecklistItem({ label, met }: { label: string; met: boolean }) {
+    const Icon = met ? Check : Circle;
+    return (
+        <li
+            className={cn(
+                "flex items-center gap-2 text-xs",
+                met ? AUTH_POSITIVE_TEXT_CLASS : AUTH_MUTED_CLASS,
+            )}
+        >
+            <Icon
+                className={cn(
+                    "size-3.5 shrink-0",
+                    met && AUTH_POSITIVE_ICON_CLASS,
+                )}
+                aria-hidden="true"
+            />
+            {label}
+            <span className="sr-only">{met ? " (met)" : " (not met)"}</span>
+        </li>
     );
 }

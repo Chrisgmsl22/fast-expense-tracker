@@ -3,6 +3,8 @@ import { render, screen, within } from "@testing-library/react";
 
 import { PasswordChecklist } from "@/components/auth/PasswordChecklist";
 
+const LIMIT_LABEL = "72 characters or fewer (accents and emoji count extra)";
+
 function strengthRegion(container: HTMLElement) {
     const region = container.querySelector("[aria-live]");
     if (!region) throw new Error("No live region");
@@ -62,19 +64,40 @@ describe("PasswordChecklist", () => {
         expect(unmet.innerHTML).not.toContain("positive");
     });
 
-    it("Should rate a password over the length limit as fair even with every rule met", () => {
-        const { container } = render(
-            <PasswordChecklist
-                password={"Invented-pass-123".padEnd(100, "x")}
-            />,
-        );
+    it("Should not list the length limit for a strong password", () => {
+        render(<PasswordChecklist password="Invented-pass-123" />);
 
-        expect(itemStates().every((text) => text?.endsWith("(met)"))).toBe(
-            true,
-        );
-        expect(strengthRegion(container).textContent).toBe(
-            "Password strength: Fair",
-        );
+        expect(itemStates()).toHaveLength(5);
+        expect(screen.queryByText(LIMIT_LABEL)).toBeNull();
+    });
+
+    it.each([
+        ["100 characters", "Invented-pass-123".padEnd(100, "x")],
+        ["24 characters but 84 bytes", `Aa1!${"😀".repeat(20)}`],
+    ])(
+        "Should rate a password of %s as fair and list the limit as not met",
+        (_, password) => {
+            const { container } = render(
+                <PasswordChecklist password={password} />,
+            );
+
+            const states = itemStates();
+            expect(states).toHaveLength(6);
+            expect(
+                states.slice(0, 5).every((text) => text?.endsWith("(met)")),
+            ).toBe(true);
+            expect(states[5]).toBe(`${LIMIT_LABEL} (not met)`);
+            expect(strengthRegion(container).textContent).toBe(
+                "Password strength: Fair",
+            );
+        },
+    );
+
+    it("Should not list the length limit while a rule is still unmet", () => {
+        render(<PasswordChecklist password={"a".repeat(100)} />);
+
+        expect(itemStates()).toHaveLength(5);
+        expect(screen.queryByText(LIMIT_LABEL)).toBeNull();
     });
 
     it("Should never colour an unmet rule red", () => {

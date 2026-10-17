@@ -40,14 +40,16 @@ export function PasswordInput({
     }, [visible]);
 
     // Hide the value again on submit, before the form's own handler reads it,
-    // so the browser never records the shown text.
+    // so the browser never records the shown text. Re-attaches when the
+    // `form` attribute points the input at another form.
+    const formId = props.form;
     useEffect(() => {
         const form = inputRef.current?.form;
         if (!form) return;
         const hide = () => flushSync(() => setVisible(false));
         form.addEventListener("submit", hide);
         return () => form.removeEventListener("submit", hide);
-    }, []);
+    }, [formId]);
 
     function toggle() {
         const input = inputRef.current;
