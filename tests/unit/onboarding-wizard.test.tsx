@@ -1608,6 +1608,8 @@ describe("Done step", () => {
             "Could not finish setup. Please try again.",
         );
         expect(dialog()).toBeTruthy();
+        const openApp = button("Open the app");
+        expect(openApp.getAttribute("aria-disabled")).toBeNull();
         expect(refreshMock).not.toHaveBeenCalled();
     });
 });
@@ -1776,6 +1778,33 @@ describe("Transitions", () => {
         expect(budgetMock).not.toHaveBeenCalled();
     });
 
+    it("keeps Add card busy while the step fades out after Continue saves a typed card", async () => {
+        await renderWizard();
+        await goTo(6);
+        fireEvent.change(screen.getByLabelText("Card name"), {
+            target: { value: "Invented Blue" },
+        });
+        const animations = holdAnimations();
+
+        fireEvent.click(button("Continue"));
+        // The card is saved and the step is fading out.
+        await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
+        await waitFor(() =>
+            expect(heading().closest(".opacity-0")).not.toBeNull(),
+        );
+        await flushFades();
+        expect(progressStep()).toBe("6");
+        const add = button("Adding…");
+        expectBusy(add);
+        expect(screen.queryByRole("button", { name: "Add card" })).toBeNull();
+        fireEvent.click(add);
+
+        await animations.finish();
+        expect(progressStep()).toBe("7");
+        await animations.finish();
+        expect(addCardMock).toHaveBeenCalledTimes(1);
+    });
+
     it("refreshes the page and focuses it only after the close fade ends, and finishes once", async () => {
         await renderWizard(data(), { withPage: true });
         await goTo(8);
@@ -1783,10 +1812,11 @@ describe("Transitions", () => {
         const animations = holdAnimations();
         const popup = () =>
             document.querySelector('[data-slot="dialog-content"]');
-        const openApp = () =>
-            screen.getByRole("button", { name: "Open the app", hidden: true });
+        // The closing dialog is hidden from the accessibility tree.
+        const footerButton = (name: string) =>
+            screen.getByRole("button", { name, hidden: true });
 
-        fireEvent.click(openApp());
+        fireEvent.click(footerButton("Open the app"));
         await waitFor(() =>
             expect(popup()?.hasAttribute("data-ending-style")).toBe(true),
         );
@@ -1796,7 +1826,16 @@ describe("Transitions", () => {
                     requestAnimationFrame(() => resolve()),
                 ),
         );
-        fireEvent.click(openApp());
+        await flushFades();
+        const finishing = footerButton("Finishing…");
+        expectBusy(finishing);
+        expect(
+            screen.queryByRole("button", {
+                name: "Open the app",
+                hidden: true,
+            }),
+        ).toBeNull();
+        fireEvent.click(finishing);
 
         expect(popup()).not.toBeNull();
         expect(completeMock).toHaveBeenCalledTimes(1);

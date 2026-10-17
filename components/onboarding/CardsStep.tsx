@@ -65,6 +65,8 @@ export function CardsStep({
         fieldOnlyCodes: ["duplicate_name"],
     });
     const error = fieldError("name");
+    // A save on Continue keeps both buttons busy until the step has faded out.
+    const busy = pending || leavingAfterSave;
 
     function saveCard(then?: () => void) {
         submit(
@@ -105,7 +107,7 @@ export function CardsStep({
                     onBack={onBack}
                     onSkip={onNext}
                     primaryLabel="Continue"
-                    pending={pending || leavingAfterSave}
+                    pending={busy}
                     onPrimary={handleContinue}
                 />
             }
@@ -172,7 +174,7 @@ export function CardsStep({
                 <Button
                     type="submit"
                     variant="outline"
-                    disabled={pending}
+                    disabled={busy}
                     focusableWhenDisabled
                     className={cn(
                         "h-10 w-full rounded-xl",
@@ -180,7 +182,7 @@ export function CardsStep({
                     )}
                 >
                     <Plus aria-hidden="true" />
-                    {pending ? "Adding…" : "Add card"}
+                    {busy ? "Adding…" : "Add card"}
                 </Button>
             </form>
             <p

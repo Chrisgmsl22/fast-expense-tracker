@@ -17,9 +17,11 @@ const READY = "Your budget, categories, and cards are ready.";
 type Props = Pick<StepNav, "headingRef"> & {
     name: string;
     onFinished: () => void;
+    /** The finish saved and the dialog is fading out. */
+    closing: boolean;
 };
 
-export function DoneStep({ headingRef, name, onFinished }: Props) {
+export function DoneStep({ headingRef, name, onFinished, closing }: Props) {
     // The wizard refreshes once its close animation ends, so the dashboard never jumps under it.
     const { pending, formError, submit } = useStepSubmit<Record<string, never>>(
         NO_FIELDS,
@@ -49,7 +51,7 @@ export function DoneStep({ headingRef, name, onFinished }: Props) {
                 <StepFooter
                     primaryLabel="Open the app"
                     pendingLabel="Finishing…"
-                    pending={pending}
+                    pending={pending || closing}
                     onPrimary={() => submit(completeOnboarding, onFinished)}
                     fullWidth
                 />

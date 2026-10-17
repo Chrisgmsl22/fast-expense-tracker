@@ -164,6 +164,7 @@ export function OnboardingWizard({ data }: { data: OnboardingData }) {
                             headingRef={headingRef}
                             name={savedName}
                             onFinished={() => setOpen(false)}
+                            closing={!open}
                         />
                     )}
                 </div>
