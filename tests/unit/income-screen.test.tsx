@@ -345,3 +345,58 @@ describe("IncomeScreen date cap", () => {
         expect(date.getAttribute("max")).toBe("2026-10-14");
     });
 });
+
+describe("IncomeScreen in Spanish", () => {
+    function renderSpanish(over: Record<string, unknown> = {}) {
+        return renderWithIntl(
+            <IncomeScreen
+                fixed={44000}
+                variableTotal={4200}
+                total={48200}
+                month="2026-06"
+                currentMonth="2026-06"
+                monthLabel="junio"
+                variable={variable}
+                {...over}
+            />,
+            { locale: "es" },
+        );
+    }
+
+    it("Should render the screen and its dates in Spanish", () => {
+        renderSpanish();
+
+        expect(screen.getByRole("heading", { name: "Ingresos" })).toBeDefined();
+        expect(screen.getAllByText("Total · junio").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/^18 jun/).length).toBeGreaterThan(0);
+        expect(
+            screen.getByRole("button", { name: "Eliminar Sold sneakers" }),
+        ).toBeDefined();
+    });
+
+    it("Should date the fixed editor's help in Spanish", () => {
+        renderSpanish();
+        fireEvent.click(
+            screen.getAllByRole("button", { name: "Editar ingreso fijo" })[0]!,
+        );
+
+        expect(
+            screen.getAllByText(
+                "Aplica desde junio de 2026 en adelante. Los meses anteriores conservan el suyo.",
+            ).length,
+        ).toBeGreaterThan(0);
+    });
+
+    it("Should name a past month alone when editing it", () => {
+        renderSpanish({ month: "2026-05" });
+        fireEvent.click(
+            screen.getAllByRole("button", { name: "Editar ingreso fijo" })[0]!,
+        );
+
+        expect(
+            screen.getAllByText(
+                "Solo cambia mayo de 2026. Los demás meses conservan el suyo.",
+            ).length,
+        ).toBeGreaterThan(0);
+    });
+});

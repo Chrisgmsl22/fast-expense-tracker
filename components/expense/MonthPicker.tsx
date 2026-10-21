@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type { ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export function MonthPicker({
      */
     currentMonth: string;
 }) {
+    const t = useTranslations("expenses.monthPicker");
     const router = useRouter();
     // Stay on the current route (e.g. /expenses or /income) — only the month
     // query param changes, so the same control drives every month-scoped page.
@@ -53,7 +55,7 @@ export function MonthPicker({
                 variant="outline"
                 size="icon-sm"
                 onClick={() => go(shiftMonth(month, -1))}
-                aria-label="Previous month"
+                aria-label={t("previous")}
             >
                 <ChevronLeft />
             </Button>
@@ -62,7 +64,7 @@ export function MonthPicker({
                 value={month}
                 max={currentMonth}
                 onChange={handleChange}
-                aria-label="Filter by month"
+                aria-label={t("filter")}
                 // text-base on mobile so iOS Safari doesn't auto-zoom on focus.
                 className="rounded border p-1.5 text-base sm:text-sm"
             />
@@ -71,7 +73,7 @@ export function MonthPicker({
                 size="icon-sm"
                 onClick={() => go(shiftMonth(month, 1))}
                 disabled={month >= currentMonth}
-                aria-label="Next month"
+                aria-label={t("next")}
             >
                 <ChevronRight />
             </Button>
@@ -81,7 +83,7 @@ export function MonthPicker({
                     size="sm"
                     onClick={() => go(currentMonth)}
                 >
-                    Take me back to the current month
+                    {t("backToCurrent")}
                 </Button>
             )}
         </div>

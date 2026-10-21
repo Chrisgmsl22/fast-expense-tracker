@@ -1,8 +1,6 @@
-import {
-    FUNDING_SOURCE_BADGE,
-    UNKNOWN_FUNDING_BADGE,
-    type FundingSource,
-} from "@/lib/domain/funding";
+import { useTranslations } from "next-intl";
+
+import type { FundingSource } from "@/lib/domain/funding";
 
 /**
  * `income` is deliberately not accepted: every row this badge renders is one
@@ -18,17 +16,13 @@ const FUNDING_BADGE_CLASS: Record<FundingBadgeSource, string> = {
     unknown: "bg-muted text-muted-foreground",
 };
 
-const FUNDING_BADGE_TEXT: Record<FundingBadgeSource, string> = {
-    ...FUNDING_SOURCE_BADGE,
-    unknown: UNKNOWN_FUNDING_BADGE,
-};
-
 export function FundingBadge({ source }: { source: FundingBadgeSource }) {
+    const t = useTranslations("expenses.funding.badge");
     return (
         <span
             className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${FUNDING_BADGE_CLASS[source]}`}
         >
-            {FUNDING_BADGE_TEXT[source]}
+            {t(source)}
         </span>
     );
 }

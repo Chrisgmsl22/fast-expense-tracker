@@ -1,12 +1,14 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
-import { frozenExpenseRefusal } from "@/lib/domain/frozen-row";
 import { expenseRepository } from "@/lib/repositories";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
+
+import { frozenRefusalKey } from "./field-messages";
 
 const idSchema = z.object({ id: z.string().min(1) });
 
@@ -40,9 +42,14 @@ export async function deleteExpense(
     input: unknown,
     repo: ExpenseRepository = expenseRepository,
 ): Promise<DeleteExpenseResult> {
+    const t = await getTranslations("expenses");
     const parsed = idSchema.safeParse(input);
     if (!parsed.success) {
-        return { ok: false, code: "validation", message: "Missing expense id" };
+        return {
+            ok: false,
+            code: "validation",
+            message: t("errors.missingId"),
+        };
     }
     const { id } = parsed.data;
 
@@ -52,7 +59,7 @@ export async function deleteExpense(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -64,12 +71,16 @@ export async function deleteExpense(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Expense not found.",
+                message: t("errors.notFound"),
             };
         }
-        const refusal = frozenExpenseRefusal(existing, "delete");
+        const refusal = frozenRefusalKey(existing, "delete");
         if (refusal) {
-            return { ok: false, code: "cycle_closed", message: refusal };
+            return {
+                ok: false,
+                code: "cycle_closed",
+                message: t(`errors.frozen.${refusal}`),
+            };
         }
 
         const count = await repo.deleteForUser(userId, id);
@@ -77,7 +88,7 @@ export async function deleteExpense(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Expense not found.",
+                message: t("errors.notFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -86,7 +97,7 @@ export async function deleteExpense(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not delete the expense. Please try again.",
+            message: t("errors.deleteFailed"),
         };
     }
 }

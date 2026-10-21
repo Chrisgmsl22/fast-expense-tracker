@@ -1,1 +1,149 @@
-{}
+{
+    "page": {
+        "title": "Expenses",
+        "loadError": "Couldn't load your expenses. Please try again.",
+        "retry": "Retry"
+    },
+    "monthPicker": {
+        "previous": "Previous month",
+        "filter": "Filter by month",
+        "next": "Next month",
+        "backToCurrent": "Take me back to the current month"
+    },
+    "funding": {
+        "badge": {
+            "savings": "from savings",
+            "reimbursed": "reimbursed",
+            "unknown": "not from income"
+        },
+        "toggle": {
+            "savings": "Paid with money I already had",
+            "reimbursed": "Fully reimbursed"
+        },
+        "hint": "Doesn't count toward this month's budget or the dashboard."
+    },
+    "add": {
+        "trigger": "+ Add",
+        "back": "Back to add menu",
+        "titles": {
+            "menu": "Add",
+            "expense": "Add expense",
+            "cardPayment": "Add card payment",
+            "transfer": "I paid {partner}",
+            "receive": "{partner} paid me"
+        },
+        "types": {
+            "expense": "Expense",
+            "expenseHint": "A purchase you made",
+            "cardPayment": "Card payment",
+            "cardPaymentHint": "Money you paid toward a card",
+            "transferHint": "Money you sent {partner}",
+            "receiveHint": "Money {partner} sent you"
+        }
+    },
+    "form": {
+        "editLabel": "Edit expense",
+        "addLabel": "Add expense",
+        "date": "Date",
+        "amount": "Amount (MXN)",
+        "category": "Category",
+        "categoryFixed": "(fixed for a payment)",
+        "categoryFixedLabel": "Category (fixed for a payment)",
+        "categoryPlaceholder": "Select a category…",
+        "subcategory": "Subcategory",
+        "subcategoryNone": "None",
+        "subcategoryPickCategory": "Pick a category",
+        "subcategoryFrom": "from {category}",
+        "card": "Card",
+        "cardNotForSavings": "(not needed for savings)",
+        "cardNotForTransfer": "(a transfer, so no card)",
+        "cardSavings": "Savings — no card",
+        "cardPartner": "Covered by your partner — no card",
+        "cardPlaceholder": "Select a card…",
+        "description": "Description",
+        "notes": "Notes",
+        "optional": "(optional)",
+        "reimbursedOnPayment": "This payment was marked \"{label}\", which a payment can't be. Saving records it as paid from this month's income.",
+        "reimbursedCleared": "\"{label}\" isn't available for {category}, so it's unchecked.",
+        "shared": "Shared expense",
+        "sharedSplit": "Shared expense · {mine}/{theirs}",
+        "paymentNoSplit": "This amount is the payment you sent your partner — there is nothing left to split.",
+        "yourShare": "your share {amount}",
+        "saveError": "Something went wrong saving the expense.",
+        "saving": "Saving…",
+        "saveChanges": "Save changes",
+        "submit": "Add expense"
+    },
+    "list": {
+        "filterLabel": "Filter by category",
+        "all": "All",
+        "allCategories": "All categories",
+        "columns": {
+            "date": "Date",
+            "description": "Description",
+            "category": "Category",
+            "card": "Card",
+            "amount": "Amount",
+            "actions": "Actions"
+        },
+        "empty": "Nothing logged for this month yet.",
+        "emptyCategory": "No expenses in this category this month.",
+        "editExpense": "Edit expense",
+        "editCardPayment": "Edit card payment",
+        "editTransfer": "Edit transfer",
+        "deleteExpenseTitle": "Delete expense?",
+        "deleteExpenseBody": "\"{description}\" will be permanently removed.",
+        "deleteMovementTitle": "Delete this movement?",
+        "deleteMovementBody": "{title} ({amount}) will be permanently removed.",
+        "deleting": "Deleting…",
+        "setAside": "set aside",
+        "myShare": "my share {amount}",
+        "notShared": "not shared",
+        "cash": "Cash",
+        "paidPartner": "Paid {partner}",
+        "editRow": "Edit {name}",
+        "deleteRow": "Delete {name}",
+        "locked": "{name} is locked: it counts in a settlement you already closed",
+        "lockedClosedTransfer": "{name} is locked: it closed a settlement you already filed"
+    },
+    "errors": {
+        "invalidExpense": "Invalid expense",
+        "invalidPayment": "Invalid payment",
+        "unauthenticated": "Not authenticated",
+        "missingId": "Missing expense id",
+        "notFound": "Expense not found.",
+        "paymentNotFound": "Payment not found.",
+        "loadNotFound": "Couldn't load that expense. Please refresh.",
+        "loadFailed": "Couldn't load that expense. Please try again.",
+        "saveExpenseFailed": "Could not save the expense. Please try again.",
+        "savePaymentFailed": "Could not save the payment. Please try again.",
+        "saveChangesFailed": "Could not save changes. Please try again.",
+        "deleteFailed": "Could not delete the expense. Please try again.",
+        "noPaymentCategory": "No category to file this under. Add a Combined Expenses category first.",
+        "paymentNoSplitOrCard": "A payment you sent your partner can't be split or charged to a card — the amount you enter is the whole transfer.",
+        "paymentKeepsCategory": "A payment you sent your partner keeps its category, and can never be marked reimbursed.",
+        "splitIntoClosedCycle": "This expense sits inside a settlement you already closed, so it can't be split with your partner now — that would change what the settlement settled.",
+        "frozen": {
+            "paymentEdit": "This payment counts in a settlement you already closed, so it can't be edited.",
+            "paymentDelete": "This payment counts in a settlement you already closed, so it can't be deleted.",
+            "expenseEdit": "Your partner's share of this expense counts in a settlement you already closed, so it can't be edited.",
+            "expenseDelete": "Your partner's share of this expense counts in a settlement you already closed, so it can't be deleted."
+        }
+    },
+    "fields": {
+        "amountPositive": "Amount must be greater than 0",
+        "categoryRequired": "Category is required",
+        "descriptionRequired": "Description is required",
+        "sharedBelowFull": "A shared expense needs your share below 100%",
+        "reimbursedHealthOnly": "Only health expenses can be marked reimbursed. Change the funding source before moving this expense to another category.",
+        "futureDate": "Date can't be later than today",
+        "categoryNotFound": "Category not found",
+        "subcategoryMismatch": "Subcategory doesn't belong to the selected category",
+        "cardNotFound": "Card not found",
+        "paymentWholeAmount": "This amount is the whole payment you sent",
+        "paymentNoCard": "A transfer leaves a bank account, so there is no card",
+        "paymentCategoryFixed": "A payment's category can't be changed",
+        "paymentNeverReimbursed": "A payment you sent your partner can never be reimbursed",
+        "splitClosedCycle": "The settlement covering this date is already closed"
+    }
+}

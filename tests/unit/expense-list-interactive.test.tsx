@@ -1228,8 +1228,8 @@ describe("ExpenseListInteractive", () => {
             // The date and its separator sit in one nowrap unit, so they never
             // wrap onto their own line beside a lone "·".
             const dateNode = within(row)
-                .getAllByText(/15 may 2026/i)
-                .find((el) => el.textContent === "15 may 2026 ·")!;
+                .getAllByText(/May 15, 2026/)
+                .find((el) => el.textContent === "May 15, 2026 ·")!;
             expect(dateNode).toBeDefined();
             expect(dateNode.className).toContain("whitespace-nowrap");
 
@@ -1399,5 +1399,47 @@ describe("ExpenseListInteractive", () => {
 
             expect(screen.queryByText(/The open settlement/)).toBeNull();
         });
+    });
+});
+
+describe("ExpenseListInteractive in Spanish", () => {
+    it("Should render the list, its dates and seeded category names in Spanish", () => {
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+            { locale: "es" },
+        );
+
+        expect(
+            screen.getByRole("group", { name: "Filtrar por categoría" }),
+        ).toBeDefined();
+        expect(screen.getByRole("button", { name: "Todas" })).toBeDefined();
+        // A seeded name is translated; "Food" has no key and shows as stored.
+        expect(screen.getAllByText("Transporte").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("Food").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("15 may 2026").length).toBeGreaterThan(0);
+        expect(screen.getByText(/^mi parte /)).toBeDefined();
+        expect(screen.getByText("no compartido")).toBeDefined();
+        expect(screen.getAllByText("Efectivo").length).toBeGreaterThan(0);
+        expect(
+            screen.getByRole("button", { name: "Editar Tacos" }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Eliminar Uber" }),
+        ).toBeDefined();
+    });
+
+    it("Should confirm a delete in Spanish", () => {
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+            { locale: "es" },
+        );
+
+        fireEvent.click(screen.getByRole("button", { name: "Eliminar Tacos" }));
+
+        expect(screen.getByText("¿Eliminar gasto?")).toBeDefined();
+        expect(
+            screen.getByText('"Tacos" se eliminará para siempre.'),
+        ).toBeDefined();
+        expect(screen.getByRole("button", { name: "Cancelar" })).toBeDefined();
     });
 });

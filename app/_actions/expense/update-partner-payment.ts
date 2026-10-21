@@ -1,5 +1,6 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { auth } from "@/auth";
@@ -7,7 +8,6 @@ import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { partnerPaymentDescription } from "@/lib/domain/expense";
-import { frozenExpenseRefusal } from "@/lib/domain/frozen-row";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import { expenseRepository, settingsRepository } from "@/lib/repositories";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
@@ -16,6 +16,11 @@ import {
     partnerPaymentInputSchema,
     type PartnerPaymentInput,
 } from "@/lib/schemas/expense";
+
+import {
+    frozenRefusalKey,
+    translateExpenseFieldErrors,
+} from "./field-messages";
 
 const idSchema = z.object({ id: z.string().min(1) });
 
@@ -50,19 +55,27 @@ export async function updatePartnerPayment(
 ): Promise<UpdatePartnerPaymentResult> {
     const expenseRepo = deps.expenseRepo ?? expenseRepository;
     const settingsRepo = deps.settingsRepo ?? settingsRepository;
+    const t = await getTranslations("expenses");
 
     const parsed = partnerPaymentInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid payment",
-            fieldErrors: toFieldErrors<PartnerPaymentInput>(parsed.error),
+            message: t("errors.invalidPayment"),
+            fieldErrors: translateExpenseFieldErrors(
+                toFieldErrors<PartnerPaymentInput>(parsed.error),
+                t,
+            ),
         };
     }
     const idParsed = idSchema.safeParse(input);
     if (!idParsed.success) {
-        return { ok: false, code: "validation", message: "Invalid payment" };
+        return {
+            ok: false,
+            code: "validation",
+            message: t("errors.invalidPayment"),
+        };
     }
     const { id } = idParsed.data;
 
@@ -72,7 +85,7 @@ export async function updatePartnerPayment(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -83,14 +96,18 @@ export async function updatePartnerPayment(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Payment not found.",
+                message: t("errors.paymentNotFound"),
             };
         }
         // Asked through the shared helper even though a payment always counts, so
         // every path freezes on one definition of "the cycle counted this".
-        const refusal = frozenExpenseRefusal(existing, "edit");
+        const refusal = frozenRefusalKey(existing, "edit");
         if (refusal) {
-            return { ok: false, code: "cycle_closed", message: refusal };
+            return {
+                ok: false,
+                code: "cycle_closed",
+                message: t(`errors.frozen.${refusal}`),
+            };
         }
 
         const { partnerName } = await settingsRepo.getSettings(userId);
@@ -121,7 +138,7 @@ export async function updatePartnerPayment(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Payment not found.",
+                message: t("errors.paymentNotFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -130,7 +147,7 @@ export async function updatePartnerPayment(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the payment. Please try again.",
+            message: t("errors.savePaymentFailed"),
         };
     }
 }
