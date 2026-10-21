@@ -57,6 +57,7 @@ export function CategoryStats({
     subcatWithSpend: number;
 }) {
     const t = useTranslations("category");
+    const tc = useTranslations("common");
     const barWidth = hasLimit ? Math.min(100, pctOfLimit) : 0;
 
     const editor = (className?: string) => (
@@ -183,7 +184,7 @@ export function CategoryStats({
                     className="mt-2 text-center text-xs text-muted-foreground sm:text-left"
                 >
                     {t("stats.nonIncome", {
-                        label: t("nonIncomeLabel"),
+                        label: tc("notFromIncome"),
                         amount: formatMxn(spentNotFromIncome),
                     })}
                 </p>

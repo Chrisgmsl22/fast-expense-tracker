@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import type { ZodError } from "zod";
 
+import { toFieldErrors, type FieldIssue } from "@/lib/actions/field-errors";
 import type { FieldErrors } from "@/lib/actions/result";
 import {
     isMovementFrozen,
@@ -9,7 +10,6 @@ import {
 } from "@/lib/domain/frozen-row";
 import { isPartnerDebt } from "@/lib/domain/movement";
 
-type Issue = ZodError["issues"][number];
 type FieldErrorsTranslator = Awaited<
     ReturnType<typeof getTranslations<"movements.fieldErrors">>
 >;
@@ -18,7 +18,7 @@ type FieldErrorsTranslator = Awaited<
 // user-facing text is picked here from the field and the kind of failure.
 function issueMessage(
     field: string,
-    issue: Issue,
+    issue: FieldIssue,
     t: FieldErrorsTranslator,
 ): string {
     if (field === "date" && issue.code === "custom") return t("futureDate");
@@ -42,21 +42,12 @@ export async function translatedFieldErrors<TInput>(
     error: ZodError,
 ): Promise<FieldErrors<TInput>> {
     const t = await getTranslations("movements.fieldErrors");
-    const fieldErrors: FieldErrors<TInput> = {};
-    for (const issue of error.issues) {
-        const key = issue.path[0];
-        if (typeof key === "string") {
-            const field = key as keyof TInput;
-            (fieldErrors[field] ??= []).push(issueMessage(key, issue, t));
-        }
-    }
-    return fieldErrors;
+    return toFieldErrors<TInput>(error, (issue, field) =>
+        issueMessage(field, issue, t),
+    );
 }
 
-/**
- * The refusal for a frozen movement in the active locale, or null when nothing
- * freezes it. Mirrors `frozenMovementRefusal` in lib/domain/frozen-row.
- */
+/** The refusal for a frozen movement in the active locale, or null when nothing freezes it. */
 export async function frozenMovementMessage(
     m: MovementCycleFacts,
     action: FrozenAction,

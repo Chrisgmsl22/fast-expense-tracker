@@ -3,7 +3,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { computeActualExpenditure } from "@/lib/domain/expense";
@@ -16,7 +16,7 @@ import {
     type ExpenseInput,
 } from "@/lib/schemas/expense";
 
-import { translateExpenseFieldErrors } from "./field-messages";
+import { expenseSchemaMessages } from "./field-messages";
 
 /** Failure modes the caller can branch on. */
 export type CreateExpenseCode = "validation" | "unauthenticated" | "db_error";
@@ -51,9 +51,9 @@ export async function createExpense(
             ok: false,
             code: "validation",
             message: t("errors.invalidExpense"),
-            fieldErrors: translateExpenseFieldErrors(
+            fieldErrors: localizeFieldErrors(
                 toFieldErrors<ExpenseInput>(parsed.error),
-                t,
+                expenseSchemaMessages(t),
             ),
         };
     }
@@ -92,9 +92,9 @@ export async function createExpense(
                 ok: false,
                 code: "validation",
                 message: t("errors.invalidExpense"),
-                fieldErrors: translateExpenseFieldErrors(
+                fieldErrors: localizeFieldErrors(
                     toFieldErrors<ExpenseInput>(funding.error),
-                    t,
+                    expenseSchemaMessages(t),
                 ),
             };
         }

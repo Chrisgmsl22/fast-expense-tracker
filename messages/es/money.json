@@ -12,8 +12,7 @@
         "fromSavings": "De ahorros",
         "reimbursed": "Reembolsado",
         "reimbursedNote": "te lo devolvieron · neto $0",
-        "expensesList": "Gastos: {label}",
-        "notFromIncome": "No salió del ingreso de este mes"
+        "expensesList": "Gastos: {label}"
     },
     "metrics": {
         "charged": "Cargado",

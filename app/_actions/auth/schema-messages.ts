@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import type { Translations } from "@/app/_actions/settings/localize";
+import type { Translations } from "@/lib/actions/field-errors";
 import {
     PASSWORD_MAX_BYTES,
     PASSWORD_MIN_LENGTH,

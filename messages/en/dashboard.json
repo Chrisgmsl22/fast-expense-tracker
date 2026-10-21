@@ -37,7 +37,7 @@
         "spentMyShare": "Spent (my share)",
         "netSoFar": "Net so far",
         "dailyAvg": "Daily avg · {daysLeft} left",
-        "notFromIncome": "Not from this month's income: {amount} — outside the budget."
+        "notFromIncome": "{label}: {amount} — outside the budget."
     },
     "categories": {
         "title": "Categories",

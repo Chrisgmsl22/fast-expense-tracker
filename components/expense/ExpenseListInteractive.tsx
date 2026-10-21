@@ -650,16 +650,16 @@ function ExpenseRow({
     onDelete: () => void;
 }) {
     const t = useTranslations("expenses.list");
+    const tCard = useTranslations("common.cardLabel");
     const locale = useLocale();
     const categoryName = useCategoryName();
     // Savings is a transfer — no card (never "Cash").
     const isSavings = expense.category.slug === SAVINGS_SLUG;
     // A payment has no card; the shared helper says so instead of "Cash" (BUG-1).
-    // Its label is English, so the name is rebuilt from the same branches here.
-    const { color: cardColor } = expenseCardLabel(expense, partnerName);
-    const cardName = expense.isPartnerPayment
-        ? t("paidPartner", { partner: partnerName })
-        : (expense.card?.name ?? t("cash"));
+    const { name: cardName, color: cardColor } = expenseCardLabel(expense, {
+        paidPartner: tCard("paidPartner", { partner: partnerName }),
+        cash: tCard("cash"),
+    });
     // A row a closed cycle counted is frozen server-side, so it shows no controls.
     // The predicate is the settlement's own: a solo expense of the same age stays editable.
     const frozen = isExpenseFrozen(expense);

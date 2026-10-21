@@ -3,7 +3,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { incomeRepository } from "@/lib/repositories";
@@ -13,7 +13,7 @@ import {
     type VariableIncomeInput,
 } from "@/lib/schemas/income";
 
-import { translateIncomeFieldErrors } from "./field-messages";
+import { incomeSchemaMessages } from "./field-messages";
 
 /** Failure modes the caller can branch on. */
 export type AddVariableIncomeCode =
@@ -45,9 +45,9 @@ export async function addVariableIncome(
             ok: false,
             code: "validation",
             message: t("errors.invalidIncome"),
-            fieldErrors: translateIncomeFieldErrors(
+            fieldErrors: localizeFieldErrors(
                 toFieldErrors<VariableIncomeInput>(parsed.error),
-                t,
+                incomeSchemaMessages(t),
             ),
         };
     }

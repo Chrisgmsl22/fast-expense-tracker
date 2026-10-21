@@ -12,8 +12,7 @@
         "fromSavings": "From savings",
         "reimbursed": "Reimbursed",
         "reimbursedNote": "paid back · net $0",
-        "expensesList": "{label} expenses",
-        "notFromIncome": "Not from this month's income"
+        "expensesList": "{label} expenses"
     },
     "metrics": {
         "charged": "Charged",

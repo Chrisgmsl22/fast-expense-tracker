@@ -1,5 +1,4 @@
 {
-    "nonIncomeLabel": "No salió del ingreso de este mes",
     "header": {
         "back": "Regresar",
         "overBy": "excedido por {amount}",

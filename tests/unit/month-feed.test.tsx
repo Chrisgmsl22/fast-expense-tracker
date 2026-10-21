@@ -796,4 +796,21 @@ describe("MonthFeed in Spanish", () => {
             screen.getByText("Aún no hay nada registrado este mes."),
         ).toBeDefined();
     });
+
+    it("names a cash row and a partner payment in Spanish", () => {
+        renderWithIntl(
+            <MonthFeed
+                expenses={[expenses[1]!, partnerPayment]}
+                movements={[]}
+                monthLabel="junio de 2026"
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByText(/Efectivo/)).toBeDefined();
+        expect(screen.getByText(/Pagado a Brenda/)).toBeDefined();
+        expect(screen.queryByText(/\bCash\b|Paid Brenda/)).toBeNull();
+    });
 });

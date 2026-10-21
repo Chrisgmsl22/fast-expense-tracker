@@ -99,8 +99,6 @@
         "setAside": "apartado",
         "myShare": "mi parte {amount}",
         "notShared": "no compartido",
-        "cash": "Efectivo",
-        "paidPartner": "Pagado a {partner}",
         "editRow": "Editar {name}",
         "deleteRow": "Eliminar {name}",
         "locked": "{name} está bloqueado: cuenta en una liquidación que ya cerraste",

@@ -6,38 +6,9 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 
 import { addVariableIncome } from "@/app/_actions/income/add-variable";
 import { deleteVariableIncome } from "@/app/_actions/income/delete-variable";
-import { translateIncomeFieldErrors } from "@/app/_actions/income/field-messages";
 import { setFixedIncome } from "@/app/_actions/income/set-fixed";
 import { FakeIncomeRepository } from "@/tests/support/fake-income-repository";
 import { setServerLocale } from "@/tests/support/intl-server";
-
-describe("translateIncomeFieldErrors", () => {
-    const t = (key: string) => `t:${key}`;
-
-    it("Should map a known schema message to its key", () => {
-        expect(
-            translateIncomeFieldErrors<{ source: string; month: string }>(
-                {
-                    source: ["Source is required"],
-                    month: ["Month must be YYYY-MM"],
-                },
-                t,
-            ),
-        ).toEqual({
-            source: ["t:fields.sourceRequired"],
-            month: ["t:fields.monthFormat"],
-        });
-    });
-
-    it("Should pass an unknown message through as written", () => {
-        expect(
-            translateIncomeFieldErrors<{ source: string }>(
-                { source: ["Too big"] },
-                t,
-            ),
-        ).toEqual({ source: ["Too big"] });
-    });
-});
 
 describe("income action messages in Spanish", () => {
     beforeEach(() => {

@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import type { Translations } from "@/app/_actions/settings/localize";
+import type { Translations } from "@/lib/actions/field-errors";
 
 // Keys are the English messages in lib/schemas/card.ts.
 export async function cardSchemaMessages(): Promise<Translations> {

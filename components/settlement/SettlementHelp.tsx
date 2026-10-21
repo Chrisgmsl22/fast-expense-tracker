@@ -3,6 +3,7 @@
 import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { debtLabel } from "@/components/movement/movement-display";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -11,6 +12,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+
 /** Each "situation → what to log" row in the cheat-sheet, in reading order. */
 const OPERATIONS = [
     { when: "sharedWhen", then: "sharedThen" },
@@ -29,7 +31,26 @@ const OPERATIONS = [
  */
 export function SettlementHelp({ partnerName }: { partnerName: string }) {
     const t = useTranslations("settlement.help");
-    const values = { partner: partnerName };
+    const tActions = useTranslations("settlement.actions");
+    const tAdd = useTranslations("expenses.add");
+    const tm = useTranslations("movements");
+    const partner = { partner: partnerName };
+    // The sheet quotes real button and menu labels, so it reads them from the
+    // same keys those controls use.
+    const values = {
+        ...partner,
+        add: tAdd("titles.menu"),
+        receive: tAdd("titles.receive", partner),
+        transfer: tAdd("titles.transfer", partner),
+        cardPayment: tAdd("types.cardPayment"),
+        recordPayment: tActions("recordPayment"),
+        iOwe: tActions("addDebt", {
+            label: debtLabel("gf_fronted", partnerName, tm),
+        }),
+        owesMe: tActions("addDebt", {
+            label: debtLabel("partner_debt", partnerName, tm),
+        }),
+    };
     return (
         <Dialog>
             <DialogTrigger

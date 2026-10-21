@@ -3,7 +3,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { incomeRepository } from "@/lib/repositories";
@@ -13,7 +13,7 @@ import {
     type FixedIncomeInput,
 } from "@/lib/schemas/income";
 
-import { translateIncomeFieldErrors } from "./field-messages";
+import { incomeSchemaMessages } from "./field-messages";
 
 /** Failure modes the caller can branch on. */
 export type SetFixedIncomeCode = "validation" | "unauthenticated" | "db_error";
@@ -34,9 +34,9 @@ export async function setFixedIncome(
     const t = await getTranslations("income");
     const parsed = fixedIncomeInputSchema.safeParse(input);
     if (!parsed.success) {
-        const fieldErrors = translateIncomeFieldErrors(
+        const fieldErrors = localizeFieldErrors(
             toFieldErrors<FixedIncomeInput>(parsed.error),
-            t,
+            incomeSchemaMessages(t),
         );
         return {
             ok: false,

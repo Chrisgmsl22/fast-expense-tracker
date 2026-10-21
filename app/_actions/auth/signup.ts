@@ -3,7 +3,7 @@
 import {
     localizeFieldErrors,
     localizeMessage,
-} from "@/app/_actions/settings/localize";
+} from "@/lib/actions/field-errors";
 import { signup, type SignupResult } from "@/lib/auth/signup";
 import { signupGate, userProvisioningRepository } from "@/lib/repositories";
 import { authMessages } from "./schema-messages";

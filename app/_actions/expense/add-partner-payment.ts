@@ -3,7 +3,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { partnerPaymentDescription } from "@/lib/domain/expense";
@@ -21,7 +21,7 @@ import {
     type PartnerPaymentInput,
 } from "@/lib/schemas/expense";
 
-import { translateExpenseFieldErrors } from "./field-messages";
+import { expenseSchemaMessages } from "./field-messages";
 
 export type AddPartnerPaymentCode =
     | "validation"
@@ -60,9 +60,9 @@ export async function addPartnerPayment(
             ok: false,
             code: "validation",
             message: t("errors.invalidPayment"),
-            fieldErrors: translateExpenseFieldErrors(
+            fieldErrors: localizeFieldErrors(
                 toFieldErrors<PartnerPaymentInput>(parsed.error),
-                t,
+                expenseSchemaMessages(t),
             ),
         };
     }

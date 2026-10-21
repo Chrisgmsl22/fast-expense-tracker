@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { computeActualExpenditure } from "@/lib/domain/expense";
@@ -18,10 +18,7 @@ import {
     type ExpenseInput,
 } from "@/lib/schemas/expense";
 
-import {
-    frozenRefusalKey,
-    translateExpenseFieldErrors,
-} from "./field-messages";
+import { expenseSchemaMessages, frozenRefusalKey } from "./field-messages";
 
 /** The edit payload carries the row id alongside the expense fields. */
 const idSchema = z.object({ id: z.string().min(1) });
@@ -62,9 +59,9 @@ export async function updateExpense(
             ok: false,
             code: "validation",
             message: t("errors.invalidExpense"),
-            fieldErrors: translateExpenseFieldErrors(
+            fieldErrors: localizeFieldErrors(
                 toFieldErrors<ExpenseInput>(parsed.error),
-                t,
+                expenseSchemaMessages(t),
             ),
         };
     }
@@ -124,9 +121,9 @@ export async function updateExpense(
                 ok: false,
                 code: "validation",
                 message: t("errors.invalidExpense"),
-                fieldErrors: translateExpenseFieldErrors(
+                fieldErrors: localizeFieldErrors(
                     toFieldErrors<ExpenseInput>(funding.error),
-                    t,
+                    expenseSchemaMessages(t),
                 ),
             };
         }

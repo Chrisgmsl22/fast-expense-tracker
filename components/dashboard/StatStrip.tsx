@@ -29,6 +29,7 @@ export function StatStrip({
     expenses: FundedExpense[];
 }) {
     const t = useTranslations("dashboard.stats");
+    const tc = useTranslations("common");
     // The same figure and split the rail shows, so the two cannot disagree.
     const { notFromIncome } = computeFeedTotals(expenses);
     return (
@@ -50,6 +51,7 @@ export function StatStrip({
                 <div className="mt-2 text-xs text-muted-foreground">
                     <p>
                         {t("notFromIncome", {
+                            label: tc("notFromIncome"),
                             amount: formatMxn(notFromIncome.amount),
                         })}
                     </p>

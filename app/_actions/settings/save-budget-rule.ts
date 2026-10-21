@@ -3,7 +3,11 @@
 import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import {
+    localizeFieldErrors,
+    localizeMessage,
+    toFieldErrors,
+} from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import type { BudgetRule } from "@/lib/domain/budget-rule";
@@ -13,7 +17,6 @@ import {
     budgetRuleInputSchema,
     type BudgetRuleInput,
 } from "@/lib/schemas/budget-rule";
-import { localizeFieldErrors, localizeMessage } from "./localize";
 import { budgetRuleMessages } from "./schema-messages";
 
 export type SaveBudgetRuleCode = "validation" | "unauthenticated" | "db_error";

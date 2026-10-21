@@ -3,7 +3,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { resolveSplitRule } from "@/lib/domain/settings";
 import { settingsRepository } from "@/lib/repositories";
@@ -12,7 +12,6 @@ import {
     splitRuleInputSchema,
     type SplitRuleInput,
 } from "@/lib/schemas/settings";
-import { localizeFieldErrors } from "./localize";
 import { splitRuleMessages } from "./schema-messages";
 
 /** Failure modes the caller can branch on. */

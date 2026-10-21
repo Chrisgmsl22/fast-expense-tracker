@@ -6,7 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { signIn } from "@/auth";
 import { loginSchema, type LoginInput } from "@/lib/schemas/auth";
 import type { ActionResult, FieldErrors } from "@/lib/actions/result";
-import { localizeFieldErrors } from "@/app/_actions/settings/localize";
+import { localizeFieldErrors } from "@/lib/actions/field-errors";
 import { authMessages } from "./schema-messages";
 
 /** Failure modes the login form can branch on. */

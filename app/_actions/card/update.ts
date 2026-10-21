@@ -3,7 +3,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cardRepository } from "@/lib/repositories";
 import type { CardRepository } from "@/lib/repositories/card.repository";
@@ -11,7 +11,6 @@ import {
     updateCardInputSchema,
     type UpdateCardInput,
 } from "@/lib/schemas/card";
-import { localizeFieldErrors } from "@/app/_actions/settings/localize";
 import { cardSchemaMessages } from "./schema-messages";
 
 /** Failure modes the caller can branch on. */

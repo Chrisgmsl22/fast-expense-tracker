@@ -35,17 +35,17 @@
             "sharedWhen": "You pay for something shared",
             "sharedThen": "Log it as a normal expense — {partner}'s 32% is added to what she owes you automatically.",
             "paidBackWhen": "{partner} sends you money / pays you back",
-            "paidBackThen": "Add → \"{partner} paid me\" (or \"Record payment\" here). It lowers what she owes you — whatever you do with the money after is separate.",
+            "paidBackThen": "{add} → \"{receive}\" (or \"{recordPayment}\" here). It lowers what she owes you — whatever you do with the money after is separate.",
             "frontedWhen": "{partner} paid for shared things",
-            "frontedThen": "\"+ I owe {partner}\" here — your share. It raises what you owe her.",
+            "frontedThen": "\"{iOwe}\" here — your share. It raises what you owe her.",
             "payHerWhen": "You end up owing {partner}, so you pay her",
-            "payHerThen": "\"Record payment\" here (it will say \"I paid {partner}\").",
+            "payHerThen": "\"{recordPayment}\" here (it will say \"{transfer}\").",
             "cardWhen": "You pay off a credit card",
-            "cardThen": "Add → Card payment. It just records the payment — it doesn't touch the settlement balance.",
+            "cardThen": "{add} → {cardPayment}. It just records the payment — it doesn't touch the settlement balance.",
             "owesWhen": "{partner} owes you money without a shared expense",
-            "owesThen": "\"+ {partner} owes me\" records the full debt. It adds no expense, income, or payment.",
+            "owesThen": "\"{owesMe}\" records the full debt. It adds no expense, income, or payment.",
             "zeroWhen": "The balance is zero",
-            "zeroThen": "Both debt actions remain available. Record payment appears only when a balance remains."
+            "zeroThen": "Both debt actions remain available. {recordPayment} appears only when a balance remains."
         }
     },
     "journalKey": {

@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import type { Translations } from "./localize";
+import type { Translations } from "@/lib/actions/field-errors";
 
 // Keys are the English messages in lib/schemas/settings.ts and budget-rule.ts.
 export async function splitRuleMessages(): Promise<Translations> {

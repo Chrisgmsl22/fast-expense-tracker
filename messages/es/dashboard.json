@@ -37,7 +37,7 @@
         "spentMyShare": "Gastado (mi parte)",
         "netSoFar": "Neto a la fecha",
         "dailyAvg": "Promedio diario · {daysLeft, plural, one {queda #} other {quedan #}}",
-        "notFromIncome": "No salió del ingreso de este mes: {amount} — fuera del presupuesto."
+        "notFromIncome": "{label}: {amount} — fuera del presupuesto."
     },
     "categories": {
         "title": "Categorías",

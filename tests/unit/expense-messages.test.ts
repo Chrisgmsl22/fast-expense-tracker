@@ -7,16 +7,11 @@ vi.mock("@/auth", () => ({ auth: authMock }));
 import { addPartnerPayment } from "@/app/_actions/expense/add-partner-payment";
 import { createExpense } from "@/app/_actions/expense/create";
 import { deleteExpense } from "@/app/_actions/expense/delete";
-import {
-    frozenRefusalKey,
-    translateExpenseFieldErrors,
-    translateFieldErrors,
-} from "@/app/_actions/expense/field-messages";
+import { frozenRefusalKey } from "@/app/_actions/expense/field-messages";
 import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
 import { updateExpense } from "@/app/_actions/expense/update";
 import { updatePartnerPayment } from "@/app/_actions/expense/update-partner-payment";
 import type { CategoryRepository } from "@/lib/repositories/category.repository";
-import { FUTURE_DATE_MESSAGE } from "@/lib/schemas/capture-date";
 import { FakeCardRepository } from "@/tests/support/fake-card-repository";
 import { FakeExpenseRepository } from "@/tests/support/fake-expense-repository";
 import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
@@ -39,53 +34,6 @@ const cycleFacts = (isPartnerPayment: boolean, closed: boolean) => ({
     actualExpenditure: isPartnerPayment ? 1000 : 680,
     isPartnerPayment,
     cycleClosedAt: closed ? CLOSED_AT : null,
-});
-
-describe("translateFieldErrors", () => {
-    it("Should rewrite every message and keep each field", () => {
-        const out = translateFieldErrors<{ a: string; b: string }>(
-            { a: ["one", "two"], b: ["three"] },
-            (m) => m.toUpperCase(),
-        );
-        expect(out).toEqual({ a: ["ONE", "TWO"], b: ["THREE"] });
-    });
-});
-
-describe("translateExpenseFieldErrors", () => {
-    const t = (key: string) => `t:${key}`;
-
-    it("Should map a known schema message to its key", () => {
-        expect(
-            translateExpenseFieldErrors<{ amount: number; date: Date }>(
-                {
-                    amount: ["Amount must be greater than 0"],
-                    date: [FUTURE_DATE_MESSAGE],
-                },
-                t,
-            ),
-        ).toEqual({
-            amount: ["t:fields.amountPositive"],
-            date: ["t:fields.futureDate"],
-        });
-    });
-
-    it("Should pass an unknown message through as written", () => {
-        expect(
-            translateExpenseFieldErrors<{ notes: string }>(
-                { notes: ["Too big"] },
-                t,
-            ),
-        ).toEqual({ notes: ["Too big"] });
-    });
-
-    it("Should not treat an inherited property name as a known message", () => {
-        expect(
-            translateExpenseFieldErrors<{ notes: string }>(
-                { notes: ["toString"] },
-                t,
-            ),
-        ).toEqual({ notes: ["toString"] });
-    });
 });
 
 describe("frozenRefusalKey", () => {

@@ -20,6 +20,7 @@ export function SubcategoryBreakdown({
     spentNotFromIncome: number;
 }) {
     const t = useTranslations("category");
+    const tc = useTranslations("common");
     const categoryName = useCategoryName();
     const withSpend = bars.filter((b) => b.spent > 0);
     const zero = bars.filter((b) => b.spent === 0);
@@ -62,7 +63,7 @@ export function SubcategoryBreakdown({
                 >
                     {spentNotFromIncome > 0
                         ? t("breakdown.emptyFiltered", {
-                              label: t("nonIncomeLabel"),
+                              label: tc("notFromIncome"),
                           })
                         : t("breakdown.empty")}
                 </p>

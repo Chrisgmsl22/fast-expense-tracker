@@ -99,8 +99,6 @@
         "setAside": "set aside",
         "myShare": "my share {amount}",
         "notShared": "not shared",
-        "cash": "Cash",
-        "paidPartner": "Paid {partner}",
         "editRow": "Edit {name}",
         "deleteRow": "Delete {name}",
         "locked": "{name} is locked: it counts in a settlement you already closed",

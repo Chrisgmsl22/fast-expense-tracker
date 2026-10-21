@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
-import type { ActionResult, FieldErrors } from "@/lib/actions/result";
+import type { ActionResult } from "@/lib/actions/result";
 import {
     categoryBudgetRepository,
     categoryRepository,
@@ -29,28 +29,6 @@ export type SetCategoryBudgetResult = ActionResult<
     SetCategoryBudgetCode
 >;
 
-const FIELDS = [
-    "slug",
-    "month",
-    "thisMonthAmount",
-    "defaultAmount",
-] as const satisfies readonly (keyof CategoryBudgetInput)[];
-
-/**
- * The schema's messages are English constants, so each field with an issue
- * gets its one translated message instead. The editor shows only the first.
- */
-function translatedFieldErrors(
-    fieldErrors: FieldErrors<CategoryBudgetInput>,
-    messages: Record<keyof CategoryBudgetInput, string>,
-): FieldErrors<CategoryBudgetInput> {
-    const translated: FieldErrors<CategoryBudgetInput> = {};
-    for (const field of FIELDS) {
-        if (fieldErrors[field]) translated[field] = [messages[field]];
-    }
-    return translated;
-}
-
 /**
  * Set a category's monthly limit for a given month + its default (ADR-0016).
  *
@@ -70,18 +48,21 @@ export async function setCategoryBudget(
     const t = await getTranslations("category.actions");
     const parsed = categoryBudgetInputSchema.safeParse(input);
     if (!parsed.success) {
+        // The schema's messages are English constants, so each field gets its
+        // one translated message instead. The editor shows only the first.
+        const fieldMessages: Record<keyof CategoryBudgetInput, string> = {
+            slug: t("categoryRequired"),
+            month: t("invalidMonth"),
+            thisMonthAmount: t("amountPositive"),
+            defaultAmount: t("amountPositive"),
+        };
         return {
             ok: false,
             code: "validation",
             message: t("invalid"),
-            fieldErrors: translatedFieldErrors(
-                toFieldErrors<CategoryBudgetInput>(parsed.error),
-                {
-                    slug: t("categoryRequired"),
-                    month: t("invalidMonth"),
-                    thisMonthAmount: t("amountPositive"),
-                    defaultAmount: t("amountPositive"),
-                },
+            fieldErrors: toFieldErrors<CategoryBudgetInput>(
+                parsed.error,
+                (_issue, field) => fieldMessages[field],
             ),
         };
     }

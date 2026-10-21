@@ -19,5 +19,10 @@
         "description": "Choose the app's language on this browser.",
         "invalid": "Choose Español or English.",
         "error": "Could not change the language. Please try again."
-    }
+    },
+    "cardLabel": {
+        "paidPartner": "Paid {partner}",
+        "cash": "Cash"
+    },
+    "notFromIncome": "Not from this month's income"
 }

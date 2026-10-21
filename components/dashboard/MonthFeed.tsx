@@ -122,14 +122,15 @@ function ExpenseRow({
     partnerName: string;
 }) {
     const t = useTranslations("dashboard.feed");
+    const tCard = useTranslations("common.cardLabel");
     const locale = useLocale();
     const isSavings = e.category.slug === SAVINGS_SLUG;
     // Same helper the Expenses list uses, so the two screens cannot print
     // different words for the same row.
-    const { name: cardName, color: cardColor } = expenseCardLabel(
-        e,
-        partnerName,
-    );
+    const { name: cardName, color: cardColor } = expenseCardLabel(e, {
+        paidPartner: tCard("paidPartner", { partner: partnerName }),
+        cash: tCard("cash"),
+    });
     return (
         <li
             className={`flex items-center gap-3 py-2.5 pr-4 pl-4 ${isSavings ? "border-l-[3px] border-positive bg-positive-tint" : "relative"}`}

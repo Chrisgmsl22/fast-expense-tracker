@@ -61,7 +61,6 @@ import { SettlementJournal } from "@/components/settlement/SettlementJournal";
 import { SettlementChip } from "@/components/dashboard/SettlementChip";
 import { updatePartnerPayment } from "@/app/_actions/expense/update-partner-payment";
 import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
-import { FUNDING_TOGGLE_LABEL } from "@/lib/domain/funding";
 import { computeCoupleBalance } from "@/lib/domain/settlement";
 import type { MovementEditable } from "@/lib/repositories/movement.repository";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
@@ -898,7 +897,7 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
             expect(
                 within(dialog)
                     .getByRole("checkbox", {
-                        name: FUNDING_TOGGLE_LABEL.savings,
+                        name: "Paid with money I already had",
                     })
                     .getAttribute("aria-checked"),
             ).toBe("true");

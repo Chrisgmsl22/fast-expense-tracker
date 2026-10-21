@@ -44,7 +44,8 @@ export function MonthBreakdown({
     fundingRows,
 }: MonthBreakdownProps) {
     const t = useTranslations("money");
-    const notFromIncomeLabel = t("funding.notFromIncome");
+    const tc = useTranslations("common");
+    const notFromIncomeLabel = tc("notFromIncome");
     const {
         charged,
         whatIReallySpent,
