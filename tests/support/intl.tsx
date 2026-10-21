@@ -1,8 +1,6 @@
-// Intl helpers for unit tests. English is the default, so English assertions hold.
-// - Components (client, or server without `async`): renderWithIntl(<X />, { locale: "es" }).
-// - Async server components and server actions: `next-intl/server` is mocked for every
-//   unit and integration file (tests/support/intl-setup.ts) with the real messages.
-//   Call setServerLocale("es") to switch; it resets to "en" after each test.
+// English by default, so English assertions hold. Components: renderWithIntl(<X />, { locale: "es" }).
+// Async server components and actions: intl-setup.ts mocks `next-intl/server` with the real
+// messages for every test file; setServerLocale("es") switches it until the test ends.
 import type { ReactElement, ReactNode } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
