@@ -1,6 +1,6 @@
 # Spanish and English UI (i18n)
 
-Reflects plan revision 2.
+Reflects plan revision 5.
 
 The app is English only. Add Spanish as the default language and keep English as the second one. The owner picks the language in Settings, and the choice lives in a cookie. The database does not change: stored names stay in English and the UI translates them on top.
 
@@ -24,9 +24,10 @@ The app is English only. Add Spanish as the default language and keep English as
 
 - **UI text:** every label, button, heading, empty state, toast, and the login page.
 - **Category and subcategory names:** one helper takes the stored English name and returns the translation, or the name as stored when no key exists. Pages and components call the helper. They never look up the key themselves.
+- **Stored auto-labels:** the app saves English labels for a partner payment or a debt with no note, for example "Transfer — you paid {partner}". The UI detects them and shows the translation. A note the owner typed shows as typed. Card names are database text and show as stored.
 - **Action errors:** actions build `message` and `fieldErrors` with `getTranslations`, so `ActionResult` keeps its shape. Callers still branch on `code`.
 - **Logs stay English.** Spanish is for what the owner sees. `console` output, thrown `Error` messages and error codes do not change.
-- **Dates:** every date uses the active locale. The 3 `en-US` date formatters go away.
+- **Dates:** every date uses the active locale, with no zero-padded day ("5 oct 2026", "Oct 5, 2026"). The 3 `en-US` date formatters go away.
 - **Money:** stays `es-MX` in both languages. It is MXN, and `$1,234.50` reads the same in both.
 
 ## Message files
@@ -52,3 +53,5 @@ This work lands first. CHORE-8.c (category management), CHORE-8.e (onboarding wi
 - Translating text that the owner types (expense notes, custom category names).
 - The weekly email (phase 7). It picks a language when it ships.
 - A per-user language column. Add it later if the cookie is not enough.
+- Card names (the starter card "Cash"). Follow-up.
+- Text the browser draws itself: native validation bubbles and the month and date pickers follow the browser language.
