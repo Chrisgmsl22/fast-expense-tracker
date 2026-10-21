@@ -2,17 +2,18 @@
 
 import { z } from "zod";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
-import { frozenMovementRefusal } from "@/lib/domain/frozen-row";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
 import {
     transferInputSchema,
     type TransferInput,
 } from "@/lib/schemas/movement";
+import { frozenMovementMessage, translatedFieldErrors } from "./messages";
 
 /** The edit payload carries the row id alongside the transfer fields. */
 const idSchema = z.object({ id: z.string().min(1) });
@@ -43,18 +44,25 @@ export async function updateTransfer(
     input: unknown,
     repo: MovementRepository = movementRepository,
 ): Promise<UpdateTransferResult> {
+    const t = await getTranslations("movements.errors");
     const parsed = transferInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid transfer",
-            fieldErrors: toFieldErrors<TransferInput>(parsed.error),
+            message: t("invalidTransfer"),
+            fieldErrors: await translatedFieldErrors<TransferInput>(
+                parsed.error,
+            ),
         };
     }
     const idParsed = idSchema.safeParse(input);
     if (!idParsed.success) {
-        return { ok: false, code: "validation", message: "Invalid transfer" };
+        return {
+            ok: false,
+            code: "validation",
+            message: t("invalidTransfer"),
+        };
     }
     const { id } = idParsed.data;
 
@@ -64,7 +72,7 @@ export async function updateTransfer(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("unauthenticated"),
         };
     }
 
@@ -78,13 +86,13 @@ export async function updateTransfer(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Transfer not found.",
+                message: t("transferNotFound"),
             };
         }
 
         // A transfer a closed cycle COUNTED is frozen, not only the one carrying its
         // marker: editing either rewrites what a filed settlement settled.
-        const refusal = frozenMovementRefusal(existing, "edit");
+        const refusal = await frozenMovementMessage(existing, "edit");
         if (refusal) {
             return { ok: false, code: "cycle_closed", message: refusal };
         }
@@ -104,7 +112,7 @@ export async function updateTransfer(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Transfer not found.",
+                message: t("transferNotFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -113,7 +121,7 @@ export async function updateTransfer(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the transfer. Please try again.",
+            message: t("transferDbError"),
         };
     }
 }

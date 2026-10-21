@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { SettlementChip } from "@/components/dashboard/SettlementChip";
 
@@ -24,6 +26,7 @@ export function SettlementReminder({
     className?: string;
     variant?: "pill" | "band";
 }) {
+    const t = useTranslations("money.reminder");
     if (!sharesExpenses || !settlement) return null;
     return (
         <div className={className}>
@@ -34,7 +37,7 @@ export function SettlementReminder({
             />
             {isCurrentMonth && variant === "band" && (
                 <p className="border-b px-4 py-1 text-[10px] text-muted-foreground">
-                    Open settlement cycle · independent of filters
+                    {t("openCycle")}
                 </p>
             )}
             {!isCurrentMonth && (
@@ -45,7 +48,7 @@ export function SettlementReminder({
                             : "mt-1 text-xs text-muted-foreground"
                     }
                 >
-                    The open settlement — not {monthLabel}.
+                    {t("notThisMonth", { month: monthLabel })}
                 </p>
             )}
         </div>

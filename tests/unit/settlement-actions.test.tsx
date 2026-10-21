@@ -23,7 +23,6 @@ vi.mock("@/app/_actions/expense/update-partner-payment", () => ({
 }));
 
 import { SettlementActions } from "@/components/settlement/SettlementActions";
-import { pastMonthNotice } from "@/components/settlement/past-month-notice";
 
 describe("SettlementActions", () => {
     it("opens the partner debt form at zero with the configured name", async () => {
@@ -123,7 +122,8 @@ describe("SettlementActions", () => {
     it("carries the past-month warning INTO the transfer dialog", async () => {
         // The dialog covers the page, so the page's own copy of this sentence
         // is invisible at exactly the moment it matters.
-        const notice = pastMonthNotice("August 2026");
+        const notice =
+            "You are viewing August 2026. Anything you log is dated today and joins the open settlement.";
         renderWithIntl(
             <SettlementActions
                 direction="she_owes"
@@ -139,7 +139,8 @@ describe("SettlementActions", () => {
     });
 
     it("carries the past-month warning INTO the debt dialog", async () => {
-        const notice = pastMonthNotice("August 2026");
+        const notice =
+            "You are viewing August 2026. Anything you log is dated today and joins the open settlement.";
         renderWithIntl(
             <SettlementActions
                 direction="she_owes"

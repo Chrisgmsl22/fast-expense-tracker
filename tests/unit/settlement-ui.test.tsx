@@ -987,3 +987,137 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
         expect(deleteExpenseMock).not.toHaveBeenCalled();
     });
 });
+
+describe("Settlement in Spanish", () => {
+    const july = new Date("2026-07-10T06:00:00Z");
+    const june = new Date("2026-06-10T06:00:00Z");
+    const journal: SettlementJournalItem[] = [
+        {
+            kind: "your_expense",
+            id: "e1",
+            date: july,
+            carriedOver: false,
+            locked: false,
+            description: "Súper",
+            gross: 1000,
+            partnerShare: 320,
+        },
+        {
+            kind: "transfer",
+            id: "m1",
+            date: july,
+            carriedOver: false,
+            locked: false,
+            direction: "gf_received",
+            amount: 320,
+            fundedFrom: "income",
+            note: "renta",
+            source: "movement",
+        },
+        {
+            kind: "partner_debt",
+            direction: "gf_fronted",
+            id: "d1",
+            date: june,
+            carriedOver: true,
+            locked: true,
+            description: "I owe Brenda",
+            amount: 300,
+            source: "movement",
+        },
+    ];
+
+    it("labels the hero and the breakdown in Spanish", () => {
+        renderWithIntl(
+            <>
+                <SettlementBalanceCard
+                    balance={sheOwes}
+                    carriedOver={{ present: true, amount: 300 }}
+                    partnerName="Brenda"
+                />
+                <SettlementBreakdown
+                    balance={sheOwes}
+                    breakdownItems={{
+                        partner_debt: [],
+                        partner_share: [
+                            {
+                                id: "e1",
+                                date: july,
+                                description: "Súper",
+                                amount: 700,
+                                gross: 2187.5,
+                            },
+                        ],
+                        your_debt: [],
+                        partner_paid: [],
+                        you_paid: [],
+                    }}
+                    partnerName="Brenda"
+                />
+            </>,
+            { locale: "es" },
+        );
+        expect(screen.getByText("BRENDA TE DEBE")).toBeDefined();
+        expect(
+            screen.getByText("incluye $300.00 del mes pasado"),
+        ).toBeDefined();
+        expect(screen.getByText("Cómo se forma este saldo")).toBeDefined();
+        expect(
+            screen.getByText(
+                "10 jul 2026 · parte de Brenda de $2,187.50 que pagaste",
+            ),
+        ).toBeDefined();
+        expect(screen.getByText("Brenda te debe $700.00")).toBeDefined();
+    });
+
+    it("shows the journal in Spanish, the stored auto-label included", () => {
+        renderWithIntl(
+            <SettlementJournal journal={journal} partnerName="Brenda" />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("Historial de movimientos")).toBeDefined();
+        expect(screen.getByText("Le debo a Brenda")).toBeDefined();
+        expect(screen.queryByText("I owe Brenda")).toBeNull();
+        expect(
+            screen.getByText(
+                "10 jun 2026 · en una liquidación cerrada · bloqueado",
+            ),
+        ).toBeDefined();
+        expect(
+            screen.getByText("Transferencia — Brenda te pagó"),
+        ).toBeDefined();
+        expect(screen.getByText("10 jul 2026 · renta")).toBeDefined();
+        expect(
+            screen.getByText(
+                "10 jul 2026 · pagaste $1,000.00 · 32% de Brenda · edítalo en la pantalla de Gastos",
+            ),
+        ).toBeDefined();
+        expect(screen.getByText("Meses anteriores")).toBeDefined();
+        expect(
+            screen.getByRole("button", {
+                name: "Eliminar Transferencia — Brenda te pagó",
+            }),
+        ).toBeDefined();
+    });
+
+    it("keeps a debt's own note as typed and names its kind beneath it", () => {
+        renderWithIntl(
+            <SettlementJournal
+                journal={[
+                    {
+                        ...journal[2]!,
+                        locked: false,
+                        carriedOver: false,
+                        description: "Boletos del concierto",
+                    } as SettlementJournalItem,
+                ]}
+                partnerName="Brenda"
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("Boletos del concierto")).toBeDefined();
+        expect(
+            screen.getByText("10 jun 2026 · Le debo a Brenda"),
+        ).toBeDefined();
+    });
+});

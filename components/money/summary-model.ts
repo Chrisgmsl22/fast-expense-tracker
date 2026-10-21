@@ -7,6 +7,9 @@ import {
     ofWhichPaidToPartnerShort,
 } from "@/lib/domain/funding";
 import type { FeedTotals } from "@/lib/domain/movement";
+import type { useTranslations } from "next-intl";
+
+export type MoneyTranslator = ReturnType<typeof useTranslations<"money">>;
 
 /** Which money system a figure belongs to — the chin and the modal read the same map. */
 export type MoneyTone =
@@ -51,22 +54,6 @@ export type SummaryLine = SummaryPart & {
     /** Figures this line is made of — rendered inside it, never beside it. */
     of: SummaryPart[];
 };
-
-/**
- * What a re-cut figure says about itself, so it never reads as extra money. ALL of
- * it, not part: whichever table a payment sits in, the pot that funded it is on the
- * same screen — which is why the note needs no condition.
- */
-export const ALSO_COUNTED_ABOVE =
-    "all of this is already inside the figures above";
-
-/**
- * The closing figure's name, in one place so no surface can qualify it differently.
- * The qualifier is load-bearing: savings-funded spend sits in the rows above and is
- * NOT in this number, so a bare "Total" would not reconcile with them.
- */
-export const TOTAL_LABEL = "Total";
-export const TOTAL_QUALIFIER = "— out of this month's income";
 
 /**
  * The month's figures as one hierarchy, each with its tone. No surface renders it
@@ -238,21 +225,34 @@ export function summaryMetrics(
     totals: FeedTotals,
     partnerName: string,
     sharesExpenses: boolean,
+    t: MoneyTranslator,
 ): SummaryPart[] {
     return [
-        { key: "charged", label: "Charged", amount: totals.charged.amount },
-        { key: "cost", label: "My cost", amount: summaryCost(totals).amount },
+        {
+            key: "charged",
+            label: t("metrics.charged"),
+            amount: totals.charged.amount,
+        },
+        {
+            key: "cost",
+            label: t("metrics.cost"),
+            amount: summaryCost(totals).amount,
+        },
         {
             key: "outside-income",
-            label: "Outside income",
+            label: t("metrics.outsideIncome"),
             amount: totals.notFromIncome.amount,
         },
         sharesExpenses || totals.charged.of.partnerShare > 0
             ? {
                   key: "partner",
-                  label: `${partnerName}'s share`,
+                  label: t("metrics.partnerShare", { partner: partnerName }),
                   amount: totals.charged.of.partnerShare,
               }
-            : { key: "set-aside", label: "Set aside", amount: totals.setAside },
+            : {
+                  key: "set-aside",
+                  label: t("metrics.setAside"),
+                  amount: totals.setAside,
+              },
     ];
 }

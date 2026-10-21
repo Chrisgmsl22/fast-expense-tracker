@@ -14,6 +14,7 @@ import type {
 } from "@/lib/repositories/settlement.repository";
 import { FakeSettlementRepository } from "@/tests/support/fake-settlement-repository";
 import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
+import { setServerLocale } from "@/tests/support/intl";
 
 const NOW = new Date("2026-07-15T12:00:00Z");
 const JULY = new Date("2026-07-10T06:00:00Z");
@@ -400,5 +401,24 @@ describe("closeSettlementCycle — a zero-count write", () => {
             expect(res.code).toBe("marker_gone");
             expect(res.message).toMatch(/no longer there/i);
         }
+    });
+});
+
+describe("closeSettlementCycle in Spanish", () => {
+    beforeEach(() => {
+        authMock.mockReset();
+        authMock.mockResolvedValue({ user: { id: "u1" } });
+        setServerLocale("es");
+    });
+
+    it("refuses an open balance in Spanish and keeps the code", async () => {
+        const { deps } = setup([expense()], [movement({ amount: 100 })]);
+        const res = await closeSettlementCycle(deps);
+        expect(res).toEqual({
+            ok: false,
+            code: "not_settled",
+            message:
+                "Esta liquidación todavía no está a mano, así que no se puede cerrar.",
+        });
     });
 });

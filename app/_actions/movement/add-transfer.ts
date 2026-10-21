@@ -1,7 +1,8 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { movementRepository } from "@/lib/repositories";
@@ -10,6 +11,7 @@ import {
     transferInputSchema,
     type TransferInput,
 } from "@/lib/schemas/movement";
+import { translatedFieldErrors } from "./messages";
 
 /** Failure modes the caller can branch on. */
 export type AddTransferCode = "validation" | "unauthenticated" | "db_error";
@@ -31,13 +33,16 @@ export async function addTransfer(
     input: unknown,
     repo: MovementRepository = movementRepository,
 ): Promise<AddTransferResult> {
+    const t = await getTranslations("movements.errors");
     const parsed = transferInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid transfer",
-            fieldErrors: toFieldErrors<TransferInput>(parsed.error),
+            message: t("invalidTransfer"),
+            fieldErrors: await translatedFieldErrors<TransferInput>(
+                parsed.error,
+            ),
         };
     }
 
@@ -47,7 +52,7 @@ export async function addTransfer(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("unauthenticated"),
         };
     }
 
@@ -69,7 +74,7 @@ export async function addTransfer(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the transfer. Please try again.",
+            message: t("transferDbError"),
         };
     }
 }

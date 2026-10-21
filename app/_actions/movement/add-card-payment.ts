@@ -1,7 +1,8 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { cardRepository, movementRepository } from "@/lib/repositories";
@@ -11,6 +12,7 @@ import {
     cardPaymentInputSchema,
     type CardPaymentInput,
 } from "@/lib/schemas/movement";
+import { translatedFieldErrors } from "./messages";
 
 /** Failure modes the caller can branch on. */
 export type AddCardPaymentCode = "validation" | "unauthenticated" | "db_error";
@@ -34,13 +36,16 @@ export async function addCardPayment(
     repo: MovementRepository = movementRepository,
     cards: CardRepository = cardRepository,
 ): Promise<AddCardPaymentResult> {
+    const t = await getTranslations("movements");
     const parsed = cardPaymentInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid card payment",
-            fieldErrors: toFieldErrors<CardPaymentInput>(parsed.error),
+            message: t("errors.invalidCardPayment"),
+            fieldErrors: await translatedFieldErrors<CardPaymentInput>(
+                parsed.error,
+            ),
         };
     }
 
@@ -50,7 +55,7 @@ export async function addCardPayment(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -60,8 +65,8 @@ export async function addCardPayment(
             return {
                 ok: false,
                 code: "validation",
-                message: "Invalid card payment",
-                fieldErrors: { cardId: ["Card not found"] },
+                message: t("errors.invalidCardPayment"),
+                fieldErrors: { cardId: [t("fieldErrors.cardNotFound")] },
             };
         }
 
@@ -78,7 +83,7 @@ export async function addCardPayment(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the card payment. Please try again.",
+            message: t("errors.cardPaymentDbError"),
         };
     }
 }

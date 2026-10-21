@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { screen } from "@testing-library/react";
+import { renderWithIntl, setServerLocale } from "@/tests/support/intl";
 
 const { authMock, getSettingsMock, getSettlementMock, redirectMock } =
     vi.hoisted(() => ({
@@ -12,7 +14,11 @@ const { authMock, getSettingsMock, getSettlementMock, redirectMock } =
     }));
 
 vi.mock("@/auth", () => ({ auth: authMock }));
-vi.mock("next/navigation", () => ({ redirect: redirectMock }));
+vi.mock("next/navigation", () => ({
+    redirect: redirectMock,
+    useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
+    usePathname: () => "/settlement",
+}));
 vi.mock("@/lib/repositories", () => ({
     settingsRepository: { getSettings: getSettingsMock },
     movementRepository: {},
@@ -101,5 +107,41 @@ describe("SettlementPage route guard (CHORE-6.b)", () => {
 
         await expect(SettlementPage(noParams)).resolves.toBeDefined();
         expect(redirectMock).not.toHaveBeenCalled();
+    });
+});
+
+describe("SettlementPage in Spanish", () => {
+    it("titles the page and warns about a past month in Spanish", async () => {
+        getSettingsMock.mockResolvedValue({
+            sharesExpenses: true,
+            partnerName: "Brenda",
+            defaultSharePercentage: 0.68,
+        });
+        getSettlementMock.mockResolvedValue({
+            ...unsettledStub,
+            breakdownItems: {
+                partner_share: [],
+                partner_debt: [],
+                your_debt: [],
+                partner_paid: [],
+                you_paid: [],
+            },
+            month: { label: "2026-07", isCurrent: false, journal: [] },
+        });
+
+        setServerLocale("es");
+        const page = await SettlementPage(noParams);
+        if (!page) throw new Error("expected the page to render");
+        renderWithIntl(page, { locale: "es" });
+
+        expect(
+            screen.getByRole("heading", { level: 1, name: "Cuentas" }),
+        ).toBeDefined();
+        expect(screen.getByText("con Brenda")).toBeDefined();
+        expect(
+            screen.getByText(
+                "Estás viendo julio de 2026. Lo que registres queda con fecha de hoy y entra en la liquidación abierta.",
+            ),
+        ).toBeDefined();
     });
 });

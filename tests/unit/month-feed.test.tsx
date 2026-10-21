@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { MonthFeed } from "@/components/dashboard/MonthFeed";
 import { PARTNER_PAYMENT_SUBCATEGORY_NAME } from "@/lib/domain/expense";
@@ -96,7 +97,7 @@ const debt: MovementListItem = {
 
 describe("MonthFeed", () => {
     it("lists the month's expenses with share subtext and card fallback", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -115,7 +116,7 @@ describe("MonthFeed", () => {
 
     it("labels a partner payment, never Cash", () => {
         // A payment has no card; the bare `?? "Cash"` fallback is BUG-1's symptom.
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[
                     {
@@ -142,7 +143,7 @@ describe("MonthFeed", () => {
     });
 
     it("totals Charged + What I really spent in the footer", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -159,7 +160,7 @@ describe("MonthFeed", () => {
     });
 
     it("shows an empty state and no footer with nothing logged", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[]}
                 movements={[]}
@@ -190,7 +191,7 @@ describe("MonthFeed", () => {
                 cycleClosedAt: null,
             },
         ];
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[]}
                 movements={received}
@@ -251,7 +252,7 @@ describe("MonthFeed", () => {
                 card: null,
             },
         ];
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={mixed}
                 movements={[]}
@@ -278,7 +279,7 @@ describe("MonthFeed", () => {
     });
 
     it("draws no Saved pill for a month that set nothing aside", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -311,7 +312,7 @@ describe("MonthFeed", () => {
                 cycleClosedAt: null,
             },
         ];
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[...expenses, partnerPayment]}
                 movements={movements}
@@ -340,7 +341,7 @@ describe("MonthFeed", () => {
             fundedFrom: "savings",
             countedInBudget: false,
         };
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[
@@ -375,7 +376,7 @@ describe("MonthFeed", () => {
         // `FundingBadge` cannot represent `income`, so a dropped guard is a type
         // error first; this is the behavioural half. Without either, every
         // ordinary row grows a false "not from income" chip.
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[
@@ -419,7 +420,7 @@ describe("MonthFeed", () => {
             fundedFrom: "income",
             countedInBudget: false,
         };
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[outOfBand]}
@@ -450,7 +451,7 @@ describe("MonthFeed", () => {
             fundedFrom: "income",
             countedInBudget: false,
         };
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[...expenses, outOfBand]}
                 movements={[]}
@@ -492,7 +493,7 @@ describe("MonthFeed", () => {
             fundedFrom: "savings",
             countedInBudget: false,
         };
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[expense]}
                 movements={[movement]}
@@ -520,7 +521,7 @@ describe("MonthFeed", () => {
             fundedFrom: "savings" as const,
             countedInBudget: false,
         };
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[pay]}
                 movements={[]}
@@ -541,7 +542,7 @@ describe("MonthFeed", () => {
     });
 
     it("shows $0 sent when no money reached her", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -561,7 +562,7 @@ describe("MonthFeed", () => {
     it("keeps the reminder, and its scope, on an empty month", () => {
         // The empty branch renders no chin, and it is the branch a past month is
         // most likely to hit — the one place the caption was still missing.
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[]}
                 movements={[]}
@@ -585,7 +586,7 @@ describe("MonthFeed", () => {
     it("says the balance is the open cycle when another month is on screen", () => {
         // The rail's own figures are the viewed month and the dashboard carries a
         // month picker, so an unqualified chip reads as that month's debt.
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -603,7 +604,7 @@ describe("MonthFeed", () => {
     });
 
     it("renders the settlement chip in Shared mode when a balance is passed", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -635,7 +636,7 @@ describe("MonthFeed", () => {
                 cycleClosedAt: null,
             },
         ];
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[...expenses, partnerPayment]}
                 movements={movements}
@@ -664,7 +665,7 @@ describe("MonthFeed", () => {
     it("never shows a debt she fronted, even when handed one", () => {
         // Settlement-only (spec 0007 §6b): the month query excludes it and `buildFeed`
         // drops it again.
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[debt]}
@@ -682,7 +683,7 @@ describe("MonthFeed", () => {
         // A debt reaches NO ledger (spec 0007 §6b), so adding one must not move a
         // figure. Both renders carry the same expenses; only the debt differs.
         const movements: MovementListItem[] = [];
-        const { unmount } = render(
+        const { unmount } = renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={movements}
@@ -695,7 +696,7 @@ describe("MonthFeed", () => {
         const without = screen.getByTestId("feed-totals").textContent;
         unmount();
 
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[...movements, debt]}
@@ -735,7 +736,7 @@ describe("MonthFeed", () => {
                 card: null,
             },
         ];
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={savings}
                 movements={[]}

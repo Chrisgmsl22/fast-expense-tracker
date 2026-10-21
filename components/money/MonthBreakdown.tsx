@@ -1,12 +1,13 @@
-import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
+import { useTranslations } from "next-intl";
+
 import type { FeedTotals } from "@/lib/domain/movement";
 import { formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Donut, type DonutSlice } from "@/components/money/Donut";
 import {
-    ALSO_COUNTED_ABOVE,
     otherMoneyThatLeft,
     percentLabel,
+    type MoneyTranslator,
 } from "@/components/money/summary-model";
 import { BottomLine } from "@/components/money/BottomLine";
 import {
@@ -33,7 +34,7 @@ export type MonthBreakdownProps = {
 
 /**
  * Each section answers one question, and a figure that re-cuts money from another
- * section says so (`ALSO_COUNTED_ABOVE`) instead of standing beside it.
+ * section says so (`breakdown.alsoCountedAbove`) instead of standing beside it.
  */
 export function MonthBreakdown({
     totals,
@@ -42,6 +43,8 @@ export function MonthBreakdown({
     incomeTotal,
     fundingRows,
 }: MonthBreakdownProps) {
+    const t = useTranslations("money");
+    const notFromIncomeLabel = t("funding.notFromIncome");
     const {
         charged,
         whatIReallySpent,
@@ -54,7 +57,7 @@ export function MonthBreakdown({
     // which counts them (spec 0007 §6a carve-out).
     const incomeThatLeft = totals.total;
     const legacyFromIncome = paidToPartner.of.fromIncome.of.fromLegacyTransfers;
-    const incomeShare = incomeShareLine(incomeThatLeft, incomeTotal);
+    const incomeShare = incomeShareLine(incomeThatLeft, incomeTotal, t);
     const otherMoney = otherMoneyThatLeft(totals);
     const paidNotFromIncome = paidToPartner.of.notFromIncome.amount;
     const legacyNotFromIncome =
@@ -65,15 +68,15 @@ export function MonthBreakdown({
     const budgeted = whatIReallySpent.amount + setAside;
     const incomeCaption =
         budgeted === 0
-            ? "none of this counts toward your budget buckets"
+            ? t("breakdown.incomeCaptionNone")
             : legacyFromIncome > 0
-              ? "all but the transfers count toward your budget buckets"
-              : "counts toward your budget buckets";
+              ? t("breakdown.incomeCaptionButTransfers")
+              : t("breakdown.incomeCaption");
 
     const chargeSlices = withMoney([
         {
             key: "my-income",
-            label: "My income",
+            label: t("breakdown.myIncome"),
             amount: charged.of.myIncome,
             tone: "spent",
         },
@@ -81,13 +84,13 @@ export function MonthBreakdown({
             // NOT the pot's label: this is the slice of the CHARGE that other
             // money funded, and the pot also holds rows nothing ever charged.
             key: "my-other-money",
-            label: "My other money",
+            label: t("breakdown.myOtherMoney"),
             amount: charged.of.myNonIncome,
             tone: "otherMoney",
         },
         {
             key: "partner-share",
-            label: `${partnerName}'s share`,
+            label: t("breakdown.partnerShare", { partner: partnerName }),
             amount: herShare,
             tone: "positive",
         },
@@ -98,13 +101,13 @@ export function MonthBreakdown({
     const paidSlices = withMoney([
         {
             key: "paid-from-income",
-            label: "From this month's income",
+            label: t("breakdown.fromIncome"),
             amount: paidToPartner.of.fromIncome.amount,
             tone: "spent",
         },
         {
             key: "paid-not-from-income",
-            label: NON_INCOME_FUNDED_LABEL,
+            label: notFromIncomeLabel,
             amount: paidNotFromIncome,
             tone: "otherMoney",
         },
@@ -112,14 +115,14 @@ export function MonthBreakdown({
 
     return (
         <div className="space-y-7">
-            <Section title="Which pot it came from">
+            <Section title={t("breakdown.whichPot")}>
                 <div className="grid gap-3 sm:grid-cols-2">
                     {/* Both pots follow the same rule: an empty one renders
                         nothing, never a $0.00 card. */}
                     {incomeThatLeft > 0 && (
                         <Pot
                             tone="spent"
-                            title="This month's income"
+                            title={t("breakdown.thisMonthsIncome")}
                             amount={incomeThatLeft}
                             caption={incomeCaption}
                         >
@@ -127,16 +130,18 @@ export function MonthBreakdown({
                                 headline={incomeThatLeft}
                                 parts={[
                                     {
-                                        label: "Spent",
+                                        label: t("breakdown.spent"),
                                         amount: whatIReallySpent.amount,
                                     },
                                     {
-                                        label: "Set aside",
+                                        label: t("breakdown.setAside"),
                                         amount: setAside,
                                         tone: "positive",
                                     },
                                     {
-                                        label: `Transfers to ${partnerName}`,
+                                        label: t("breakdown.transfersTo", {
+                                            partner: partnerName,
+                                        }),
                                         amount: legacyFromIncome,
                                     },
                                 ]}
@@ -151,23 +156,25 @@ export function MonthBreakdown({
                     {otherMoney > 0 && (
                         <Pot
                             tone="otherMoney"
-                            title={NON_INCOME_FUNDED_LABEL}
+                            title={notFromIncomeLabel}
                             amount={otherMoney}
-                            caption="outside the budget"
+                            caption={t("breakdown.outsideBudget")}
                         >
                             {/* One row for her, not two near-synonyms: which
                                 table a payment sits in is not a distinction the
                                 reader has (spec 0007 §6a carve-out). */}
                             <PotParts
                                 headline={otherMoney}
-                                caption="By who it went to"
+                                caption={t("breakdown.byWho")}
                                 parts={[
                                     {
-                                        label: "Own spending",
+                                        label: t("breakdown.ownSpending"),
                                         amount: notFromIncome.of.ownSpending,
                                     },
                                     {
-                                        label: `Paid to ${partnerName}`,
+                                        label: t("breakdown.paidTo", {
+                                            partner: partnerName,
+                                        }),
                                         amount: paidNotFromIncome,
                                     },
                                 ]}
@@ -177,7 +184,9 @@ export function MonthBreakdown({
                                 legacy transfers (savings-only: a transfer cannot
                                 be reimbursed) get a row of their own. */}
                             <div className="mt-3 border-t border-dashed pt-3">
-                                <PartsCaption>By which money paid</PartsCaption>
+                                <PartsCaption>
+                                    {t("breakdown.byWhichMoney")}
+                                </PartsCaption>
                                 <FundingSplit
                                     fromSavings={
                                         notFromIncome.fromSavings.amount
@@ -192,8 +201,10 @@ export function MonthBreakdown({
                                             className="size-3 shrink-0"
                                         />
                                         <span>
-                                            Transfers to {partnerName} (from
-                                            savings)
+                                            {t(
+                                                "breakdown.transfersFromSavings",
+                                                { partner: partnerName },
+                                            )}
                                         </span>
                                         <span className="ml-auto font-medium tabular-nums">
                                             {formatMxn(legacyNotFromIncome)}
@@ -214,17 +225,17 @@ export function MonthBreakdown({
             </Section>
 
             {charged.amount > 0 && (
-                <Section title="What I was charged">
+                <Section title={t("breakdown.whatCharged")}>
                     <div className="rounded-xl border p-4">
                         <Donut
                             slices={chargeSlices}
                             total={charged.amount}
-                            centerCaption="charged"
+                            centerCaption={t("breakdown.chargedCaption")}
                         />
                         {whatIReallySpent.amount > 0 && (
                             <div className="mt-4 flex items-center gap-3 border-t border-dashed pt-3">
                                 <span className="text-sm font-medium">
-                                    What I really spent
+                                    {t("breakdown.whatIReallySpent")}
                                 </span>
                                 <span className="ml-auto text-lg font-semibold text-spent tabular-nums">
                                     {formatMxn(whatIReallySpent.amount)}
@@ -237,34 +248,37 @@ export function MonthBreakdown({
 
             {totals.partnerPaidYou > 0 && (
                 <Section
-                    title={`${partnerName} — cash she sent you, this month`}
+                    title={t("breakdown.cashSent", { partner: partnerName })}
                 >
                     <div className="rounded-xl border p-4">
                         <Row
-                            label={`${partnerName} paid you`}
+                            label={t("breakdown.partnerPaidYou", {
+                                partner: partnerName,
+                            })}
                             amount={totals.partnerPaidYou}
                             tone="positive"
                         />
                         <p className="pt-2 text-xs text-muted-foreground">
-                            What either of you still owes belongs to the
-                            settlement, not to a month.
+                            {t("breakdown.owedBelongs")}
                         </p>
                     </div>
                 </Section>
             )}
 
             {paidToPartner.amount > 0 && (
-                <Section title={`${partnerName} — what I paid her`}>
+                <Section
+                    title={t("breakdown.whatIPaid", { partner: partnerName })}
+                >
                     <div className="rounded-xl border p-4">
                         <Donut
                             slices={paidSlices}
                             total={paidToPartner.amount}
-                            centerCaption="I paid her"
+                            centerCaption={t("breakdown.iPaidHer")}
                         />
                         {/* Ungated: every peso in this donut is already inside a
                             pot above, whichever table it is stored in. */}
                         <p className="mt-3 border-t border-dashed pt-3 text-xs text-muted-foreground">
-                            {ALSO_COUNTED_ABOVE}
+                            {t("breakdown.alsoCountedAbove")}
                         </p>
                     </div>
                 </Section>
@@ -276,7 +290,7 @@ export function MonthBreakdown({
                 <BottomLine totals={totals} partnerName={partnerName} />
             )}
             <p className="text-xs text-muted-foreground">
-                Every figure covers {monthLabel}.
+                {t("breakdown.everyFigure", { month: monthLabel })}
             </p>
         </div>
     );
@@ -285,13 +299,14 @@ export function MonthBreakdown({
 function incomeShareLine(
     spent: number,
     incomeTotal: number | undefined,
+    t: MoneyTranslator,
 ): string | null {
     if (incomeTotal === undefined) return null;
     // The income figure itself lives in `IncomeRemainder`, right below this
     // pot in the same section — repeating it here read as two facts about
     // one number.
     const percent = percentLabel(spent, incomeTotal);
-    return percent === null ? null : `${percent} of your income`;
+    return percent === null ? null : t("breakdown.incomeShare", { percent });
 }
 
 function IncomeRemainder({
@@ -301,6 +316,7 @@ function IncomeRemainder({
     incomeTotal: number;
     incomeThatLeft: number;
 }) {
+    const t = useTranslations("money.breakdown");
     // Compared in cents: a float sum landing a hair below zero (e.g. -1e-13)
     // must read as exactly spent, never as a red "over income" that is not real.
     const remainderCents = Math.round((incomeTotal - incomeThatLeft) * 100);
@@ -309,7 +325,7 @@ function IncomeRemainder({
     return (
         <p className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-xl border px-4 py-3 text-sm">
             <span className="text-muted-foreground">
-                Income{" "}
+                {t("income")}{" "}
                 <span className="font-medium text-foreground tabular-nums">
                     {formatMxn(incomeTotal)}
                 </span>
@@ -320,7 +336,11 @@ function IncomeRemainder({
                     over ? "text-danger" : "text-positive",
                 )}
             >
-                {formatMxn(Math.abs(remainder))} {over ? "over income" : "left"}
+                {over
+                    ? t("overIncome", {
+                          amount: formatMxn(Math.abs(remainder)),
+                      })
+                    : t("left", { amount: formatMxn(Math.abs(remainder)) })}
             </span>
         </p>
     );

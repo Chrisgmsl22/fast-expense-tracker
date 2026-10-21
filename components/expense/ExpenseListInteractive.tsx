@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Pencil, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { isExpenseFrozen, isMovementFrozen } from "@/lib/domain/frozen-row";
 import {
@@ -17,6 +18,7 @@ import { expenseCardLabel } from "@/lib/expense-display";
 import {
     movementDisplay,
     movementRowText,
+    type MovementsTranslator,
 } from "@/components/movement/movement-display";
 // TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
@@ -108,8 +110,9 @@ const ROW_TITLE_TEXT = "min-w-0 break-words max-sm:basis-full sm:truncate";
 function movementDeleteMessage(
     m: MovementListItem,
     partnerName: string,
+    tm: MovementsTranslator,
 ): string {
-    const { title } = movementRowText(m, partnerName);
+    const { title } = movementRowText(m, partnerName, tm);
     return `${title} (${formatMxn(m.amount)}) will be permanently removed.`;
 }
 
@@ -140,6 +143,7 @@ export function ExpenseListInteractive({
     incomeTotal,
 }: Props) {
     const router = useRouter();
+    const tm = useTranslations("movements");
     const [editing, setEditing] = useState<ExpenseEditable | null>(null);
     const [editingMovement, setEditingMovement] =
         useState<MovementEditable | null>(null);
@@ -581,6 +585,7 @@ export function ExpenseListInteractive({
                                 ? movementDeleteMessage(
                                       deletingMovement,
                                       partnerName,
+                                      tm,
                                   )
                                 : ""}
                         </DialogDescription>
@@ -819,13 +824,11 @@ function MovementRow({
     onEdit: () => void;
     onDelete: () => void;
 }) {
-    const { amountClass: amountColor, rowTint } = movementDisplay(
-        m.type,
-        partnerName,
-    );
+    const tm = useTranslations("movements");
+    const { amountClass: amountColor, rowTint } = movementDisplay(m.type);
     // `title` names the row's own thing (a debt's note), so two debts don't get
     // one shared accessible name on their edit/delete controls.
-    const { title, subline } = movementRowText(m, partnerName);
+    const { title, subline } = movementRowText(m, partnerName, tm);
     // A movement a CLOSED cycle counted is frozen server-side, so it shows no
     // controls. `closedAt` marks one transfer per cycle and cannot be the predicate.
     const frozen = isMovementFrozen(m);

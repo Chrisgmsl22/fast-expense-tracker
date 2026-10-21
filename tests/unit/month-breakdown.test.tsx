@@ -915,3 +915,26 @@ describe("the figures the rail leaves to Full breakdown", () => {
         );
     });
 });
+
+describe("MonthBreakdown in Spanish", () => {
+    it("names each section and figure in Spanish", () => {
+        renderWithIntl(
+            <MonthBreakdown
+                totals={totals}
+                fundingRows={NO_ROWS}
+                monthLabel="junio de 2026"
+                partnerName="Brenda"
+                incomeTotal={4000}
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("De qué fondo salió")).toBeDefined();
+        expect(screen.getByText("Ingreso de este mes")).toBeDefined();
+        expect(screen.getByText("Lo que me cargaron")).toBeDefined();
+        expect(screen.getByText("En resumen")).toBeDefined();
+        expect(screen.getByText(/de tu ingreso$/)).toBeDefined();
+        expect(
+            screen.getByText("Todas las cifras son de junio de 2026."),
+        ).toBeDefined();
+    });
+});

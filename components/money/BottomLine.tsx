@@ -1,12 +1,9 @@
+import { useTranslations } from "next-intl";
+
 import type { FeedTotals } from "@/lib/domain/movement";
 import { formatMxn } from "@/lib/format";
 import { Heading, Row } from "@/components/money/BreakdownParts";
-import {
-    TOTAL_LABEL,
-    TOTAL_QUALIFIER,
-    closingTotal,
-    type MoneyTone,
-} from "@/components/money/summary-model";
+import { closingTotal, type MoneyTone } from "@/components/money/summary-model";
 
 /**
  * The month in two figures that do not overlap: what stayed with me, and what went
@@ -20,6 +17,7 @@ export function BottomLine({
     totals: FeedTotals;
     partnerName: string;
 }) {
+    const t = useTranslations("money.bottomLine");
     const { whatIReallySpent, paidToPartner, setAside } = totals;
     const rows: {
         label: string;
@@ -27,17 +25,20 @@ export function BottomLine({
         tone?: MoneyTone;
         note?: string;
     }[] = [
-        { label: "Spent on myself", amount: whatIReallySpent.of.spentOnMyself },
         {
-            label: `Sent to ${partnerName}`,
+            label: t("spentOnMyself"),
+            amount: whatIReallySpent.of.spentOnMyself,
+        },
+        {
+            label: t("sentTo", { partner: partnerName }),
             amount: paidToPartner.of.fromIncome.amount,
             tone: "partner",
         },
         {
-            label: "Set aside",
+            label: t("setAside"),
             amount: setAside,
             tone: "positive",
-            note: "kept, not spent",
+            note: t("keptNotSpent"),
         },
     ];
     const income = rows.filter((row) => row.amount > 0);
@@ -45,13 +46,13 @@ export function BottomLine({
     const closing = income.length > 1 ? closingTotal(totals) : null;
     return (
         <section className="rounded-xl bg-muted p-4">
-            <Heading>Bottom line</Heading>
+            <Heading>{t("title")}</Heading>
             {/* One rule for this whole block: a headline or a part with nothing
                 in it is not a figure, so it is not drawn. */}
             {whatIReallySpent.amount > 0 && (
                 <div className="mt-3 flex items-center gap-3">
                     <span className="text-sm font-medium">
-                        What I really spent
+                        {t("whatIReallySpent")}
                     </span>
                     <span className="ml-auto text-xl font-semibold text-spent tabular-nums">
                         {formatMxn(whatIReallySpent.amount)}
@@ -61,14 +62,14 @@ export function BottomLine({
             {whatIReallySpent.of.sentToPartner > 0 && (
                 <div className="mt-1 ml-3 border-l pl-3">
                     <Row
-                        label={`of which sent to ${partnerName}`}
+                        label={t("ofWhichSent", { partner: partnerName })}
                         amount={whatIReallySpent.of.sentToPartner}
                     />
                 </div>
             )}
 
             <p className="mt-4 border-t pt-3 text-xs font-semibold uppercase">
-                Where this month&apos;s income went
+                {t("incomeWent")}
             </p>
             <div className="mt-2 space-y-1.5">
                 {income.map((row) => (
@@ -87,9 +88,9 @@ export function BottomLine({
             {closing !== null && (
                 <div className="mt-3 flex items-center gap-3 border-t pt-3">
                     <span className="text-sm font-medium">
-                        {TOTAL_LABEL}{" "}
+                        {t("total")}{" "}
                         <span className="font-normal text-muted-foreground">
-                            {TOTAL_QUALIFIER}
+                            {t("totalQualifier")}
                         </span>
                     </span>
                     <span className="ml-auto text-xl font-semibold tabular-nums">

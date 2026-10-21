@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { StatStrip } from "@/components/dashboard/StatStrip";
 import { funded } from "@/tests/support/funding-rows";
@@ -24,7 +25,7 @@ const groceries = funded({
 
 describe("StatStrip", () => {
     it("renders income, spent, net, and daily-average with days left", () => {
-        render(<StatStrip {...stats} expenses={[groceries]} />);
+        renderWithIntl(<StatStrip {...stats} expenses={[groceries]} />);
         expect(screen.getByText("Income in")).toBeDefined();
         expect(screen.getByText("$48,200.00")).toBeDefined();
         expect(screen.getByText("Spent (my share)")).toBeDefined();
@@ -32,12 +33,12 @@ describe("StatStrip", () => {
     });
 
     it("shows a positive net with a + sign", () => {
-        render(<StatStrip {...stats} expenses={[]} />);
+        renderWithIntl(<StatStrip {...stats} expenses={[]} />);
         expect(screen.getByText("+$5,900.00")).toBeDefined();
     });
 
     it("shows a negative net with a minus sign", () => {
-        render(
+        renderWithIntl(
             <StatStrip
                 {...stats}
                 income={40000}
@@ -51,7 +52,7 @@ describe("StatStrip", () => {
     });
 
     it("splits spend this month's income didn't fund (spec 0007 §3.1)", () => {
-        render(
+        renderWithIntl(
             <StatStrip
                 {...stats}
                 expenses={[
@@ -92,7 +93,7 @@ describe("StatStrip", () => {
     });
 
     it("stays silent when every peso came from this month's income", () => {
-        render(<StatStrip {...stats} expenses={[groceries]} />);
+        renderWithIntl(<StatStrip {...stats} expenses={[groceries]} />);
         expect(screen.queryByText(/not from this month's income/i)).toBeNull();
         expect(screen.queryByText("From savings")).toBeNull();
     });

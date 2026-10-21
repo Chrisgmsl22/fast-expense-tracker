@@ -2,18 +2,19 @@
 
 import { z } from "zod";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { isPartnerDebt } from "@/lib/domain/movement";
-import { frozenMovementRefusal } from "@/lib/domain/frozen-row";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
 import {
     partnerDebtInputSchema,
     type PartnerDebtInput,
 } from "@/lib/schemas/movement";
+import { frozenMovementMessage, translatedFieldErrors } from "./messages";
 
 /** The edit payload carries the row id alongside the debt fields. */
 const idSchema = z.object({ id: z.string().min(1) });
@@ -46,18 +47,25 @@ export async function updatePartnerDebt(
     input: unknown,
     repo: MovementRepository = movementRepository,
 ): Promise<UpdatePartnerDebtResult> {
+    const t = await getTranslations("movements");
     const parsed = partnerDebtInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid debt",
-            fieldErrors: toFieldErrors<PartnerDebtInput>(parsed.error),
+            message: t("errors.invalidDebt"),
+            fieldErrors: await translatedFieldErrors<PartnerDebtInput>(
+                parsed.error,
+            ),
         };
     }
     const idParsed = idSchema.safeParse(input);
     if (!idParsed.success) {
-        return { ok: false, code: "validation", message: "Invalid debt" };
+        return {
+            ok: false,
+            code: "validation",
+            message: t("errors.invalidDebt"),
+        };
     }
     const { id } = idParsed.data;
 
@@ -67,7 +75,7 @@ export async function updatePartnerDebt(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -78,7 +86,7 @@ export async function updatePartnerDebt(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Debt not found.",
+                message: t("errors.debtNotFound"),
             };
         }
 
@@ -86,17 +94,16 @@ export async function updatePartnerDebt(
             return {
                 ok: false,
                 code: "validation",
-                message:
-                    "A debt's direction cannot change. Delete it and add a new debt.",
+                message: t("errors.debtDirectionLocked"),
                 fieldErrors: {
-                    direction: ["The direction must match the original debt."],
+                    direction: [t("fieldErrors.directionMismatch")],
                 },
             };
         }
 
         // A debt carries no marker column — the DB CHECK allows `closedAt` only on a
         // transfer — so the repository where-clause never blocked it.
-        const refusal = frozenMovementRefusal(existing, "edit");
+        const refusal = await frozenMovementMessage(existing, "edit");
         if (refusal) {
             return { ok: false, code: "cycle_closed", message: refusal };
         }
@@ -112,7 +119,7 @@ export async function updatePartnerDebt(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Debt not found.",
+                message: t("errors.debtNotFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -121,7 +128,7 @@ export async function updatePartnerDebt(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the debt. Please try again.",
+            message: t("errors.debtDbError"),
         };
     }
 }

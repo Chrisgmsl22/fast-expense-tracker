@@ -2,11 +2,13 @@
 
 import { z } from "zod";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
-import { frozenMovementRefusal } from "@/lib/domain/frozen-row";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
+import { frozenMovementMessage } from "./messages";
 
 const idSchema = z.object({ id: z.string().min(1) });
 
@@ -36,12 +38,13 @@ export async function deleteMovement(
     input: unknown,
     repo: MovementRepository = movementRepository,
 ): Promise<DeleteMovementResult> {
+    const t = await getTranslations("movements.errors");
     const parsed = idSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Missing movement id",
+            message: t("missingId"),
         };
     }
     const { id } = parsed.data;
@@ -52,7 +55,7 @@ export async function deleteMovement(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("unauthenticated"),
         };
     }
 
@@ -63,12 +66,12 @@ export async function deleteMovement(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Movement not found.",
+                message: t("movementNotFound"),
             };
         }
         // Frozen = cycle closed AND that cycle counted the row. The DB CHECK allows
         // `closedAt` only on a transfer, so the marker can never freeze a debt.
-        const refusal = frozenMovementRefusal(existing, "delete");
+        const refusal = await frozenMovementMessage(existing, "delete");
         if (refusal) {
             return { ok: false, code: "cycle_closed", message: refusal };
         }
@@ -78,7 +81,7 @@ export async function deleteMovement(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Movement not found.",
+                message: t("movementNotFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -87,7 +90,7 @@ export async function deleteMovement(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not delete the movement. Please try again.",
+            message: t("deleteDbError"),
         };
     }
 }

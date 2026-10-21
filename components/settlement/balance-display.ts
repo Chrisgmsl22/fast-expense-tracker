@@ -1,4 +1,10 @@
+import type { useTranslations } from "next-intl";
+
 import type { SettlementDirection } from "@/lib/domain/settlement";
+
+export type SettlementTranslator = ReturnType<
+    typeof useTranslations<"settlement">
+>;
 
 /**
  * Presentation for a balance direction — the single source both the settlement
@@ -24,37 +30,44 @@ export type BalanceTone = {
 export function balanceTone(
     direction: SettlementDirection,
     partnerName: string,
+    t: SettlementTranslator,
 ): BalanceTone {
     switch (direction) {
-        case "she_owes":
+        case "she_owes": {
+            const chipLabel = t("tone.sheOwes", { partner: partnerName });
             return {
-                label: `${partnerName.toUpperCase()} OWES YOU`,
-                chipLabel: `${partnerName} owes you`,
+                label: chipLabel.toUpperCase(),
+                chipLabel,
                 dotClass: "bg-positive",
                 textClass: "text-positive",
                 fillClass: "bg-positive",
                 tintClass: "bg-positive-tint",
                 borderClass: "border-positive",
             };
-        case "you_owe":
+        }
+        case "you_owe": {
+            const chipLabel = t("tone.youOwe", { partner: partnerName });
             return {
-                label: `YOU OWE ${partnerName.toUpperCase()}`,
-                chipLabel: `You owe ${partnerName}`,
+                label: chipLabel.toUpperCase(),
+                chipLabel,
                 dotClass: "bg-transfer",
                 textClass: "text-transfer",
                 fillClass: "bg-transfer",
                 tintClass: "bg-transfer-tint",
                 borderClass: "border-transfer",
             };
-        case "settled":
+        }
+        case "settled": {
+            const chipLabel = t("tone.settled");
             return {
-                label: "ALL SETTLED",
-                chipLabel: "All settled",
+                label: chipLabel.toUpperCase(),
+                chipLabel,
                 dotClass: "bg-muted-foreground",
                 textClass: "text-muted-foreground",
                 fillClass: "bg-muted-foreground",
                 tintClass: "bg-muted",
                 borderClass: "border-border",
             };
+        }
     }
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { act, fireEvent, screen, within } from "@testing-library/react";
+import { createTranslator } from "next-intl";
 import { renderWithIntl } from "@/tests/support/intl";
+import { MESSAGES } from "@/i18n/messages";
 import { SummaryRail } from "@/components/money/SummaryRail";
 import { SummaryStrip } from "@/components/money/SummaryStrip";
 import { summaryCost, summaryMetrics } from "@/components/money/summary-model";
@@ -9,6 +11,13 @@ import {
     type FeedTotalExpense,
 } from "@/lib/domain/movement";
 import { fundingRowsOf } from "@/tests/support/funding-rows";
+import { computeCoupleBalance } from "@/lib/domain/settlement";
+
+const t = createTranslator({
+    locale: "en",
+    messages: MESSAGES.en,
+    namespace: "money",
+});
 
 const row: FeedTotalExpense = {
     id: "income",
@@ -94,7 +103,7 @@ describe("summary layout", () => {
             outsideIncomePercent: 50,
         });
         expect(totals.total).toBe(125);
-        const metrics = summaryMetrics(totals, "Avery", true);
+        const metrics = summaryMetrics(totals, "Avery", true, t);
         // Charged and "Outside income" still hold the refund at full value.
         expect(metrics.map((metric) => metric.amount)).toEqual([
             230, 120, 90, 80,
@@ -102,7 +111,7 @@ describe("summary layout", () => {
     });
 
     it("preserves historical partner shares in solo mode", () => {
-        expect(summaryMetrics(totals, "Avery", false)[3]).toEqual({
+        expect(summaryMetrics(totals, "Avery", false, t)[3]).toEqual({
             key: "partner",
             label: "Avery's share",
             amount: 80,
@@ -111,7 +120,7 @@ describe("summary layout", () => {
             { ...row, actualExpenditure: 100 },
             rows[3]!,
         ]);
-        expect(summaryMetrics(solo, "Avery", false)[3]).toEqual({
+        expect(summaryMetrics(solo, "Avery", false, t)[3]).toEqual({
             key: "set-aside",
             label: "Set aside",
             amount: 50,
@@ -130,7 +139,7 @@ describe("summary layout", () => {
         ]);
         expect(summaryCost(withSavingsCategory).amount).toBe(170);
         expect(
-            summaryMetrics(withSavingsCategory, "Avery", true)[3]?.amount,
+            summaryMetrics(withSavingsCategory, "Avery", true, t)[3]?.amount,
         ).toBe(80);
     });
 
@@ -361,5 +370,61 @@ describe("summary layout", () => {
         );
         unmount();
         expect(disconnect).toHaveBeenCalledOnce();
+    });
+});
+
+describe("summary layout in Spanish", () => {
+    const es = { ...sharedProps, monthLabel: "junio de 2026" };
+
+    it("labels the rail in Spanish", () => {
+        renderWithIntl(<SummaryRail totals={totals} {...es} />, {
+            locale: "es",
+        });
+        const rail = within(screen.getByTestId("feed-totals"));
+        expect(
+            rail.getByRole("heading", {
+                name: "Lo que me costó junio de 2026",
+            }),
+        ).toBeDefined();
+        expect(rail.getByText("$230.00 cargado")).toBeDefined();
+        expect(rail.getByText("Del ingreso de este mes")).toBeDefined();
+        expect(rail.getByText("De ahorros")).toBeDefined();
+        expect(
+            rail.getByRole("button", { name: "Desglose completo" }),
+        ).toBeDefined();
+    });
+
+    it("labels the strip and its reminder in Spanish", () => {
+        renderWithIntl(
+            <SummaryStrip
+                totals={totals}
+                {...es}
+                isCurrentMonth={false}
+                settlement={computeCoupleBalance({
+                    partnerShareOfYourExpenses: 700,
+                    yourDebtToPartner: 0,
+                    moneyPartnerPaidYou: 0,
+                    moneyYouPaidPartner: 0,
+                })}
+                visibleCount={1}
+                categoryLabel="Todas"
+            />,
+            { locale: "es" },
+        );
+        const footer = within(
+            screen.getByRole("region", {
+                name: "Totales de la actividad visible",
+            }),
+        );
+        expect(footer.getByText("1 registro")).toBeDefined();
+        expect(
+            footer.getByText("Los totales siguen los filtros"),
+        ).toBeDefined();
+        expect(footer.getByText("Mi costo")).toBeDefined();
+        expect(footer.getByText("Parte de Avery")).toBeDefined();
+        expect(footer.getByText("Avery te debe")).toBeDefined();
+        expect(
+            footer.getByText("La liquidación abierta, no junio de 2026."),
+        ).toBeDefined();
     });
 });
