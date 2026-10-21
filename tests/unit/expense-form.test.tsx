@@ -7,13 +7,8 @@ import {
     beforeEach,
     type Mock,
 } from "vitest";
-import {
-    render,
-    screen,
-    fireEvent,
-    waitFor,
-    within,
-} from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 // Isolate the component from the server actions (and their auth/db imports).
 vi.mock("@/app/_actions/expense/create", () => ({ createExpense: vi.fn() }));
@@ -52,8 +47,11 @@ const editable = {
     cycleClosedAt: null,
 };
 
-function renderForm(props?: Partial<Parameters<typeof ExpenseForm>[0]>) {
-    return render(
+function renderForm(
+    props?: Partial<Parameters<typeof ExpenseForm>[0]>,
+    locale: "en" | "es" = "en",
+) {
+    return renderWithIntl(
         <ExpenseForm
             categories={categories}
             subcategories={subcategories}
@@ -62,6 +60,7 @@ function renderForm(props?: Partial<Parameters<typeof ExpenseForm>[0]>) {
             sharesExpenses
             {...props}
         />,
+        { locale },
     );
 }
 
@@ -588,5 +587,37 @@ describe("ExpenseForm date cap", () => {
 
         fireEvent.change(date, { target: { value: "2026-10-14" } });
         expect(date.validity.rangeOverflow).toBe(false);
+    });
+});
+
+describe("ExpenseForm in Spanish", () => {
+    it("Should render the capture form in Spanish", () => {
+        renderForm({}, "es");
+
+        expect(
+            screen.getByRole("form", { name: "Agregar gasto" }),
+        ).toBeDefined();
+        expect(screen.getByLabelText("Fecha")).toBeDefined();
+        expect(screen.getByText("Elige una categoría…")).toBeDefined();
+        expect(
+            screen.getByText("Lo pagué con dinero que ya tenía"),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Agregar gasto" }),
+        ).toBeDefined();
+    });
+
+    it("Should show stored category and subcategory names translated when editing", () => {
+        renderForm({ expense: editable }, "es");
+
+        expect(screen.getAllByText("Salud").length).toBeGreaterThan(0);
+        expect(screen.getByText("de Salud")).toBeDefined();
+        expect(screen.getAllByText("Consultas médicas").length).toBeGreaterThan(
+            0,
+        );
+        expect(screen.getByText("Gasto compartido · 68/32")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Guardar cambios" }),
+        ).toBeDefined();
     });
 });

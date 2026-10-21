@@ -2,6 +2,7 @@
 
 import { useId, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { Check, Eye, EyeOff, Pencil, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,6 @@ import { addVariableIncome } from "@/app/_actions/income/add-variable";
 import { deleteVariableIncome } from "@/app/_actions/income/delete-variable";
 import { setFixedIncome } from "@/app/_actions/income/set-fixed";
 import { getTodayCdmx } from "@/lib/dates";
-// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMonthLabel, formatMxn } from "@/lib/format";
 import type { VariableIncomeItem } from "@/lib/repositories/income.repository";
 
@@ -57,6 +57,10 @@ export function IncomeScreen({
     variable,
 }: Props) {
     const router = useRouter();
+    const t = useTranslations("income.screen");
+    const tForm = useTranslations("income.addForm");
+    const tActions = useTranslations("common.actions");
+    const locale = useLocale();
     const [hidden, setHidden] = useState(false);
     const [addOpen, setAddOpen] = useState(false);
     const [deleting, setDeleting] = useState<VariableIncomeItem | null>(null);
@@ -89,7 +93,7 @@ export function IncomeScreen({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Edit fixed income"
+                    aria-label={t("editFixed")}
                     onClick={() => {
                         setActionError(null);
                         setEditingFixed(true);
@@ -100,7 +104,7 @@ export function IncomeScreen({
             </div>
             {!isPastMonth && (
                 <p className="text-xs text-muted-foreground">
-                    carries forward until you change it
+                    {t("carriesForward")}
                 </p>
             )}
         </>
@@ -125,7 +129,7 @@ export function IncomeScreen({
             {/* Header */}
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <h1 className="text-xl font-semibold">Income</h1>
+                    <h1 className="text-xl font-semibold">{t("title")}</h1>
                     <Button
                         type="button"
                         variant="outline"
@@ -134,11 +138,11 @@ export function IncomeScreen({
                         aria-pressed={hidden}
                     >
                         {hidden ? <EyeOff /> : <Eye />}
-                        {hidden ? "Show" : "Hide"}
+                        {hidden ? t("show") : t("hide")}
                     </Button>
                 </div>
                 <span className="hidden text-sm text-muted-foreground sm:block">
-                    drives your bucket targets
+                    {t("drivesTargets")}
                 </span>
             </div>
 
@@ -153,7 +157,7 @@ export function IncomeScreen({
                 {/* Fixed — inline-editable */}
                 <div className="rounded-lg border p-4">
                     <p className="text-xs text-muted-foreground">
-                        Fixed income · monthly
+                        {t("fixedMonthly")}
                     </p>
                     {fixedField}
                 </div>
@@ -161,24 +165,24 @@ export function IncomeScreen({
                 {/* Variable */}
                 <div className="rounded-lg border p-4">
                     <p className="text-xs text-muted-foreground">
-                        Variable · {monthLabel}
+                        {t("variableMonth", { month: monthLabel })}
                     </p>
                     <p className="mt-1 text-2xl font-bold text-positive">
                         {money(variableTotal)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        logged this month
+                        {t("loggedThisMonth")}
                     </p>
                 </div>
 
                 {/* Total */}
                 <div className="rounded-lg bg-foreground p-4 text-background">
                     <p className="text-xs text-background/70">
-                        Total · {monthLabel}
+                        {t("totalMonth", { month: monthLabel })}
                     </p>
                     <p className="mt-1 text-2xl font-bold">{money(total)}</p>
                     <p className="text-xs text-background/70">
-                        fixed + variable
+                        {t("fixedPlusVariable")}
                     </p>
                 </div>
             </div>
@@ -186,13 +190,16 @@ export function IncomeScreen({
             {/* Mobile total card */}
             <div className="mt-6 rounded-lg bg-foreground p-5 text-center text-background sm:hidden">
                 <p className="text-xs text-background/70">
-                    Total · {monthLabel}
+                    {t("totalMonth", { month: monthLabel })}
                 </p>
                 <p className="mt-1 text-3xl font-bold">{money(total)}</p>
                 <p className="mt-1 text-xs text-background/70">
                     {hidden
-                        ? "fixed · variable"
-                        : `${formatMxn(fixed)} fixed · ${formatMxn(variableTotal)} variable`}
+                        ? t("mobileSplitHidden")
+                        : t("mobileSplit", {
+                              fixed: formatMxn(fixed),
+                              variable: formatMxn(variableTotal),
+                          })}
                 </p>
             </div>
 
@@ -201,7 +208,7 @@ export function IncomeScreen({
                 way to set monthly income on a phone). */}
             <div className="mt-3 rounded-lg border p-4 sm:hidden">
                 <p className="text-xs text-muted-foreground">
-                    Fixed income · monthly
+                    {t("fixedMonthly")}
                 </p>
                 {fixedField}
             </div>
@@ -209,10 +216,8 @@ export function IncomeScreen({
             {/* Variable income log */}
             <div className="mt-8 flex items-center justify-between">
                 <h2 className="text-sm font-semibold">
-                    <span className="hidden sm:inline">
-                        Variable income log
-                    </span>
-                    <span className="sm:hidden">Variable income</span>
+                    <span className="hidden sm:inline">{t("logTitle")}</span>
+                    <span className="sm:hidden">{t("logTitleShort")}</span>
                 </h2>
                 <Button
                     type="button"
@@ -223,23 +228,25 @@ export function IncomeScreen({
                         setAddOpen(true);
                     }}
                 >
-                    <span className="hidden sm:inline">+ Add income</span>
-                    <span className="sm:hidden">+ Add</span>
+                    <span className="hidden sm:inline">{t("addIncome")}</span>
+                    <span className="sm:hidden">{t("addShort")}</span>
                 </Button>
             </div>
 
             {variable.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
-                    No variable income logged for {monthLabel} yet.
+                    {t("empty", { month: monthLabel })}
                 </p>
             ) : (
                 <>
                     {/* Desktop column headers */}
                     <div className="mt-3 hidden grid-cols-[6rem_minmax(0,1fr)_8rem_3rem] items-center gap-4 border-b pb-2 text-xs font-medium text-muted-foreground sm:grid">
-                        <span>Date</span>
-                        <span>Source</span>
-                        <span className="text-right">Amount</span>
-                        <span className="sr-only">Actions</span>
+                        <span>{t("columns.date")}</span>
+                        <span>{t("columns.source")}</span>
+                        <span className="text-right">
+                            {t("columns.amount")}
+                        </span>
+                        <span className="sr-only">{t("columns.actions")}</span>
                     </div>
                     <ul className="divide-y">
                         {variable.map((row) => (
@@ -249,14 +256,14 @@ export function IncomeScreen({
                             >
                                 {/* Date — desktop column / mobile subline */}
                                 <span className="hidden whitespace-nowrap text-sm text-muted-foreground sm:block">
-                                    {formatExpenseDate(row.date, "es")}
+                                    {formatExpenseDate(row.date, locale)}
                                 </span>
                                 <span className="min-w-0">
                                     <span className="block truncate font-medium sm:font-normal">
                                         {row.source}
                                     </span>
                                     <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">
-                                        {formatExpenseDate(row.date, "es")}
+                                        {formatExpenseDate(row.date, locale)}
                                     </span>
                                 </span>
                                 <span className="text-right font-semibold whitespace-nowrap text-positive">
@@ -267,7 +274,9 @@ export function IncomeScreen({
                                         type="button"
                                         variant="ghost"
                                         size="icon-sm"
-                                        aria-label={`Delete ${row.source}`}
+                                        aria-label={t("deleteRow", {
+                                            source: row.source,
+                                        })}
                                         onClick={() => setDeleting(row)}
                                         disabled={pending}
                                     >
@@ -289,7 +298,7 @@ export function IncomeScreen({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Add income</DialogTitle>
+                        <DialogTitle>{tForm("title")}</DialogTitle>
                     </DialogHeader>
                     <AddIncomeForm
                         defaultDate={`${month}-01`}
@@ -314,11 +323,11 @@ export function IncomeScreen({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete income?</DialogTitle>
+                        <DialogTitle>{t("deleteTitle")}</DialogTitle>
                     </DialogHeader>
                     <p className="text-sm text-muted-foreground">
                         {deleting
-                            ? `"${deleting.source}" will be permanently removed.`
+                            ? t("deleteBody", { source: deleting.source })
                             : ""}
                     </p>
                     {actionError && (
@@ -333,7 +342,7 @@ export function IncomeScreen({
                             onClick={() => setDeleting(null)}
                             disabled={pending}
                         >
-                            Cancel
+                            {tActions("cancel")}
                         </Button>
                         <Button
                             type="button"
@@ -341,7 +350,7 @@ export function IncomeScreen({
                             onClick={confirmDelete}
                             disabled={pending}
                         >
-                            {pending ? "Deleting…" : "Delete"}
+                            {pending ? t("deleting") : tActions("delete")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -365,6 +374,9 @@ function FixedEditor({
     onCancel: () => void;
     onSaved: () => void;
 }) {
+    const t = useTranslations("income.fixed");
+    const tActions = useTranslations("common.actions");
+    const locale = useLocale();
     const [amount, setAmount] = useState(String(current));
     const [error, setError] = useState<string | null>(null);
     const [pending, startTransition] = useTransition();
@@ -394,7 +406,7 @@ function FixedEditor({
                     min="0"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    aria-label="Fixed monthly income"
+                    aria-label={t("inputLabel")}
                     aria-invalid={error ? true : undefined}
                     aria-describedby={error ? `${helpId} ${errorId}` : helpId}
                     className="h-9"
@@ -404,7 +416,7 @@ function FixedEditor({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Save fixed income"
+                    aria-label={t("save")}
                     onClick={save}
                     disabled={pending}
                 >
@@ -414,7 +426,7 @@ function FixedEditor({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Cancel"
+                    aria-label={tActions("cancel")}
                     onClick={onCancel}
                     disabled={pending}
                 >
@@ -423,8 +435,12 @@ function FixedEditor({
             </div>
             <p id={helpId} className="mt-1 text-xs text-muted-foreground">
                 {pastMonth
-                    ? `Changes ${formatMonthLabel(pastMonth, "en")} only. Other months keep theirs.`
-                    : `Applies from ${formatMonthLabel(currentMonth, "en")} onward. Past months keep theirs.`}
+                    ? t("pastMonthHelp", {
+                          month: formatMonthLabel(pastMonth, locale),
+                      })
+                    : t("forwardHelp", {
+                          month: formatMonthLabel(currentMonth, locale),
+                      })}
             </p>
             {error && (
                 <p
@@ -450,6 +466,8 @@ function AddIncomeForm({
     onCancel: () => void;
     onSuccess: () => void;
 }) {
+    const t = useTranslations("income.addForm");
+    const tActions = useTranslations("common.actions");
     const [source, setSource] = useState("");
     const [amount, setAmount] = useState("");
     const [date, setDate] = useState(defaultDate);
@@ -486,16 +504,16 @@ function AddIncomeForm({
         <form
             onSubmit={handleSubmit}
             className="flex flex-col gap-4"
-            aria-label="Add income"
+            aria-label={t("title")}
         >
             <div>
-                <Label htmlFor="income-source">Source</Label>
+                <Label htmlFor="income-source">{t("source")}</Label>
                 <Input
                     id="income-source"
                     name="source"
                     type="text"
                     required
-                    placeholder="e.g. Freelance — logo"
+                    placeholder={t("sourcePlaceholder")}
                     value={source}
                     onChange={(e) => setSource(e.target.value)}
                     className="mt-1.5"
@@ -509,7 +527,7 @@ function AddIncomeForm({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                    <Label htmlFor="income-amount">Amount (MXN)</Label>
+                    <Label htmlFor="income-amount">{t("amount")}</Label>
                     <div className="relative mt-1.5">
                         <span
                             aria-hidden
@@ -541,7 +559,7 @@ function AddIncomeForm({
                     )}
                 </div>
                 <div>
-                    <Label htmlFor="income-date">Date</Label>
+                    <Label htmlFor="income-date">{t("date")}</Label>
                     <Input
                         id="income-date"
                         name="date"
@@ -576,10 +594,10 @@ function AddIncomeForm({
                     onClick={onCancel}
                     disabled={pending}
                 >
-                    Cancel
+                    {tActions("cancel")}
                 </Button>
                 <Button type="submit" disabled={pending}>
-                    {pending ? "Saving…" : "Add income"}
+                    {pending ? t("saving") : t("submit")}
                 </Button>
             </DialogFooter>
         </form>

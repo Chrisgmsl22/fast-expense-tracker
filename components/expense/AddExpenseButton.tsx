@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
     ChevronLeft,
     CreditCard,
@@ -43,13 +44,14 @@ type Props = {
 /** Which thing the user is logging; `menu` is the type picker (ADR-0018). */
 type Mode = "menu" | "expense" | "card_payment" | "transfer" | "receive";
 
-const titlesFor = (partnerName: string): Record<Mode, string> => ({
-    menu: "Add",
-    expense: "Add expense",
-    card_payment: "Add card payment",
-    transfer: `I paid ${partnerName}`,
-    receive: `${partnerName} paid me`,
-});
+/** Mode → its key under `expenses.add.titles`. */
+const TITLE_KEY = {
+    menu: "menu",
+    expense: "expense",
+    card_payment: "cardPayment",
+    transfer: "transfer",
+    receive: "receive",
+} as const satisfies Record<Mode, string>;
 
 /**
  * Money movements are logged here alongside expenses, so there is one place to
@@ -67,7 +69,8 @@ export function AddExpenseButton({
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<Mode>("menu");
     const router = useRouter();
-    const titles = titlesFor(partnerName);
+    const t = useTranslations("expenses.add");
+    const partner = { partner: partnerName };
 
     // Reset to the picker on close so the next open starts on the menu — not the
     // form that was last shown (close() sets open=false directly, bypassing
@@ -90,7 +93,7 @@ export function AddExpenseButton({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogTrigger render={<Button>+ Add</Button>} />
+            <DialogTrigger render={<Button>{t("trigger")}</Button>} />
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -98,13 +101,13 @@ export function AddExpenseButton({
                             <button
                                 type="button"
                                 onClick={() => setMode("menu")}
-                                aria-label="Back to add menu"
+                                aria-label={t("back")}
                                 className="-ml-1 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                             >
                                 <ChevronLeft className="size-4" />
                             </button>
                         ) : null}
-                        {titles[mode]}
+                        {t(`titles.${TITLE_KEY[mode]}`, partner)}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -112,28 +115,28 @@ export function AddExpenseButton({
                     <div className="flex flex-col gap-2">
                         <TypeButton
                             icon={<Receipt className="size-5" />}
-                            title="Expense"
-                            subtitle="A purchase you made"
+                            title={t("types.expense")}
+                            subtitle={t("types.expenseHint")}
                             onClick={() => setMode("expense")}
                         />
                         <TypeButton
                             icon={<CreditCard className="size-5" />}
-                            title="Card payment"
-                            subtitle="Money you paid toward a card"
+                            title={t("types.cardPayment")}
+                            subtitle={t("types.cardPaymentHint")}
                             onClick={() => setMode("card_payment")}
                         />
                         {sharesExpenses ? (
                             <>
                                 <TypeButton
                                     icon={<Send className="size-5" />}
-                                    title={`I paid ${partnerName}`}
-                                    subtitle={`Money you sent ${partnerName}`}
+                                    title={t("titles.transfer", partner)}
+                                    subtitle={t("types.transferHint", partner)}
                                     onClick={() => setMode("transfer")}
                                 />
                                 <TypeButton
                                     icon={<HandCoins className="size-5" />}
-                                    title={`${partnerName} paid me`}
-                                    subtitle={`Money ${partnerName} sent you`}
+                                    title={t("titles.receive", partner)}
+                                    subtitle={t("types.receiveHint", partner)}
                                     onClick={() => setMode("receive")}
                                 />
                             </>

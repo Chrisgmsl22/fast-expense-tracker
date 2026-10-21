@@ -1,5 +1,6 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { auth } from "@/auth";
@@ -32,9 +33,14 @@ export async function deleteVariableIncome(
     input: unknown,
     repo: IncomeRepository = incomeRepository,
 ): Promise<DeleteVariableIncomeResult> {
+    const t = await getTranslations("income");
     const parsed = idSchema.safeParse(input);
     if (!parsed.success) {
-        return { ok: false, code: "validation", message: "Missing income id" };
+        return {
+            ok: false,
+            code: "validation",
+            message: t("errors.missingId"),
+        };
     }
     const { id } = parsed.data;
 
@@ -44,7 +50,7 @@ export async function deleteVariableIncome(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -54,7 +60,7 @@ export async function deleteVariableIncome(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Income not found.",
+                message: t("errors.notFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -63,7 +69,7 @@ export async function deleteVariableIncome(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not delete the income. Please try again.",
+            message: t("errors.deleteFailed"),
         };
     }
 }

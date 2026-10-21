@@ -1,1 +1,149 @@
-{}
+{
+    "page": {
+        "title": "Gastos",
+        "loadError": "No se pudieron cargar tus gastos. Inténtalo de nuevo.",
+        "retry": "Reintentar"
+    },
+    "monthPicker": {
+        "previous": "Mes anterior",
+        "filter": "Filtrar por mes",
+        "next": "Mes siguiente",
+        "backToCurrent": "Volver al mes actual"
+    },
+    "funding": {
+        "badge": {
+            "savings": "de ahorros",
+            "reimbursed": "reembolsado",
+            "unknown": "no de ingresos"
+        },
+        "toggle": {
+            "savings": "Lo pagué con dinero que ya tenía",
+            "reimbursed": "Reembolsado por completo"
+        },
+        "hint": "No cuenta para el presupuesto de este mes ni para el resumen."
+    },
+    "add": {
+        "trigger": "+ Agregar",
+        "back": "Volver al menú de agregar",
+        "titles": {
+            "menu": "Agregar",
+            "expense": "Agregar gasto",
+            "cardPayment": "Agregar pago de tarjeta",
+            "transfer": "Le pagué a {partner}",
+            "receive": "{partner} me pagó"
+        },
+        "types": {
+            "expense": "Gasto",
+            "expenseHint": "Una compra que hiciste",
+            "cardPayment": "Pago de tarjeta",
+            "cardPaymentHint": "Dinero que abonaste a una tarjeta",
+            "transferHint": "Dinero que le enviaste a {partner}",
+            "receiveHint": "Dinero que {partner} te envió"
+        }
+    },
+    "form": {
+        "editLabel": "Editar gasto",
+        "addLabel": "Agregar gasto",
+        "date": "Fecha",
+        "amount": "Monto (MXN)",
+        "category": "Categoría",
+        "categoryFixed": "(fija para un pago)",
+        "categoryFixedLabel": "Categoría (fija para un pago)",
+        "categoryPlaceholder": "Elige una categoría…",
+        "subcategory": "Subcategoría",
+        "subcategoryNone": "Ninguna",
+        "subcategoryPickCategory": "Elige una categoría",
+        "subcategoryFrom": "de {category}",
+        "card": "Tarjeta",
+        "cardNotForSavings": "(no aplica para ahorro)",
+        "cardNotForTransfer": "(es una transferencia, sin tarjeta)",
+        "cardSavings": "Ahorro — sin tarjeta",
+        "cardPartner": "Lo cubrió tu pareja — sin tarjeta",
+        "cardPlaceholder": "Elige una tarjeta…",
+        "description": "Descripción",
+        "notes": "Notas",
+        "optional": "(opcional)",
+        "reimbursedOnPayment": "Este pago estaba marcado como \"{label}\", y un pago no puede estarlo. Al guardar, se registra como pagado con los ingresos de este mes.",
+        "reimbursedCleared": "\"{label}\" no está disponible para {category}, así que se desmarcó.",
+        "shared": "Gasto compartido",
+        "sharedSplit": "Gasto compartido · {mine}/{theirs}",
+        "paymentNoSplit": "Este monto es el pago que le enviaste a tu pareja; no queda nada por dividir.",
+        "yourShare": "tu parte {amount}",
+        "saveError": "Algo salió mal al guardar el gasto.",
+        "saving": "Guardando…",
+        "saveChanges": "Guardar cambios",
+        "submit": "Agregar gasto"
+    },
+    "list": {
+        "filterLabel": "Filtrar por categoría",
+        "all": "Todas",
+        "allCategories": "Todas las categorías",
+        "columns": {
+            "date": "Fecha",
+            "description": "Descripción",
+            "category": "Categoría",
+            "card": "Tarjeta",
+            "amount": "Monto",
+            "actions": "Acciones"
+        },
+        "empty": "Aún no hay nada registrado este mes.",
+        "emptyCategory": "No hay gastos en esta categoría este mes.",
+        "editExpense": "Editar gasto",
+        "editCardPayment": "Editar pago de tarjeta",
+        "editTransfer": "Editar transferencia",
+        "deleteExpenseTitle": "¿Eliminar gasto?",
+        "deleteExpenseBody": "\"{description}\" se eliminará para siempre.",
+        "deleteMovementTitle": "¿Eliminar este movimiento?",
+        "deleteMovementBody": "{title} ({amount}) se eliminará para siempre.",
+        "deleting": "Eliminando…",
+        "setAside": "apartado",
+        "myShare": "mi parte {amount}",
+        "notShared": "no compartido",
+        "cash": "Efectivo",
+        "paidPartner": "Pagado a {partner}",
+        "editRow": "Editar {name}",
+        "deleteRow": "Eliminar {name}",
+        "locked": "{name} está bloqueado: cuenta en una liquidación que ya cerraste",
+        "lockedClosedTransfer": "{name} está bloqueado: cerró una liquidación que ya registraste"
+    },
+    "errors": {
+        "invalidExpense": "Gasto no válido",
+        "invalidPayment": "Pago no válido",
+        "unauthenticated": "No has iniciado sesión",
+        "missingId": "Falta el id del gasto",
+        "notFound": "No se encontró el gasto.",
+        "paymentNotFound": "No se encontró el pago.",
+        "loadNotFound": "No se pudo cargar ese gasto. Actualiza la página.",
+        "loadFailed": "No se pudo cargar ese gasto. Inténtalo de nuevo.",
+        "saveExpenseFailed": "No se pudo guardar el gasto. Inténtalo de nuevo.",
+        "savePaymentFailed": "No se pudo guardar el pago. Inténtalo de nuevo.",
+        "saveChangesFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
+        "deleteFailed": "No se pudo eliminar el gasto. Inténtalo de nuevo.",
+        "noPaymentCategory": "No hay una categoría para registrarlo. Primero agrega una categoría de Gastos en pareja.",
+        "paymentNoSplitOrCard": "Un pago que le enviaste a tu pareja no se puede dividir ni cargar a una tarjeta; el monto que escribes es la transferencia completa.",
+        "paymentKeepsCategory": "Un pago que le enviaste a tu pareja conserva su categoría y nunca se puede marcar como reembolsado.",
+        "splitIntoClosedCycle": "Este gasto cae dentro de una liquidación que ya cerraste, así que ya no se puede dividir con tu pareja; eso cambiaría lo que la liquidación saldó.",
+        "frozen": {
+            "paymentEdit": "Este pago cuenta en una liquidación que ya cerraste, así que no se puede editar.",
+            "paymentDelete": "Este pago cuenta en una liquidación que ya cerraste, así que no se puede eliminar.",
+            "expenseEdit": "La parte de tu pareja en este gasto cuenta en una liquidación que ya cerraste, así que no se puede editar.",
+            "expenseDelete": "La parte de tu pareja en este gasto cuenta en una liquidación que ya cerraste, así que no se puede eliminar."
+        }
+    },
+    "fields": {
+        "amountPositive": "El monto debe ser mayor que 0",
+        "categoryRequired": "La categoría es obligatoria",
+        "descriptionRequired": "La descripción es obligatoria",
+        "sharedBelowFull": "Un gasto compartido necesita que tu parte sea menor al 100%",
+        "reimbursedHealthOnly": "Solo los gastos de salud se pueden marcar como reembolsados. Cambia el origen del dinero antes de mover este gasto a otra categoría.",
+        "futureDate": "La fecha no puede ser posterior a hoy",
+        "categoryNotFound": "No se encontró la categoría",
+        "subcategoryMismatch": "La subcategoría no pertenece a la categoría elegida",
+        "cardNotFound": "No se encontró la tarjeta",
+        "paymentWholeAmount": "Este monto es el pago completo que enviaste",
+        "paymentNoCard": "Una transferencia sale de una cuenta bancaria, así que no hay tarjeta",
+        "paymentCategoryFixed": "La categoría de un pago no se puede cambiar",
+        "paymentNeverReimbursed": "Un pago que le enviaste a tu pareja nunca se puede reembolsar",
+        "splitClosedCycle": "La liquidación que cubre esta fecha ya está cerrada"
+    }
+}

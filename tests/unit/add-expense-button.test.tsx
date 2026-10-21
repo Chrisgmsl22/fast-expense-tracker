@@ -61,3 +61,26 @@ describe("AddExpenseButton", () => {
         expect(screen.queryByText("I owe Brenda")).toBeNull();
     });
 });
+
+describe("AddExpenseButton in Spanish", () => {
+    it("Should render the add menu and its titles in Spanish", () => {
+        renderWithIntl(<AddExpenseButton {...props} sharesExpenses />, {
+            locale: "es",
+        });
+        fireEvent.click(screen.getByRole("button", { name: "+ Agregar" }));
+
+        expect(screen.getByText("Pago de tarjeta")).toBeDefined();
+        expect(screen.getByText("Le pagué a Brenda")).toBeDefined();
+        expect(screen.getByText("Brenda me pagó")).toBeDefined();
+        expect(
+            screen.getByText("Dinero que le enviaste a Brenda"),
+        ).toBeDefined();
+
+        fireEvent.click(screen.getByText("Gasto"));
+
+        expect(screen.getByText("Agregar gasto")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Volver al menú de agregar" }),
+        ).toBeDefined();
+    });
+});
