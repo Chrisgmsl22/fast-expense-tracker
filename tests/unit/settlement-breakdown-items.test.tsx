@@ -489,3 +489,48 @@ describe("SettlementBreakdown disclosure", () => {
         expect(screen.getByText("Uber home")).toBeDefined();
     });
 });
+
+describe("SettlementBreakdown partner-payment rows in Spanish", () => {
+    it("translates the auto-label and keeps a typed note", () => {
+        const balance = computeCoupleBalance({
+            partnerShareOfYourExpenses: 0,
+            yourDebtToPartner: 0,
+            moneyPartnerPaidYou: 0,
+            moneyYouPaidPartner: 900,
+        });
+        renderWithIntl(
+            <SettlementBreakdown
+                balance={balance}
+                breakdownItems={{
+                    partner_share: [],
+                    your_debt: [],
+                    partner_debt: [],
+                    partner_paid: [],
+                    you_paid: [
+                        {
+                            id: "p1",
+                            date: JULY,
+                            description: "Transfer — you paid Brenda",
+                            amount: 500,
+                            gross: null,
+                        },
+                        {
+                            id: "p2",
+                            date: JULY,
+                            description: "Half of the rent",
+                            amount: 400,
+                            gross: null,
+                        },
+                    ],
+                }}
+                partnerName="Brenda"
+            />,
+            { locale: "es" },
+        );
+        expect(
+            screen.getByText("Transferencia — le pagaste a Brenda"),
+        ).toBeDefined();
+        expect(screen.queryByText("Transfer — you paid Brenda")).toBeNull();
+        expect(screen.getByText("Half of the rent")).toBeDefined();
+    });
+});

@@ -11,6 +11,7 @@ const stats = {
     net: 5900,
     dailyAvg: 1762,
     daysLeft: 7,
+    partnerName: "Avery",
 };
 
 const groceries = funded({

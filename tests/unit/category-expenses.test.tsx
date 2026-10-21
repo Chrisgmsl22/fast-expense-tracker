@@ -45,7 +45,11 @@ function exp(
 describe("CategoryExpenses", () => {
     it("renders each row with description, subcategory, card, and amount", () => {
         renderWithIntl(
-            <CategoryExpenses expenses={[exp({ id: "e1" })]} color="#0d9488" />,
+            <CategoryExpenses
+                expenses={[exp({ id: "e1" })]}
+                color="#0d9488"
+                partnerName="Avery"
+            />,
         );
         expect(screen.getByText("Dr. Salinas")).toBeDefined();
         expect(screen.getByText("Doctors appt")).toBeDefined();
@@ -67,6 +71,7 @@ describe("CategoryExpenses", () => {
                     }),
                 ]}
                 color="#0d9488"
+                partnerName="Avery"
             />,
         );
         expect(screen.getByText(/my share \$680\.00/)).toBeDefined();
@@ -77,6 +82,7 @@ describe("CategoryExpenses", () => {
             <CategoryExpenses
                 expenses={[exp({ id: "e1", isShared: false })]}
                 color="#0d9488"
+                partnerName="Avery"
             />,
         );
         expect(screen.queryByText(/my share/)).toBeNull();
@@ -94,6 +100,7 @@ describe("CategoryExpenses", () => {
                     }),
                 ]}
                 color="#0d9488"
+                partnerName="Avery"
             />,
         );
         expect(screen.getByText("Uncategorized")).toBeDefined();
@@ -117,6 +124,7 @@ describe("CategoryExpenses", () => {
                     }),
                 ]}
                 color="#0d9488"
+                partnerName="Avery"
             />,
         );
         expect(screen.getByText("Shoes")).toBeDefined();
@@ -128,6 +136,7 @@ describe("CategoryExpenses", () => {
             <CategoryExpenses
                 expenses={[exp({ id: "e1", fundedFrom: "reimbursed" })]}
                 color="#0d9488"
+                partnerName="Avery"
             />,
         );
         expect(screen.getByText("reimbursed")).toBeDefined();
@@ -135,7 +144,11 @@ describe("CategoryExpenses", () => {
 
     it("leaves an income-funded row unbadged", () => {
         renderWithIntl(
-            <CategoryExpenses expenses={[exp({ id: "e1" })]} color="#0d9488" />,
+            <CategoryExpenses
+                expenses={[exp({ id: "e1" })]}
+                color="#0d9488"
+                partnerName="Avery"
+            />,
         );
         expect(screen.queryByText(/from savings|reimbursed/)).toBeNull();
         expect(screen.queryByText(/not from income/i)).toBeNull();
@@ -157,6 +170,7 @@ describe("CategoryExpenses", () => {
                     }),
                 ]}
                 color="#0d9488"
+                partnerName="Avery"
             />,
         );
         expect(screen.getByText("Airline credit")).toBeDefined();
@@ -166,7 +180,13 @@ describe("CategoryExpenses", () => {
     });
 
     it("shows an empty state when the category has no expenses", () => {
-        renderWithIntl(<CategoryExpenses expenses={[]} color="#0d9488" />);
+        renderWithIntl(
+            <CategoryExpenses
+                expenses={[]}
+                color="#0d9488"
+                partnerName="Avery"
+            />,
+        );
         expect(
             screen.getByText(/no expenses in this category this month/i),
         ).toBeDefined();
@@ -188,6 +208,7 @@ describe("CategoryExpenses in Spanish", () => {
                     }),
                 ]}
                 color="#0d9488"
+                partnerName="Avery"
             />,
             { locale: "es" },
         );
@@ -209,16 +230,53 @@ describe("CategoryExpenses in Spanish", () => {
                     }),
                 ]}
                 color="#0d9488"
+                partnerName="Avery"
             />,
             { locale: "es" },
         );
         expect(screen.getByText("Pilates")).toBeDefined();
     });
 
+    it("translates a partner payment's auto-label and keeps a typed note", () => {
+        renderWithIntl(
+            <CategoryExpenses
+                expenses={[
+                    exp({
+                        id: "p1",
+                        description: "Transfer — you paid Avery",
+                        isPartnerPayment: true,
+                        card: null,
+                    }),
+                    exp({
+                        id: "p2",
+                        description: "Half of the rent",
+                        isPartnerPayment: true,
+                        card: null,
+                    }),
+                ]}
+                color="#0d9488"
+                partnerName="Avery"
+            />,
+            { locale: "es" },
+        );
+        expect(
+            screen.getByText("Transferencia — le pagaste a Avery"),
+        ).toBeDefined();
+        expect(screen.queryByText("Transfer — you paid Avery")).toBeNull();
+        expect(screen.getByText("Half of the rent")).toBeDefined();
+    });
+
     it("shows the Spanish empty state", () => {
-        renderWithIntl(<CategoryExpenses expenses={[]} color="#0d9488" />, {
-            locale: "es",
-        });
+        renderWithIntl(
+            <CategoryExpenses
+                expenses={[]}
+                color="#0d9488"
+                partnerName="Avery"
+            />,
+            {
+                locale: "es",
+            },
+        );
         expect(
             screen.getByText("No hay gastos en esta categoría este mes."),
         ).toBeDefined();

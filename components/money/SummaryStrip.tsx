@@ -147,6 +147,7 @@ export function SummaryStrip({
                         fromSavings={totals.notFromIncome.fromSavings.amount}
                         reimbursed={totals.notFromIncome.reimbursed.amount}
                         rows={fundingRows}
+                        partnerName={partnerName}
                         className="border-b px-4 py-2 sm:order-last sm:basis-full sm:border-t sm:border-b-0"
                     />
                     <div className="flex items-center justify-center border-t px-4 py-2 sm:border-t-0">

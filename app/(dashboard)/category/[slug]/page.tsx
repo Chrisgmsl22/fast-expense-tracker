@@ -4,6 +4,8 @@ import { getLocale } from "next-intl/server";
 import { auth } from "@/auth";
 import { getScopedMonth } from "@/lib/month-scope.server";
 import { formatMonthLabel } from "@/lib/format";
+import { resolvePartnerName } from "@/lib/domain/settings";
+import { settingsRepository } from "@/lib/repositories";
 import { getCategoryDetail } from "@/lib/services/category/category.service";
 import { CategoryDetailHeader } from "@/components/category/CategoryDetailHeader";
 import { CategoryExpenses } from "@/components/category/CategoryExpenses";
@@ -32,7 +34,10 @@ export default async function CategoryDetailPage({
         return null;
     }
 
-    const detail = await getCategoryDetail(userId, slug, month);
+    const [detail, settings] = await Promise.all([
+        getCategoryDetail(userId, slug, month),
+        settingsRepository.getSettings(userId),
+    ]);
     if (!detail) {
         notFound();
     }
@@ -78,6 +83,7 @@ export default async function CategoryDetailPage({
                 <CategoryExpenses
                     expenses={detail.expenses}
                     color={detail.meta.color}
+                    partnerName={resolvePartnerName(settings.partnerName)}
                 />
             </div>
         </main>

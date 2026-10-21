@@ -19,6 +19,7 @@ export function StatStrip({
     dailyAvg,
     daysLeft,
     expenses,
+    partnerName,
 }: {
     income: number;
     spent: number;
@@ -27,6 +28,7 @@ export function StatStrip({
     daysLeft: number;
     /** The month's rows, for the spend the budget skipped (spec 0007 §3.1). */
     expenses: FundedExpense[];
+    partnerName: string;
 }) {
     const t = useTranslations("dashboard.stats");
     const tc = useTranslations("common");
@@ -59,6 +61,7 @@ export function StatStrip({
                         fromSavings={notFromIncome.fromSavings.amount}
                         reimbursed={notFromIncome.reimbursed.amount}
                         rows={nonIncomeFundedRows(expenses)}
+                        partnerName={partnerName}
                         className="mt-1 text-foreground"
                     />
                 </div>

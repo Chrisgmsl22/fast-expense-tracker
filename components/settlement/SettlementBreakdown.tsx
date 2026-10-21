@@ -15,6 +15,7 @@ import {
     CollapsiblePanel,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { paymentTitle } from "@/components/movement/movement-display";
 import { balanceTone } from "./balance-display";
 
 // Money lines carry the journal's colour language: green = she paid you,
@@ -175,6 +176,7 @@ function BreakdownItemRow({
     partnerName: string;
 }) {
     const t = useTranslations("settlement.breakdown");
+    const tm = useTranslations("movements");
     const date = formatExpenseDate(item.date, useLocale());
     const subtitle =
         item.gross === null
@@ -189,7 +191,7 @@ function BreakdownItemRow({
         <li className="flex items-start justify-between gap-3">
             <span className="min-w-0">
                 <span className="block truncate text-xs font-medium">
-                    {item.description}
+                    {paymentTitle(item.description, partnerName, tm)}
                 </span>
                 <span className="block text-xs text-muted-foreground">
                     {subtitle}

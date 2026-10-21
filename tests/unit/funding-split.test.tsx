@@ -70,6 +70,7 @@ describe("FundingSplit", () => {
                 fromSavings={0}
                 reimbursed={0}
                 rows={fundingRowsOf([])}
+                partnerName="Avery"
             />,
         );
         expect(container.innerHTML).toBe("");
@@ -81,6 +82,7 @@ describe("FundingSplit", () => {
                 fromSavings={4758}
                 reimbursed={3500}
                 rows={fundingRows}
+                partnerName="Avery"
             />,
         );
 
@@ -117,6 +119,7 @@ describe("FundingSplit", () => {
                 fromSavings={4758}
                 reimbursed={0}
                 rows={fundingRows}
+                partnerName="Avery"
             />,
         );
         expect(screen.getByText("From savings")).toBeDefined();
@@ -129,6 +132,7 @@ describe("FundingSplit", () => {
                 fromSavings={4758}
                 reimbursed={3500}
                 rows={fundingRows}
+                partnerName="Avery"
             />,
             { locale: "es" },
         );
@@ -142,6 +146,52 @@ describe("FundingSplit", () => {
                 "te lo devolvieron · neto $0",
             ),
         ).toBeDefined();
+    });
+});
+
+describe("FundingSplit partner-payment rows in Spanish", () => {
+    it("translates the auto-label and keeps a typed note", () => {
+        const payments = [
+            funded({
+                id: "p1",
+                amount: 2000,
+                actualExpenditure: 2000,
+                isPartnerPayment: true,
+                category: { slug: "debt" },
+                fundedFrom: "savings",
+                countedInBudget: false,
+                description: "Transfer — you paid Avery",
+            }),
+            funded({
+                id: "p2",
+                amount: 1500,
+                actualExpenditure: 1500,
+                isPartnerPayment: true,
+                category: { slug: "debt" },
+                fundedFrom: "savings",
+                countedInBudget: false,
+                description: "Half of the rent",
+            }),
+        ];
+        renderWithIntl(
+            <FundingSplit
+                fromSavings={3500}
+                reimbursed={0}
+                rows={fundingRowsOf(payments)}
+                partnerName="Avery"
+            />,
+            { locale: "es" },
+        );
+        const list = within(subRow("Del ahorro")).getByRole("list", {
+            name: "Gastos: Del ahorro",
+        });
+        expect(
+            within(list).getByText("Transferencia — le pagaste a Avery"),
+        ).toBeDefined();
+        expect(
+            within(list).queryByText("Transfer — you paid Avery"),
+        ).toBeNull();
+        expect(within(list).getByText("Half of the rent")).toBeDefined();
     });
 });
 

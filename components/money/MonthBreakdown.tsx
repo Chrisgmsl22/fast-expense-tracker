@@ -194,6 +194,7 @@ export function MonthBreakdown({
                                     }
                                     reimbursed={notFromIncome.reimbursed.amount}
                                     rows={fundingRows}
+                                    partnerName={partnerName}
                                 />
                                 {legacyNotFromIncome > 0 && (
                                     <div className="flex min-h-6 items-center gap-1.5 py-1 text-xs">

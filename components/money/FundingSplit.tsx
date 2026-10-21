@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { FeedTotalExpense, NonIncomeSource } from "@/lib/domain/movement";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { paymentTitle } from "@/components/movement/movement-display";
 
 export type FundingRow = {
     id: string;
@@ -21,6 +22,8 @@ type PartProps = {
     source: NonIncomeSource;
     amount: number;
     rows: FundingRow[];
+    /** A partner payment's auto-label names her, so the row needs the name. */
+    partnerName: string;
     className?: string;
 };
 
@@ -29,8 +32,15 @@ type PartProps = {
  * Native `<details>`, so it works in a server component and starts closed. A
  * zero part is not drawn.
  */
-export function FundingPart({ source, amount, rows, className }: PartProps) {
+export function FundingPart({
+    source,
+    amount,
+    rows,
+    partnerName,
+    className,
+}: PartProps) {
     const t = useTranslations("money.funding");
+    const tm = useTranslations("movements");
     const locale = useLocale();
     if (amount <= 0) return null;
     const label = t(source);
@@ -60,7 +70,7 @@ export function FundingPart({ source, amount, rows, className }: PartProps) {
                 {rows.map((row) => (
                     <li key={row.id} className="flex items-baseline gap-2">
                         <span className="min-w-0 flex-1 truncate text-foreground">
-                            {row.description}
+                            {paymentTitle(row.description, partnerName, tm)}
                         </span>
                         <span className="shrink-0">
                             {formatExpenseDate(row.date, locale)}
@@ -79,6 +89,7 @@ type Props = {
     fromSavings: number;
     reimbursed: number;
     rows: FundingRows;
+    partnerName: string;
     className?: string;
 };
 
@@ -87,6 +98,7 @@ export function FundingSplit({
     fromSavings,
     reimbursed,
     rows,
+    partnerName,
     className,
 }: Props) {
     if (fromSavings <= 0 && reimbursed <= 0) return null;
@@ -96,11 +108,13 @@ export function FundingSplit({
                 source="fromSavings"
                 amount={fromSavings}
                 rows={rows.fromSavings}
+                partnerName={partnerName}
             />
             <FundingPart
                 source="reimbursed"
                 amount={reimbursed}
                 rows={rows.reimbursed}
+                partnerName={partnerName}
             />
         </div>
     );

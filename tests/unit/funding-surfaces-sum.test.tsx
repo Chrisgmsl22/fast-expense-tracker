@@ -210,6 +210,7 @@ describe("every surface shows parts that add up to their parent", () => {
                 dailyAvg={100}
                 daysLeft={10}
                 expenses={expenses}
+                partnerName="Avery"
             />,
         );
         const line = screen.getByText(/^Not from this month's income:/);
@@ -230,6 +231,7 @@ describe("a funding sub-row", () => {
                 source="fromSavings"
                 amount={4758}
                 rows={fundingRows.fromSavings}
+                partnerName="Avery"
             />,
         );
         const summary = screen.getByText("From savings").closest("summary")!;

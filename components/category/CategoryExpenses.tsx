@@ -1,6 +1,7 @@
 import { useLocale, useTranslations } from "next-intl";
 
 import { RowFundingBadge } from "@/components/expense/FundingBadge";
+import { paymentTitle } from "@/components/movement/movement-display";
 import { useCategoryName } from "@/i18n/category-name";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { CategoryExpenseListItem } from "@/lib/repositories/category.repository";
@@ -8,11 +9,14 @@ import type { CategoryExpenseListItem } from "@/lib/repositories/category.reposi
 export function CategoryExpenses({
     expenses,
     color,
+    partnerName,
 }: {
     expenses: CategoryExpenseListItem[];
     color: string;
+    partnerName: string;
 }) {
     const t = useTranslations("category.expenses");
+    const tm = useTranslations("movements");
     const locale = useLocale();
     const categoryName = useCategoryName();
     return (
@@ -36,7 +40,11 @@ export function CategoryExpenses({
                             <span className="min-w-0 flex-1">
                                 <span className="flex min-w-0 items-center gap-2">
                                     <span className="truncate text-sm font-medium">
-                                        {e.description}
+                                        {paymentTitle(
+                                            e.description,
+                                            partnerName,
+                                            tm,
+                                        )}
                                     </span>
                                     <RowFundingBadge row={e} />
                                 </span>

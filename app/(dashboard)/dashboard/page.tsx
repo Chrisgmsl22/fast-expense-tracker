@@ -112,6 +112,7 @@ export default async function DashboardPage({
                         dailyAvg={summary.dailyAvg}
                         daysLeft={summary.daysLeft}
                         expenses={expenses}
+                        partnerName={partnerName}
                     />
                     <CategoriesGrid
                         categories={summary.categoryBudgets}
