@@ -394,3 +394,25 @@ describe("SavingsSpendCard", () => {
         expect(within(otherMoney).getByText("$470.00")).toBeDefined();
     });
 });
+
+describe("SavingsSpendCard in Spanish", () => {
+    it("titles the card and names its parts in Spanish", () => {
+        renderWithIntl(
+            <SavingsSpendCard
+                expenses={expenses}
+                movements={movements}
+                monthLabel="junio de 2026"
+                partnerName="Alex"
+                incomeTotal={4000}
+            />,
+            { locale: "es" },
+        );
+        const card = screen.getByRole("region", { name: "Gastado del ahorro" });
+        expect(
+            within(card).getByText("Fuera del ingreso de este mes"),
+        ).toBeDefined();
+        expect(within(card).getByText("Tus compras")).toBeDefined();
+        expect(within(card).getByText("Pagado a Alex")).toBeDefined();
+        expect(within(card).getByText("Ver desglose")).toBeDefined();
+    });
+});

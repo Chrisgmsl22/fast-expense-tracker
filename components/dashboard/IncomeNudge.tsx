@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, Wallet } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /** Points a month with no income at the Income page, since every target is a share of income. */
 export function IncomeNudge({
@@ -9,6 +10,7 @@ export function IncomeNudge({
     incomeTotal: number;
     month: string;
 }) {
+    const t = useTranslations("dashboard.incomeNudge");
     if (incomeTotal !== 0) return null;
     return (
         <Link
@@ -20,11 +22,9 @@ export function IncomeNudge({
                 className="size-4 shrink-0 text-muted-foreground"
             />
             <span className="min-w-0">
-                <span className="block text-sm font-medium">
-                    Set your monthly income
-                </span>
+                <span className="block text-sm font-medium">{t("title")}</span>
                 <span className="block text-xs text-muted-foreground">
-                    Your budget targets are worked out from it.
+                    {t("body")}
                 </span>
             </span>
             <ChevronRight

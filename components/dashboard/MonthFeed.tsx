@@ -1,10 +1,11 @@
+import { useLocale, useTranslations } from "next-intl";
+
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, nonIncomeFundedRows } from "@/lib/domain/movement";
 import { RowFundingBadge } from "@/components/expense/FundingBadge";
 import { SummaryRail } from "@/components/money/SummaryRail";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
-// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
@@ -52,6 +53,7 @@ export function MonthFeed({
     /** This month's income, for the breakdown modal's "% of income" line. */
     incomeTotal?: number;
 }) {
+    const t = useTranslations("dashboard.feed");
     const feed = buildFeed(expenses, movements);
 
     // Movements go in because a legacy `gf_paid` transfer is still a movement until
@@ -65,17 +67,17 @@ export function MonthFeed({
         <div className="flex flex-col rounded-lg border xl:sticky xl:top-6">
             <div className="border-b p-4">
                 <p className="text-sm font-medium">
-                    All activity · {monthLabel}
+                    {t("title", { month: monthLabel })}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                    {count} {count === 1 ? "entry" : "entries"}
-                    {count > 0 ? " · scroll" : ""}
+                    {t("entries", { count })}
+                    {count > 0 ? ` · ${t("scroll")}` : ""}
                 </p>
             </div>
 
             {count === 0 ? (
                 <p className="flex-1 p-8 text-center text-sm text-muted-foreground">
-                    Nothing logged this month yet.
+                    {t("empty")}
                 </p>
             ) : (
                 <ul className="max-h-[45vh] min-h-24 flex-1 divide-y overflow-x-hidden overflow-y-auto xl:max-h-[calc(100vh-38rem)]">
@@ -119,6 +121,8 @@ function ExpenseRow({
     expense: ExpenseListItem;
     partnerName: string;
 }) {
+    const t = useTranslations("dashboard.feed");
+    const locale = useLocale();
     const isSavings = e.category.slug === SAVINGS_SLUG;
     // Same helper the Expenses list uses, so the two screens cannot print
     // different words for the same row.
@@ -145,7 +149,7 @@ function ExpenseRow({
                     <RowFundingBadge row={e} />
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    {formatExpenseDate(e.date, "es")}
+                    {formatExpenseDate(e.date, locale)}
                     {isSavings ? null : (
                         <>
                             {" · "}
@@ -167,15 +171,17 @@ function ExpenseRow({
                 </span>
                 {isSavings ? (
                     <span className="block text-xs text-positive">
-                        set aside
+                        {t("setAside")}
                     </span>
                 ) : e.isShared ? (
                     <span className="block text-xs text-positive">
-                        {`share ${formatMxn(e.actualExpenditure)}`}
+                        {t("share", {
+                            amount: formatMxn(e.actualExpenditure),
+                        })}
                     </span>
                 ) : (
                     <span className="block text-xs text-muted-foreground">
-                        solo
+                        {t("solo")}
                     </span>
                 )}
             </span>
@@ -191,6 +197,7 @@ function MovementRow({
     movement: MovementListItem;
     partnerName: string;
 }) {
+    const locale = useLocale();
     const { amountClass, rowTint } = movementDisplay(m.type, partnerName);
     // `buildFeed` drops a debt she fronted, so only card payments and transfers reach here.
     const { title, subline } = movementRowText(m, partnerName);
@@ -207,7 +214,7 @@ function MovementRow({
                     <RowFundingBadge row={m} />
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                    {formatExpenseDate(m.date, "es")}
+                    {formatExpenseDate(m.date, locale)}
                     {subline ? ` · ${subline}` : ""}
                 </span>
             </span>

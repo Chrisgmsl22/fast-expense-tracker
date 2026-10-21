@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { CategoriesGrid } from "@/components/dashboard/CategoriesGrid";
 import type { CategoryBudgetItem } from "@/lib/repositories/dashboard.repository";
@@ -20,7 +21,7 @@ function cat(
 
 describe("CategoriesGrid", () => {
     it("shows money left + subcat count for an under-budget category", () => {
-        render(
+        renderWithIntl(
             <CategoriesGrid
                 month="2026-06"
                 categories={[
@@ -44,7 +45,7 @@ describe("CategoriesGrid", () => {
     });
 
     it("shows an over-by amount when spent exceeds the budget", () => {
-        render(
+        renderWithIntl(
             <CategoriesGrid
                 month="2026-06"
                 categories={[
@@ -64,7 +65,7 @@ describe("CategoriesGrid", () => {
     });
 
     it("reads 'no limit' when the category has no budget", () => {
-        render(
+        renderWithIntl(
             <CategoriesGrid
                 month="2026-06"
                 categories={[
@@ -76,7 +77,7 @@ describe("CategoriesGrid", () => {
     });
 
     it("links each card to its detail route for the viewed month", () => {
-        render(
+        renderWithIntl(
             <CategoriesGrid
                 month="2026-06"
                 categories={[
@@ -91,7 +92,46 @@ describe("CategoriesGrid", () => {
     });
 
     it("shows an empty state with no category spend", () => {
-        render(<CategoriesGrid month="2026-06" categories={[]} />);
+        renderWithIntl(<CategoriesGrid month="2026-06" categories={[]} />);
         expect(screen.getByText(/no category spend this month/i)).toBeDefined();
+    });
+});
+
+describe("CategoriesGrid in Spanish", () => {
+    it("translates seeded names and the status line, and keeps a custom name as stored", () => {
+        renderWithIntl(
+            <CategoriesGrid
+                month="2026-06"
+                categories={[
+                    cat({
+                        name: "Groceries",
+                        monthlyBudget: 5000,
+                        spent: 3200,
+                        subcatTotal: 3,
+                        subcatWithSpend: 2,
+                    }),
+                    cat({ name: "Mascotas de Ana", slug: "pets", spent: 100 }),
+                ]}
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("Categorías")).toBeDefined();
+        expect(screen.getByText("Despensa")).toBeDefined();
+        expect(screen.getByText("Mascotas de Ana")).toBeDefined();
+        expect(
+            screen.getByText(
+                "límite $5,000.00 · quedan $1,800.00 · 2 de 3 subcat.",
+            ),
+        ).toBeDefined();
+        expect(screen.getByText("sin límite · 0 de 0 subcat.")).toBeDefined();
+    });
+
+    it("shows the Spanish empty state", () => {
+        renderWithIntl(<CategoriesGrid month="2026-06" categories={[]} />, {
+            locale: "es",
+        });
+        expect(
+            screen.getByText("Aún no hay gastos por categoría este mes."),
+        ).toBeDefined();
     });
 });

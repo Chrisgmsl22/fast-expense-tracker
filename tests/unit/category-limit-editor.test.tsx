@@ -121,3 +121,26 @@ describe("CategoryLimitEditor", () => {
         expect(refreshMock).not.toHaveBeenCalled();
     });
 });
+
+describe("CategoryLimitEditor in Spanish", () => {
+    it("opens a Spanish dialog with the translated category name", async () => {
+        renderWithIntl(
+            <CategoryLimitEditor {...props} monthLabel="junio de 2026" />,
+            { locale: "es" },
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Editar límite" }));
+        expect(await screen.findByText("Límite mensual · Salud")).toBeDefined();
+        expect(screen.getByLabelText("Este mes (junio de 2026)")).toBeDefined();
+        expect(
+            screen.getByLabelText("Predeterminado (otros meses)"),
+        ).toBeDefined();
+        expect(screen.getAllByPlaceholderText("Sin límite")).toHaveLength(2);
+        expect(
+            screen.getByText("Déjalo vacío para usar el predeterminado."),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Volver al predeterminado" }),
+        ).toBeDefined();
+        expect(screen.getByRole("button", { name: "Guardar" })).toBeDefined();
+    });
+});

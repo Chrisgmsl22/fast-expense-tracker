@@ -1,8 +1,10 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
-import type { ActionResult } from "@/lib/actions/result";
+import type { ActionResult, FieldErrors } from "@/lib/actions/result";
 import {
     categoryBudgetRepository,
     categoryRepository,
@@ -27,6 +29,28 @@ export type SetCategoryBudgetResult = ActionResult<
     SetCategoryBudgetCode
 >;
 
+const FIELDS = [
+    "slug",
+    "month",
+    "thisMonthAmount",
+    "defaultAmount",
+] as const satisfies readonly (keyof CategoryBudgetInput)[];
+
+/**
+ * The schema's messages are English constants, so each field with an issue
+ * gets its one translated message instead. The editor shows only the first.
+ */
+function translatedFieldErrors(
+    fieldErrors: FieldErrors<CategoryBudgetInput>,
+    messages: Record<keyof CategoryBudgetInput, string>,
+): FieldErrors<CategoryBudgetInput> {
+    const translated: FieldErrors<CategoryBudgetInput> = {};
+    for (const field of FIELDS) {
+        if (fieldErrors[field]) translated[field] = [messages[field]];
+    }
+    return translated;
+}
+
 /**
  * Set a category's monthly limit for a given month + its default (ADR-0016).
  *
@@ -43,13 +67,22 @@ export async function setCategoryBudget(
     budgetRepo: CategoryBudgetRepository = categoryBudgetRepository,
     categoryRepo: CategoryRepository = categoryRepository,
 ): Promise<SetCategoryBudgetResult> {
+    const t = await getTranslations("category.actions");
     const parsed = categoryBudgetInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid budget",
-            fieldErrors: toFieldErrors<CategoryBudgetInput>(parsed.error),
+            message: t("invalid"),
+            fieldErrors: translatedFieldErrors(
+                toFieldErrors<CategoryBudgetInput>(parsed.error),
+                {
+                    slug: t("categoryRequired"),
+                    month: t("invalidMonth"),
+                    thisMonthAmount: t("amountPositive"),
+                    defaultAmount: t("amountPositive"),
+                },
+            ),
         };
     }
 
@@ -58,7 +91,7 @@ export async function setCategoryBudget(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("unauthenticated"),
         };
     }
 
@@ -70,7 +103,7 @@ export async function setCategoryBudget(
         return {
             ok: false,
             code: "not_found",
-            message: "Category not found",
+            message: t("notFound"),
         };
     }
 
@@ -88,7 +121,7 @@ export async function setCategoryBudget(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the limit. Please try again.",
+            message: t("dbError"),
         };
     }
 }

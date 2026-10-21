@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
+import { formatExpenseDate } from "@/lib/format";
 
 import { CategoryExpenses } from "@/components/category/CategoryExpenses";
 import type { CategoryExpenseListItem } from "@/lib/repositories/category.repository";
@@ -42,7 +44,7 @@ function exp(
 
 describe("CategoryExpenses", () => {
     it("renders each row with description, subcategory, card, and amount", () => {
-        render(
+        renderWithIntl(
             <CategoryExpenses expenses={[exp({ id: "e1" })]} color="#0d9488" />,
         );
         expect(screen.getByText("Dr. Salinas")).toBeDefined();
@@ -52,7 +54,7 @@ describe("CategoryExpenses", () => {
     });
 
     it("shows a my-share subtext only on shared rows", () => {
-        render(
+        renderWithIntl(
             <CategoryExpenses
                 expenses={[
                     exp({
@@ -71,7 +73,7 @@ describe("CategoryExpenses", () => {
     });
 
     it("omits the my-share subtext on a solo expense", () => {
-        render(
+        renderWithIntl(
             <CategoryExpenses
                 expenses={[exp({ id: "e1", isShared: false })]}
                 color="#0d9488"
@@ -81,7 +83,7 @@ describe("CategoryExpenses", () => {
     });
 
     it("omits the subcategory label and card meta when an expense has neither", () => {
-        render(
+        renderWithIntl(
             <CategoryExpenses
                 expenses={[
                     exp({
@@ -103,7 +105,7 @@ describe("CategoryExpenses", () => {
         // The gap this closes: the row is on screen at $3,000 while `spent`
         // above counts it as nothing (spec 0007 §2). Without the badge the
         // screen contradicts itself and says nothing about why.
-        render(
+        renderWithIntl(
             <CategoryExpenses
                 expenses={[
                     exp({
@@ -122,7 +124,7 @@ describe("CategoryExpenses", () => {
     });
 
     it("badges a reimbursed row too", () => {
-        render(
+        renderWithIntl(
             <CategoryExpenses
                 expenses={[exp({ id: "e1", fundedFrom: "reimbursed" })]}
                 color="#0d9488"
@@ -132,7 +134,7 @@ describe("CategoryExpenses", () => {
     });
 
     it("leaves an income-funded row unbadged", () => {
-        render(
+        renderWithIntl(
             <CategoryExpenses expenses={[exp({ id: "e1" })]} color="#0d9488" />,
         );
         expect(screen.queryByText(/from savings|reimbursed/)).toBeNull();
@@ -142,7 +144,7 @@ describe("CategoryExpenses", () => {
     it("badges a row the budget dropped even when it narrows to income", () => {
         // An out-of-band stored value: the SQL filter dropped it, so it sits in
         // the header's figure, but `toFundingSource` reads it back as `income`.
-        render(
+        renderWithIntl(
             <CategoryExpenses
                 expenses={[
                     exp({
@@ -164,9 +166,61 @@ describe("CategoryExpenses", () => {
     });
 
     it("shows an empty state when the category has no expenses", () => {
-        render(<CategoryExpenses expenses={[]} color="#0d9488" />);
+        renderWithIntl(<CategoryExpenses expenses={[]} color="#0d9488" />);
         expect(
             screen.getByText(/no expenses in this category this month/i),
+        ).toBeDefined();
+    });
+});
+
+describe("CategoryExpenses in Spanish", () => {
+    it("translates the heading, subcategory name, share line, and date", () => {
+        const date = new Date("2026-06-19T12:00:00Z");
+        renderWithIntl(
+            <CategoryExpenses
+                expenses={[
+                    exp({
+                        id: "e1",
+                        date,
+                        isShared: true,
+                        actualExpenditure: 700,
+                        subcategory: { id: "sub2", name: "Dentist" },
+                    }),
+                ]}
+                color="#0d9488"
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("Gastos en esta categoría")).toBeDefined();
+        expect(screen.getByText("Dentista")).toBeDefined();
+        expect(screen.getByText("mi parte $700.00")).toBeDefined();
+        expect(
+            screen.getByText(formatExpenseDate(date, "es"), { exact: false }),
+        ).toBeDefined();
+    });
+
+    it("keeps a subcategory the owner created as stored", () => {
+        renderWithIntl(
+            <CategoryExpenses
+                expenses={[
+                    exp({
+                        id: "e1",
+                        subcategory: { id: "s9", name: "Pilates" },
+                    }),
+                ]}
+                color="#0d9488"
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("Pilates")).toBeDefined();
+    });
+
+    it("shows the Spanish empty state", () => {
+        renderWithIntl(<CategoryExpenses expenses={[]} color="#0d9488" />, {
+            locale: "es",
+        });
+        expect(
+            screen.getByText("No hay gastos en esta categoría este mes."),
         ).toBeDefined();
     });
 });

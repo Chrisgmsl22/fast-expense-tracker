@@ -6,6 +6,7 @@ const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
 vi.mock("@/auth", () => ({ auth: authMock }));
 
 import { setCategoryBudget } from "@/app/_actions/category/set-budget";
+import { setServerLocale } from "@/tests/support/intl-server";
 import type { CategoryBudgetRepository } from "@/lib/repositories/category-budget.repository";
 import type {
     CategoryMeta,
@@ -144,5 +145,101 @@ describe("setCategoryBudget (unit, injected fakes)", () => {
         const res = await setCategoryBudget(valid, budget, catRepo());
         expect(res.ok).toBe(false);
         if (!res.ok) expect(res.code).toBe("db_error");
+    });
+});
+
+describe("setCategoryBudget messages", () => {
+    const invalid = {
+        slug: "",
+        month: "nope",
+        thisMonthAmount: "-5",
+        defaultAmount: "",
+    };
+
+    beforeEach(() => {
+        authMock.mockReset();
+        authMock.mockResolvedValue({ user: { id: "u1" } });
+    });
+
+    it("gives one English message per invalid field", async () => {
+        const res = await setCategoryBudget(invalid, budgetRepo(), catRepo());
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.message).toBe("Invalid budget");
+        expect(res.fieldErrors).toEqual({
+            slug: ["Category is required"],
+            month: ["Invalid month"],
+            thisMonthAmount: ["Amount must be greater than 0"],
+        });
+    });
+
+    it("translates the validation message and field errors to Spanish, keeping the code", async () => {
+        setServerLocale("es");
+        const res = await setCategoryBudget(invalid, budgetRepo(), catRepo());
+        expect(res.ok).toBe(false);
+        if (res.ok) return;
+        expect(res.code).toBe("validation");
+        expect(res.message).toBe("Límite no válido");
+        expect(res.fieldErrors).toEqual({
+            slug: ["La categoría es obligatoria"],
+            month: ["Mes no válido"],
+            thisMonthAmount: ["El monto debe ser mayor que 0"],
+        });
+    });
+
+    it("translates the unauthenticated message to Spanish", async () => {
+        setServerLocale("es");
+        authMock.mockResolvedValue(null);
+        const res = await setCategoryBudget(valid, budgetRepo(), catRepo());
+        expect(res).toEqual({
+            ok: false,
+            code: "unauthenticated",
+            message: "No has iniciado sesión",
+        });
+    });
+
+    it("translates the not_found message to Spanish", async () => {
+        setServerLocale("es");
+        const res = await setCategoryBudget(valid, budgetRepo(), catRepo(null));
+        expect(res).toEqual({
+            ok: false,
+            code: "not_found",
+            message: "No se encontró la categoría",
+        });
+    });
+
+    it("translates the db_error message to Spanish and logs in English", async () => {
+        setServerLocale("es");
+        const consoleError = vi
+            .spyOn(console, "error")
+            .mockImplementation(() => {});
+        const budget = budgetRepo();
+        budget.setBudget.mockRejectedValue(new Error("boom"));
+        const res = await setCategoryBudget(valid, budget, catRepo());
+        expect(res).toEqual({
+            ok: false,
+            code: "db_error",
+            message: "No se pudo guardar el límite. Inténtalo de nuevo.",
+        });
+        expect(consoleError).toHaveBeenCalledWith(
+            "setCategoryBudget: db write failed",
+            expect.any(Error),
+        );
+        consoleError.mockRestore();
+    });
+
+    it("keeps the English db_error message", async () => {
+        const budget = budgetRepo();
+        budget.setBudget.mockRejectedValue(new Error("boom"));
+        const consoleError = vi
+            .spyOn(console, "error")
+            .mockImplementation(() => {});
+        const res = await setCategoryBudget(valid, budget, catRepo());
+        expect(res.ok).toBe(false);
+        if (!res.ok)
+            expect(res.message).toBe(
+                "Could not save the limit. Please try again.",
+            );
+        consoleError.mockRestore();
     });
 });
