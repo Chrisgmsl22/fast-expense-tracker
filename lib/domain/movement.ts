@@ -46,6 +46,27 @@ export function partnerDebtLabel(
         : `I owe ${partnerName}`;
 }
 
+/** The fixed parts of a received transfer's auto-label; only the name sits between. */
+const PARTNER_RECEIVED_LABEL_PREFIX = "Transfer — ";
+const PARTNER_RECEIVED_LABEL_SUFFIX = " paid you";
+
+/** The label a note-less `gf_received` transfer carries. */
+export function partnerReceivedLabel(partnerName: string): string {
+    return `${PARTNER_RECEIVED_LABEL_PREFIX}${partnerName}${PARTNER_RECEIVED_LABEL_SUFFIX}`;
+}
+
+/**
+ * Is this the received-transfer auto-label rather than the user's note? Matched on
+ * the fixed parts, not the current name, so a label written before a partner rename
+ * still reads as the auto-label.
+ */
+export function isPartnerReceivedAutoLabel(description: string): boolean {
+    return (
+        description.startsWith(PARTNER_RECEIVED_LABEL_PREFIX) &&
+        description.endsWith(PARTNER_RECEIVED_LABEL_SUFFIX)
+    );
+}
+
 /** Minimal shape the couple-balance math needs from a shared expense. */
 export type ExpenseShare = { amount: number; actualExpenditure: number };
 

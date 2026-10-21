@@ -534,3 +534,62 @@ describe("SettlementBreakdown partner-payment rows in Spanish", () => {
         expect(screen.getByText("Half of the rent")).toBeDefined();
     });
 });
+
+describe("SettlementBreakdown debt and received rows in Spanish", () => {
+    const balance = computeCoupleBalance({
+        partnerShareOfYourExpenses: 0,
+        yourDebtToPartner: 500,
+        moneyPartnerPaidYou: 900,
+        moneyYouPaidPartner: 0,
+    });
+    const row = (id: string, description: string, amount: number) => ({
+        id,
+        date: JULY,
+        description,
+        amount,
+        gross: null,
+    });
+    const renderIt = () =>
+        renderWithIntl(
+            <SettlementBreakdown
+                balance={balance}
+                breakdownItems={{
+                    partner_share: [],
+                    partner_debt: [
+                        row("d1", "Brenda owes me", 300),
+                        row("d2", "Concert tickets", 200),
+                    ],
+                    your_debt: [
+                        row("d3", "I owe Brenda", 250),
+                        row("d4", "Uber home", 250),
+                    ],
+                    partner_paid: [
+                        row("t1", "Transfer — Brenda paid you", 500),
+                        row("t2", "Rent back", 400),
+                    ],
+                    you_paid: [],
+                }}
+                partnerName="Brenda"
+            />,
+            { locale: "es" },
+        );
+
+    it("translates both debt auto-labels and keeps typed notes", () => {
+        renderIt();
+        expect(screen.getByText("Brenda me debe")).toBeDefined();
+        expect(screen.getByText("Le debo a Brenda")).toBeDefined();
+        expect(screen.queryByText("Brenda owes me")).toBeNull();
+        expect(screen.queryByText("I owe Brenda")).toBeNull();
+        expect(screen.getByText("Concert tickets")).toBeDefined();
+        expect(screen.getByText("Uber home")).toBeDefined();
+    });
+
+    it("translates a received transfer's auto-label and keeps a typed note", () => {
+        renderIt();
+        expect(
+            screen.getByText("Transferencia — Brenda te pagó"),
+        ).toBeDefined();
+        expect(screen.queryByText("Transfer — Brenda paid you")).toBeNull();
+        expect(screen.getByText("Rent back")).toBeDefined();
+    });
+});

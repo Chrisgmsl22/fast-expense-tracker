@@ -25,6 +25,7 @@ import {
 import {
     isPartnerDebt,
     partnerDebtLabel,
+    partnerReceivedLabel,
     partnerShareTotal,
     type PartnerDebtDirection,
 } from "@/lib/domain/movement";
@@ -495,7 +496,7 @@ const transferDescription = (
     partnerName: string,
 ): string =>
     direction === "gf_received"
-        ? note?.trim() || `Transfer — ${partnerName} paid you`
+        ? note?.trim() || partnerReceivedLabel(partnerName)
         : partnerPaymentDescription(note, partnerName);
 
 /**

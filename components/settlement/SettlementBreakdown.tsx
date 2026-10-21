@@ -10,13 +10,18 @@ import type {
     SettlementBreakdownItem,
     SettlementBreakdownItems,
 } from "@/lib/services/settlement/settlement.service";
+import { isPartnerReceivedAutoLabel } from "@/lib/domain/movement";
 import {
     Collapsible,
     CollapsiblePanel,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { paymentTitle } from "@/components/movement/movement-display";
-import { balanceTone } from "./balance-display";
+import {
+    debtTitle,
+    paymentTitle,
+    type MovementsTranslator,
+} from "@/components/movement/movement-display";
+import { balanceTone, type SettlementTranslator } from "./balance-display";
 
 // Money lines carry the journal's colour language: green = she paid you,
 // gold = you paid her, orange = a debt you owe (matches the journal key).
@@ -134,6 +139,7 @@ export function SettlementBreakdown({
                                                 <BreakdownItemRow
                                                     key={item.id}
                                                     item={item}
+                                                    line={line.key}
                                                     sign={line.sign}
                                                     amountClass={
                                                         AMOUNT_CLASS[line.key]
@@ -166,22 +172,24 @@ export function SettlementBreakdown({
  */
 function BreakdownItemRow({
     item,
+    line,
     sign,
     amountClass,
     partnerName,
 }: {
     item: SettlementBreakdownItem;
+    line: SettlementBreakdownKey;
     sign: "+" | "-";
     amountClass: string;
     partnerName: string;
 }) {
-    const t = useTranslations("settlement.breakdown");
+    const t = useTranslations("settlement");
     const tm = useTranslations("movements");
     const date = formatExpenseDate(item.date, useLocale());
     const subtitle =
         item.gross === null
             ? date
-            : t("shareOf", {
+            : t("breakdown.shareOf", {
                   date,
                   partner: partnerName,
                   gross: formatMxn(item.gross),
@@ -191,7 +199,7 @@ function BreakdownItemRow({
         <li className="flex items-start justify-between gap-3">
             <span className="min-w-0">
                 <span className="block truncate text-xs font-medium">
-                    {paymentTitle(item.description, partnerName, tm)}
+                    {itemTitle(item.description, line, partnerName, t, tm)}
                 </span>
                 <span className="block text-xs text-muted-foreground">
                     {subtitle}
@@ -203,4 +211,31 @@ function BreakdownItemRow({
             </span>
         </li>
     );
+}
+
+/**
+ * A row's title. A note-less debt or transfer stores an English auto-label, so that
+ * one shows in the active locale; the user's own note shows as typed.
+ */
+function itemTitle(
+    description: string,
+    line: SettlementBreakdownKey,
+    partnerName: string,
+    t: SettlementTranslator,
+    tm: MovementsTranslator,
+): string {
+    switch (line) {
+        case "partner_debt":
+            return debtTitle(description, "partner_debt", partnerName, tm);
+        case "your_debt":
+            return debtTitle(description, "gf_fronted", partnerName, tm);
+        case "partner_paid":
+            return isPartnerReceivedAutoLabel(description)
+                ? t("journal.transferPartnerPaid", { partner: partnerName })
+                : description;
+        case "you_paid":
+            return paymentTitle(description, partnerName, tm);
+        case "partner_share":
+            return description;
+    }
 }
