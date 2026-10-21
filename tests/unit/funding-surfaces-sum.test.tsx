@@ -11,6 +11,7 @@ import {
     type FeedTotalMovement,
 } from "@/lib/domain/movement";
 import { funded, fundingRowsOf } from "@/tests/support/funding-rows";
+import { renderWithIntl } from "@/tests/support/intl";
 
 /**
  * Invented month, built to catch a parent whose visible parts do not add up:
@@ -201,7 +202,7 @@ describe("every surface shows parts that add up to their parent", () => {
     });
 
     it("dashboard stat strip: From savings + Reimbursed = Not from this month's income", () => {
-        render(
+        renderWithIntl(
             <StatStrip
                 income={20000}
                 spent={680}

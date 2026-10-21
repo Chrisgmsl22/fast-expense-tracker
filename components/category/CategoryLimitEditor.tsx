@@ -3,6 +3,7 @@
 import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { setCategoryBudget } from "@/app/_actions/category/set-budget";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCategoryName } from "@/i18n/category-name";
 
 /** number | null → the string an <input> shows (null = empty = "no limit"). */
 function toField(n: number | null): string {
@@ -45,6 +47,9 @@ export function CategoryLimitEditor({
     thisMonthOverride: number | null;
     className?: string;
 }) {
+    const t = useTranslations("category.limitEditor");
+    const tc = useTranslations("common.actions");
+    const translateName = useCategoryName();
     const router = useRouter();
     // Unique per editor instance — desktop + mobile both mount, so hardcoded ids
     // would collide (invalid duplicate ids break label + aria associations).
@@ -109,7 +114,7 @@ export function CategoryLimitEditor({
                         variant="ghost"
                         size="icon-sm"
                         className={className}
-                        aria-label="Edit limit"
+                        aria-label={t("editLimit")}
                     >
                         <Pencil />
                     </Button>
@@ -117,18 +122,20 @@ export function CategoryLimitEditor({
             />
             <DialogContent className="sm:max-w-sm">
                 <DialogHeader>
-                    <DialogTitle>Monthly limit · {categoryName}</DialogTitle>
+                    <DialogTitle>
+                        {t("title", { category: translateName(categoryName) })}
+                    </DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-4">
                     <div className="space-y-1.5">
                         <Label htmlFor={thisMonthId}>
-                            This month ({monthLabel})
+                            {t("thisMonth", { month: monthLabel })}
                         </Label>
                         <Input
                             id={thisMonthId}
                             inputMode="numeric"
-                            placeholder="No limit"
+                            placeholder={t("noLimitPlaceholder")}
                             value={thisMonth}
                             onChange={(e) => setThisMonth(e.target.value)}
                             aria-invalid={errors.thisMonth ? true : undefined}
@@ -147,18 +154,16 @@ export function CategoryLimitEditor({
                             </p>
                         ) : (
                             <p className="text-xs text-muted-foreground">
-                                Leave blank to use the default.
+                                {t("blankHint")}
                             </p>
                         )}
                     </div>
                     <div className="space-y-1.5">
-                        <Label htmlFor={defaultId}>
-                            Default (other months)
-                        </Label>
+                        <Label htmlFor={defaultId}>{t("defaultLabel")}</Label>
                         <Input
                             id={defaultId}
                             inputMode="numeric"
-                            placeholder="No limit"
+                            placeholder={t("noLimitPlaceholder")}
                             value={defaultAmount}
                             onChange={(e) => setDefaultAmount(e.target.value)}
                             aria-invalid={errors.default ? true : undefined}
@@ -188,10 +193,10 @@ export function CategoryLimitEditor({
                         onClick={() => setThisMonth("")}
                         disabled={pending}
                     >
-                        Reset to default
+                        {t("reset")}
                     </Button>
                     <Button onClick={handleSave} disabled={pending}>
-                        {pending ? "Saving…" : "Save"}
+                        {pending ? t("saving") : tc("save")}
                     </Button>
                 </DialogFooter>
             </DialogContent>

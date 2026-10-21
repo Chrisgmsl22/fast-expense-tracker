@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 vi.mock("next/navigation", () => ({
     useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -27,12 +28,12 @@ const props = {
 
 describe("DashboardTopbar", () => {
     it("shows the 'My view · NN%' share pill in Shared mode", () => {
-        render(<DashboardTopbar {...props} sharesExpenses />);
+        renderWithIntl(<DashboardTopbar {...props} sharesExpenses />);
         expect(screen.getByText(/My view · 68%/)).toBeDefined();
     });
 
     it("hides the share pill in Solo mode (CHORE-6.b)", () => {
-        render(<DashboardTopbar {...props} sharesExpenses={false} />);
+        renderWithIntl(<DashboardTopbar {...props} sharesExpenses={false} />);
         expect(screen.queryByText(/My view/)).toBeNull();
         // Non-partner content is unchanged.
         expect(screen.getByText("June 2026")).toBeDefined();
@@ -40,7 +41,7 @@ describe("DashboardTopbar", () => {
     });
 
     it("carries a month picker that remembers the choice", () => {
-        render(<DashboardTopbar {...props} sharesExpenses />);
+        renderWithIntl(<DashboardTopbar {...props} sharesExpenses />);
         expect(screen.getByLabelText(/filter by month/i)).toBeDefined();
         expect(
             screen.queryByRole("button", { name: /take me back/i }),
@@ -48,7 +49,7 @@ describe("DashboardTopbar", () => {
     });
 
     it("offers the back-to-current button while a past month is on screen", () => {
-        render(
+        renderWithIntl(
             <DashboardTopbar
                 {...props}
                 month="2026-04"
@@ -59,5 +60,15 @@ describe("DashboardTopbar", () => {
         expect(
             screen.getByRole("button", { name: /take me back/i }),
         ).toBeDefined();
+    });
+});
+
+describe("DashboardTopbar in Spanish", () => {
+    it("labels the income chip and the share pill in Spanish", () => {
+        renderWithIntl(<DashboardTopbar {...props} sharesExpenses />, {
+            locale: "es",
+        });
+        expect(screen.getByText("Ingreso total")).toBeDefined();
+        expect(screen.getByText("Mi parte · 68%")).toBeDefined();
     });
 });

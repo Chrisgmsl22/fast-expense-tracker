@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Pot, PotParts } from "@/components/money/BreakdownParts";
 import type { FundedExpense } from "@/components/money/FundingSplit";
@@ -25,28 +26,31 @@ export function SavingsSpendCard({
     partnerName,
     incomeTotal,
 }: Props) {
+    const t = useTranslations("dashboard.savingsSpend");
     const savings = computeSavingsSpend(expenses, movements);
     if (savings.amount === 0) return null;
     const totals = computeFeedTotals(expenses, movements);
 
     return (
-        <section aria-label="Spent from savings" className="min-w-0">
+        <section aria-label={t("title")} className="min-w-0">
             <Pot
                 tone="otherMoney"
-                title="Spent from savings"
+                title={t("title")}
                 amount={savings.amount}
-                caption="Outside this month's income"
+                caption={t("caption")}
             >
                 <div className="space-y-1.5">
                     <PotParts
                         headline={savings.amount}
                         parts={[
                             {
-                                label: "Your purchases",
+                                label: t("ownPurchases"),
                                 amount: savings.of.ownPurchases,
                             },
                             {
-                                label: `Paid to ${partnerName}`,
+                                label: t("paidToPartner", {
+                                    partner: partnerName,
+                                }),
                                 amount: savings.of.paidToPartner,
                             },
                         ]}
@@ -61,7 +65,7 @@ export function SavingsSpendCard({
                     triggerClassName="mt-3 inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     trigger={
                         <>
-                            View breakdown
+                            {t("viewBreakdown")}
                             <ChevronRight aria-hidden className="size-4" />
                         </>
                     }

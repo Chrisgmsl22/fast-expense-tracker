@@ -1,5 +1,7 @@
+import { useLocale, useTranslations } from "next-intl";
+
 import { RowFundingBadge } from "@/components/expense/FundingBadge";
-// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
+import { useCategoryName } from "@/i18n/category-name";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { CategoryExpenseListItem } from "@/lib/repositories/category.repository";
 
@@ -10,18 +12,19 @@ export function CategoryExpenses({
     expenses: CategoryExpenseListItem[];
     color: string;
 }) {
+    const t = useTranslations("category.expenses");
+    const locale = useLocale();
+    const categoryName = useCategoryName();
     return (
         <section>
             <h2 className="mb-3 text-sm font-semibold">
-                <span className="sm:hidden">Expenses</span>
-                <span className="hidden sm:inline">
-                    Expenses in this category
-                </span>
+                <span className="sm:hidden">{t("titleShort")}</span>
+                <span className="hidden sm:inline">{t("title")}</span>
             </h2>
 
             {expenses.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
-                    No expenses in this category this month.
+                    {t("empty")}
                 </p>
             ) : (
                 <ul className="divide-y rounded-lg border">
@@ -42,13 +45,13 @@ export function CategoryExpenses({
                                         className="mt-0.5 block truncate text-xs font-medium"
                                         style={{ color }}
                                     >
-                                        {e.subcategory.name}
+                                        {categoryName(e.subcategory.name)}
                                     </span>
                                 )}
                             </span>
 
                             <span className="hidden whitespace-nowrap text-xs text-muted-foreground sm:block">
-                                {formatExpenseDate(e.date, "es")}
+                                {formatExpenseDate(e.date, locale)}
                                 {e.card ? ` · ${e.card.name}` : ""}
                             </span>
 
@@ -58,8 +61,11 @@ export function CategoryExpenses({
                                 </span>
                                 {e.isShared && (
                                     <span className="block text-xs text-positive">
-                                        my share{" "}
-                                        {formatMxn(e.actualExpenditure)}
+                                        {t("myShare", {
+                                            amount: formatMxn(
+                                                e.actualExpenditure,
+                                            ),
+                                        })}
                                     </span>
                                 )}
                             </span>

@@ -1,1 +1,54 @@
-{}
+{
+    "nonIncomeLabel": "No salió del ingreso de este mes",
+    "header": {
+        "back": "Regresar",
+        "overBy": "excedido por {amount}",
+        "left": "quedan {amount}"
+    },
+    "stats": {
+        "spentMyShare": "Gastado (mi parte)",
+        "monthlyLimit": "Límite mensual",
+        "noLimit": "Sin límite",
+        "remaining": "Restante",
+        "pctOfLimit": "{pct}% del límite",
+        "progress": "{daysLeft, plural, one {queda # día} other {quedan # días}} · {expenseCount, plural, one {# gasto} other {# gastos}} en {subcatCount, plural, one {# subcategoría} other {# subcategorías}}",
+        "overYourLimit": "{amount} por encima de tu límite de {limit}",
+        "leftOfYourLimit": "Te quedan {amount} de tu límite de {limit}",
+        "noLimitSet": "Sin límite definido",
+        "nonIncome": "{label}: {amount} — en la lista de abajo, fuera del presupuesto."
+    },
+    "limitEditor": {
+        "editLimit": "Editar límite",
+        "title": "Límite mensual · {category}",
+        "thisMonth": "Este mes ({month})",
+        "noLimitPlaceholder": "Sin límite",
+        "blankHint": "Déjalo vacío para usar el predeterminado.",
+        "defaultLabel": "Predeterminado (otros meses)",
+        "reset": "Volver al predeterminado",
+        "saving": "Guardando…"
+    },
+    "breakdown": {
+        "title": "Gasto por subcategoría",
+        "subtitle": "a dónde se fue el dinero en realidad",
+        "scope": "Los montos y % de abajo solo cubren el gasto del ingreso de este mes.",
+        "emptyFiltered": "No hay gasto del ingreso de este mes. Revisa \"{label}\" arriba.",
+        "empty": "No hay gasto en esta categoría este mes.",
+        "zeroFiltered": "Sin gasto del ingreso de este mes en:",
+        "zeroItem": "{name} — $0"
+    },
+    "expenses": {
+        "titleShort": "Gastos",
+        "title": "Gastos en esta categoría",
+        "empty": "No hay gastos en esta categoría este mes.",
+        "myShare": "mi parte {amount}"
+    },
+    "actions": {
+        "invalid": "Límite no válido",
+        "unauthenticated": "No has iniciado sesión",
+        "notFound": "No se encontró la categoría",
+        "dbError": "No se pudo guardar el límite. Inténtalo de nuevo.",
+        "categoryRequired": "La categoría es obligatoria",
+        "invalidMonth": "Mes no válido",
+        "amountPositive": "El monto debe ser mayor que 0"
+    }
+}

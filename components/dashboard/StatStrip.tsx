@@ -1,4 +1,5 @@
-import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
+import { useTranslations } from "next-intl";
+
 import { computeFeedTotals, nonIncomeFundedRows } from "@/lib/domain/movement";
 import { formatMxn } from "@/lib/format";
 import {
@@ -27,27 +28,30 @@ export function StatStrip({
     /** The month's rows, for the spend the budget skipped (spec 0007 §3.1). */
     expenses: FundedExpense[];
 }) {
+    const t = useTranslations("dashboard.stats");
     // The same figure and split the rail shows, so the two cannot disagree.
     const { notFromIncome } = computeFeedTotals(expenses);
     return (
         <div>
             <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4">
-                <Stat label="Income in" value={formatMxn(income)} />
-                <Stat label="Spent (my share)" value={formatMxn(spent)} />
+                <Stat label={t("incomeIn")} value={formatMxn(income)} />
+                <Stat label={t("spentMyShare")} value={formatMxn(spent)} />
                 <Stat
-                    label="Net so far"
+                    label={t("netSoFar")}
                     value={`${net >= 0 ? "+" : "−"}${formatMxn(Math.abs(net))}`}
                     valueClass={net >= 0 ? "text-positive" : "text-danger"}
                 />
                 <Stat
-                    label={`Daily avg · ${daysLeft} left`}
+                    label={t("dailyAvg", { daysLeft })}
                     value={formatMxn(dailyAvg)}
                 />
             </div>
             {notFromIncome.amount > 0 ? (
                 <div className="mt-2 text-xs text-muted-foreground">
                     <p>
-                        {`${NON_INCOME_FUNDED_LABEL}: ${formatMxn(notFromIncome.amount)} — outside the budget.`}
+                        {t("notFromIncome", {
+                            amount: formatMxn(notFromIncome.amount),
+                        })}
                     </p>
                     <FundingSplit
                         fromSavings={notFromIncome.fromSavings.amount}

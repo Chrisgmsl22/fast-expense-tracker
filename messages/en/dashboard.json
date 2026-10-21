@@ -1,1 +1,61 @@
-{}
+{
+    "topbar": {
+        "totalIncome": "Total income",
+        "myView": "My view · {percent}%"
+    },
+    "incomeNudge": {
+        "title": "Set your monthly income",
+        "body": "Your budget targets are worked out from it."
+    },
+    "buckets": {
+        "savingsShort": "Savings/Inv",
+        "ofTarget": "of {target}",
+        "goalMet": "goal met",
+        "toGo": "{amount} to go",
+        "over": "{amount} over",
+        "left": "{amount} left",
+        "progressLabel": "{bucket} spend"
+    },
+    "savingsSpend": {
+        "title": "Spent from savings",
+        "caption": "Outside this month's income",
+        "ownPurchases": "Your purchases",
+        "paidToPartner": "Paid to {partner}",
+        "viewBreakdown": "View breakdown"
+    },
+    "radar": {
+        "title": "Where the money went",
+        "subtitle": "Bigger shape = more spent in that area",
+        "empty": "No spending to chart this month."
+    },
+    "spendByCard": {
+        "title": "Spend by card",
+        "empty": "No card spend this month."
+    },
+    "stats": {
+        "incomeIn": "Income in",
+        "spentMyShare": "Spent (my share)",
+        "netSoFar": "Net so far",
+        "dailyAvg": "Daily avg · {daysLeft} left",
+        "notFromIncome": "Not from this month's income: {amount} — outside the budget."
+    },
+    "categories": {
+        "title": "Categories",
+        "subtitle": "each has its own limit",
+        "empty": "No category spend this month yet.",
+        "noLimit": "no limit",
+        "overBy": "over by {amount}",
+        "maxed": "limit {limit} · maxed",
+        "limitLeft": "limit {limit} · {remaining} left",
+        "subcats": "{withSpend} of {total} subcats"
+    },
+    "feed": {
+        "title": "All activity · {month}",
+        "entries": "{count, plural, one {# entry} other {# entries}}",
+        "scroll": "scroll",
+        "empty": "Nothing logged this month yet.",
+        "setAside": "set aside",
+        "share": "share {amount}",
+        "solo": "solo"
+    }
+}

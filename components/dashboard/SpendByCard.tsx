@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { formatMxn } from "@/lib/format";
 import type { CardSpend } from "@/lib/repositories/dashboard.repository";
 
@@ -8,14 +10,15 @@ import type { CardSpend } from "@/lib/repositories/dashboard.repository";
  * dashboard service.
  */
 export function SpendByCard({ cards }: { cards: CardSpend[] }) {
+    const t = useTranslations("dashboard.spendByCard");
     const total = cards.reduce((sum, c) => sum + c.spent, 0);
 
     return (
         <div className="rounded-lg border p-4">
-            <p className="text-sm font-medium">Spend by card</p>
+            <p className="text-sm font-medium">{t("title")}</p>
             {total === 0 ? (
                 <p className="mt-4 text-sm text-muted-foreground">
-                    No card spend this month.
+                    {t("empty")}
                 </p>
             ) : (
                 <>
