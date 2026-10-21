@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { PasswordInput } from "@/components/auth/PasswordInput";
 
@@ -12,7 +13,7 @@ function renderInForm(props: { toggleSubject?: string } = {}) {
                 null,
         );
     });
-    render(
+    renderWithIntl(
         <form onSubmit={onSubmit}>
             <label htmlFor="pw">Password</label>
             <PasswordInput
@@ -108,7 +109,7 @@ describe("PasswordInput", () => {
         const form = externalForm("outside");
         const add = vi.spyOn(form, "addEventListener");
         const remove = vi.spyOn(form, "removeEventListener");
-        const { unmount } = render(
+        const { unmount } = renderWithIntl(
             <PasswordInput aria-label="Password" form="outside" />,
         );
         const added = add.mock.calls.find(([type]) => type === "submit");
@@ -124,7 +125,7 @@ describe("PasswordInput", () => {
     it("Should follow the input to another form when its form attribute changes", () => {
         const first = externalForm("first");
         const second = externalForm("second");
-        const { rerender } = render(
+        const { rerender } = renderWithIntl(
             <PasswordInput aria-label="Password" form="first" />,
         );
         const input = screen.getByLabelText("Password");

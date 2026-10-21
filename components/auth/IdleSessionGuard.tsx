@@ -3,6 +3,7 @@
 import { useEffect, useEffectEvent, useState, type ReactNode } from "react";
 import { getSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { renewIdleSessionAction } from "@/app/_actions/auth/renew-idle-session";
 import { EXPIRED_LOGIN_PATH } from "@/lib/auth/idle-session";
 import { watchIdleSession } from "@/lib/auth/idle-session-client";
@@ -19,6 +20,7 @@ export function IdleSessionGuard({
     idleSessionId?: string;
     children?: ReactNode;
 }) {
+    const t = useTranslations("auth.sessionExpired");
     const router = useRouter();
     const [generation, restart] = useState(0);
     const [expired, setExpired] = useState(false);
@@ -88,7 +90,7 @@ export function IdleSessionGuard({
                         href={EXPIRED_LOGIN_PATH}
                         className="text-sm font-medium underline underline-offset-4"
                     >
-                        Log in
+                        {t("loginLink")}
                     </a>
                 </div>
             </main>

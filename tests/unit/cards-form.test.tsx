@@ -11,6 +11,8 @@ vi.mock("@/app/_actions/card/restore", () => ({ restoreCard: vi.fn() }));
 
 import { CardsForm } from "@/components/settings/CardsForm";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
+import { MESSAGES } from "@/i18n/messages";
+import { CARD_PALETTE } from "@/lib/palette";
 import type { CardSettingsItem } from "@/lib/repositories/card.repository";
 import { addCard } from "@/app/_actions/card/add";
 import { updateCard } from "@/app/_actions/card/update";
@@ -550,4 +552,110 @@ describe("CardsForm", () => {
             ),
         );
     });
+});
+
+describe("CardsForm in Spanish", () => {
+    it("Should render rows, types and the locked Cash card in Spanish", () => {
+        renderWithIntl(
+            <CardsForm
+                cards={[
+                    card({ id: "c1", name: "NU" }),
+                    card({ id: "c2", name: "BBVA", type: "debit" }),
+                    card({
+                        id: "cash",
+                        name: "Cash",
+                        type: "cash",
+                        color: "#16a34a",
+                    }),
+                    card({
+                        id: "old",
+                        name: "Old",
+                        archivedAt: new Date("2026-01-01"),
+                    }),
+                ]}
+            />,
+            { locale: "es" },
+        );
+        const section = screen.getByRole("region", { name: "Tarjetas" });
+        expect(within(section).getAllByText("Crédito")).toHaveLength(2);
+        expect(within(section).getByText("Débito")).toBeDefined();
+        expect(within(section).getByText("Efectivo")).toBeDefined();
+        expect(within(section).getByText("bloqueada")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Editar NU" })).toBeDefined();
+        expect(screen.getByText("Archivadas")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Restaurar Old" }),
+        ).toBeDefined();
+    });
+
+    it("Should render the add form and swatch names in Spanish", () => {
+        renderWithIntl(<CardsForm cards={[]} />, { locale: "es" });
+        expect(
+            screen.getByText("Aún no tienes tarjetas. Agrega la primera."),
+        ).toBeDefined();
+        fireEvent.click(
+            screen.getByRole("button", { name: "Agregar tarjeta" }),
+        );
+        const form = screen.getByRole("form", { name: "Agregar tarjeta" });
+        expect(
+            within(form).getByLabelText("Nombre de la tarjeta"),
+        ).toBeDefined();
+        expect(
+            within(form).getByRole("combobox", { name: "Tipo de tarjeta" }),
+        ).toBeDefined();
+        const swatches = within(form).getByRole("group", {
+            name: "Muestras de color",
+        });
+        expect(
+            within(swatches).getByRole("button", { name: "Pizarra" }),
+        ).toBeDefined();
+        expect(
+            within(form).getByRole("button", { name: "Cancelar" }),
+        ).toBeDefined();
+    });
+
+    it("Should confirm a delete in Spanish", () => {
+        renderWithIntl(<CardsForm cards={[card({ id: "c1", name: "NU" })]} />, {
+            locale: "es",
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Editar NU" }));
+        fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
+        expect(
+            screen.getByRole("dialog", { name: "¿Eliminar NU?" }),
+        ).toBeDefined();
+        expect(screen.getByText("Esto no se puede deshacer.")).toBeDefined();
+    });
+
+    it("Should show the card cap in Spanish", () => {
+        const cards = Array.from({ length: MAX_ACTIVE_CARDS }, (_, i) =>
+            card({ id: `c${i}`, name: `Card ${i}` }),
+        );
+        renderWithIntl(<CardsForm cards={cards} />, { locale: "es" });
+        expect(
+            screen.getByText(
+                `Llegaste al límite de ${MAX_ACTIVE_CARDS} tarjetas. Archiva una para agregar otra.`,
+            ),
+        ).toBeDefined();
+    });
+});
+
+describe("CardsForm labels", () => {
+    it("Should show an unknown card type as stored", () => {
+        renderWithIntl(
+            <CardsForm cards={[card({ id: "c1", type: "prepaid" })]} />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("prepaid")).toBeDefined();
+    });
+
+    it.each(["en", "es"] as const)(
+        "Should have a %s name for every palette swatch",
+        (locale) => {
+            const names: Record<string, string> =
+                MESSAGES[locale].settings.cards.swatches;
+            for (const swatch of CARD_PALETTE) {
+                expect(Object.hasOwn(names, swatch.name)).toBe(true);
+            }
+        },
+    );
 });

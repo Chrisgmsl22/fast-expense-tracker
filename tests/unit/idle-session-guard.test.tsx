@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 import { IDLE_TIMEOUT_MS } from "@/lib/auth/idle-session";
 
 const { getSession, signOut, replace, refresh, renew } = vi.hoisted(() => ({
@@ -28,7 +29,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 it("Should sign out and show the expiry notice when the deadline passes", async () => {
-    render(
+    renderWithIntl(
         <IdleSessionGuard
             idleExpiresAt={NOW + IDLE_TIMEOUT_MS}
             idleSessionId="invented-session"
@@ -44,7 +45,7 @@ it("Should preserve a newer login when expiry work finishes late", async () => {
         idleSessionId: "new-session",
         idleExpiresAt: NOW + IDLE_TIMEOUT_MS * 2,
     });
-    render(
+    renderWithIntl(
         <IdleSessionGuard
             idleExpiresAt={NOW + IDLE_TIMEOUT_MS}
             idleSessionId="old-session"
@@ -61,7 +62,7 @@ it("Should retain the throttle when a server action updates the layout deadline"
         idleSessionId: "invented-session",
         idleExpiresAt: Date.now() - idleForMs + IDLE_TIMEOUT_MS,
     }));
-    const view = render(
+    const view = renderWithIntl(
         <IdleSessionGuard
             idleExpiresAt={NOW + IDLE_TIMEOUT_MS}
             idleSessionId="invented-session"
@@ -85,7 +86,7 @@ it("Should reach login when the final session check never resolves", async () =>
     getSession
         .mockResolvedValueOnce(null)
         .mockReturnValue(new Promise(() => {}));
-    render(
+    renderWithIntl(
         <IdleSessionGuard
             idleExpiresAt={NOW + IDLE_TIMEOUT_MS}
             idleSessionId="invented-session"
@@ -103,7 +104,7 @@ it("Should reach login when sign-out never resolves", async () => {
             completeSignOut = resolve;
         }),
     );
-    render(
+    renderWithIntl(
         <IdleSessionGuard
             idleExpiresAt={NOW + IDLE_TIMEOUT_MS}
             idleSessionId="invented-session"
@@ -122,7 +123,7 @@ it("Should reach login when another tab holds the cookie lock indefinitely", asy
         value: { request: () => new Promise(() => {}) },
     });
     try {
-        render(
+        renderWithIntl(
             <IdleSessionGuard
                 idleExpiresAt={NOW + IDLE_TIMEOUT_MS}
                 idleSessionId="invented-session"
@@ -139,7 +140,7 @@ it("Should reach login when another tab holds the cookie lock indefinitely", asy
 it("Should replace protected content locally when session and login requests stall", async () => {
     getSession.mockReturnValue(new Promise(() => {}));
     replace.mockImplementation(() => new Promise(() => {}));
-    render(
+    renderWithIntl(
         <IdleSessionGuard
             idleExpiresAt={NOW + IDLE_TIMEOUT_MS}
             idleSessionId="invented-session"
@@ -167,7 +168,7 @@ it("Should retain protected content when the final check finds a newer login", a
         idleSessionId: "new-session",
         idleExpiresAt: NOW + IDLE_TIMEOUT_MS * 2,
     });
-    render(
+    renderWithIntl(
         <IdleSessionGuard
             idleExpiresAt={NOW + IDLE_TIMEOUT_MS}
             idleSessionId="old-session"
@@ -179,4 +180,23 @@ it("Should retain protected content when the final check finds a newer login", a
     expect(screen.getByText("Private account content")).toBeDefined();
     expect(screen.queryByRole("status")).toBeNull();
     expect(signOut).not.toHaveBeenCalled();
+});
+
+it("Should show the expiry notice and login link in Spanish", async () => {
+    renderWithIntl(
+        <IdleSessionGuard
+            idleExpiresAt={NOW + IDLE_TIMEOUT_MS}
+            idleSessionId="invented-session"
+        />,
+        { locale: "es" },
+    );
+    await act(() => vi.advanceTimersByTimeAsync(IDLE_TIMEOUT_MS));
+    expect(screen.getByRole("status").textContent).toBe(
+        "Tu sesión expiró. Vuelve a iniciar sesión.",
+    );
+    expect(
+        screen
+            .getByRole("link", { name: "Iniciar sesión" })
+            .getAttribute("href"),
+    ).toBe("/login?reason=session-expired");
 });

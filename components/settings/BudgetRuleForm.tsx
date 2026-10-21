@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,6 @@ import {
 import type { FieldErrors } from "@/lib/actions/result";
 import type { BucketKey } from "@/lib/domain/dashboard";
 import { DEFAULT_BUDGET_RULE, type BudgetRule } from "@/lib/domain/budget-rule";
-// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatMonthLabel } from "@/lib/format";
 import type { BudgetRuleInput } from "@/lib/schemas/budget-rule";
 
@@ -33,18 +33,10 @@ type Props = {
 
 type Draft = Record<BucketKey, string>;
 
-const FIELDS: { key: BucketKey; label: string; border: string }[] = [
-    {
-        key: "essentials",
-        label: "Essentials",
-        border: "border-t-bucket-essentials",
-    },
-    {
-        key: "discretionary",
-        label: "Discretionary",
-        border: "border-t-bucket-discretionary",
-    },
-    { key: "savings", label: "Savings/Inv", border: "border-t-bucket-savings" },
+const FIELDS: { key: BucketKey; border: string }[] = [
+    { key: "essentials", border: "border-t-bucket-essentials" },
+    { key: "discretionary", border: "border-t-bucket-discretionary" },
+    { key: "savings", border: "border-t-bucket-savings" },
 ];
 
 function toDraft(rule: BudgetRule): Draft {
@@ -55,14 +47,10 @@ function toDraft(rule: BudgetRule): Draft {
     };
 }
 
-function totalLine(total: number): string {
-    if (total === 100) return "Total 100%";
-    return total < 100
-        ? `Total ${total}% · ${100 - total}% left to assign`
-        : `Total ${total}% · ${total - 100}% over 100%`;
-}
-
 export function BudgetRuleForm({ rule, monthLabel }: Props) {
+    const t = useTranslations("settings");
+    const tc = useTranslations("common");
+    const locale = useLocale();
     const router = useRouter();
     const [draft, setDraft] = useState<Draft>(() => toDraft(rule));
     // The action picks the month from its own clock; show that one after a save.
@@ -118,7 +106,7 @@ export function BudgetRuleForm({ rule, monthLabel }: Props) {
                         rule: res.data.rule,
                         monthLabel: formatMonthLabel(
                             res.data.effectiveMonth,
-                            "en",
+                            locale,
                         ),
                     });
                     setSaved(true);
@@ -134,37 +122,49 @@ export function BudgetRuleForm({ rule, monthLabel }: Props) {
                 }
             } catch {
                 setSaved(false);
-                setFormError("Something went wrong saving your budget rule.");
+                setFormError(t("budget.unexpectedError"));
             }
         });
     }
 
+    const fieldLabel = (key: BucketKey) =>
+        key === "savings" ? t("budget.savingsField") : tc(`buckets.${key}`);
+
+    const totalLine =
+        total === 100
+            ? t("budget.totalExact")
+            : total < 100
+              ? t("budget.totalUnder", { total, left: 100 - total })
+              : t("budget.totalOver", { total, over: total - 100 });
+
     return (
         <form
             onSubmit={handleSubmit}
-            aria-label="Budget rule"
+            aria-label={t("budget.title")}
             className="rounded-xl border p-5"
         >
             <div className="flex items-baseline justify-between gap-3">
-                <h2 className="font-semibold">Budget rule</h2>
+                <h2 className="font-semibold">{t("budget.title")}</h2>
                 <span className="text-xs text-muted-foreground">
-                    In force for {inForce.monthLabel}: {inForce.rule.essentials}{" "}
-                    / {inForce.rule.discretionary} / {inForce.rule.savings}
+                    {t("budget.inForce", {
+                        month: inForce.monthLabel,
+                        ...inForce.rule,
+                    })}
                 </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-                How your income splits across the three buckets. The three must
-                total 100%. A change applies from {inForce.monthLabel} onward;
-                past months keep the split they had.
+                {t("budget.description", { month: inForce.monthLabel })}
             </p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {FIELDS.map(({ key, label, border }) => (
+                {FIELDS.map(({ key, border }) => (
                     <div
                         key={key}
                         className={`rounded-lg border border-t-4 ${border} p-3`}
                     >
-                        <Label htmlFor={`budget-${key}`}>{label} (%)</Label>
+                        <Label htmlFor={`budget-${key}`}>
+                            {t("budget.fieldLabel", { label: fieldLabel(key) })}
+                        </Label>
                         <Input
                             id={`budget-${key}`}
                             name={key}
@@ -199,7 +199,7 @@ export function BudgetRuleForm({ rule, monthLabel }: Props) {
                 className={`mt-3 text-sm tabular-nums ${total === 100 ? "text-muted-foreground" : "text-destructive"}`}
                 aria-live="polite"
             >
-                {totalLine(total)}
+                {totalLine}
             </p>
 
             {formError && (
@@ -217,9 +217,7 @@ export function BudgetRuleForm({ rule, monthLabel }: Props) {
                         edit(toDraft(DEFAULT_BUDGET_RULE));
                     }}
                 >
-                    Reset to {DEFAULT_BUDGET_RULE.essentials}/
-                    {DEFAULT_BUDGET_RULE.discretionary}/
-                    {DEFAULT_BUDGET_RULE.savings}
+                    {t("budget.reset", { ...DEFAULT_BUDGET_RULE })}
                 </Button>
                 <Button
                     type="submit"
@@ -232,12 +230,12 @@ export function BudgetRuleForm({ rule, monthLabel }: Props) {
                     {saved && !pending ? (
                         <>
                             <Check className="size-4" aria-hidden="true" />
-                            Saved
+                            {t("saveButton.saved")}
                         </>
                     ) : pending ? (
-                        "Saving…"
+                        t("saveButton.saving")
                     ) : (
-                        "Save changes"
+                        t("saveButton.save")
                     )}
                 </Button>
             </div>

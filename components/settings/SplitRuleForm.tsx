@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -42,6 +43,7 @@ export function SplitRuleForm({
     partnerName,
     defaultSharePercentage,
 }: Props) {
+    const t = useTranslations("settings");
     const router = useRouter();
     const [shares, setShares] = useState(sharesExpenses);
     const [name, setName] = useState(partnerName ?? "");
@@ -104,7 +106,7 @@ export function SplitRuleForm({
                 }
             } catch {
                 setSaved(false);
-                setFormError("Something went wrong saving your settings.");
+                setFormError(t("split.unexpectedError"));
             }
         });
     }
@@ -125,19 +127,17 @@ export function SplitRuleForm({
     return (
         <form
             onSubmit={handleSubmit}
-            aria-label="Expense split rule"
+            aria-label={t("split.title")}
             className="rounded-xl border p-5"
         >
             <div className="flex items-baseline justify-between gap-3">
-                <h2 className="font-semibold">Expense split rule</h2>
+                <h2 className="font-semibold">{t("split.title")}</h2>
                 <span className="text-xs text-muted-foreground">
-                    applies to shared expenses
+                    {t("split.appliesTo")}
                 </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-                Turn this on if you split expenses with a partner. It reveals
-                the split controls across the app; leave it off for a plain
-                tracker.
+                {t("split.description")}
             </p>
 
             <div className="mt-4 flex items-center gap-3">
@@ -150,14 +150,16 @@ export function SplitRuleForm({
                     }}
                 />
                 <Label htmlFor="shares-toggle" className="text-sm font-medium">
-                    I share expenses
+                    {t("split.sharesToggle")}
                 </Label>
             </div>
 
             {shares && (
                 <div className="mt-5 space-y-5 border-t pt-5">
                     <div>
-                        <Label htmlFor="partner-name">Partner name</Label>
+                        <Label htmlFor="partner-name">
+                            {t("split.partnerName")}
+                        </Label>
                         <Input
                             id="partner-name"
                             name="partnerName"
@@ -167,7 +169,7 @@ export function SplitRuleForm({
                                 setName(e.target.value);
                                 resetSaved();
                             }}
-                            placeholder="e.g. Alex"
+                            placeholder={t("split.partnerPlaceholder")}
                             aria-invalid={Boolean(errors.partnerName)}
                             aria-describedby={
                                 errors.partnerName
@@ -181,7 +183,9 @@ export function SplitRuleForm({
 
                     <div>
                         <div className="flex items-baseline justify-between">
-                            <Label htmlFor="share-percentage">Your share</Label>
+                            <Label htmlFor="share-percentage">
+                                {t("split.yourShare")}
+                            </Label>
                             <span className="text-sm font-semibold tabular-nums">
                                 {yourShare}%
                             </span>
@@ -215,14 +219,20 @@ export function SplitRuleForm({
                                 className="flex items-center justify-center bg-foreground text-background"
                                 style={{ width: `${yourShare}%` }}
                             >
-                                {yourShare >= 12 ? `You ${yourShare}%` : ""}
+                                {yourShare >= 12
+                                    ? t("split.previewYou", {
+                                          percent: yourShare,
+                                      })
+                                    : ""}
                             </div>
                             <div
                                 className="flex items-center justify-center bg-muted text-muted-foreground"
                                 style={{ width: `${partnerShare}%` }}
                             >
                                 {partnerShare >= 12
-                                    ? `Partner ${partnerShare}%`
+                                    ? t("split.previewPartner", {
+                                          percent: partnerShare,
+                                      })
                                     : ""}
                             </div>
                         </div>
@@ -248,12 +258,12 @@ export function SplitRuleForm({
                     {saved && !pending ? (
                         <>
                             <Check className="size-4" aria-hidden="true" />
-                            Saved
+                            {t("saveButton.saved")}
                         </>
                     ) : pending ? (
-                        "Saving…"
+                        t("saveButton.saving")
                     ) : (
-                        "Save changes"
+                        t("saveButton.save")
                     )}
                 </Button>
             </div>

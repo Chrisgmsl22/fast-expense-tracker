@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { PasswordChecklist } from "@/components/auth/PasswordChecklist";
 
@@ -20,7 +21,7 @@ function itemStates() {
 
 describe("PasswordChecklist", () => {
     it("Should show nothing but an empty live region before typing", () => {
-        const { container } = render(<PasswordChecklist password="" />);
+        const { container } = renderWithIntl(<PasswordChecklist password="" />);
 
         expect(screen.queryByRole("list")).toBeNull();
         const region = strengthRegion(container);
@@ -29,7 +30,7 @@ describe("PasswordChecklist", () => {
     });
 
     it("Should state each rule as met or not met in text", () => {
-        render(<PasswordChecklist password="abc" />);
+        renderWithIntl(<PasswordChecklist password="abc" />);
 
         expect(itemStates()).toEqual([
             "At least 8 characters (not met)",
@@ -41,7 +42,7 @@ describe("PasswordChecklist", () => {
     });
 
     it("Should tick every rule for a password meeting all five", () => {
-        render(<PasswordChecklist password="Invented-pass-123" />);
+        renderWithIntl(<PasswordChecklist password="Invented-pass-123" />);
 
         expect(itemStates().every((text) => text?.endsWith("(met)"))).toBe(
             true,
@@ -49,7 +50,7 @@ describe("PasswordChecklist", () => {
     });
 
     it("Should colour a met rule's icon green but keep its text readable on the white panel", () => {
-        render(<PasswordChecklist password="abc" />);
+        renderWithIntl(<PasswordChecklist password="abc" />);
 
         const met = screen.getByText("One lowercase letter").closest("li");
         if (!met) throw new Error("No met item");
@@ -65,7 +66,7 @@ describe("PasswordChecklist", () => {
     });
 
     it("Should not list the length limit for a strong password", () => {
-        render(<PasswordChecklist password="Invented-pass-123" />);
+        renderWithIntl(<PasswordChecklist password="Invented-pass-123" />);
 
         expect(itemStates()).toHaveLength(5);
         expect(screen.queryByText(LIMIT_LABEL)).toBeNull();
@@ -77,7 +78,7 @@ describe("PasswordChecklist", () => {
     ])(
         "Should rate a password of %s as fair and list the limit as not met",
         (_, password) => {
-            const { container } = render(
+            const { container } = renderWithIntl(
                 <PasswordChecklist password={password} />,
             );
 
@@ -94,14 +95,14 @@ describe("PasswordChecklist", () => {
     );
 
     it("Should not list the length limit while a rule is still unmet", () => {
-        render(<PasswordChecklist password={"a".repeat(100)} />);
+        renderWithIntl(<PasswordChecklist password={"a".repeat(100)} />);
 
         expect(itemStates()).toHaveLength(5);
         expect(screen.queryByText(LIMIT_LABEL)).toBeNull();
     });
 
     it("Should never colour an unmet rule red", () => {
-        render(<PasswordChecklist password="a" />);
+        renderWithIntl(<PasswordChecklist password="a" />);
 
         const list = screen.getByRole("list", {
             name: "Password requirements",
@@ -116,7 +117,9 @@ describe("PasswordChecklist", () => {
         ["aA1!", "Fair"],
         ["Invented-pass-123", "Strong"],
     ])("Should rate %j as %s", (password, label) => {
-        const { container } = render(<PasswordChecklist password={password} />);
+        const { container } = renderWithIntl(
+            <PasswordChecklist password={password} />,
+        );
 
         expect(strengthRegion(container).textContent).toBe(
             `Password strength: ${label}`,
@@ -124,7 +127,7 @@ describe("PasswordChecklist", () => {
     });
 
     it("Should keep the announcement unchanged while the level holds", () => {
-        const { container, rerender } = render(
+        const { container, rerender } = renderWithIntl(
             <PasswordChecklist password="aA1" />,
         );
         const region = strengthRegion(container);
@@ -138,5 +141,45 @@ describe("PasswordChecklist", () => {
         rerender(<PasswordChecklist password="Invented-pass-123" />);
 
         expect(region.textContent).toBe("Password strength: Strong");
+    });
+});
+
+describe("PasswordChecklist in Spanish", () => {
+    it("Should render the strength, rules and states in Spanish", () => {
+        const { container } = renderWithIntl(
+            <PasswordChecklist password="abc" />,
+            { locale: "es" },
+        );
+        expect(strengthRegion(container).textContent).toBe(
+            "Seguridad de la contraseña: Débil",
+        );
+        const list = screen.getByRole("list", {
+            name: "Requisitos de la contraseña",
+        });
+        expect(
+            within(list)
+                .getAllByRole("listitem")
+                .map((item) => item.textContent),
+        ).toEqual([
+            "Al menos 8 caracteres (pendiente)",
+            "Una letra mayúscula (pendiente)",
+            "Una letra minúscula (cumplido)",
+            "Un número (pendiente)",
+            "Un carácter especial, como ! o # (pendiente)",
+        ]);
+    });
+
+    it("Should show the length limit in Spanish once it is the only problem", () => {
+        renderWithIntl(
+            <PasswordChecklist password={`Aa1!${"a".repeat(80)}`} />,
+            {
+                locale: "es",
+            },
+        );
+        expect(
+            screen.getByText(
+                "72 caracteres o menos (los acentos y emojis cuentan doble o más)",
+            ),
+        ).toBeDefined();
     });
 });
