@@ -1,6 +1,7 @@
 "use client";
 
 import { Info } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -10,39 +11,16 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-/** One "situation → what to log" row in the cheat-sheet. */
-const operationsFor = (
-    partnerName: string,
-): { when: string; then: string }[] => [
-    {
-        when: "You pay for something shared",
-        then: `Log it as a normal expense — ${partnerName}'s 32% is added to what she owes you automatically.`,
-    },
-    {
-        when: `${partnerName} sends you money / pays you back`,
-        then: `Add → "${partnerName} paid me" (or "Record payment" here). It lowers what she owes you — whatever you do with the money after is separate.`,
-    },
-    {
-        when: `${partnerName} paid for shared things`,
-        then: `"+ I owe ${partnerName}" here — your share. It raises what you owe her.`,
-    },
-    {
-        when: `You end up owing ${partnerName}, so you pay her`,
-        then: `"Record payment" here (it will say "I paid ${partnerName}").`,
-    },
-    {
-        when: "You pay off a credit card",
-        then: `Add → Card payment. It just records the payment — it doesn't touch the settlement balance.`,
-    },
-    {
-        when: `${partnerName} owes you money without a shared expense`,
-        then: `"+ ${partnerName} owes me" records the full debt. It adds no expense, income, or payment.`,
-    },
-    {
-        when: "The balance is zero",
-        then: "Both debt actions remain available. Record payment appears only when a balance remains.",
-    },
-];
+/** Each "situation → what to log" row in the cheat-sheet, in reading order. */
+const OPERATIONS = [
+    { when: "sharedWhen", then: "sharedThen" },
+    { when: "paidBackWhen", then: "paidBackThen" },
+    { when: "frontedWhen", then: "frontedThen" },
+    { when: "payHerWhen", then: "payHerThen" },
+    { when: "cardWhen", then: "cardThen" },
+    { when: "owesWhen", then: "owesThen" },
+    { when: "zeroWhen", then: "zeroThen" },
+] as const;
 
 /**
  * A small info button on the settlement header opening a cheat-sheet of the
@@ -50,7 +28,8 @@ const operationsFor = (
  * the flows are easy to recall.
  */
 export function SettlementHelp({ partnerName }: { partnerName: string }) {
-    const operations = operationsFor(partnerName);
+    const t = useTranslations("settlement.help");
+    const values = { partner: partnerName };
     return (
         <Dialog>
             <DialogTrigger
@@ -58,7 +37,7 @@ export function SettlementHelp({ partnerName }: { partnerName: string }) {
                     <Button
                         variant="ghost"
                         size="icon-sm"
-                        aria-label="How to use settlement"
+                        aria-label={t("trigger")}
                     >
                         <Info className="size-4" />
                     </Button>
@@ -66,15 +45,17 @@ export function SettlementHelp({ partnerName }: { partnerName: string }) {
             />
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Common operations</DialogTitle>
+                    <DialogTitle>{t("title")}</DialogTitle>
                 </DialogHeader>
                 <ul className="flex flex-col gap-3 text-sm">
-                    {operations.map((op) => (
+                    {OPERATIONS.map((op) => (
                         <li key={op.when}>
                             <p className="font-medium text-foreground">
-                                {op.when}
+                                {t(`ops.${op.when}`, values)}
                             </p>
-                            <p className="text-muted-foreground">{op.then}</p>
+                            <p className="text-muted-foreground">
+                                {t(`ops.${op.then}`, values)}
+                            </p>
                         </li>
                     ))}
                 </ul>

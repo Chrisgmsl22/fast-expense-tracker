@@ -1,12 +1,7 @@
 import { ChevronRight } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
-import {
-    FROM_SAVINGS_LABEL,
-    REIMBURSED_LABEL,
-    REIMBURSED_NOTE,
-} from "@/lib/domain/funding";
 import type { FeedTotalExpense, NonIncomeSource } from "@/lib/domain/movement";
-// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -22,14 +17,6 @@ export type FundingRows = Record<NonIncomeSource, FundingRow[]>;
 /** An expense the totals can count and the split can list. */
 export type FundedExpense = FeedTotalExpense & FundingRow;
 
-const PART_COPY: Record<
-    NonIncomeSource,
-    { label: string; note: string | null }
-> = {
-    fromSavings: { label: FROM_SAVINGS_LABEL, note: null },
-    reimbursed: { label: REIMBURSED_LABEL, note: REIMBURSED_NOTE },
-};
-
 type PartProps = {
     source: NonIncomeSource;
     amount: number;
@@ -43,8 +30,11 @@ type PartProps = {
  * zero part is not drawn.
  */
 export function FundingPart({ source, amount, rows, className }: PartProps) {
+    const t = useTranslations("money.funding");
+    const locale = useLocale();
     if (amount <= 0) return null;
-    const { label, note } = PART_COPY[source];
+    const label = t(source);
+    const note = source === "reimbursed" ? t("reimbursedNote") : null;
     return (
         <details className={cn("group text-xs", className)}>
             <summary className="flex min-h-6 cursor-pointer list-none items-center gap-1.5 rounded-sm py-1 focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
@@ -64,7 +54,7 @@ export function FundingPart({ source, amount, rows, className }: PartProps) {
                 </span>
             </summary>
             <ul
-                aria-label={`${label} expenses`}
+                aria-label={t("expensesList", { label })}
                 className="mt-1 ml-1.5 space-y-1 border-l pl-3 text-muted-foreground"
             >
                 {rows.map((row) => (
@@ -73,7 +63,7 @@ export function FundingPart({ source, amount, rows, className }: PartProps) {
                             {row.description}
                         </span>
                         <span className="shrink-0">
-                            {formatExpenseDate(row.date, "es")}
+                            {formatExpenseDate(row.date, locale)}
                         </span>
                         <span className="shrink-0 tabular-nums">
                             {formatMxn(row.actualExpenditure)}

@@ -1,7 +1,8 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { movementRepository } from "@/lib/repositories";
@@ -10,6 +11,7 @@ import {
     partnerDebtInputSchema,
     type PartnerDebtInput,
 } from "@/lib/schemas/movement";
+import { translatedFieldErrors } from "./messages";
 
 /** Failure modes the caller can branch on. */
 export type AddPartnerDebtCode = "validation" | "unauthenticated" | "db_error";
@@ -29,13 +31,16 @@ export async function addPartnerDebt(
     input: unknown,
     repo: MovementRepository = movementRepository,
 ): Promise<AddPartnerDebtResult> {
+    const t = await getTranslations("movements.errors");
     const parsed = partnerDebtInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid debt",
-            fieldErrors: toFieldErrors<PartnerDebtInput>(parsed.error),
+            message: t("invalidDebt"),
+            fieldErrors: await translatedFieldErrors<PartnerDebtInput>(
+                parsed.error,
+            ),
         };
     }
 
@@ -45,7 +50,7 @@ export async function addPartnerDebt(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("unauthenticated"),
         };
     }
 
@@ -64,7 +69,7 @@ export async function addPartnerDebt(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the debt. Please try again.",
+            message: t("debtDbError"),
         };
     }
 }

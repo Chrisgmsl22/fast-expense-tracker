@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +19,6 @@ import {
 type CopyStatus = "idle" | "copied" | "failed";
 
 const COPIED_MS = 2000;
-const COPY_LABEL = "Copy settlement summary to clipboard";
 
 export function CopySettlementButton({
     journal,
@@ -29,6 +29,10 @@ export function CopySettlementButton({
     partnerName: string;
     scope: SettlementSummaryScope;
 }) {
+    const t = useTranslations("settlement");
+    const tm = useTranslations("movements");
+    const locale = useLocale();
+    const copyLabel = t("copy.label");
     const [status, setStatus] = useState<CopyStatus>("idle");
     // Bumped on every success, so a repeat copy restarts the timer and the
     // re-keyed live text is announced again.
@@ -50,7 +54,11 @@ export function CopySettlementButton({
         }
         try {
             await navigator.clipboard.writeText(
-                buildSettlementSummaryText(journal, partnerName, scope),
+                buildSettlementSummaryText(journal, partnerName, scope, {
+                    t,
+                    tm,
+                    locale,
+                }),
             );
             setStatus("copied");
             setCopies((n) => n + 1);
@@ -68,7 +76,7 @@ export function CopySettlementButton({
                             type="button"
                             variant="outline"
                             size="icon-sm"
-                            aria-label={COPY_LABEL}
+                            aria-label={copyLabel}
                             onClick={copy}
                             // An out-of-flow touch target of at least 40px (the
                             // inset counts from inside the 1px border: 26 + 16),
@@ -82,7 +90,7 @@ export function CopySettlementButton({
                 {/* While open, the portalled popup is text in the
                     accessibility tree. The aria-label already says it, so
                     hide the popup rather than announce it twice. */}
-                <TooltipContent aria-hidden="true">{COPY_LABEL}</TooltipContent>
+                <TooltipContent aria-hidden="true">{copyLabel}</TooltipContent>
             </Tooltip>
             {/* Out of flow, under the icon: both hosts right-align the button,
                 so text in the flow would push the icon sideways. */}
@@ -92,12 +100,12 @@ export function CopySettlementButton({
             >
                 {status === "copied" && (
                     <span key={copies} className="sr-only">
-                        Copied
+                        {t("copy.copied")}
                     </span>
                 )}
                 {status === "failed" && (
                     <span className="rounded bg-background px-1 text-xs text-destructive">
-                        Could not copy
+                        {t("copy.failed")}
                     </span>
                 )}
             </span>

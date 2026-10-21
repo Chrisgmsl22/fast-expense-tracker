@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import {
     Collapsible,
@@ -9,7 +10,6 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { TotalsBar } from "@/components/money/TotalsBar";
-// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type {
     ClosedCycleSummary,
@@ -19,16 +19,14 @@ import type {
 } from "@/lib/services/settlement/settlement.service";
 import { CopySettlementButton } from "./CopySettlementButton";
 import { SettlementJournal } from "./SettlementJournal";
+import type { SettlementTranslator } from "./balance-display";
 import type { MonthPosition } from "./month-position";
 
 type View = "open" | "month" | "history";
 
-/** "September 2026" → "Sep 2026". */
+/** "September 2026" → "Sep 2026"; "septiembre de 2026" → "sep 2026". */
 const shortMonthLabel = (label: string): string =>
-    label.replace(/^(\p{L}{3})\p{L}*/u, "$1");
-
-/** "4 items" / "1 item" — what the corner measures. */
-const itemCount = (n: number): string => `${n} ${n === 1 ? "item" : "items"}`;
+    label.replace(/^(\p{L}{3})\p{L}*(?: de)?/u, "$1");
 
 /**
  * The open cycle has no month, so its tab stays visible for every month.
@@ -49,12 +47,17 @@ export function SettlementViews({
     history: ClosedSettlementCycle[];
     partnerName: string;
 }) {
+    const t = useTranslations("settlement");
     // A phone shows the short labels so the copy button fits on the tablist
     // line; the full label stays the tab's accessible name.
     const tabs: { key: View; label: string; short: string }[] = [
-        { key: "open", label: "Open settlement", short: "Open" },
+        { key: "open", label: t("views.open"), short: t("views.openShort") },
         { key: "month", label: monthLabel, short: shortMonthLabel(monthLabel) },
-        { key: "history", label: "History", short: "History" },
+        {
+            key: "history",
+            label: t("views.history"),
+            short: t("views.history"),
+        },
     ];
     // Sets the tab only at mount; a later month change is a soft navigation
     // that keeps this component mounted, so the initialiser never re-runs
@@ -76,7 +79,7 @@ export function SettlementViews({
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div
                     role="tablist"
-                    aria-label="Settlement views"
+                    aria-label={t("views.tablist")}
                     className="flex shrink-0 gap-1 rounded-lg bg-muted p-0.5"
                 >
                     {tabs.map(({ key, label, short }) => (
@@ -115,8 +118,10 @@ export function SettlementViews({
                     <p className="flex min-w-0 grow justify-end text-xs text-muted-foreground">
                         <span className="shrink-0 font-medium text-foreground">
                             {view === "history"
-                                ? `${renderedCount} ${renderedCount === 1 ? "settlement" : "settlements"}`
-                                : itemCount(renderedCount)}
+                                ? t("views.settlements", {
+                                      count: renderedCount,
+                                  })
+                                : t("views.items", { count: renderedCount })}
                         </span>
                         {/* The descriptor names what a JOURNAL ROW can be, so it
                             belongs only beside a row count — History counts closed
@@ -126,7 +131,8 @@ export function SettlementViews({
                             <span className="hidden w-0 max-w-fit grow truncate sm:block">
                                 {/* Non-breaking: a plain space at the start
                                     of a truncated block collapses away. */}
-                                {" "}· shared expenses · debts · transfers
+                                {" "}
+                                {t("views.descriptor")}
                             </span>
                         )}
                     </p>
@@ -146,7 +152,7 @@ export function SettlementViews({
                         bare
                         journal={openJournal}
                         partnerName={partnerName}
-                        emptyMessage="This settlement is empty — nothing has been logged since the last close."
+                        emptyMessage={t("views.openEmpty")}
                     />
                 )}
                 {view === "month" && (
@@ -154,15 +160,21 @@ export function SettlementViews({
                         {monthPosition !== "current" && (
                             <p className="mb-3 text-xs text-muted-foreground">
                                 {monthPosition === "past"
-                                    ? `${monthLabel} has ended. This is what it held — the open settlement is on its own tab.`
-                                    : `${monthLabel} has not started. This is what is already dated to it — the open settlement is on its own tab.`}
+                                    ? t("views.monthPast", {
+                                          month: monthLabel,
+                                      })
+                                    : t("views.monthFuture", {
+                                          month: monthLabel,
+                                      })}
                             </p>
                         )}
                         <SettlementJournal
                             bare
                             journal={monthJournal}
                             partnerName={partnerName}
-                            emptyMessage={`No shared expenses or transfers in ${monthLabel}.`}
+                            emptyMessage={t("views.monthEmpty", {
+                                month: monthLabel,
+                            })}
                         />
                     </>
                 )}
@@ -179,11 +191,15 @@ export function SettlementViews({
 }
 
 /** How the cycle ended, in words rather than a signed number. */
-function outcomeText(outcome: CycleOutcome, partnerName: string): string {
-    if (outcome.kind === "even") return "Came out even";
+function outcomeText(
+    outcome: CycleOutcome,
+    partnerName: string,
+    t: SettlementTranslator,
+): string {
+    if (outcome.kind === "even") return t("views.outcome.even");
     return outcome.kind === "you_paid"
-        ? `You paid ${partnerName}`
-        : `${partnerName} paid you`;
+        ? t("views.outcome.youPaid", { partner: partnerName })
+        : t("views.outcome.partnerPaid", { partner: partnerName });
 }
 
 /**
@@ -197,25 +213,30 @@ function CycleSummaryFooter({
     summary: ClosedCycleSummary;
     partnerName: string;
 }) {
+    const t = useTranslations("settlement");
     return (
         <TotalsBar
             className="mt-3"
             testId="cycle-summary"
             items={[
                 {
-                    label: "Spent (unsplit)",
+                    label: t("views.summary.spentUnsplit"),
                     value: formatMxn(summary.spentUnsplit),
                 },
                 {
-                    label: `You owed ${partnerName}`,
+                    label: t("views.summary.youOwed", {
+                        partner: partnerName,
+                    }),
                     value: formatMxn(summary.youOwed),
                 },
                 {
-                    label: `${partnerName} owed you`,
+                    label: t("views.summary.sheOwed", {
+                        partner: partnerName,
+                    }),
                     value: formatMxn(summary.sheOwed),
                 },
                 {
-                    label: outcomeText(summary.outcome, partnerName),
+                    label: outcomeText(summary.outcome, partnerName, t),
                     value:
                         summary.outcome.kind === "even"
                             ? "—"
@@ -237,12 +258,12 @@ function ClosedCycles({
     monthLabel: string;
     partnerName: string;
 }) {
+    const t = useTranslations("settlement.views");
+    const locale = useLocale();
     if (history.length === 0) {
         return (
             <p className="text-sm text-muted-foreground">
-                No settlement was closed in {monthLabel}. When a balance reaches
-                zero you can close it, and it is filed under the month you
-                closed it in.
+                {t("historyEmpty", { month: monthLabel })}
             </p>
         );
     }
@@ -259,13 +280,19 @@ function ClosedCycles({
                             <span className="flex min-w-0 items-center gap-1.5">
                                 <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-aria-expanded:rotate-90" />
                                 <span className="truncate font-medium">
-                                    Settled{" "}
-                                    {formatExpenseDate(cycle.closedOn, "es")}
+                                    {t("settledOn", {
+                                        date: formatExpenseDate(
+                                            cycle.closedOn,
+                                            locale,
+                                        ),
+                                    })}
                                 </span>
                             </span>
                             <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                                {formatMxn(cycle.settledAmount)} ·{" "}
-                                {cycle.journal.length} rows
+                                {t("cycleMeta", {
+                                    amount: formatMxn(cycle.settledAmount),
+                                    count: cycle.journal.length,
+                                })}
                             </span>
                         </CollapsibleTrigger>
                         {/* Kept mounted (and `hidden` while closed) so the
@@ -291,7 +318,7 @@ function ClosedCycles({
                                     readOnly
                                     journal={cycle.journal}
                                     partnerName={partnerName}
-                                    emptyMessage="This settlement closed with no rows in it."
+                                    emptyMessage={t("closedEmpty")}
                                 />
                                 <CycleSummaryFooter
                                     summary={cycle.summary}

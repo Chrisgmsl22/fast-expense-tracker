@@ -1,3 +1,5 @@
+import type { useTranslations } from "next-intl";
+
 import {
     isQuietCard,
     type CardBalanceState,
@@ -20,18 +22,13 @@ export type CardBalanceView = WithStatement<CardBalanceInput>;
 
 export type CardBalancesView = CardBalanceSummary<CardBalanceInput>;
 
+export type CardsTranslator = ReturnType<typeof useTranslations<"money.cards">>;
+
 /**
  * The balance state as a headline reads it. `untouched` is the extra case: a
  * quiet card, with no charge or payment in the month.
  */
 export type CardHeadlineState = CardBalanceState | "untouched";
-
-const STATE_LABELS: Record<CardHeadlineState, string> = {
-    owed: "Owed",
-    paid: "Paid in full",
-    credit: "Paid more than charged",
-    untouched: "No activity",
-};
 
 /**
  * "Paid in full" claims a payment happened. A card with no rows in the month
@@ -44,14 +41,13 @@ export function headlineState(statement: CardStatement): CardHeadlineState {
 /** With a month, the label names the statement it belongs to. */
 export function stateLabel(
     state: CardHeadlineState,
+    t: CardsTranslator,
     monthName?: string,
 ): string {
-    if (monthName) {
-        if (state === "owed") return `Owed for ${monthName}`;
-        if (state === "credit") return `Paid more than charged in ${monthName}`;
-        if (state === "untouched") return `No activity in ${monthName}`;
+    if (monthName && state !== "paid") {
+        return t(`stateIn.${state}`, { month: monthName });
     }
-    return STATE_LABELS[state];
+    return t(`state.${state}`);
 }
 
 /**
@@ -68,14 +64,22 @@ export function balanceFootnote(
     card: CardStatement,
     monthName: string,
     state: CardHeadlineState,
+    t: CardsTranslator,
 ): string | null {
-    if (state === "paid") return `Nothing owed for ${monthName}`;
+    if (state === "paid") return t("footPaid", { month: monthName });
     if (state === "credit")
-        return `You paid ${formatMxn(Math.abs(card.balance))} more than you charged in ${monthName}.`;
+        return t("footCredit", {
+            amount: formatMxn(Math.abs(card.balance)),
+            month: monthName,
+        });
     return null;
 }
 
-export function cardTypeLabel(type: string): string {
+/** A seeded type reads in the active locale; any other stored value is capitalised as is. */
+export function cardTypeLabel(type: string, t: CardsTranslator): string {
+    if (type === "credit" || type === "debit" || type === "cash") {
+        return t(`type.${type}`);
+    }
     return type.charAt(0).toUpperCase() + type.slice(1);
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown";
 import { computeCoupleBalance } from "@/lib/domain/settlement";
@@ -352,7 +353,7 @@ describe("SettlementBreakdown disclosure", () => {
     };
 
     const renderIt = () =>
-        render(
+        renderWithIntl(
             <SettlementBreakdown
                 balance={balance}
                 breakdownItems={breakdownItems}
@@ -410,7 +411,7 @@ describe("SettlementBreakdown disclosure", () => {
     });
 
     it("says so plainly when a line has a total but no rows behind it", () => {
-        render(
+        renderWithIntl(
             <SettlementBreakdown
                 balance={balance}
                 breakdownItems={{ ...breakdownItems, partner_share: [] }}
@@ -442,7 +443,7 @@ describe("SettlementBreakdown disclosure", () => {
                 },
             ],
         };
-        const { unmount } = render(
+        const { unmount } = renderWithIntl(
             <SettlementBreakdown
                 balance={youOwe}
                 breakdownItems={debtItems}
@@ -463,7 +464,7 @@ describe("SettlementBreakdown disclosure", () => {
             moneyPartnerPaidYou: 0,
             moneyYouPaidPartner: 0,
         });
-        render(
+        renderWithIntl(
             <SettlementBreakdown
                 balance={settled}
                 breakdownItems={{

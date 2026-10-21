@@ -4,9 +4,14 @@ import {
     type CoupleBalance,
     type SettlementInputs,
 } from "@/lib/domain/settlement";
-// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
+import type { Locale } from "@/i18n/config";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
+import {
+    debtTitle,
+    type MovementsTranslator,
+} from "@/components/movement/movement-display";
+import type { SettlementTranslator } from "./balance-display";
 
 type ExpenseRow = Extract<SettlementJournalItem, { kind: "your_expense" }>;
 type DebtRow = Extract<SettlementJournalItem, { kind: "partner_debt" }>;
@@ -14,6 +19,13 @@ type TransferRow = Extract<SettlementJournalItem, { kind: "transfer" }>;
 
 /** The open settlement is still running, so its header ends in "present". */
 export type SettlementSummaryScope = "open" | "closed";
+
+/** The copied text is read by the partner, so it follows the active locale. */
+export type SettlementSummaryIntl = {
+    t: SettlementTranslator;
+    tm: MovementsTranslator;
+    locale: Locale;
+};
 
 type GroupedRows = {
     expenses: ExpenseRow[];
@@ -38,6 +50,15 @@ const roundCents = (n: number): number => Math.round(n * 100) / 100;
 const sum = (values: number[]): number => values.reduce((a, b) => a + b, 0);
 const bullet = (label: string, amount: number): string =>
     `${INDENT}• ${label}: ${formatMxn(amount)}`;
+const debtBullet = (
+    row: DebtRow,
+    partnerName: string,
+    tm: MovementsTranslator,
+): string =>
+    bullet(
+        debtTitle(row.description, row.direction, partnerName, tm),
+        row.amount,
+    );
 const percentOf = (row: ExpenseRow): number =>
     Math.round((row.partnerShare / row.gross) * 100);
 
@@ -105,16 +126,19 @@ function groupRows(rows: SettlementJournalItem[]): GroupedRows {
 function header(
     rows: SettlementJournalItem[],
     scope: SettlementSummaryScope,
+    { t, locale }: SettlementSummaryIntl,
 ): string {
     const oldest = rows[0];
     const newest = rows.at(-1);
-    if (!oldest || !newest) return "🧾 *Settlement*";
-    const first = formatExpenseDate(oldest.date, "es");
+    if (!oldest || !newest) return t("summaryText.header");
+    const first = formatExpenseDate(oldest.date, locale);
     const last =
-        scope === "open" ? "present" : formatExpenseDate(newest.date, "es");
+        scope === "open"
+            ? t("summaryText.present")
+            : formatExpenseDate(newest.date, locale);
     return first === last
-        ? `🧾 *Settlement ${first}*`
-        : `🧾 *Settlement ${first} – ${last}*`;
+        ? t("summaryText.headerOne", { date: first })
+        : t("summaryText.headerRange", { first, last });
 }
 
 // Null when the rows differ, or when the shared percent does not reproduce the
@@ -134,32 +158,49 @@ function expenseSection(
     rows: ExpenseRow[],
     percent: number | null,
     partnerName: string,
+    t: SettlementTranslator,
 ): string[] {
     // Mixed percents put each row's split on the row itself.
     const rowLines =
         percent === null
-            ? rows.map(
-                  (r) =>
-                      `${bullet(r.description, r.gross)} (${partnerName}'s ${percentOf(r)}%: ${formatMxn(r.partnerShare)})`,
+            ? rows.map((r) =>
+                  t("summaryText.rowSplit", {
+                      line: bullet(r.description, r.gross),
+                      partner: partnerName,
+                      percent: percentOf(r),
+                      share: formatMxn(r.partnerShare),
+                  }),
               )
             : rows.map((r) => bullet(r.description, r.gross));
     return [
-        "*Shared expenses*",
+        t("summaryText.sharedExpenses"),
         ...rowLines,
         "",
-        `*Subtotal: ${formatMxn(sum(rows.map((r) => r.gross)))}*`,
+        subtotalLine(sum(rows.map((r) => r.gross)), t),
     ];
 }
 
-function debtSection(title: string, lines: string[], subtotal: number) {
-    return [title, ...lines, "", `*Subtotal: ${formatMxn(subtotal)}*`];
+const subtotalLine = (amount: number, t: SettlementTranslator): string =>
+    t("summaryText.subtotal", { amount: formatMxn(amount) });
+
+function debtSection(
+    title: string,
+    lines: string[],
+    subtotal: number,
+    t: SettlementTranslator,
+) {
+    return [title, ...lines, "", subtotalLine(subtotal, t)];
 }
 
-function paymentLine(row: TransferRow, partnerName: string): string {
+function paymentLine(
+    row: TransferRow,
+    partnerName: string,
+    t: SettlementTranslator,
+): string {
     const line = bullet(
         row.direction === "gf_paid"
-            ? `You paid ${partnerName}`
-            : `${partnerName} paid you`,
+            ? t("summaryText.youPaid", { partner: partnerName })
+            : t("summaryText.partnerPaid", { partner: partnerName }),
         row.amount,
     );
     return row.note ? `${line} (${row.note})` : line;
@@ -188,14 +229,18 @@ function calculationLine(
     return `🟰 *${expression} = ${signedAmount(balance)}*`;
 }
 
-function finalLine(balance: CoupleBalance, partnerName: string): string {
+function finalLine(
+    balance: CoupleBalance,
+    partnerName: string,
+    t: SettlementTranslator,
+): string {
     if (isBalanceSettled(balance)) {
-        return `✅ *Final outcome: settled, ${formatMxn(0)} MXN*`;
+        return t("summaryText.finalSettled", { amount: formatMxn(0) });
     }
-    const amount = formatMxn(balance.amount);
+    const values = { partner: partnerName, amount: formatMxn(balance.amount) };
     return balance.direction === "she_owes"
-        ? `✅ *Final outcome: ${partnerName} owes ${amount} MXN*`
-        : `✅ *Final outcome: ${partnerName} receives ${amount} MXN*`;
+        ? t("summaryText.finalOwes", values)
+        : t("summaryText.finalReceives", values);
 }
 
 // Every figure comes from computeCoupleBalance over the rows the text lists,
@@ -204,19 +249,24 @@ export function buildSettlementSummaryText(
     journal: SettlementJournalItem[],
     partnerName: string,
     scope: SettlementSummaryScope,
+    intl: SettlementSummaryIntl,
 ): string {
+    const { t, tm } = intl;
     const rows = oldestFirst(journal);
     const { expenses, owedToYou, youOwe, transfers, inputs } = groupRows(rows);
     const balance = computeCoupleBalance(inputs);
     const share = inputs.partnerShareOfYourExpenses;
     const percent = uniformPercent(expenses, share);
 
-    const sections: Part[] = [[header(rows, scope)]];
+    const sections: Part[] = [[header(rows, scope, intl)]];
     const terms: { sign: "+" | "−"; amount: number }[] = [];
 
     if (expenses.length > 0) {
         // The 🌸 section always follows, since it lists this share.
-        sections.push(expenseSection(expenses, percent, partnerName), DIVIDER);
+        sections.push(
+            expenseSection(expenses, percent, partnerName, t),
+            DIVIDER,
+        );
     }
 
     const owedLines = [
@@ -224,18 +274,28 @@ export function buildSettlementSummaryText(
             ? [
                   bullet(
                       percent === null
-                          ? `${partnerName}'s share of shared expenses`
-                          : `${partnerName}'s ${percent}% of shared expenses`,
+                          ? t("summaryText.shareOfShared", {
+                                partner: partnerName,
+                            })
+                          : t("summaryText.percentOfShared", {
+                                partner: partnerName,
+                                percent,
+                            }),
                       share,
                   ),
               ]
             : []),
-        ...owedToYou.map((r) => bullet(r.description, r.amount)),
+        ...owedToYou.map((r) => debtBullet(r, partnerName, tm)),
     ];
     if (owedLines.length > 0) {
         const subtotal = share + inputs.partnerDebtToYou;
         sections.push(
-            debtSection(`🌸 *${partnerName} owes you*`, owedLines, subtotal),
+            debtSection(
+                t("summaryText.partnerOwesYou", { partner: partnerName }),
+                owedLines,
+                subtotal,
+                t,
+            ),
         );
         terms.push({ sign: "+", amount: subtotal });
     }
@@ -243,9 +303,10 @@ export function buildSettlementSummaryText(
     if (youOwe.length > 0) {
         sections.push(
             debtSection(
-                `🍔 *You owe ${partnerName}*`,
-                youOwe.map((r) => bullet(r.description, r.amount)),
+                t("summaryText.youOwePartner", { partner: partnerName }),
+                youOwe.map((r) => debtBullet(r, partnerName, tm)),
                 inputs.yourDebtToPartner,
+                t,
             ),
         );
         terms.push({ sign: MINUS, amount: inputs.yourDebtToPartner });
@@ -253,8 +314,8 @@ export function buildSettlementSummaryText(
 
     if (transfers.length > 0) {
         sections.push([
-            "💸 *Payments*",
-            ...transfers.map((r) => paymentLine(r, partnerName)),
+            t("summaryText.payments"),
+            ...transfers.map((r) => paymentLine(r, partnerName, t)),
         ]);
         if (transfers.some((r) => r.direction === "gf_paid")) {
             terms.push({ sign: "+", amount: inputs.moneyYouPaidPartner });
@@ -266,7 +327,7 @@ export function buildSettlementSummaryText(
 
     const calculation = calculationLine(terms, balance);
     if (calculation) sections.push(DIVIDER, [calculation]);
-    sections.push([finalLine(balance, partnerName)]);
+    sections.push([finalLine(balance, partnerName, t)]);
 
     return joinParts(sections);
 }

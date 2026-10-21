@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,6 @@ import {
 import type { FieldErrors } from "@/lib/actions/result";
 import { balanceAfterPayment, payFullAmount } from "@/lib/domain/card-balance";
 import { getTodayCdmx } from "@/lib/dates";
-// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatBalance, formatMonthLabel, formatMxn } from "@/lib/format";
 import type { CardPaymentInput } from "@/lib/schemas/movement";
 import type { CardOption } from "@/components/expense/ExpenseForm";
@@ -65,6 +65,9 @@ export function CardPaymentForm({
     onSuccess,
     onCancel,
 }: Props) {
+    const t = useTranslations("movements");
+    const tc = useTranslations("common.actions");
+    const locale = useLocale();
     const [date, setDate] = useState(payment?.date ?? "");
     const [amount, setAmount] = useState(payment?.amount ?? "");
     const [cardId, setCardId] = useState(
@@ -83,7 +86,10 @@ export function CardPaymentForm({
     // since saving would look like nothing happened.
     const otherMonthNote =
         viewingMonth && date.length === 10 && date.slice(0, 7) !== viewingMonth
-            ? `Lands in ${formatMonthLabel(date.slice(0, 7), "en")}. You are viewing ${formatMonthLabel(viewingMonth, "en")}, so this balance will not change.`
+            ? t("cardPayment.otherMonth", {
+                  landing: formatMonthLabel(date.slice(0, 7), locale),
+                  viewing: formatMonthLabel(viewingMonth, locale),
+              })
             : null;
     // That month's balance is not the one on screen, so "Pay full" has no amount to offer.
     const fullAmount =
@@ -127,7 +133,7 @@ export function CardPaymentForm({
                     setFormError(res.message);
                 }
             } catch {
-                setFormError("Something went wrong saving the card payment.");
+                setFormError(t("cardPayment.unexpected"));
             }
         });
     }
@@ -145,11 +151,13 @@ export function CardPaymentForm({
         <form
             onSubmit={handleSubmit}
             className="flex flex-col gap-4"
-            aria-label={payment ? "Edit card payment" : "Add card payment"}
+            aria-label={
+                payment ? t("cardPayment.formEdit") : t("cardPayment.formAdd")
+            }
         >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                    <Label htmlFor="cp-date">Date</Label>
+                    <Label htmlFor="cp-date">{t("form.date")}</Label>
                     <Input
                         id="cp-date"
                         name="date"
@@ -178,7 +186,7 @@ export function CardPaymentForm({
                     </p>
                 </div>
                 <div className="sm:col-span-2">
-                    <Label htmlFor="cp-amount">Amount (MXN)</Label>
+                    <Label htmlFor="cp-amount">{t("form.amount")}</Label>
                     <div className="relative mt-1.5">
                         <span
                             aria-hidden
@@ -208,7 +216,9 @@ export function CardPaymentForm({
                             className="mt-2 rounded-full"
                             onClick={() => setAmount(fullAmount.toFixed(2))}
                         >
-                            Pay full {formatMxn(fullAmount)}
+                            {t("cardPayment.payFull", {
+                                amount: formatMxn(fullAmount),
+                            })}
                         </Button>
                     ) : null}
                     {fieldError("amount")}
@@ -216,14 +226,14 @@ export function CardPaymentForm({
             </div>
 
             <div>
-                <Label htmlFor="cp-card">Card paid</Label>
+                <Label htmlFor="cp-card">{t("cardPayment.card")}</Label>
                 <Select
                     value={cardId}
                     onValueChange={(value) => setCardId(value ?? "")}
                 >
                     <SelectTrigger
                         id="cp-card"
-                        aria-label="Card paid"
+                        aria-label={t("cardPayment.card")}
                         className="mt-1.5 w-full"
                     >
                         {selectedCard ? (
@@ -239,7 +249,7 @@ export function CardPaymentForm({
                             </span>
                         ) : (
                             <span className="text-muted-foreground">
-                                Select a card…
+                                {t("cardPayment.selectCard")}
                             </span>
                         )}
                     </SelectTrigger>
@@ -263,9 +273,9 @@ export function CardPaymentForm({
 
             <div>
                 <Label htmlFor="cp-note">
-                    Note{" "}
+                    {t("form.note")}{" "}
                     <span className="font-normal text-muted-foreground">
-                        (optional)
+                        {t("form.optional")}
                     </span>
                 </Label>
                 <Input
@@ -286,18 +296,22 @@ export function CardPaymentForm({
             !otherMonthNote ? (
                 <div className="space-y-1.5">
                     <p className="flex items-center gap-2 rounded-lg bg-payment-tint px-3 py-2.5 text-sm tabular-nums">
-                        <span>{selectedCard.name} balance</span>
+                        <span>
+                            {t("cardPayment.balance", {
+                                card: selectedCard.name,
+                            })}
+                        </span>
                         <span className="ml-auto">
                             {formatBalance(balance)}
                         </span>
                         <span aria-hidden>→</span>
-                        <span className="sr-only">after this payment</span>
+                        <span className="sr-only">
+                            {t("cardPayment.afterPayment")}
+                        </span>
                         <b>{formatBalance(balanceAfter)}</b>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        Cash you sent to the card. Your spending figures
-                        don&apos;t change: the expenses were already counted
-                        when you charged them.
+                        {t("cardPayment.cashNote")}
                     </p>
                 </div>
             ) : null}
@@ -316,15 +330,15 @@ export function CardPaymentForm({
                         onClick={onCancel}
                         disabled={pending}
                     >
-                        Cancel
+                        {tc("cancel")}
                     </Button>
                 ) : null}
                 <Button type="submit" disabled={pending}>
                     {pending
-                        ? "Saving…"
+                        ? t("form.saving")
                         : payment
-                          ? "Save changes"
-                          : "Add card payment"}
+                          ? t("form.saveChanges")
+                          : t("cardPayment.submit")}
                 </Button>
             </div>
         </form>

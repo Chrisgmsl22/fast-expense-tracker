@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import {
     Dialog,
@@ -24,6 +25,7 @@ export function MonthBreakdownDialog({
     trigger: ReactNode;
     triggerClassName?: string;
 }) {
+    const t = useTranslations("money.breakdownDialog");
     return (
         <Dialog>
             <DialogTrigger className={triggerClassName}>
@@ -31,10 +33,10 @@ export function MonthBreakdownDialog({
             </DialogTrigger>
             <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
-                    <DialogTitle>{breakdown.monthLabel} breakdown</DialogTitle>
-                    <DialogDescription>
-                        What the month spent, grouped by which pot it came from
-                    </DialogDescription>
+                    <DialogTitle>
+                        {t("title", { month: breakdown.monthLabel })}
+                    </DialogTitle>
+                    <DialogDescription>{t("description")}</DialogDescription>
                 </DialogHeader>
                 <MonthBreakdown {...breakdown} />
             </DialogContent>

@@ -7,7 +7,8 @@ import {
     beforeEach,
     type Mock,
 } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 vi.mock("@/app/_actions/expense/add-partner-payment", () => ({
     addPartnerPayment: vi.fn(),
@@ -51,7 +52,9 @@ describe("TransferForm", () => {
         // Paying her is the moment the money is really spent (spec 0007 §6b), so the
         // outbound half writes an Expense and nothing touches the movement action.
         const onSuccess = vi.fn();
-        render(<TransferForm partnerName="Brenda" onSuccess={onSuccess} />);
+        renderWithIntl(
+            <TransferForm partnerName="Brenda" onSuccess={onSuccess} />,
+        );
         expect(
             screen.getByRole("button", { name: /Log payment to Brenda/ }),
         ).toBeDefined();
@@ -75,7 +78,7 @@ describe("TransferForm", () => {
 
     it("submits a gf_received transfer when direction is gf_received", async () => {
         const onSuccess = vi.fn();
-        render(
+        renderWithIntl(
             <TransferForm
                 direction="gf_received"
                 partnerName="Brenda"
@@ -107,7 +110,7 @@ describe("TransferForm", () => {
     });
 
     it("prefills the amount for quick-settle", () => {
-        render(
+        renderWithIntl(
             <TransferForm
                 direction="gf_received"
                 initialAmount="512.5"
@@ -120,7 +123,7 @@ describe("TransferForm", () => {
 
     it("edits an outbound payment via updatePartnerPayment, prefilled", async () => {
         const onSuccess = vi.fn();
-        render(
+        renderWithIntl(
             <TransferForm
                 direction="gf_paid"
                 transfer={{
@@ -164,7 +167,7 @@ describe("TransferForm", () => {
 
     describe("the funding-source control (spec 0007 §6a decision 5)", () => {
         it("is a single checkbox — never a reimbursed option, which is Health-only", () => {
-            render(<TransferForm partnerName="Brenda" />);
+            renderWithIntl(<TransferForm partnerName="Brenda" />);
 
             // A payment reads like a purchase: one box you tick, no picker.
             expect(screen.queryByLabelText("Funded from")).toBeNull();
@@ -180,7 +183,9 @@ describe("TransferForm", () => {
 
         it("defaults to income, so ignoring the control changes nothing", async () => {
             const onSuccess = vi.fn();
-            render(<TransferForm partnerName="Brenda" onSuccess={onSuccess} />);
+            renderWithIntl(
+                <TransferForm partnerName="Brenda" onSuccess={onSuccess} />,
+            );
 
             fireEvent.change(screen.getByLabelText("Date"), {
                 target: { value: "2026-07-10" },
@@ -204,7 +209,7 @@ describe("TransferForm", () => {
         });
 
         it("says what a savings-funded transfer leaves and what it still does", () => {
-            render(
+            renderWithIntl(
                 <TransferForm
                     partnerName="Brenda"
                     transfer={{
@@ -230,7 +235,7 @@ describe("TransferForm", () => {
         });
 
         it("is hidden on money she sent you, which your money never funded", () => {
-            render(
+            renderWithIntl(
                 <TransferForm direction="gf_received" partnerName="Brenda" />,
             );
             expect(screen.queryByLabelText("Funded from")).toBeNull();
@@ -238,7 +243,7 @@ describe("TransferForm", () => {
 
         it("sends income on an inbound transfer", async () => {
             const onSuccess = vi.fn();
-            render(
+            renderWithIntl(
                 <TransferForm
                     direction="gf_received"
                     partnerName="Brenda"
@@ -270,7 +275,9 @@ describe("TransferForm", () => {
             fieldErrors: { amount: ["Amount must be greater than 0"] },
         });
         const onSuccess = vi.fn();
-        render(<TransferForm partnerName="Brenda" onSuccess={onSuccess} />);
+        renderWithIntl(
+            <TransferForm partnerName="Brenda" onSuccess={onSuccess} />,
+        );
 
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
@@ -302,9 +309,48 @@ describe("TransferForm date cap", () => {
     });
 
     it("caps the date input at today in CDMX", () => {
-        render(<TransferForm partnerName="Brenda" />);
+        renderWithIntl(<TransferForm partnerName="Brenda" />);
         expect(screen.getByLabelText("Date").getAttribute("max")).toBe(
             "2026-10-14",
         );
+    });
+});
+
+describe("TransferForm in Spanish", () => {
+    it("explains money you send in Spanish, the category name translated", () => {
+        renderWithIntl(<TransferForm partnerName="Brenda" />, {
+            locale: "es",
+        });
+        expect(
+            screen.getByRole("form", {
+                name: "Registrar dinero enviado a Brenda",
+            }),
+        ).toBeDefined();
+        expect(screen.getByText(/dentro de Gastos en pareja\.$/)).toBeDefined();
+        expect(screen.getByLabelText("Fecha")).toBeDefined();
+        expect(screen.getByLabelText("Monto (MXN)")).toBeDefined();
+        expect(
+            screen.getByRole("checkbox", {
+                name: "Lo pagué con dinero que ya tenía",
+            }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Registrar pago a Brenda" }),
+        ).toBeDefined();
+    });
+
+    it("names money she sent in Spanish", () => {
+        renderWithIntl(
+            <TransferForm partnerName="Brenda" direction="gf_received" />,
+            { locale: "es" },
+        );
+        expect(
+            screen.getByText(
+                "Dinero que Brenda te mandó: salda lo que te debe. No es un gasto.",
+            ),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Registrar pago de Brenda" }),
+        ).toBeDefined();
     });
 });

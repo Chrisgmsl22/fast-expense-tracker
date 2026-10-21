@@ -1,4 +1,4 @@
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
@@ -25,6 +25,7 @@ export default async function CardBalancesPage({
     const { month: monthParam } = await searchParams;
     const month = await getScopedMonth(monthParam);
     const locale = await getLocale();
+    const t = await getTranslations("money.cards");
     const currentMonth = getCurrentMonthCdmx();
 
     const session = await auth();
@@ -50,10 +51,10 @@ export default async function CardBalancesPage({
             <div className="flex items-center gap-3">
                 <div>
                     <h1 className="text-[22px] font-bold tracking-tight">
-                        Card balances
+                        {t("title")}
                     </h1>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                        Based on logged expenses, not your bank statement · MXN
+                        {t("subtitle")}
                     </p>
                 </div>
                 <div className="ml-auto">

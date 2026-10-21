@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatBalance, formatMxnCompactAbs } from "@/lib/format";
 import {
@@ -18,8 +19,10 @@ type Props = {
 
 /** The mobile card row: one tap opens the detail drawer. */
 export function CardBalanceRow({ card, onOpen }: Props) {
+    const t = useTranslations("money.cards");
     const head = headlineState(card);
     const quiet = head === "untouched";
+    const label = stateLabel(head, t);
     const id = useId();
     const typeId = `${id}-type`;
     const breakdownId = `${id}-breakdown`;
@@ -28,8 +31,12 @@ export function CardBalanceRow({ card, onOpen }: Props) {
             type="button"
             aria-label={
                 quiet
-                    ? `${card.name}, ${stateLabel(head)}`
-                    : `${card.name}, ${formatBalance(card.balance)}, ${stateLabel(head)}`
+                    ? t("rowLabel", { card: card.name, state: label })
+                    : t("rowLabelBalance", {
+                          card: card.name,
+                          balance: formatBalance(card.balance),
+                          state: label,
+                      })
             }
             // The label replaces the row's content, so the line beneath it is
             // handed to assistive tech as the description.
@@ -55,7 +62,7 @@ export function CardBalanceRow({ card, onOpen }: Props) {
                 {/* A quiet card's $0.00 would read as paid off: the label says it all. */}
                 {quiet ? (
                     <span className="ml-auto text-xs whitespace-nowrap text-muted-foreground">
-                        {stateLabel(head)}
+                        {label}
                     </span>
                 ) : (
                     <span className="ml-auto text-[17px] font-bold tabular-nums">
@@ -68,7 +75,7 @@ export function CardBalanceRow({ card, onOpen }: Props) {
                 />
             </span>
             <span className="flex w-full items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
-                <span id={typeId}>{cardTypeLabel(card.type)}</span>
+                <span id={typeId}>{cardTypeLabel(card.type, t)}</span>
                 {quiet ? null : (
                     <>
                         <span aria-hidden>·</span>
@@ -83,7 +90,7 @@ export function CardBalanceRow({ card, onOpen }: Props) {
                                 isSettled(head) && "text-positive",
                             )}
                         >
-                            {stateLabel(head)}
+                            {label}
                         </span>
                     </>
                 )}

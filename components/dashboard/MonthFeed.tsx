@@ -198,9 +198,10 @@ function MovementRow({
     partnerName: string;
 }) {
     const locale = useLocale();
-    const { amountClass, rowTint } = movementDisplay(m.type, partnerName);
+    const tm = useTranslations("movements");
+    const { amountClass, rowTint } = movementDisplay(m.type);
     // `buildFeed` drops a debt she fronted, so only card payments and transfers reach here.
-    const { title, subline } = movementRowText(m, partnerName);
+    const { title, subline } = movementRowText(m, partnerName, tm);
 
     return (
         <li

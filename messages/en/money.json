@@ -1,1 +1,167 @@
-{}
+{
+    "fullBreakdown": "Full breakdown",
+    "breakdownDialog": {
+        "title": "{month} breakdown",
+        "description": "What the month spent, grouped by which pot it came from"
+    },
+    "reminder": {
+        "openCycle": "Open settlement cycle · independent of filters",
+        "notThisMonth": "The open settlement — not {month}."
+    },
+    "funding": {
+        "fromSavings": "From savings",
+        "reimbursed": "Reimbursed",
+        "reimbursedNote": "paid back · net $0",
+        "expensesList": "{label} expenses",
+        "notFromIncome": "Not from this month's income"
+    },
+    "metrics": {
+        "charged": "Charged",
+        "cost": "My cost",
+        "outsideIncome": "Outside income",
+        "partnerShare": "{partner}'s share",
+        "setAside": "Set aside"
+    },
+    "strip": {
+        "region": "Visible activity totals",
+        "entries": "{count, plural, one {# entry} other {# entries}}",
+        "followFilters": "Totals follow filters",
+        "collapsed": "My cost {cost} · Charged {charged}",
+        "hide": "Hide totals",
+        "show": "Show totals"
+    },
+    "rail": {
+        "region": "{month} summary",
+        "costTitle": "What {month} cost me",
+        "charged": "{amount} charged",
+        "fromIncome": "From this month's income",
+        "saved": "Saved",
+        "youSent": "You sent {partner}",
+        "partnerSent": "{partner} sent you"
+    },
+    "bottomLine": {
+        "title": "Bottom line",
+        "whatIReallySpent": "What I really spent",
+        "ofWhichSent": "of which sent to {partner}",
+        "incomeWent": "Where this month's income went",
+        "spentOnMyself": "Spent on myself",
+        "sentTo": "Sent to {partner}",
+        "setAside": "Set aside",
+        "keptNotSpent": "kept, not spent",
+        "total": "Total",
+        "totalQualifier": "— out of this month's income"
+    },
+    "breakdown": {
+        "whichPot": "Which pot it came from",
+        "thisMonthsIncome": "This month's income",
+        "incomeCaptionNone": "none of this counts toward your budget buckets",
+        "incomeCaptionButTransfers": "all but the transfers count toward your budget buckets",
+        "incomeCaption": "counts toward your budget buckets",
+        "spent": "Spent",
+        "setAside": "Set aside",
+        "transfersTo": "Transfers to {partner}",
+        "outsideBudget": "outside the budget",
+        "byWho": "By who it went to",
+        "ownSpending": "Own spending",
+        "paidTo": "Paid to {partner}",
+        "byWhichMoney": "By which money paid",
+        "transfersFromSavings": "Transfers to {partner} (from savings)",
+        "incomeShare": "{percent} of your income",
+        "income": "Income",
+        "overIncome": "{amount} over income",
+        "left": "{amount} left",
+        "whatCharged": "What I was charged",
+        "myIncome": "My income",
+        "myOtherMoney": "My other money",
+        "partnerShare": "{partner}'s share",
+        "chargedCaption": "charged",
+        "whatIReallySpent": "What I really spent",
+        "cashSent": "{partner} — cash she sent you, this month",
+        "partnerPaidYou": "{partner} paid you",
+        "owedBelongs": "What either of you still owes belongs to the settlement, not to a month.",
+        "whatIPaid": "{partner} — what I paid her",
+        "fromIncome": "From this month's income",
+        "iPaidHer": "I paid her",
+        "alsoCountedAbove": "all of this is already inside the figures above",
+        "everyFigure": "Every figure covers {month}."
+    },
+    "cards": {
+        "title": "Card balances",
+        "subtitle": "Based on logged expenses, not your bank statement · MXN",
+        "loadError": "Couldn't load your card balances. Please try again.",
+        "retry": "Retry",
+        "historyError": "Could not load the card history. Please try again.",
+        "state": {
+            "owed": "Owed",
+            "paid": "Paid in full",
+            "credit": "Paid more than charged",
+            "untouched": "No activity"
+        },
+        "stateIn": {
+            "owed": "Owed for {month}",
+            "credit": "Paid more than charged in {month}",
+            "untouched": "No activity in {month}"
+        },
+        "footPaid": "Nothing owed for {month}",
+        "footCredit": "You paid {amount} more than you charged in {month}.",
+        "type": {
+            "credit": "Credit",
+            "debit": "Debit",
+            "cash": "Cash"
+        },
+        "lines": {
+            "charged": "Charged in {month}",
+            "paid": "Paid in {month}",
+            "redeemed": "Redeemed in {month}"
+        },
+        "notice": {
+            "region": "Work in progress",
+            "lead": "Work in progress:",
+            "body": "balances may not match your bank yet. Each month shows only the charges and card payments you logged in that month. An unpaid amount stays in its own month.",
+            "howItWorks": "How this balance works",
+            "rules": {
+                "fullAmount": "Charges count at their full amount, even when you split them.",
+                "payments": "Card payments lower the balance.",
+                "partnerMoney": "Partner money, insurance refunds and the reimbursed toggle do not change it.",
+                "cashDebit": "Cash and debit cards spend money you already have, so they are not listed. Transfers to Savings are not card charges.",
+                "archived": "Archived cards are not listed."
+            }
+        },
+        "logPayment": "Log a payment",
+        "logPaymentOn": "Log a payment on {card}",
+        "details": "{card} details",
+        "rowLabel": "{card}, {state}",
+        "rowLabelBalance": "{card}, {balance}, {state}",
+        "drawer": {
+            "payment": "Payment",
+            "shared": "shared, full amount",
+            "balanceAfter": "bal {amount}",
+            "loading": "Loading history…",
+            "history": "History",
+            "newestFirst": "· newest first",
+            "empty": "Nothing logged on this card in {month}.",
+            "showEarlier": "{count, plural, one {Show # earlier entry} other {Show # earlier entries}}",
+            "monthNote": "Each month shows only that month's charges and card payments. An unpaid amount stays in its own month, so your bank's balance can differ."
+        },
+        "empty": {
+            "title": "No cards yet",
+            "body": "Add a credit card in Settings → Cards. Its balance shows up here. Cash and debit cards spend money you already have, so they never appear here.",
+            "cta": "Go to Cards"
+        },
+        "totals": {
+            "region": "Totals",
+            "owedFor": "Owed for {month}",
+            "nothingOwed": "Nothing owed for {month}",
+            "creditIn": "Paid more than charged in {month}",
+            "notSubtracted": "{cards} · not subtracted above",
+            "howMade": "How a balance is made",
+            "charged": "Charged",
+            "fullAmount": "full amount, even when split",
+            "payments": "Payments",
+            "redeemed": "Points redeemed",
+            "owed": "Owed",
+            "creditCard": "Paid more than charged in {month}: {card}",
+            "formula": "Charged (full amount, even when split) − payments − points redeemed"
+        }
+    }
+}

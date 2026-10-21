@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
@@ -48,13 +49,14 @@ export type CloseSettlementCycleResult = ActionResult<
 export async function closeSettlementCycle(
     deps: Partial<SettlementDeps> = {},
 ): Promise<CloseSettlementCycleResult> {
+    const t = await getTranslations("settlement.errors");
     const session = await auth();
     const userId = session?.user?.id;
     if (!userId) {
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("unauthenticated"),
         };
     }
 
@@ -70,8 +72,7 @@ export async function closeSettlementCycle(
             return {
                 ok: false,
                 code: "not_settled",
-                message:
-                    "This settlement isn't square yet, so it can't be closed.",
+                message: t("notSettled"),
             };
         }
 
@@ -90,9 +91,7 @@ export async function closeSettlementCycle(
             return {
                 ok: false,
                 code: "no_marker",
-                message:
-                    "This settlement can't be closed yet: closing marks a payment or " +
-                    "transfer with your partner, and this one holds neither.",
+                message: t("noMarker"),
             };
         }
 
@@ -117,9 +116,7 @@ export async function closeSettlementCycle(
                 return {
                     ok: false,
                     code: "marker_gone",
-                    message:
-                        "The row that would close this settlement is no longer there. " +
-                        "Refresh the page and try again.",
+                    message: t("markerGone"),
                 };
             }
             revalidatePath("/settlement");
@@ -139,7 +136,7 @@ export async function closeSettlementCycle(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not close the settlement. Please try again.",
+            message: t("dbError"),
         };
     }
 }

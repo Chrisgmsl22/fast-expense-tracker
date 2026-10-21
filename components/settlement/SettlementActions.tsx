@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +17,9 @@ import { TransferForm } from "@/components/movement/TransferForm";
 import type { SettlementDirection } from "@/lib/domain/settlement";
 import {
     PARTNER_DEBT_TYPES,
-    partnerDebtLabel,
     type PartnerDebtDirection,
 } from "@/lib/domain/movement";
+import { debtLabel } from "@/components/movement/movement-display";
 
 type Props = {
     /** Drives the transfer form's quick-settle prefill (net amount + side). */
@@ -49,6 +50,8 @@ export function SettlementActions({
     const [transferOpen, setTransferOpen] = useState(false);
     const [debtOpen, setDebtOpen] = useState<PartnerDebtDirection | null>(null);
     const router = useRouter();
+    const t = useTranslations("settlement.actions");
+    const tm = useTranslations("movements");
 
     // Settle toward zero: if she owes you, the settling transfer is her paying
     // you; if you owe her, it's you paying her. When settled, default to "I paid".
@@ -69,10 +72,12 @@ export function SettlementActions({
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {direction !== "settled" && (
                 <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
-                    <DialogTrigger render={<Button>Record payment</Button>} />
+                    <DialogTrigger
+                        render={<Button>{t("recordPayment")}</Button>}
+                    />
                     <DialogContent className="sm:max-w-2xl">
                         <DialogHeader>
-                            <DialogTitle>Record payment</DialogTitle>
+                            <DialogTitle>{t("recordPayment")}</DialogTitle>
                         </DialogHeader>
                         {pastMonthNotice && (
                             <p className="text-sm text-muted-foreground">
@@ -100,13 +105,21 @@ export function SettlementActions({
                 >
                     <DialogTrigger
                         render={
-                            <Button variant="outline">{`+ ${partnerDebtLabel(debtDirection, partnerName)}`}</Button>
+                            <Button variant="outline">
+                                {t("addDebt", {
+                                    label: debtLabel(
+                                        debtDirection,
+                                        partnerName,
+                                        tm,
+                                    ),
+                                })}
+                            </Button>
                         }
                     />
                     <DialogContent className="sm:max-w-2xl">
                         <DialogHeader>
                             <DialogTitle>
-                                {partnerDebtLabel(debtDirection, partnerName)}
+                                {debtLabel(debtDirection, partnerName, tm)}
                             </DialogTitle>
                         </DialogHeader>
                         {pastMonthNotice && (

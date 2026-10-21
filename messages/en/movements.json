@@ -1,1 +1,92 @@
-{}
+{
+    "display": {
+        "cardPayment": "Card payment",
+        "partnerPaidYou": "{partner} paid you",
+        "paidPartner": "Paid {partner}"
+    },
+    "debtLabel": {
+        "gf_fronted": "I owe {partner}",
+        "partner_debt": "{partner} owes me"
+    },
+    "form": {
+        "date": "Date",
+        "amount": "Amount (MXN)",
+        "note": "Note",
+        "optional": "(optional)",
+        "saving": "Saving…",
+        "saveChanges": "Save changes"
+    },
+    "debt": {
+        "formEditPartnerOwes": "Edit a debt {partner} owes you",
+        "formEditYouOwe": "Edit a debt you owe {partner}",
+        "formLogPartnerOwes": "Log a debt {partner} owes you",
+        "formLogYouOwe": "Log a debt you owe {partner}",
+        "blurbPartnerOwes": "Record money {partner} owes you. Enter the full debt amount. This is settlement only. It adds no expense, income, or payment.",
+        "blurbYouOwe": "Something {partner} fronted that you owe her back. Enter what YOU owe, not what she paid. This is settlement only — it does not touch your budget. The payment you make later is the expense.",
+        "amountPartnerOwes": "What {partner} owes you (MXN)",
+        "amountYouOwe": "What you owe {partner} (MXN)",
+        "helpPartnerOwes": "The full debt amount — no split applies.",
+        "helpYouOwe": "Your share only — not what {partner} paid.",
+        "submit": "Log debt",
+        "unexpected": "Something went wrong saving the debt."
+    },
+    "transfer": {
+        "formIn": "Log money received from {partner}",
+        "formOut": "Log money sent to {partner}",
+        "blurbIn": "Money {partner} sent you — settles what she owes you. Not an expense.",
+        "blurbOut": "Money you sent {partner} — this IS your expense, counted in your budget under {category}.",
+        "submitIn": "Log {partner}'s payment",
+        "submitOut": "Log payment to {partner}",
+        "savingsToggle": "Paid with money I already had",
+        "savingsHint": "Doesn't count toward this month's budget or what you really spent. It still settles what you owe {partner}.",
+        "unexpected": "Something went wrong saving the transfer."
+    },
+    "cardPayment": {
+        "formEdit": "Edit card payment",
+        "formAdd": "Add card payment",
+        "otherMonth": "Lands in {landing}. You are viewing {viewing}, so this balance will not change.",
+        "payFull": "Pay full {amount}",
+        "card": "Card paid",
+        "selectCard": "Select a card…",
+        "balance": "{card} balance",
+        "afterPayment": "after this payment",
+        "cashNote": "Cash you sent to the card. Your spending figures don't change: the expenses were already counted when you charged them.",
+        "submit": "Add card payment",
+        "unexpected": "Something went wrong saving the card payment."
+    },
+    "errors": {
+        "unauthenticated": "Not authenticated",
+        "invalidDebt": "Invalid debt",
+        "invalidTransfer": "Invalid transfer",
+        "invalidCardPayment": "Invalid card payment",
+        "missingId": "Missing movement id",
+        "debtNotFound": "Debt not found.",
+        "transferNotFound": "Transfer not found.",
+        "cardPaymentNotFound": "Card payment not found.",
+        "movementNotFound": "Movement not found.",
+        "debtDirectionLocked": "A debt's direction cannot change. Delete it and add a new debt.",
+        "debtDbError": "Could not save the debt. Please try again.",
+        "transferDbError": "Could not save the transfer. Please try again.",
+        "cardPaymentDbError": "Could not save the card payment. Please try again.",
+        "deleteDbError": "Could not delete the movement. Please try again.",
+        "loadNotFound": "Couldn't load that movement. Please refresh.",
+        "loadDbError": "Couldn't load that movement. Please try again."
+    },
+    "fieldErrors": {
+        "futureDate": "Date can't be later than today",
+        "amountPositive": "Amount must be greater than 0",
+        "cardRequired": "Card is required",
+        "cardNotFound": "Card not found",
+        "savingsOutboundOnly": "Only money you send can be funded from savings",
+        "noteTooLong": "Note must be {max} characters or fewer",
+        "directionMismatch": "The direction must match the original debt.",
+        "invalid": "Invalid value"
+    },
+    "frozen": {
+        "transferClosedEdit": "This transfer closed a settlement and can't be edited.",
+        "transferClosedDelete": "This transfer closed a settlement and can't be deleted.",
+        "rowDelete": "This row counts in a settlement you already closed, so it can't be deleted.",
+        "debtEdit": "This debt counts in a settlement you already closed, so it can't be edited.",
+        "transferEdit": "This transfer counts in a settlement you already closed, so it can't be edited."
+    }
+}

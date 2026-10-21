@@ -135,6 +135,7 @@ export function ExpenseListInteractive({
     const router = useRouter();
     const t = useTranslations("expenses.list");
     const tActions = useTranslations("common.actions");
+    const tm = useTranslations("movements");
     const locale = useLocale();
     const categoryName = useCategoryName();
     const [editing, setEditing] = useState<ExpenseEditable | null>(null);
@@ -591,6 +592,7 @@ export function ExpenseListInteractive({
                                       title: movementRowText(
                                           deletingMovement,
                                           partnerName,
+                                          tm,
                                       ).title,
                                       amount: formatMxn(
                                           deletingMovement.amount,
@@ -842,14 +844,12 @@ function MovementRow({
     onDelete: () => void;
 }) {
     const t = useTranslations("expenses.list");
+    const tm = useTranslations("movements");
     const locale = useLocale();
-    const { amountClass: amountColor, rowTint } = movementDisplay(
-        m.type,
-        partnerName,
-    );
+    const { amountClass: amountColor, rowTint } = movementDisplay(m.type);
     // `title` names the row's own thing (a debt's note), so two debts don't get
     // one shared accessible name on their edit/delete controls.
-    const { title, subline } = movementRowText(m, partnerName);
+    const { title, subline } = movementRowText(m, partnerName, tm);
     // A movement a CLOSED cycle counted is frozen server-side, so it shows no
     // controls. `closedAt` marks one transfer per cycle and cannot be the predicate.
     const frozen = isMovementFrozen(m);

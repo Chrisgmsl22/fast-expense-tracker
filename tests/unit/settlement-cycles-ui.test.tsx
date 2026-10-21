@@ -471,3 +471,63 @@ describe("SettlementCloseCard", () => {
         expect(refreshMock).not.toHaveBeenCalled();
     });
 });
+
+describe("SettlementViews in Spanish", () => {
+    function renderEs(
+        over: Partial<Parameters<typeof SettlementViews>[0]> = {},
+    ) {
+        return renderWithIntl(
+            <SettlementViews
+                openJournal={[openRow]}
+                monthJournal={[monthRow]}
+                monthLabel="septiembre de 2026"
+                monthPosition="past"
+                history={[closedCycle]}
+                partnerName="Brenda"
+                {...over}
+            />,
+            { locale: "es" },
+        );
+    }
+
+    it("names the tabs, the count and the past month in Spanish", () => {
+        renderEs();
+        expect(
+            screen.getByRole("tab", { name: "Liquidación abierta" }),
+        ).toBeDefined();
+        const month = screen.getByRole("tab", { name: "septiembre de 2026" });
+        expect(month.getAttribute("aria-selected")).toBe("true");
+        expect(within(month).getByText("sep 2026")).toBeDefined();
+        expect(screen.getByText("1 registro")).toBeDefined();
+        expect(
+            screen.getByText(
+                "septiembre de 2026 ya terminó. Esto es lo que tuvo; la liquidación abierta está en su propia pestaña.",
+            ),
+        ).toBeDefined();
+    });
+
+    it("dates and sums a closed cycle in Spanish", () => {
+        renderEs();
+        fireEvent.click(screen.getByRole("tab", { name: "Historial" }));
+        expect(screen.getByText("1 liquidación")).toBeDefined();
+        const trigger = screen.getByRole("button", {
+            name: /Saldado el 30 jun 2026/,
+        });
+        expect(within(trigger).getByText("$420.00 · 1 fila")).toBeDefined();
+        fireEvent.click(trigger);
+        const footer = screen.getByTestId("cycle-summary");
+        expect(footer.textContent).toContain("Gastado (sin dividir)");
+        expect(footer.textContent).toContain("Le debías a Brenda");
+        expect(footer.textContent).toContain("Brenda te pagó");
+    });
+
+    it("explains an empty history in Spanish", () => {
+        renderEs({ history: [] });
+        fireEvent.click(screen.getByRole("tab", { name: "Historial" }));
+        expect(
+            screen.getByText(
+                /No se cerró ninguna liquidación en septiembre de 2026/,
+            ),
+        ).toBeDefined();
+    });
+});
