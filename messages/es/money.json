@@ -9,7 +9,7 @@
         "notThisMonth": "La liquidación abierta, no {month}."
     },
     "funding": {
-        "fromSavings": "De ahorros",
+        "fromSavings": "Del ahorro",
         "reimbursed": "Reembolsado",
         "reimbursedNote": "te lo devolvieron · neto $0",
         "expensesList": "Gastos: {label}"
@@ -41,10 +41,10 @@
     "bottomLine": {
         "title": "En resumen",
         "whatIReallySpent": "Gastado real",
-        "ofWhichSent": "de eso, enviado a {partner}",
+        "ofWhichSent": "de eso, mandado a {partner}",
         "incomeWent": "A dónde se fue el ingreso de este mes",
         "spentOnMyself": "Gastado en mí",
-        "sentTo": "Enviado a {partner}",
+        "sentTo": "Mandado a {partner}",
         "setAside": "Apartado",
         "keptNotSpent": "guardado, no gastado",
         "total": "Total",
@@ -64,7 +64,7 @@
         "ownSpending": "Gasto propio",
         "paidTo": "Pagado a {partner}",
         "byWhichMoney": "Con qué dinero se pagó",
-        "transfersFromSavings": "Transferencias a {partner} (de ahorros)",
+        "transfersFromSavings": "Transferencias a {partner} (del ahorro)",
         "incomeShare": "{percent} de tu ingreso",
         "income": "Ingreso",
         "overIncome": "{amount} sobre el ingreso",

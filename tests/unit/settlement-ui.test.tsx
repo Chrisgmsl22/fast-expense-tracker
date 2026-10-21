@@ -130,6 +130,24 @@ describe("SettlementBalanceCard", () => {
         expect(screen.getByText(/from last month/)).toBeDefined();
         expect(screen.getByText(/\$300\.00 from last month/)).toBeDefined();
     });
+
+    it.each([
+        ["en", "Brenda owes"],
+        ["es", "Brenda debe"],
+    ] as const)(
+        "keeps the partner name as stored on the %s gauge",
+        (locale, label) => {
+            renderWithIntl(
+                <SettlementBalanceCard
+                    balance={sheOwes}
+                    carriedOver={{ present: false, amount: 0 }}
+                    partnerName="Brenda"
+                />,
+                { locale },
+            );
+            expect(screen.getByText(label)).toBeDefined();
+        },
+    );
 });
 
 describe("SettlementChip", () => {

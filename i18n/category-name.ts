@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useMessages } from "next-intl";
 
 export type CategoryNames = Readonly<Record<string, string>>;
@@ -16,5 +17,8 @@ export function translateCategoryName(
 /** Client components and non-async server components. */
 export function useCategoryName(): (name: string) => string {
     const names: CategoryNames = useMessages().categories;
-    return (name) => translateCategoryName(name, names);
+    return useCallback(
+        (name: string) => translateCategoryName(name, names),
+        [names],
+    );
 }

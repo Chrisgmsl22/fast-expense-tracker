@@ -63,6 +63,7 @@
         "monthFormat": "Month must be YYYY-MM",
         "monthTooEarly": "Month can't be before 2000",
         "monthAfterCurrent": "Month can't be after the current month",
-        "futureDate": "Date can't be later than today"
+        "futureDate": "Date can't be later than today",
+        "dateInvalid": "Enter a valid date"
     }
 }

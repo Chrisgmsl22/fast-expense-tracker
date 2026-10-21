@@ -13,6 +13,7 @@ import { expenseCardLabel } from "@/lib/expense-display";
 import {
     movementDisplay,
     movementRowText,
+    paymentTitle,
 } from "@/components/movement/movement-display";
 
 /**
@@ -123,6 +124,7 @@ function ExpenseRow({
 }) {
     const t = useTranslations("dashboard.feed");
     const tCard = useTranslations("common.cardLabel");
+    const tm = useTranslations("movements");
     const locale = useLocale();
     const isSavings = e.category.slug === SAVINGS_SLUG;
     // Same helper the Expenses list uses, so the two screens cannot print
@@ -145,7 +147,7 @@ function ExpenseRow({
             <span className="min-w-0 flex-1">
                 <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-medium">
-                        {e.description}
+                        {paymentTitle(e.description, partnerName, tm)}
                     </span>
                     <RowFundingBadge row={e} />
                 </span>

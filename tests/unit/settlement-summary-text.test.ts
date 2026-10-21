@@ -146,7 +146,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "open")).toBe(
             [
-                "🧾 *Settlement Oct 01, 2026 – present*",
+                "🧾 *Settlement Oct 1, 2026 – present*",
                 "",
                 "*Shared expenses*",
                 "    • Groceries: $500.00",
@@ -184,7 +184,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "closed")).toBe(
             [
-                "🧾 *Settlement Sep 02, 2026 – Sep 06, 2026*",
+                "🧾 *Settlement Sep 2, 2026 – Sep 6, 2026*",
                 "",
                 "*Shared expenses*",
                 "    • Dinner: $1,000.00",
@@ -220,7 +220,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "open")).toBe(
             [
-                "🧾 *Settlement Sep 03, 2026 – present*",
+                "🧾 *Settlement Sep 3, 2026 – present*",
                 "",
                 "🍔 *You owe Brenda*",
                 "    • Uber: $85.00",
@@ -256,7 +256,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "closed")).toBe(
             [
-                "🧾 *Settlement Sep 01, 2026 – Sep 02, 2026*",
+                "🧾 *Settlement Sep 1, 2026 – Sep 2, 2026*",
                 "",
                 "*Shared expenses*",
                 "    • Groceries: $1,000.00 (Brenda's 32%: $320.00)",
@@ -301,7 +301,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "closed")).toBe(
             [
-                "🧾 *Settlement Sep 01, 2026 – Sep 02, 2026*",
+                "🧾 *Settlement Sep 1, 2026 – Sep 2, 2026*",
                 "",
                 "*Shared expenses*",
                 "    • Lunch: $1,000.00",
@@ -332,7 +332,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "open")).toBe(
             [
-                "🧾 *Settlement Sep 01, 2026 – present*",
+                "🧾 *Settlement Sep 1, 2026 – present*",
                 "",
                 "🌸 *Brenda owes you*",
                 "    • Concert: $300.00",
@@ -362,7 +362,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "open")).toBe(
             [
-                "🧾 *Settlement Sep 01, 2026 – present*",
+                "🧾 *Settlement Sep 1, 2026 – present*",
                 "",
                 "*Shared expenses*",
                 "    • Lunch: $500.00",
@@ -386,15 +386,15 @@ describe("buildSettlementSummaryText", () => {
             expense("e2", "2026-06-20", "B", 100, 32),
         ]);
         expect(lines(build(range, PARTNER, "closed"))[0]).toBe(
-            "🧾 *Settlement Jun 02, 2026 – Jun 20, 2026*",
+            "🧾 *Settlement Jun 2, 2026 – Jun 20, 2026*",
         );
 
         const oneDay = [expense("e1", "2026-09-03", "Lunch", 100, 32)];
         expect(lines(build(oneDay, PARTNER, "closed"))[0]).toBe(
-            "🧾 *Settlement Sep 03, 2026*",
+            "🧾 *Settlement Sep 3, 2026*",
         );
         expect(lines(build(oneDay, PARTNER, "open"))[0]).toBe(
-            "🧾 *Settlement Sep 03, 2026 – present*",
+            "🧾 *Settlement Sep 3, 2026 – present*",
         );
     });
 
@@ -415,7 +415,7 @@ describe("buildSettlementSummaryText", () => {
         );
         expect(text).toBe(
             [
-                "🧾 *Settlement Sep 01, 2026 – Sep 02, 2026*",
+                "🧾 *Settlement Sep 1, 2026 – Sep 2, 2026*",
                 "",
                 "💸 *Payments*",
                 "    • You paid Brenda: $100.00 (Rent share)",
@@ -497,7 +497,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "open", intlFor("es"))).toBe(
             [
-                "🧾 *Liquidación 01 oct 2026 – hoy*",
+                "🧾 *Liquidación 1 oct 2026 – hoy*",
                 "",
                 "*Gastos compartidos*",
                 "    • Súper: $500.00",
@@ -540,8 +540,6 @@ describe("buildSettlementSummaryText", () => {
         expect(text).toContain(
             "    • Parte de Brenda en gastos compartidos: $570.00",
         );
-        expect(lines(text)[0]).toBe(
-            "🧾 *Liquidación 01 sep 2026 – 02 sep 2026*",
-        );
+        expect(lines(text)[0]).toBe("🧾 *Liquidación 1 sep 2026 – 2 sep 2026*");
     });
 });

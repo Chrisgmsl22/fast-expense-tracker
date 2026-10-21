@@ -1,9 +1,8 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { resolveBudgetRule } from "@/lib/domain/budget-rule";
-import { formatMonthLabel } from "@/lib/format";
 import {
     budgetRuleRepository,
     cardRepository,
@@ -36,7 +35,6 @@ export default async function SettingsPage() {
     }
 
     const currentMonth = getCurrentMonthCdmx();
-    const locale = await getLocale();
     const t = await getTranslations("settings");
     const [settings, cards, budgetRules] = await Promise.all([
         settingsRepository.getSettings(userId),
@@ -57,7 +55,7 @@ export default async function SettingsPage() {
 
                 <BudgetRuleForm
                     rule={resolveBudgetRule(budgetRules, currentMonth)}
-                    monthLabel={formatMonthLabel(currentMonth, locale)}
+                    month={currentMonth}
                 />
 
                 <CardsForm cards={cards} />

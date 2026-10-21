@@ -132,11 +132,11 @@ describe("FundingSplit", () => {
             />,
             { locale: "es" },
         );
-        const savings = subRow("De ahorros");
+        const savings = subRow("Del ahorro");
         const list = within(savings).getByRole("list", {
-            name: "Gastos: De ahorros",
+            name: "Gastos: Del ahorro",
         });
-        expect(within(list).getByText("04 oct 2026")).toBeDefined();
+        expect(within(list).getByText("4 oct 2026")).toBeDefined();
         expect(
             within(subRow("Reembolsado")).getByText(
                 "te lo devolvieron · neto $0",

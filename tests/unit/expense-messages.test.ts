@@ -63,6 +63,29 @@ describe("expense action messages in Spanish", () => {
         setServerLocale("es");
     });
 
+    it.each([
+        ["en", "Enter a valid date"],
+        ["es", "Ingresa una fecha válida"],
+    ] as const)(
+        "Should name an empty date in %s, never with zod's own text",
+        async (locale, message) => {
+            setServerLocale(locale);
+            const res = await createExpense(
+                {
+                    date: "",
+                    amount: 100,
+                    categoryId: "c1",
+                    description: "Tacos",
+                },
+                new FakeExpenseRepository(),
+            );
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.fieldErrors?.date).toEqual([message]);
+        },
+    );
+
     it("Should translate the validation message and the schema field errors", async () => {
         const repo = new FakeExpenseRepository();
 

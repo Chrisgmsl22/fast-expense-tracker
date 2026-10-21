@@ -53,7 +53,7 @@ function dateFormatters(
 // UTC recovers that calendar date instead of shifting it back a day in CDMX.
 const dateFormatter = dateFormatters({
     timeZone: "UTC",
-    day: "2-digit",
+    day: "numeric",
     month: "short",
     year: "numeric",
 });

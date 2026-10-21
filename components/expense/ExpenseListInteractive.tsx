@@ -18,6 +18,7 @@ import { expenseCardLabel } from "@/lib/expense-display";
 import {
     movementDisplay,
     movementRowText,
+    paymentTitle,
 } from "@/components/movement/movement-display";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { SummaryStrip } from "@/components/money/SummaryStrip";
@@ -539,7 +540,11 @@ export function ExpenseListInteractive({
                         <DialogDescription>
                             {deleting
                                 ? t("deleteExpenseBody", {
-                                      description: deleting.description,
+                                      description: paymentTitle(
+                                          deleting.description,
+                                          partnerName,
+                                          tm,
+                                      ),
                                   })
                                 : ""}
                         </DialogDescription>
@@ -651,8 +656,10 @@ function ExpenseRow({
 }) {
     const t = useTranslations("expenses.list");
     const tCard = useTranslations("common.cardLabel");
+    const tm = useTranslations("movements");
     const locale = useLocale();
     const categoryName = useCategoryName();
+    const title = paymentTitle(expense.description, partnerName, tm);
     // Savings is a transfer — no card (never "Cash").
     const isSavings = expense.category.slug === SAVINGS_SLUG;
     // A payment has no card; the shared helper says so instead of "Cash" (BUG-1).
@@ -697,7 +704,7 @@ function ExpenseRow({
                     <span
                         className={`${ROW_TITLE_TEXT} font-medium sm:font-normal`}
                     >
-                        {expense.description}
+                        {title}
                     </span>
                     <RowFundingBadge row={expense} />
                 </span>
@@ -765,16 +772,14 @@ function ExpenseRow({
             {/* Actions — revealed on hover/focus (desktop), always shown on
                 mobile. A frozen row shows why it has none instead. */}
             {frozen ? (
-                <LockedRowActions
-                    reason={t("locked", { name: expense.description })}
-                />
+                <LockedRowActions reason={t("locked", { name: title })} />
             ) : (
                 <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                     <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={t("editRow", { name: expense.description })}
+                        aria-label={t("editRow", { name: title })}
                         onClick={onEdit}
                         disabled={pending}
                     >
@@ -784,9 +789,7 @@ function ExpenseRow({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={t("deleteRow", {
-                            name: expense.description,
-                        })}
+                        aria-label={t("deleteRow", { name: title })}
                         onClick={onDelete}
                         disabled={pending}
                     >

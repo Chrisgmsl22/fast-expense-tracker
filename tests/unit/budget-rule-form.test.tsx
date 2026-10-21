@@ -7,8 +7,18 @@ import {
     vi,
     type Mock,
 } from "vitest";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import {
+    act,
+    fireEvent,
+    render,
+    screen,
+    waitFor,
+} from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import { renderWithIntl } from "@/tests/support/intl";
+import { TIME_ZONE, type Locale } from "@/i18n/config";
+import { MESSAGES } from "@/i18n/messages";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/app/_actions/settings/save-budget-rule", () => ({
@@ -24,7 +34,7 @@ const saveMock = saveBudgetRule as unknown as Mock;
 const rule = { essentials: 60, discretionary: 30, savings: 10 };
 
 function renderForm() {
-    renderWithIntl(<BudgetRuleForm rule={rule} monthLabel="September 2026" />);
+    renderWithIntl(<BudgetRuleForm rule={rule} month="2026-09" />);
 }
 
 function field(label: string): HTMLInputElement {
@@ -252,10 +262,9 @@ describe("BudgetRuleForm", () => {
 
 describe("BudgetRuleForm in Spanish", () => {
     it("Should render the bucket labels, total and reset in Spanish", () => {
-        renderWithIntl(
-            <BudgetRuleForm rule={rule} monthLabel="septiembre de 2026" />,
-            { locale: "es" },
-        );
+        renderWithIntl(<BudgetRuleForm rule={rule} month="2026-09" />, {
+            locale: "es",
+        });
         expect(
             screen.getByText("Vigente en septiembre de 2026: 60 / 30 / 10"),
         ).toBeDefined();
@@ -283,10 +292,9 @@ describe("BudgetRuleForm in Spanish", () => {
             ok: true,
             data: { effectiveMonth: "2026-10", rule },
         });
-        renderWithIntl(
-            <BudgetRuleForm rule={rule} monthLabel="septiembre de 2026" />,
-            { locale: "es" },
-        );
+        renderWithIntl(<BudgetRuleForm rule={rule} month="2026-09" />, {
+            locale: "es",
+        });
         fireEvent.click(
             screen.getByRole("button", { name: "Guardar cambios" }),
         );
@@ -295,5 +303,42 @@ describe("BudgetRuleForm in Spanish", () => {
                 `Vigente en ${formatMonthLabel("2026-10", "es")}: 60 / 30 / 10`,
             ),
         ).toBeDefined();
+    });
+
+    // Guard: an in-place language switch keeps the form mounted; the month label follows it.
+    it("Should relabel the month when the locale changes without a remount", () => {
+        function Intl({
+            locale,
+            children,
+        }: {
+            locale: Locale;
+            children: ReactNode;
+        }) {
+            return (
+                <NextIntlClientProvider
+                    locale={locale}
+                    messages={MESSAGES[locale]}
+                    timeZone={TIME_ZONE}
+                >
+                    {children}
+                </NextIntlClientProvider>
+            );
+        }
+        const { rerender } = render(
+            <Intl locale="en">
+                <BudgetRuleForm rule={rule} month="2026-09" />
+            </Intl>,
+        );
+        expect(screen.getByText(/In force for September 2026/)).toBeDefined();
+
+        rerender(
+            <Intl locale="es">
+                <BudgetRuleForm rule={rule} month="2026-09" />
+            </Intl>,
+        );
+        expect(
+            screen.getByText("Vigente en septiembre de 2026: 60 / 30 / 10"),
+        ).toBeDefined();
+        expect(screen.queryByText(/September/)).toBeNull();
     });
 });

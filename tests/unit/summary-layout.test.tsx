@@ -388,7 +388,7 @@ describe("summary layout in Spanish", () => {
         ).toBeDefined();
         expect(rail.getByText("$230.00 cargado")).toBeDefined();
         expect(rail.getByText("Del ingreso de este mes")).toBeDefined();
-        expect(rail.getByText("De ahorros")).toBeDefined();
+        expect(rail.getByText("Del ahorro")).toBeDefined();
         expect(
             rail.getByRole("button", { name: "Desglose completo" }),
         ).toBeDefined();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -14,6 +14,7 @@ export function LanguageSection() {
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
+    const headingId = useId();
 
     function choose(locale: Locale) {
         if (locale === current) return;
@@ -33,11 +34,8 @@ export function LanguageSection() {
     }
 
     return (
-        <section
-            aria-labelledby="language-heading"
-            className="rounded-xl border p-5"
-        >
-            <h2 id="language-heading" className="font-semibold">
+        <section aria-labelledby={headingId} className="rounded-xl border p-5">
+            <h2 id={headingId} className="font-semibold">
                 {t("title")}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -45,7 +43,7 @@ export function LanguageSection() {
             </p>
             <div
                 role="group"
-                aria-labelledby="language-heading"
+                aria-labelledby={headingId}
                 className="mt-4 flex gap-2"
             >
                 {LOCALES.map((locale) => (

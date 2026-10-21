@@ -2,7 +2,8 @@
     "display": {
         "cardPayment": "Pago de tarjeta",
         "partnerPaidYou": "{partner} te pagó",
-        "paidPartner": "Le pagaste a {partner}"
+        "paidPartner": "Le pagaste a {partner}",
+        "transferYouPaid": "Transferencia — le pagaste a {partner}"
     },
     "debtLabel": {
         "gf_fronted": "Le debo a {partner}",
@@ -32,7 +33,7 @@
     },
     "transfer": {
         "formIn": "Registrar dinero recibido de {partner}",
-        "formOut": "Registrar dinero enviado a {partner}",
+        "formOut": "Registrar dinero mandado a {partner}",
         "blurbIn": "Dinero que {partner} te mandó: salda lo que te debe. No es un gasto.",
         "blurbOut": "Dinero que le mandaste a {partner}: esto SÍ es tu gasto y cuenta en tu presupuesto dentro de {category}.",
         "submitIn": "Registrar pago de {partner}",
@@ -77,7 +78,7 @@
         "amountPositive": "El monto debe ser mayor que 0",
         "cardRequired": "Elige una tarjeta",
         "cardNotFound": "No se encontró la tarjeta",
-        "savingsOutboundOnly": "Solo el dinero que tú mandas puede salir de tus ahorros",
+        "savingsOutboundOnly": "Solo el dinero que tú mandas puede salir del ahorro",
         "noteTooLong": "La nota debe tener {max} caracteres o menos",
         "directionMismatch": "La dirección debe ser la de la deuda original.",
         "invalid": "Valor no válido"
@@ -85,7 +86,7 @@
     "frozen": {
         "transferClosedEdit": "Esta transferencia cerró una liquidación y no se puede editar.",
         "transferClosedDelete": "Esta transferencia cerró una liquidación y no se puede eliminar.",
-        "rowDelete": "Esta fila cuenta en una liquidación que ya cerraste, así que no se puede eliminar.",
+        "rowDelete": "Este registro cuenta en una liquidación que ya cerraste, así que no se puede eliminar.",
         "debtEdit": "Esta deuda cuenta en una liquidación que ya cerraste, así que no se puede editar.",
         "transferEdit": "Esta transferencia cuenta en una liquidación que ya cerraste, así que no se puede editar."
     }

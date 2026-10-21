@@ -89,11 +89,17 @@ describe("formatExpenseDate", () => {
         },
     );
 
-    it("keeps the first of the month on the first", () => {
-        expect(formatExpenseDate(new Date("2026-09-01T06:00:00Z"), "es")).toBe(
-            "01 sep 2026",
-        );
-    });
+    it.each([
+        ["en", "Sep 1, 2026"],
+        ["es", "1 sep 2026"],
+    ] as const)(
+        "keeps the first of the month on the first, without a zero pad, in %s",
+        (locale, text) => {
+            expect(
+                formatExpenseDate(new Date("2026-09-01T06:00:00Z"), locale),
+            ).toBe(text);
+        },
+    );
 });
 
 describe("formatMonthLabel", () => {

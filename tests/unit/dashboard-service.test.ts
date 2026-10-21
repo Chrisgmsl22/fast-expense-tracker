@@ -64,7 +64,7 @@ describe("getDashboardSummary", () => {
     ];
     const cards: CardSpend[] = [
         { id: "c1", name: "Platinum", color: "#6b7280", spent: 18000 },
-        { id: "cash", name: "Cash", color: "#16a34a", spent: 10000 },
+        { id: "cash", name: null, color: "#16a34a", spent: 10000 },
     ];
     const categoryBudgets: CategoryBudgetItem[] = [
         {

@@ -6,7 +6,7 @@ import { SpendByCard } from "@/components/dashboard/SpendByCard";
 
 const cards = [
     { id: "c1", name: "Platinum", color: "#6b7280", spent: 14400 },
-    { id: "cash", name: "Cash", color: "#16a34a", spent: 4200 },
+    { id: "cash", name: null, color: "#16a34a", spent: 4200 },
 ];
 
 describe("SpendByCard", () => {
@@ -16,6 +16,12 @@ describe("SpendByCard", () => {
         expect(screen.getByText("$14,400.00")).toBeDefined();
         expect(screen.getByText("Cash")).toBeDefined();
         expect(screen.getByText("$4,200.00")).toBeDefined();
+    });
+
+    it("labels the null-card rollup in Spanish", () => {
+        renderWithIntl(<SpendByCard cards={cards} />, { locale: "es" });
+        expect(screen.getByText("Efectivo")).toBeDefined();
+        expect(screen.queryByText("Cash")).toBeNull();
     });
 
     it("renders a bar segment per card sized to its share", () => {

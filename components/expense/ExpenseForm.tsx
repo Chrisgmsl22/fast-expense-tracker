@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition, type FormEvent } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -111,6 +111,7 @@ export function ExpenseForm({
     const tFunding = useTranslations("expenses.funding");
     const tActions = useTranslations("common.actions");
     const categoryName = useCategoryName();
+    const locale = useLocale();
     const isEdit = expense !== undefined;
     // A payment is never split and leaves a bank account, not a card. The server
     // clamps both; disabling the controls stops the form taking a click it drops.
@@ -160,6 +161,17 @@ export function ExpenseForm({
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<ExpenseInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
+
+    const sortedCategories = useMemo(
+        () =>
+            [...categories].sort((a, b) =>
+                categoryName(a.name).localeCompare(
+                    categoryName(b.name),
+                    locale,
+                ),
+            ),
+        [categories, categoryName, locale],
+    );
 
     const availableSubcategories = useMemo(
         () => subcategories.filter((s) => s.categoryId === categoryId),
@@ -358,7 +370,7 @@ export function ExpenseForm({
                             )}
                         </SelectTrigger>
                         <SelectContent>
-                            {categories.map((c) => (
+                            {sortedCategories.map((c) => (
                                 <SelectItem key={c.id} value={c.id}>
                                     <Dotted color={c.color}>
                                         {categoryName(c.name)}

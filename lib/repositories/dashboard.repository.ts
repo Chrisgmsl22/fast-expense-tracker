@@ -13,7 +13,8 @@ import { CASH_COLOR } from "@/lib/palette";
 export type CardSpend = {
     /** Stable key — the card id, or "cash" for the null-card rollup. */
     id: string;
-    name: string;
+    /** The card's name; null for the null-card rollup, which the UI labels in the active locale. */
+    name: string | null;
     color: string;
     spent: number;
 };
@@ -32,9 +33,8 @@ export type CategoryBudgetItem = {
     subcatWithSpend: number;
 };
 
-/** Cash (null `cardId`) rolls up under this id/label + the seeded Cash green. */
+/** Cash (null `cardId`) rolls up under this id + the seeded Cash green. */
 const CASH_ID = "cash";
-const CASH_NAME = "Cash";
 
 /** The orphaned-expense sentinel — excluded from the category grid. */
 const UNASSIGNED_SLUG = "unassigned";
@@ -156,7 +156,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
                 const card = g.cardId ? meta.get(g.cardId) : undefined;
                 return {
                     id: g.cardId ?? CASH_ID,
-                    name: card?.name ?? CASH_NAME,
+                    name: card?.name ?? null,
                     color: card?.color ?? CASH_COLOR,
                     spent,
                 };

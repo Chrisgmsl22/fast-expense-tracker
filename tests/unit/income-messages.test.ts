@@ -39,6 +39,24 @@ describe("income action messages in Spanish", () => {
         ]);
     });
 
+    it.each([
+        ["en", "Enter a valid date"],
+        ["es", "Ingresa una fecha válida"],
+    ] as const)(
+        "Should name an empty date in %s, never with zod's own text",
+        async (locale, message) => {
+            setServerLocale(locale);
+            const res = await addVariableIncome(
+                { source: "Freelance", amount: 100, date: "" },
+                new FakeIncomeRepository(),
+            );
+
+            expect(res.ok).toBe(false);
+            if (res.ok) return;
+            expect(res.fieldErrors?.date).toEqual([message]);
+        },
+    );
+
     it("Should translate a future capture date", async () => {
         const res = await addVariableIncome(
             { source: "Freelance", amount: 100, date: "2026-12-01" },

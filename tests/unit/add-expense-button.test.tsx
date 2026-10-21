@@ -73,7 +73,7 @@ describe("AddExpenseButton in Spanish", () => {
         expect(screen.getByText("Le pagué a Brenda")).toBeDefined();
         expect(screen.getByText("Brenda me pagó")).toBeDefined();
         expect(
-            screen.getByText("Dinero que le enviaste a Brenda"),
+            screen.getByText("Dinero que le mandaste a Brenda"),
         ).toBeDefined();
 
         fireEvent.click(screen.getByText("Gasto"));

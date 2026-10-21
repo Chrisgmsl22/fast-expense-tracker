@@ -143,6 +143,32 @@ describe("MonthFeed", () => {
         expect(screen.queryByText(/\bCash\b/)).toBeNull();
     });
 
+    it("shows a stored partner-payment auto-label in Spanish, and a typed note as typed", () => {
+        renderWithIntl(
+            <MonthFeed
+                expenses={[
+                    {
+                        ...partnerPayment,
+                        description: "Transfer — you paid Brenda",
+                    },
+                    { ...partnerPayment, id: "ePay2" },
+                ]}
+                movements={[]}
+                monthLabel="junio 2026"
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth
+            />,
+            { locale: "es" },
+        );
+
+        expect(
+            screen.getByText("Transferencia — le pagaste a Brenda"),
+        ).toBeDefined();
+        expect(screen.queryByText(/Transfer — you paid/)).toBeNull();
+        expect(screen.getByText("Settled up")).toBeDefined();
+    });
+
     it("totals Charged + What I really spent in the footer", () => {
         renderWithIntl(
             <MonthFeed

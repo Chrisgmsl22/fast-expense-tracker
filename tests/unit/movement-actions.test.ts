@@ -470,7 +470,7 @@ describe("movement actions in Spanish", () => {
             ok: false,
             code: "cycle_closed",
             message:
-                "Esta fila cuenta en una liquidación que ya cerraste, así que no se puede eliminar.",
+                "Este registro cuenta en una liquidación que ya cerraste, así que no se puede eliminar.",
         });
     });
 

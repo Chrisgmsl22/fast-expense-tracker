@@ -620,4 +620,45 @@ describe("ExpenseForm in Spanish", () => {
             screen.getByRole("button", { name: "Guardar cambios" }),
         ).toBeDefined();
     });
+
+    it("Should list the categories in Spanish alphabetical order", async () => {
+        renderForm(
+            {
+                categories: [
+                    {
+                        id: "t",
+                        slug: "transport",
+                        name: "Transport",
+                        color: "#7c3aed",
+                    },
+                    {
+                        id: "h",
+                        slug: "health",
+                        name: "Health",
+                        color: "#14b8a6",
+                    },
+                    { id: "d", slug: "debt", name: "Debt", color: "#dc2626" },
+                    {
+                        id: "s",
+                        slug: "savings",
+                        name: "Savings",
+                        color: "#0d9488",
+                    },
+                    { id: "f", slug: "food", name: "Food", color: "#ef4444" },
+                ],
+            },
+            "es",
+        );
+
+        fireEvent.click(screen.getByRole("combobox", { name: "Categoría" }));
+
+        const options = await screen.findAllByRole("option");
+        expect(options.map((o) => o.textContent)).toEqual([
+            "Ahorro",
+            "Deudas",
+            "Food",
+            "Salud",
+            "Transporte",
+        ]);
+    });
 });

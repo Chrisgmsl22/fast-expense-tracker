@@ -2,7 +2,8 @@
     "display": {
         "cardPayment": "Card payment",
         "partnerPaidYou": "{partner} paid you",
-        "paidPartner": "Paid {partner}"
+        "paidPartner": "Paid {partner}",
+        "transferYouPaid": "Transfer — you paid {partner}"
     },
     "debtLabel": {
         "gf_fronted": "I owe {partner}",

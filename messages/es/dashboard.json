@@ -36,7 +36,7 @@
         "incomeIn": "Ingresos",
         "spentMyShare": "Gastado (mi parte)",
         "netSoFar": "Neto a la fecha",
-        "dailyAvg": "Promedio diario · {daysLeft, plural, one {queda #} other {quedan #}}",
+        "dailyAvg": "Promedio diario · {daysLeft, plural, one {queda # día} other {quedan # días}}",
         "notFromIncome": "{label}: {amount} — fuera del presupuesto."
     },
     "categories": {

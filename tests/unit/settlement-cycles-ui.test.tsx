@@ -513,7 +513,7 @@ describe("SettlementViews in Spanish", () => {
         const trigger = screen.getByRole("button", {
             name: /Saldado el 30 jun 2026/,
         });
-        expect(within(trigger).getByText("$420.00 · 1 fila")).toBeDefined();
+        expect(within(trigger).getByText("$420.00 · 1 registro")).toBeDefined();
         fireEvent.click(trigger);
         const footer = screen.getByTestId("cycle-summary");
         expect(footer.textContent).toContain("Gastado (sin dividir)");

@@ -30,6 +30,8 @@ describe("LanguageSection", () => {
             expect(
                 screen.getByRole("heading", { name: heading }),
             ).toBeDefined();
+            expect(screen.getByRole("region", { name: heading })).toBeDefined();
+            expect(screen.getByRole("group", { name: heading })).toBeDefined();
             expect(
                 screen
                     .getByRole("button", { name: selected })

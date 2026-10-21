@@ -11,6 +11,7 @@ import type { CardSpend } from "@/lib/repositories/dashboard.repository";
  */
 export function SpendByCard({ cards }: { cards: CardSpend[] }) {
     const t = useTranslations("dashboard.spendByCard");
+    const tCard = useTranslations("common.cardLabel");
     const total = cards.reduce((sum, c) => sum + c.spent, 0);
 
     return (
@@ -47,7 +48,7 @@ export function SpendByCard({ cards }: { cards: CardSpend[] }) {
                                     className="size-1.5 shrink-0 rounded-full"
                                     style={{ backgroundColor: c.color }}
                                 />
-                                {c.name}
+                                {c.name ?? tCard("cash")}
                                 <span className="ml-auto font-semibold text-foreground">
                                     {formatMxn(c.spent)}
                                 </span>

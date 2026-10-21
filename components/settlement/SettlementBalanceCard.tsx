@@ -106,9 +106,7 @@ function BalanceBar({
                     className="absolute top-1/2 left-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-border"
                 />
             </div>
-            <span>
-                {t("barPartnerOwes", { partner: partnerName.toLowerCase() })}
-            </span>
+            <span>{t("barPartnerOwes", { partner: partnerName })}</span>
         </div>
     );
 }

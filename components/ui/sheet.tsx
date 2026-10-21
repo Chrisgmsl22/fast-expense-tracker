@@ -5,12 +5,8 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { CloseLabel } from "@/components/ui/close-label";
 import { XIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
-
-function CloseLabel() {
-    return useTranslations("common.actions")("close");
-}
 
 /**
  * Slide-in drawer, built on the same Base UI Dialog as `dialog.tsx` but pinned

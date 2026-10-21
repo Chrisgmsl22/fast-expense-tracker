@@ -5,7 +5,10 @@ import {
     type FrozenAction,
 } from "@/lib/domain/frozen-row";
 import { REIMBURSABLE_CATEGORY_SLUG } from "@/lib/domain/funding";
-import { FUTURE_DATE_MESSAGE } from "@/lib/schemas/capture-date";
+import {
+    FUTURE_DATE_MESSAGE,
+    INVALID_DATE_MESSAGE,
+} from "@/lib/schemas/capture-date";
 import type { Messages } from "@/i18n/messages";
 
 export type ExpenseFieldKey = keyof Messages["expenses"]["fields"];
@@ -27,6 +30,7 @@ export function expenseSchemaMessages(
         [`Only ${REIMBURSABLE_CATEGORY_SLUG} expenses can be marked reimbursed. Change the funding source before moving this expense to another category.`]:
             t("fields.reimbursedHealthOnly"),
         [FUTURE_DATE_MESSAGE]: t("fields.futureDate"),
+        [INVALID_DATE_MESSAGE]: t("fields.dateInvalid"),
     };
 }
 

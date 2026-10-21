@@ -1,5 +1,6 @@
 import type { useTranslations } from "next-intl";
 
+import { isPartnerPaymentAutoLabel } from "@/lib/domain/expense";
 import {
     partnerDebtLabel,
     type MovementType,
@@ -104,5 +105,20 @@ export function debtTitle(
 ): string {
     return description === partnerDebtLabel(direction, partnerName)
         ? debtLabel(direction, partnerName, t)
+        : description;
+}
+
+/**
+ * A partner payment's title. A note-less payment stores the English auto-label
+ * (`partnerPaymentDescription`), so that one shows in the active locale; the user's
+ * own note shows as typed.
+ */
+export function paymentTitle(
+    description: string,
+    partnerName: string,
+    t: MovementsTranslator,
+): string {
+    return isPartnerPaymentAutoLabel(description)
+        ? t("display.transferYouPaid", { partner: partnerName })
         : description;
 }

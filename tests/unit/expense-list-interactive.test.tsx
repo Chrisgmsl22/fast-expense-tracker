@@ -68,6 +68,7 @@ import { deleteMovement } from "@/app/_actions/movement/delete";
 import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
 import { getMovementForEdit } from "@/app/_actions/movement/get-for-edit";
 import type { CoupleBalance } from "@/lib/domain/settlement";
+import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
 
 // jsdom has no layout, so it ships no `scrollIntoView`.
@@ -1441,5 +1442,77 @@ describe("ExpenseListInteractive in Spanish", () => {
             screen.getByText('"Tacos" se eliminará para siempre.'),
         ).toBeDefined();
         expect(screen.getByRole("button", { name: "Cancelar" })).toBeDefined();
+    });
+
+    const autoLabelPayment: ExpenseListItem = {
+        ...expenses[1]!,
+        id: "pay1",
+        description: "Transfer — you paid Brenda",
+        isPartnerPayment: true,
+        card: null,
+    };
+
+    it("Should show a stored partner-payment auto-label in Spanish on the row and its actions", () => {
+        renderWithIntl(
+            <ExpenseListInteractive expenses={[autoLabelPayment]} {...props} />,
+            { locale: "es" },
+        );
+
+        expect(
+            screen.getByText("Transferencia — le pagaste a Brenda"),
+        ).toBeDefined();
+        expect(screen.queryByText(/Transfer — you paid/)).toBeNull();
+        expect(
+            screen.getByRole("button", {
+                name: "Editar Transferencia — le pagaste a Brenda",
+            }),
+        ).toBeDefined();
+
+        fireEvent.click(
+            screen.getByRole("button", {
+                name: "Eliminar Transferencia — le pagaste a Brenda",
+            }),
+        );
+        expect(
+            screen.getByText(
+                '"Transferencia — le pagaste a Brenda" se eliminará para siempre.',
+            ),
+        ).toBeDefined();
+    });
+
+    it("Should name a frozen auto-label payment in Spanish in its locked reason", () => {
+        renderWithIntl(
+            <ExpenseListInteractive
+                expenses={[
+                    {
+                        ...autoLabelPayment,
+                        cycleClosedAt: new Date("2026-05-30T06:00:00Z"),
+                    },
+                ]}
+                {...props}
+            />,
+            { locale: "es" },
+        );
+
+        expect(
+            screen.getByLabelText(
+                "Transferencia — le pagaste a Brenda está bloqueado: cuenta en una liquidación que ya cerraste",
+            ),
+        ).toBeDefined();
+    });
+
+    it("Should show a partner payment's own note as typed", () => {
+        renderWithIntl(
+            <ExpenseListInteractive
+                expenses={[{ ...autoLabelPayment, description: "Rent split" }]}
+                {...props}
+            />,
+            { locale: "es" },
+        );
+
+        expect(screen.getByText("Rent split")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Editar Rent split" }),
+        ).toBeDefined();
     });
 });

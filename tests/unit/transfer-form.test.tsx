@@ -323,7 +323,7 @@ describe("TransferForm in Spanish", () => {
         });
         expect(
             screen.getByRole("form", {
-                name: "Registrar dinero enviado a Brenda",
+                name: "Registrar dinero mandado a Brenda",
             }),
         ).toBeDefined();
         expect(screen.getByText(/dentro de Gastos en pareja\.$/)).toBeDefined();

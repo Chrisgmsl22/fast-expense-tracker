@@ -27,8 +27,8 @@ import type { BudgetRuleInput } from "@/lib/schemas/budget-rule";
 type Props = {
     /** The rule in force for the current month. */
     rule: BudgetRule;
-    /** The current month's label, e.g. "September 2026". */
-    monthLabel: string;
+    /** The current month, "YYYY-MM". The label is formatted at render in the active locale. */
+    month: string;
 };
 
 type Draft = Record<BucketKey, string>;
@@ -47,14 +47,14 @@ function toDraft(rule: BudgetRule): Draft {
     };
 }
 
-export function BudgetRuleForm({ rule, monthLabel }: Props) {
+export function BudgetRuleForm({ rule, month }: Props) {
     const t = useTranslations("settings");
     const tc = useTranslations("common");
     const locale = useLocale();
     const router = useRouter();
     const [draft, setDraft] = useState<Draft>(() => toDraft(rule));
     // The action picks the month from its own clock; show that one after a save.
-    const [inForce, setInForce] = useState({ rule, monthLabel });
+    const [inForce, setInForce] = useState({ rule, month });
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<BudgetRuleInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
@@ -104,10 +104,7 @@ export function BudgetRuleForm({ rule, monthLabel }: Props) {
                     setFormError(null);
                     setInForce({
                         rule: res.data.rule,
-                        monthLabel: formatMonthLabel(
-                            res.data.effectiveMonth,
-                            locale,
-                        ),
+                        month: res.data.effectiveMonth,
                     });
                     setSaved(true);
                     revertTimer.current = setTimeout(() => {
@@ -130,6 +127,8 @@ export function BudgetRuleForm({ rule, monthLabel }: Props) {
     const fieldLabel = (key: BucketKey) =>
         key === "savings" ? t("budget.savingsField") : tc(`buckets.${key}`);
 
+    const monthLabel = formatMonthLabel(inForce.month, locale);
+
     const totalLine =
         total === 100
             ? t("budget.totalExact")
@@ -147,13 +146,13 @@ export function BudgetRuleForm({ rule, monthLabel }: Props) {
                 <h2 className="font-semibold">{t("budget.title")}</h2>
                 <span className="text-xs text-muted-foreground">
                     {t("budget.inForce", {
-                        month: inForce.monthLabel,
+                        month: monthLabel,
                         ...inForce.rule,
                     })}
                 </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-                {t("budget.description", { month: inForce.monthLabel })}
+                {t("budget.description", { month: monthLabel })}
             </p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">

@@ -107,7 +107,9 @@ describe("StatStrip in Spanish", () => {
         expect(screen.getByText("Ingresos")).toBeDefined();
         expect(screen.getByText("Gastado (mi parte)")).toBeDefined();
         expect(screen.getByText("Neto a la fecha")).toBeDefined();
-        expect(screen.getByText("Promedio diario · quedan 7")).toBeDefined();
+        expect(
+            screen.getByText("Promedio diario · quedan 7 días"),
+        ).toBeDefined();
     });
 
     it("uses the singular for one day left", () => {
@@ -115,7 +117,7 @@ describe("StatStrip in Spanish", () => {
             <StatStrip {...stats} daysLeft={1} expenses={[groceries]} />,
             { locale: "es" },
         );
-        expect(screen.getByText("Promedio diario · queda 1")).toBeDefined();
+        expect(screen.getByText("Promedio diario · queda 1 día")).toBeDefined();
     });
 
     it("names the spend this month's income didn't fund in Spanish", () => {

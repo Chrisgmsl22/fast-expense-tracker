@@ -63,6 +63,7 @@
         "monthFormat": "El mes debe tener el formato AAAA-MM",
         "monthTooEarly": "El mes no puede ser anterior a 2000",
         "monthAfterCurrent": "El mes no puede ser posterior al mes actual",
-        "futureDate": "La fecha no puede ser posterior a hoy"
+        "futureDate": "La fecha no puede ser posterior a hoy",
+        "dateInvalid": "Ingresa una fecha válida"
     }
 }

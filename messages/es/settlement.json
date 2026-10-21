@@ -66,7 +66,7 @@
         },
         "partnerPaidSublabel": "transferencias que te mandó",
         "nothingThisWindow": "— nada en este periodo",
-        "noItemizedRows": "— sin filas detalladas",
+        "noItemizedRows": "— sin registros detallados",
         "netBalance": "Saldo neto",
         "settled": "Saldado",
         "net": "{label} {amount}",
@@ -86,8 +86,8 @@
         "monthEmpty": "No hay gastos compartidos ni transferencias en {month}.",
         "historyEmpty": "No se cerró ninguna liquidación en {month}. Cuando un saldo llega a cero puedes cerrarlo, y se archiva en el mes en que lo cerraste.",
         "settledOn": "Saldado el {date}",
-        "cycleMeta": "{amount} · {count, plural, one {# fila} other {# filas}}",
-        "closedEmpty": "Esta liquidación se cerró sin filas.",
+        "cycleMeta": "{amount} · {count, plural, one {# registro} other {# registros}}",
+        "closedEmpty": "Esta liquidación se cerró sin registros.",
         "outcome": {
             "even": "Quedaron a mano",
             "youPaid": "Le pagaste a {partner}",
@@ -147,7 +147,7 @@
         "unauthenticated": "No has iniciado sesión",
         "notSettled": "Esta liquidación todavía no está a mano, así que no se puede cerrar.",
         "noMarker": "Esta liquidación todavía no se puede cerrar: al cerrarla se marca un pago o una transferencia con tu pareja, y esta no tiene ninguno.",
-        "markerGone": "La fila que cerraría esta liquidación ya no existe. Recarga la página e inténtalo de nuevo.",
+        "markerGone": "El registro que cerraría esta liquidación ya no existe. Recarga la página e inténtalo de nuevo.",
         "dbError": "No se pudo cerrar la liquidación. Inténtalo de nuevo."
     }
 }

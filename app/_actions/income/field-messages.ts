@@ -1,5 +1,8 @@
 import type { Translations } from "@/lib/actions/field-errors";
-import { FUTURE_DATE_MESSAGE } from "@/lib/schemas/capture-date";
+import {
+    FUTURE_DATE_MESSAGE,
+    INVALID_DATE_MESSAGE,
+} from "@/lib/schemas/capture-date";
 import type { Messages } from "@/i18n/messages";
 
 export type IncomeFieldKey = keyof Messages["income"]["fields"];
@@ -15,5 +18,6 @@ export function incomeSchemaMessages(
         "Month must be YYYY-MM": t("fields.monthFormat"),
         "Month can't be before 2000": t("fields.monthTooEarly"),
         [FUTURE_DATE_MESSAGE]: t("fields.futureDate"),
+        [INVALID_DATE_MESSAGE]: t("fields.dateInvalid"),
     };
 }
