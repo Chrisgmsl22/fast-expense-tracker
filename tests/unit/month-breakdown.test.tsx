@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { screen, fireEvent, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { PotParts } from "@/components/money/BreakdownParts";
 import { Donut } from "@/components/money/Donut";
@@ -66,7 +67,7 @@ const totals = computeFeedTotals(month, movements);
 
 describe("MonthBreakdown", () => {
     it("names both pots and the budget figure", () => {
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={totals}
                 fundingRows={NO_ROWS}
@@ -138,7 +139,7 @@ describe("MonthBreakdown", () => {
         it("gives the income pot every peso the bottom line counts", () => {
             // The pot printed 19,450.82 beside a bottom line of 34,869.53 — two
             // figures for the same money, 15,418.71 apart, on one modal.
-            render(
+            renderWithIntl(
                 <MonthBreakdown
                     totals={september}
                     fundingRows={NO_ROWS}
@@ -160,7 +161,7 @@ describe("MonthBreakdown", () => {
         });
 
         it("gives the other-money pot its legacy transfer too", () => {
-            render(
+            renderWithIntl(
                 <MonthBreakdown
                     totals={september}
                     fundingRows={fundingRowsOf(septemberExpenses)}
@@ -194,7 +195,7 @@ describe("MonthBreakdown", () => {
     });
 
     it("cuts the charge into the three shares that make it", () => {
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={totals}
                 fundingRows={NO_ROWS}
@@ -216,7 +217,7 @@ describe("MonthBreakdown", () => {
         // Her 32% is a receivable on MY charges, not money she put in. Printed
         // under "what she put in" it claims a contribution she has not made, and
         // doubles any part of it she has already settled in cash (spec 0007 §6a).
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={totals}
                 fundingRows={NO_ROWS}
@@ -239,7 +240,7 @@ describe("MonthBreakdown", () => {
     });
 
     it("reports what reached her in full, and says it overlaps", () => {
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={totals}
                 fundingRows={NO_ROWS}
@@ -257,7 +258,7 @@ describe("MonthBreakdown", () => {
     });
 
     it("closes with a bottom line whose parts do not overlap", () => {
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={totals}
                 fundingRows={NO_ROWS}
@@ -288,7 +289,7 @@ describe("MonthBreakdown", () => {
         ]);
 
         const renderIt = () =>
-            render(
+            renderWithIntl(
                 <MonthBreakdown
                     totals={withSavings}
                     fundingRows={NO_ROWS}
@@ -336,7 +337,7 @@ describe("MonthBreakdown", () => {
         const noAddend = computeFeedTotals([
             expense({ id: "e1", amount: 300, actualExpenditure: 300 }),
         ]);
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={noAddend}
                 fundingRows={NO_ROWS}
@@ -352,7 +353,7 @@ describe("MonthBreakdown", () => {
     });
 
     it("calls the closing total what it is — income, not all money out", () => {
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={totals}
                 fundingRows={NO_ROWS}
@@ -387,7 +388,7 @@ describe("MonthBreakdown", () => {
         );
 
         const renderIt = () =>
-            render(
+            renderWithIntl(
                 <MonthBreakdown
                     totals={transferOnly}
                     fundingRows={NO_ROWS}
@@ -440,7 +441,7 @@ describe("MonthBreakdown", () => {
             [expense({ id: "e1", amount: 300, actualExpenditure: 300 })],
             [],
         );
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={plain}
                 fundingRows={NO_ROWS}
@@ -468,7 +469,7 @@ describe("MonthBreakdown", () => {
                 category: { slug: "shopping" },
             }),
         ]);
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={savingsOnly}
                 fundingRows={NO_ROWS}
@@ -498,7 +499,7 @@ describe("MonthBreakdown", () => {
                 category: { slug: "combined-expenses" },
             }),
         ]);
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={paymentOnly}
                 fundingRows={NO_ROWS}
@@ -531,7 +532,7 @@ describe("MonthBreakdown", () => {
                 category: { slug: "combined-expenses" },
             }),
         ]);
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={withSavingsPayment}
                 fundingRows={NO_ROWS}
@@ -574,7 +575,7 @@ describe("MonthBreakdown", () => {
                 },
             ],
         );
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={bothHalves}
                 fundingRows={NO_ROWS}
@@ -612,7 +613,7 @@ describe("MonthBreakdown", () => {
         const october = computeFeedTotals([pay("p1", 300), pay("p2", 230)]);
         expect(october.notFromIncome.of.ownSpending).toBe(0);
 
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={october}
                 fundingRows={NO_ROWS}
@@ -632,7 +633,7 @@ describe("MonthBreakdown", () => {
     it("draws no itemisation that would not add up to its own headline", () => {
         // The safety cannot rest on the caller passing a complete partition: a
         // part left out would print rows that silently hide the difference.
-        render(
+        renderWithIntl(
             <PotParts
                 headline={1000}
                 parts={[
@@ -656,7 +657,7 @@ describe("MonthBreakdown", () => {
                 category: { slug: "combined-expenses" },
             }),
         ]);
-        render(
+        renderWithIntl(
             <Donut
                 slices={[
                     {
@@ -675,7 +676,7 @@ describe("MonthBreakdown", () => {
     });
 
     it("drops the income share when the month has no income logged", () => {
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={totals}
                 fundingRows={NO_ROWS}
@@ -690,7 +691,7 @@ describe("MonthBreakdown", () => {
 
     it("draws no income remainder for a month with neither income nor spend logged (R4-2)", () => {
         const empty = computeFeedTotals([]);
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={empty}
                 fundingRows={NO_ROWS}
@@ -705,7 +706,7 @@ describe("MonthBreakdown", () => {
     });
 
     it("reads spend against no logged income as over income (R4-2)", () => {
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={totals}
                 fundingRows={NO_ROWS}
@@ -727,7 +728,7 @@ describe("MonthBreakdown", () => {
             expense({ id: "f1", amount: 0.1, actualExpenditure: 0.1 }),
             expense({ id: "f2", amount: 0.2, actualExpenditure: 0.2 }),
         ]);
-        render(
+        renderWithIntl(
             <MonthBreakdown
                 totals={floatMonth}
                 fundingRows={NO_ROWS}
@@ -746,7 +747,7 @@ describe("MonthBreakdown", () => {
 
 describe("the chin that opens it", () => {
     it("opens the breakdown from the dashboard rail", async () => {
-        render(
+        renderWithIntl(
             <SummaryRail
                 totals={totals}
                 fundingRows={NO_ROWS}
@@ -764,7 +765,7 @@ describe("the chin that opens it", () => {
     });
 
     it("shows the partner cash as two named flows and no net", () => {
-        render(
+        renderWithIntl(
             <SummaryRail
                 totals={totals}
                 fundingRows={NO_ROWS}
@@ -850,7 +851,7 @@ describe("the figures the rail leaves to Full breakdown", () => {
     });
 
     it("drops them from the rail", () => {
-        render(<SummaryRail {...props} />);
+        renderWithIntl(<SummaryRail {...props} />);
         const chin = within(screen.getByTestId("feed-totals"));
 
         for (const gone of [
@@ -867,7 +868,7 @@ describe("the figures the rail leaves to Full breakdown", () => {
     });
 
     it("keeps every one of them in the modal", async () => {
-        render(<SummaryRail {...props} />);
+        renderWithIntl(<SummaryRail {...props} />);
         fireEvent.click(screen.getByRole("button", { name: "Full breakdown" }));
         const modal = within(await screen.findByRole("dialog"));
 
@@ -906,7 +907,7 @@ describe("the figures the rail leaves to Full breakdown", () => {
     });
 
     it("says when the month spent more than its income", async () => {
-        render(<SummaryRail {...props} incomeTotal={1000} />);
+        renderWithIntl(<SummaryRail {...props} incomeTotal={1000} />);
         fireEvent.click(screen.getByRole("button", { name: "Full breakdown" }));
         const modal = within(await screen.findByRole("dialog"));
         expect(modal.getByText("$880.00 over income").className).toContain(

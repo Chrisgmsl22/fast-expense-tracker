@@ -1,3 +1,5 @@
+import { getLocale } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { summarizeCardBalances } from "@/lib/domain/card-balance";
@@ -22,6 +24,7 @@ export default async function CardBalancesPage({
 }) {
     const { month: monthParam } = await searchParams;
     const month = await getScopedMonth(monthParam);
+    const locale = await getLocale();
     const currentMonth = getCurrentMonthCdmx();
 
     const session = await auth();
@@ -67,7 +70,7 @@ export default async function CardBalancesPage({
             <CardBalancesScreen
                 summary={summary}
                 month={month}
-                monthName={formatMonthName(month)}
+                monthName={formatMonthName(month, locale)}
                 currentMonth={currentMonth}
             />
         </main>

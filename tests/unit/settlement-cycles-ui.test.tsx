@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-    render,
-    screen,
-    fireEvent,
-    waitFor,
-    within,
-} from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const { refreshMock } = vi.hoisted(() => ({ refreshMock: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -114,7 +109,7 @@ const closedCycle: ClosedSettlementCycle = {
 function renderViews(
     over: Partial<Parameters<typeof SettlementViews>[0]> = {},
 ) {
-    return render(
+    return renderWithIntl(
         <SettlementViews
             openJournal={[openRow]}
             monthJournal={[monthRow]}
@@ -329,7 +324,7 @@ describe("a locked row", () => {
     // The Month view passes no `readOnly`, so a locked row must carry its own lock —
     // otherwise the refusal only arrives after the user confirms the delete.
     it("offers no edit or delete control in a view that never passes readOnly", () => {
-        render(
+        renderWithIntl(
             <SettlementJournal
                 journal={[lockedTransfer, openTransfer]}
                 partnerName="Brenda"
@@ -347,7 +342,7 @@ describe("a locked row", () => {
     });
 
     it("says why it cannot be changed, rather than looking inert", () => {
-        render(
+        renderWithIntl(
             <SettlementJournal
                 journal={[lockedTransfer]}
                 partnerName="Brenda"
@@ -404,7 +399,7 @@ describe("a locked row", () => {
     // A frozen shared expense must not point at the Expenses screen: the same
     // close froze it there too, so that names a way out that is not there.
     it("does not send a locked shared expense to the Expenses screen", () => {
-        render(
+        renderWithIntl(
             <SettlementJournal
                 journal={[{ ...openRow, locked: true }]}
                 partnerName="Brenda"
@@ -424,7 +419,7 @@ describe("SettlementCloseCard", () => {
     });
 
     it("never closes without an explicit confirmation", () => {
-        render(<SettlementCloseCard partnerName="Brenda" />);
+        renderWithIntl(<SettlementCloseCard partnerName="Brenda" />);
         fireEvent.click(
             screen.getByRole("button", { name: "Close settlement" }),
         );
@@ -442,7 +437,7 @@ describe("SettlementCloseCard", () => {
                 alreadyClosed: false,
             },
         });
-        render(<SettlementCloseCard partnerName="Brenda" />);
+        renderWithIntl(<SettlementCloseCard partnerName="Brenda" />);
         fireEvent.click(
             screen.getByRole("button", { name: "Close settlement" }),
         );
@@ -461,7 +456,7 @@ describe("SettlementCloseCard", () => {
             code: "not_settled",
             message: "This settlement isn't square yet, so it can't be closed.",
         });
-        render(<SettlementCloseCard partnerName="Brenda" />);
+        renderWithIntl(<SettlementCloseCard partnerName="Brenda" />);
         fireEvent.click(
             screen.getByRole("button", { name: "Close settlement" }),
         );

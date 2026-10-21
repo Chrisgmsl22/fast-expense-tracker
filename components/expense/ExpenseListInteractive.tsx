@@ -18,6 +18,7 @@ import {
     movementDisplay,
     movementRowText,
 } from "@/components/movement/movement-display";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { SummaryStrip } from "@/components/money/SummaryStrip";
 import { Button } from "@/components/ui/button";
@@ -665,7 +666,7 @@ function ExpenseRow({
 
             {/* Date — desktop only */}
             <span className="hidden whitespace-nowrap text-sm text-muted-foreground sm:block">
-                {formatExpenseDate(expense.date)}
+                {formatExpenseDate(expense.date, "es")}
             </span>
 
             {/* Description (+ mobile date · card subline). On mobile the wrapper
@@ -683,12 +684,12 @@ function ExpenseRow({
                 <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground sm:hidden">
                     {isSavings ? (
                         <span className="whitespace-nowrap">
-                            {formatExpenseDate(expense.date)}
+                            {formatExpenseDate(expense.date, "es")}
                         </span>
                     ) : (
                         <>
                             <span className="whitespace-nowrap">
-                                {formatExpenseDate(expense.date)} ·
+                                {formatExpenseDate(expense.date, "es")} ·
                             </span>
                             <Dot color={cardColor} />
                             <span className="min-w-0 truncate">{cardName}</span>
@@ -841,7 +842,7 @@ function MovementRow({
                     <RowFundingBadge row={m} />
                 </span>
                 <span className="block min-w-0 truncate text-xs text-muted-foreground sm:mt-0.5">
-                    {formatExpenseDate(m.date)}
+                    {formatExpenseDate(m.date, "es")}
                     {subline ? ` · ${subline}` : ""}
                 </span>
             </span>

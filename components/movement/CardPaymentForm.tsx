@@ -21,6 +21,7 @@ import {
 import type { FieldErrors } from "@/lib/actions/result";
 import { balanceAfterPayment, payFullAmount } from "@/lib/domain/card-balance";
 import { getTodayCdmx } from "@/lib/dates";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatBalance, formatMonthLabel, formatMxn } from "@/lib/format";
 import type { CardPaymentInput } from "@/lib/schemas/movement";
 import type { CardOption } from "@/components/expense/ExpenseForm";
@@ -82,7 +83,7 @@ export function CardPaymentForm({
     // since saving would look like nothing happened.
     const otherMonthNote =
         viewingMonth && date.length === 10 && date.slice(0, 7) !== viewingMonth
-            ? `Lands in ${formatMonthLabel(date.slice(0, 7))}. You are viewing ${formatMonthLabel(viewingMonth)}, so this balance will not change.`
+            ? `Lands in ${formatMonthLabel(date.slice(0, 7), "en")}. You are viewing ${formatMonthLabel(viewingMonth, "en")}, so this balance will not change.`
             : null;
     // That month's balance is not the one on screen, so "Pay full" has no amount to offer.
     const fullAmount =

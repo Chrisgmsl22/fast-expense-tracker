@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import {
-    render,
-    screen,
-    fireEvent,
-    waitFor,
-    within,
-} from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/app/_actions/card/add", () => ({ addCard: vi.fn() }));
@@ -55,7 +50,7 @@ beforeEach(() => {
 
 describe("CardsForm", () => {
     it("renders each card as a row", () => {
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[
                     card({ id: "c1", name: "NU" }),
@@ -68,7 +63,7 @@ describe("CardsForm", () => {
     });
 
     it("reveals the add form and submits a new card", async () => {
-        render(<CardsForm cards={[]} />);
+        renderWithIntl(<CardsForm cards={[]} />);
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
 
         const form = screen.getByRole("form", { name: "Add card" });
@@ -88,7 +83,7 @@ describe("CardsForm", () => {
     });
 
     it("offers only Credit and Debit as add types (no Cash)", async () => {
-        render(<CardsForm cards={[]} />);
+        renderWithIntl(<CardsForm cards={[]} />);
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
         // Open the type dropdown so its options mount.
         fireEvent.click(screen.getByLabelText("Card type"));
@@ -103,7 +98,7 @@ describe("CardsForm", () => {
     });
 
     it("shows the max-cards hint on the add form", () => {
-        render(<CardsForm cards={[]} />);
+        renderWithIntl(<CardsForm cards={[]} />);
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
         expect(
             screen.getByText(`Up to ${MAX_ACTIVE_CARDS} cards.`),
@@ -117,7 +112,7 @@ describe("CardsForm", () => {
             message: "You already have an active card with that name.",
             fieldErrors: { name: ["A card with that name already exists"] },
         });
-        render(<CardsForm cards={[]} />);
+        renderWithIntl(<CardsForm cards={[]} />);
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
         const form = screen.getByRole("form", { name: "Add card" });
         fireEvent.change(within(form).getByLabelText("Card name"), {
@@ -133,7 +128,7 @@ describe("CardsForm", () => {
     });
 
     it("picks a palette swatch as the colour (custom hex stays hidden)", async () => {
-        render(<CardsForm cards={[]} />);
+        renderWithIntl(<CardsForm cards={[]} />);
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
         const form = screen.getByRole("form", { name: "Add card" });
         fireEvent.change(within(form).getByLabelText("Card name"), {
@@ -152,7 +147,7 @@ describe("CardsForm", () => {
     });
 
     it("hides the custom hex input until the advanced checkbox is ticked", () => {
-        render(<CardsForm cards={[]} />);
+        renderWithIntl(<CardsForm cards={[]} />);
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
         const form = screen.getByRole("form", { name: "Add card" });
 
@@ -166,7 +161,7 @@ describe("CardsForm", () => {
     });
 
     it("submits a typed custom hex once the advanced box is ticked", async () => {
-        render(<CardsForm cards={[]} />);
+        renderWithIntl(<CardsForm cards={[]} />);
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
         const form = screen.getByRole("form", { name: "Add card" });
         fireEvent.change(within(form).getByLabelText("Card name"), {
@@ -190,7 +185,7 @@ describe("CardsForm", () => {
     });
 
     it("reverts to a palette swatch when the custom-hex box is unchecked", async () => {
-        render(<CardsForm cards={[]} />);
+        renderWithIntl(<CardsForm cards={[]} />);
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
         const form = screen.getByRole("form", { name: "Add card" });
         fireEvent.change(within(form).getByLabelText("Card name"), {
@@ -223,7 +218,7 @@ describe("CardsForm", () => {
     });
 
     it("edit on a custom-hex card pre-checks advanced and prefills the hex", () => {
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[card({ id: "c1", name: "NU", color: "#abcdef" })]}
             />,
@@ -240,7 +235,7 @@ describe("CardsForm", () => {
     });
 
     it("edit on a palette-colour card leaves advanced unchecked", () => {
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[card({ id: "c1", name: "NU", color: "#9333ea" })]}
             />,
@@ -251,7 +246,7 @@ describe("CardsForm", () => {
     });
 
     it("locks the cash card — no edit control, shows a lock note", () => {
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[card({ id: "cash", name: "Cash", type: "cash" })]}
             />,
@@ -261,7 +256,7 @@ describe("CardsForm", () => {
     });
 
     it("puts archived cards in their own section — Restore only, no edit/archive/delete", () => {
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[
                     card({ id: "a1", name: "NU" }),
@@ -277,12 +272,12 @@ describe("CardsForm", () => {
     });
 
     it("omits the Archived section when there are no archived cards", () => {
-        render(<CardsForm cards={[card({ id: "a1", name: "NU" })]} />);
+        renderWithIntl(<CardsForm cards={[card({ id: "a1", name: "NU" })]} />);
         expect(screen.queryByText("Archived")).toBeNull();
     });
 
     it("restores an archived card", async () => {
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[
                     card({ id: "c1", name: "Old", archivedAt: new Date() }),
@@ -303,7 +298,7 @@ describe("CardsForm", () => {
             message:
                 "You're at the 10-card limit — archive or delete an active card first.",
         });
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[
                     card({ id: "c1", name: "Old", archivedAt: new Date() }),
@@ -328,7 +323,7 @@ describe("CardsForm", () => {
             message:
                 'You already have an active card named "NU" — rename or archive that one first.',
         });
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[card({ id: "c1", name: "NU", archivedAt: new Date() })]}
             />,
@@ -348,7 +343,7 @@ describe("CardsForm", () => {
         const cards = Array.from({ length: MAX_ACTIVE_CARDS }, (_, i) =>
             card({ id: `c${i}`, name: `Card ${i}` }),
         );
-        render(<CardsForm cards={cards} />);
+        renderWithIntl(<CardsForm cards={cards} />);
         const addButton = screen.getByRole("button", {
             name: "Add card",
         }) as HTMLButtonElement;
@@ -357,7 +352,7 @@ describe("CardsForm", () => {
     });
 
     it("edit → Archive when the card is in use", async () => {
-        render(
+        renderWithIntl(
             <CardsForm cards={[card({ id: "c1", name: "NU", inUse: true })]} />,
         );
         fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
@@ -370,7 +365,7 @@ describe("CardsForm", () => {
     });
 
     it("edit → Delete opens a confirm dialog, then deletes on confirm", async () => {
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[card({ id: "c1", name: "NU", inUse: false })]}
             />,
@@ -391,7 +386,7 @@ describe("CardsForm", () => {
     });
 
     it("edit → Delete → Cancel dismisses the dialog without deleting", async () => {
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[card({ id: "c1", name: "NU", inUse: false })]}
             />,
@@ -412,7 +407,7 @@ describe("CardsForm", () => {
             message: "You already have an active card with that name.",
             fieldErrors: { name: ["A card with that name already exists"] },
         });
-        render(<CardsForm cards={[card({ id: "c1", name: "NU" })]} />);
+        renderWithIntl(<CardsForm cards={[card({ id: "c1", name: "NU" })]} />);
         fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
         fireEvent.change(screen.getByLabelText("Card name"), {
             target: { value: "BBVA" },
@@ -433,7 +428,7 @@ describe("CardsForm", () => {
             message: "Please fix the highlighted fields.",
             fieldErrors: { color: ["Enter a valid #RRGGBB color"] },
         });
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[card({ id: "c1", name: "BBVA", color: "blue" })]}
             />,
@@ -460,7 +455,7 @@ describe("CardsForm", () => {
             message: "Please fix the highlighted fields.",
             fieldErrors: { color: ["Enter a valid #RRGGBB color"] },
         });
-        render(<CardsForm cards={[]} />);
+        renderWithIntl(<CardsForm cards={[]} />);
         fireEvent.click(screen.getByRole("button", { name: "Add card" }));
         const form = screen.getByRole("form", { name: "Add card" });
         fireEvent.click(within(form).getByRole("button", { name: "Add card" }));
@@ -477,7 +472,7 @@ describe("CardsForm", () => {
     });
 
     it("leaves the colour field undescribed when there is no colour error", () => {
-        render(<CardsForm cards={[card({ id: "c1", name: "NU" })]} />);
+        renderWithIntl(<CardsForm cards={[card({ id: "c1", name: "NU" })]} />);
         fireEvent.click(screen.getByRole("button", { name: "Edit NU" }));
 
         expect(
@@ -493,7 +488,7 @@ describe("CardsForm", () => {
             code: "has_references",
             message: "This card is used by past records — archive it instead.",
         });
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[card({ id: "c1", name: "NU", inUse: false })]}
             />,
@@ -513,7 +508,7 @@ describe("CardsForm", () => {
     });
 
     it("edit form shows the type dropdown prefilled with the card's type", async () => {
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[card({ id: "c1", name: "BBVA", type: "debit" })]}
             />,
@@ -534,7 +529,7 @@ describe("CardsForm", () => {
     });
 
     it("edit → Save changes calls updateCard with the type", async () => {
-        render(
+        renderWithIntl(
             <CardsForm
                 cards={[card({ id: "c1", name: "NU", type: "credit" })]}
             />,

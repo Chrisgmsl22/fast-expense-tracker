@@ -9,12 +9,12 @@ import {
 } from "vitest";
 import {
     act,
-    render,
     screen,
     fireEvent,
     waitFor,
     within,
 } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const refreshMock = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -176,7 +176,7 @@ const props = {
 
 describe("ExpenseListInteractive", () => {
     it("shows the empty state when there is nothing logged", () => {
-        render(<ExpenseListInteractive expenses={[]} {...props} />);
+        renderWithIntl(<ExpenseListInteractive expenses={[]} {...props} />);
         expect(
             screen.getByText(/nothing logged for this month/i),
         ).toBeDefined();
@@ -184,7 +184,7 @@ describe("ExpenseListInteractive", () => {
 
     it("labels a partner payment, never Cash", () => {
         // A payment has no card, and the bare `?? "Cash"` fallback printed BUG-1's symptom here.
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={[
                     {
@@ -204,7 +204,9 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("renders a row with per-row edit + delete actions", () => {
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
         expect(screen.getByText("Tacos")).toBeDefined();
         expect(
             screen.getByRole("button", { name: "Edit Tacos" }),
@@ -223,7 +225,7 @@ describe("ExpenseListInteractive", () => {
                 cycleClosedAt: new Date("2026-05-20T00:00:00Z"),
             },
         ];
-        render(<ExpenseListInteractive expenses={frozen} {...props} />);
+        renderWithIntl(<ExpenseListInteractive expenses={frozen} {...props} />);
 
         expect(screen.getByText("Tacos")).toBeDefined();
         expect(screen.queryByRole("button", { name: "Edit Tacos" })).toBeNull();
@@ -242,7 +244,7 @@ describe("ExpenseListInteractive", () => {
                 cycleClosedAt: new Date("2026-05-20T00:00:00Z"),
             },
         ];
-        render(<ExpenseListInteractive expenses={solo} {...props} />);
+        renderWithIntl(<ExpenseListInteractive expenses={solo} {...props} />);
 
         expect(screen.getByRole("button", { name: "Edit Uber" })).toBeDefined();
         expect(
@@ -259,7 +261,7 @@ describe("ExpenseListInteractive", () => {
             // A marker is inside the cycle it closed, so it carries BOTH facts.
             { ...movements[1]!, closedAt, cycleClosedAt: closedAt },
         ];
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={[]}
                 {...{ ...props, movements: marked }}
@@ -297,7 +299,7 @@ describe("ExpenseListInteractive", () => {
             // the same.
             { ...movements[1]!, closedAt: null, cycleClosedAt },
         ];
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={[]}
                 {...{ ...props, movements: inClosedCycle }}
@@ -321,13 +323,17 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("renders my-share for shared rows and 'not shared' otherwise", () => {
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
         expect(screen.getByText("my share $136.00")).toBeDefined();
         expect(screen.getByText("not shared")).toBeDefined();
     });
 
     it("falls back to a Cash label for a null card", () => {
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
         // Uber has no card → rendered as Cash (desktop card cell + mobile subline).
         expect(screen.getAllByText("Cash").length).toBeGreaterThan(0);
     });
@@ -355,7 +361,9 @@ describe("ExpenseListInteractive", () => {
                 card: null,
             },
         ];
-        render(<ExpenseListInteractive expenses={savings} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={savings} {...props} />,
+        );
         expect(screen.getByText("Emergency fund")).toBeDefined();
         // Savings is a transfer — no card, and must not show the Cash fallback.
         expect(screen.queryByText("Cash")).toBeNull();
@@ -363,7 +371,9 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("totals Charged and My-share over the visible rows", () => {
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
         const totals = screen.getByTestId("totals-footer");
         // Charged = 200 + 1000; My-share = 136 + 1000.
         expect(within(totals).getByText("$1,200.00")).toBeDefined();
@@ -371,7 +381,9 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("filters rows by category chip and retotals", () => {
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
         expect(screen.getByText("Tacos")).toBeDefined();
         expect(screen.getByText("Uber")).toBeDefined();
 
@@ -390,7 +402,7 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("falls back to All when the active category disappears after a refresh", () => {
-        const { rerender } = render(
+        const { rerender } = renderWithIntl(
             <ExpenseListInteractive expenses={expenses} {...props} />,
         );
         fireEvent.click(screen.getByRole("button", { name: "Food" }));
@@ -415,7 +427,9 @@ describe("ExpenseListInteractive", () => {
             ok: true,
             data: { id: "e1" },
         });
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
 
         fireEvent.click(screen.getByRole("button", { name: "Edit Tacos" }));
 
@@ -433,7 +447,9 @@ describe("ExpenseListInteractive", () => {
             message:
                 "Your partner's share of this expense counts in a settlement you already closed, so it can't be edited.",
         });
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
 
         fireEvent.click(screen.getByRole("button", { name: "Edit Tacos" }));
 
@@ -463,7 +479,7 @@ describe("ExpenseListInteractive", () => {
             (getExpenseForEdit as unknown as Mock).mockResolvedValue(
                 editRefused,
             );
-            render(
+            renderWithIntl(
                 <ExpenseListInteractive
                     expenses={expenses}
                     {...{ ...props, movements }}
@@ -512,7 +528,9 @@ describe("ExpenseListInteractive", () => {
                     message: "Could not delete the expense. Please try again.",
                 })
                 .mockResolvedValueOnce({ ok: true, data: { id: "e1" } });
-            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            renderWithIntl(
+                <ExpenseListInteractive expenses={expenses} {...props} />,
+            );
 
             fireEvent.click(
                 screen.getByRole("button", { name: "Delete Tacos" }),
@@ -545,7 +563,9 @@ describe("ExpenseListInteractive", () => {
             message:
                 "Your partner's share of this expense counts in a settlement you already closed, so it can't be deleted.",
         });
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
 
         fireEvent.click(screen.getByRole("button", { name: "Delete Tacos" }));
         fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
@@ -592,7 +612,9 @@ describe("ExpenseListInteractive", () => {
             code: "db_error",
             message: "Could not delete the expense. Please try again.",
         });
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
 
         fireEvent.click(screen.getByRole("button", { name: "Delete Tacos" }));
         fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
@@ -613,7 +635,9 @@ describe("ExpenseListInteractive", () => {
             ok: true,
             data: { id: "e1" },
         });
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
 
         fireEvent.click(screen.getByRole("button", { name: "Delete Tacos" }));
         expect(
@@ -636,7 +660,9 @@ describe("ExpenseListInteractive", () => {
             code: "db_error",
             message: "Could not delete the expense. Please try again.",
         });
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
 
         fireEvent.click(screen.getByRole("button", { name: "Delete Tacos" }));
         fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
@@ -668,7 +694,7 @@ describe("ExpenseListInteractive", () => {
             isShared: false,
             isPartnerPayment: true,
         };
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={[...expenses, payment]}
                 {...{ ...props, movements }}
@@ -683,7 +709,9 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("keeps one accessible breakdown control across responsive layouts", () => {
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
         expect(
             screen.getAllByRole("button", { name: "Full breakdown" }),
         ).toHaveLength(1);
@@ -693,7 +721,7 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("keeps a legacy outside-income transfer out of personal cost", () => {
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...props}
@@ -727,7 +755,9 @@ describe("ExpenseListInteractive", () => {
             isShared: false,
             isPartnerPayment: true,
         };
-        render(<ExpenseListInteractive expenses={[payment]} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={[payment]} {...props} />,
+        );
         const footer = within(screen.getByTestId("totals-footer"));
         expect(
             footer.getByText("My cost").nextElementSibling?.textContent,
@@ -744,7 +774,7 @@ describe("ExpenseListInteractive", () => {
             direction: "she_owes",
             breakdown: [],
         };
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...props}
@@ -763,7 +793,9 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("shows zero outside-income cost when all expenses use income", () => {
-        render(<ExpenseListInteractive expenses={expenses} {...props} />);
+        renderWithIntl(
+            <ExpenseListInteractive expenses={expenses} {...props} />,
+        );
         const footer = within(screen.getByTestId("totals-footer"));
         expect(
             footer.getByText("Outside income").nextElementSibling?.textContent,
@@ -771,7 +803,7 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("hides movements when a category filter is active (they have no category)", () => {
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements }}
@@ -784,7 +816,7 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("renders edit + delete actions on a movement row", () => {
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements }}
@@ -811,7 +843,7 @@ describe("ExpenseListInteractive", () => {
                 fundedFrom: "income",
             },
         });
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements }}
@@ -840,7 +872,7 @@ describe("ExpenseListInteractive", () => {
                 fundedFrom: "income",
             },
         });
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements }}
@@ -862,7 +894,7 @@ describe("ExpenseListInteractive", () => {
             code: "not_found",
             message: "Couldn't load that movement. Please refresh.",
         });
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements }}
@@ -886,7 +918,7 @@ describe("ExpenseListInteractive", () => {
             message:
                 "This transfer counts in a settlement you already closed, so it can't be edited.",
         });
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements }}
@@ -914,7 +946,7 @@ describe("ExpenseListInteractive", () => {
             message:
                 "This row counts in a settlement you already closed, so it can't be deleted.",
         });
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements }}
@@ -949,7 +981,7 @@ describe("ExpenseListInteractive", () => {
             ok: true,
             data: { id: "mv2" },
         });
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements }}
@@ -973,7 +1005,7 @@ describe("ExpenseListInteractive", () => {
     it("never shows a debt she fronted, even when handed one", () => {
         // Settlement-only (spec 0007 §6b). The month query excludes it and `buildFeed`
         // drops it again, so no caller can put the orange row back.
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements: [...movements, debt] }}
@@ -989,13 +1021,13 @@ describe("ExpenseListInteractive", () => {
     });
 
     it("leaves the totals untouched when a debt is present", () => {
-        const { unmount } = render(
+        const { unmount } = renderWithIntl(
             <ExpenseListInteractive expenses={expenses} {...props} />,
         );
         const without = screen.getByTestId("totals-footer").textContent;
         unmount();
 
-        render(
+        renderWithIntl(
             <ExpenseListInteractive
                 expenses={expenses}
                 {...{ ...props, movements: [debt] }}
@@ -1050,7 +1082,9 @@ describe("ExpenseListInteractive", () => {
         ];
 
         it("badges a savings-funded row and a reimbursed row distinctly", () => {
-            render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
+            renderWithIntl(
+                <ExpenseListInteractive expenses={fundedRows} {...props} />,
+            );
 
             const savingsBadge = screen.getByText("from savings");
             const reimbursedBadge = screen.getByText("reimbursed");
@@ -1062,7 +1096,9 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("shows the row at its full amount — the badge explains, it doesn't discount", () => {
-            render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
+            renderWithIntl(
+                <ExpenseListInteractive expenses={fundedRows} {...props} />,
+            );
             const row = screen
                 .getByRole("button", { name: "Edit Shoes" })
                 .closest("li")!;
@@ -1071,7 +1107,9 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("lists the funded rows behind each footer sub-row, following the filter", () => {
-            render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
+            renderWithIntl(
+                <ExpenseListInteractive expenses={fundedRows} {...props} />,
+            );
             const footer = within(screen.getByTestId("totals-footer"));
             const reimbursed = footer
                 .getByText("Reimbursed")
@@ -1085,7 +1123,9 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("gives the title its own full-width line on mobile, badge beneath", () => {
-            render(<ExpenseListInteractive expenses={fundedRows} {...props} />);
+            renderWithIntl(
+                <ExpenseListInteractive expenses={fundedRows} {...props} />,
+            );
             const title = screen.getAllByText("Shoes")[0]!;
             // The title line spans every mobile column, so the amount and the
             // actions sit on the next line instead of squeezing it.
@@ -1098,7 +1138,9 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("leaves an income-funded row unbadged", () => {
-            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            renderWithIntl(
+                <ExpenseListInteractive expenses={expenses} {...props} />,
+            );
             expect(screen.queryByText("from savings")).toBeNull();
             expect(screen.queryByText("reimbursed")).toBeNull();
         });
@@ -1114,7 +1156,7 @@ describe("ExpenseListInteractive", () => {
                 fundedFrom: "income" as const,
                 countedInBudget: false,
             };
-            render(
+            renderWithIntl(
                 <ExpenseListInteractive
                     expenses={[...expenses, outOfBand]}
                     {...props}
@@ -1135,7 +1177,7 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("badges an out-of-band transfer the same way", () => {
-            render(
+            renderWithIntl(
                 <ExpenseListInteractive
                     expenses={expenses}
                     {...props}
@@ -1163,7 +1205,9 @@ describe("ExpenseListInteractive", () => {
             screen.getByRole("button", { name: "Edit Tacos" }).closest("ul")!;
 
         it("scrolls with the page on mobile, so the top bar can hide and return", () => {
-            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            renderWithIntl(
+                <ExpenseListInteractive expenses={expenses} {...props} />,
+            );
             const list = rowList().className.split(" ");
             // Desktop keeps its bounded scroller…
             expect(list).toContain("max-h-[70vh]");
@@ -1174,7 +1218,9 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("keeps the mobile date on one line and truncates the card name instead", () => {
-            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            renderWithIntl(
+                <ExpenseListInteractive expenses={expenses} {...props} />,
+            );
             const row = screen
                 .getByRole("button", { name: "Edit Tacos" })
                 .closest("li")!;
@@ -1207,7 +1253,9 @@ describe("ExpenseListInteractive", () => {
                     disconnect() {}
                 },
             );
-            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            renderWithIntl(
+                <ExpenseListInteractive expenses={expenses} {...props} />,
+            );
             const chin = screen.getByTestId("totals-footer");
             // The chin's box includes its env(safe-area-inset-bottom) padding.
             expect(chin.className).toContain(
@@ -1239,7 +1287,7 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("says who owes whom, how much, and links to the settlement", () => {
-            render(
+            renderWithIntl(
                 <ExpenseListInteractive
                     expenses={expenses}
                     {...props}
@@ -1258,7 +1306,7 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("reads the other way round when she owes you", () => {
-            render(
+            renderWithIntl(
                 <ExpenseListInteractive
                     expenses={expenses}
                     {...props}
@@ -1272,7 +1320,7 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("stays calm when nothing is outstanding", () => {
-            render(
+            renderWithIntl(
                 <ExpenseListInteractive
                     expenses={expenses}
                     {...props}
@@ -1286,7 +1334,7 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("renders nothing in solo mode — there is nobody to settle with", () => {
-            render(
+            renderWithIntl(
                 <ExpenseListInteractive
                     expenses={expenses}
                     {...props}
@@ -1299,12 +1347,14 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("renders nothing when no balance is passed", () => {
-            render(<ExpenseListInteractive expenses={expenses} {...props} />);
+            renderWithIntl(
+                <ExpenseListInteractive expenses={expenses} {...props} />,
+            );
             expect(screen.queryByRole("link")).toBeNull();
         });
 
         it("survives an empty month, which has no chin to sit on", () => {
-            render(
+            renderWithIntl(
                 <ExpenseListInteractive
                     expenses={[]}
                     {...props}
@@ -1323,7 +1373,7 @@ describe("ExpenseListInteractive", () => {
         it("names its scope on any month but the live one", () => {
             // Every other figure in this chin is the viewed month, and the month
             // picker sits above it — unqualified, March reads as March's debt.
-            render(
+            renderWithIntl(
                 <ExpenseListInteractive
                     expenses={expenses}
                     {...props}
@@ -1339,7 +1389,7 @@ describe("ExpenseListInteractive", () => {
         });
 
         it("stays quiet about the scope on the current month", () => {
-            render(
+            renderWithIntl(
                 <ExpenseListInteractive
                     expenses={expenses}
                     {...props}

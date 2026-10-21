@@ -1,0 +1,41 @@
+{
+    "home": "Inicio de Fast Expense",
+    "sidebar": "Barra lateral",
+    "mainNavigation": "Navegación principal",
+    "navigation": "Navegación",
+    "openMenu": "Abrir menú",
+    "groups": {
+        "overview": "General",
+        "money": "Dinero",
+        "setup": "Ajustes"
+    },
+    "links": {
+        "dashboard": "Resumen",
+        "expenses": "Gastos",
+        "income": "Ingresos",
+        "settlement": "Cuentas",
+        "cards": "Saldos de tarjetas",
+        "savings": "Ahorro",
+        "settings": "Configuración"
+    },
+    "settlement": {
+        "sheOwes": "{partner} te debe",
+        "youOwe": "Le debes a {partner}",
+        "settled": "Saldado",
+        "linkLabel": "Cuentas, ciclo abierto: {status}, {amount}"
+    },
+    "thisMonth": "Este mes",
+    "dayProgress": "día {day} / {days}",
+    "totals": {
+        "spent": "Gastado real",
+        "saved": "Ahorrado",
+        "net": "Neto a la fecha"
+    },
+    "overBudget": "Sobre el presupuesto",
+    "alertKind": {
+        "bucket": "bolsa",
+        "category": "categoría"
+    },
+    "alertLabel": "{name}, {kind}, {amount} sobre el presupuesto de {month}",
+    "account": "Cuenta"
+}

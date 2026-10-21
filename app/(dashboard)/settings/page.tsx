@@ -1,3 +1,5 @@
+import { getLocale } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { resolveBudgetRule } from "@/lib/domain/budget-rule";
@@ -9,6 +11,7 @@ import {
 } from "@/lib/repositories";
 import { BudgetRuleForm } from "@/components/settings/BudgetRuleForm";
 import { CardsForm } from "@/components/settings/CardsForm";
+import { LanguageSection } from "@/components/settings/LanguageSection";
 import { SplitRuleForm } from "@/components/settings/SplitRuleForm";
 
 // Per-request, DB-backed data — never prerender at build (no DB in preview builds, ADR-0004).
@@ -33,6 +36,7 @@ export default async function SettingsPage() {
     }
 
     const currentMonth = getCurrentMonthCdmx();
+    const locale = await getLocale();
     const [settings, cards, budgetRules] = await Promise.all([
         settingsRepository.getSettings(userId),
         cardRepository.listForSettings(userId),
@@ -52,10 +56,12 @@ export default async function SettingsPage() {
 
                 <BudgetRuleForm
                     rule={resolveBudgetRule(budgetRules, currentMonth)}
-                    monthLabel={formatMonthLabel(currentMonth)}
+                    monthLabel={formatMonthLabel(currentMonth, locale)}
                 />
 
                 <CardsForm cards={cards} />
+
+                <LanguageSection />
 
                 {/* Deferred sections (spec 0006 §8) — placeholders so the page
                     reads as the full Settings surface without shipping them yet. */}

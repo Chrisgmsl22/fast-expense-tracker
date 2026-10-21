@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 vi.mock("next/navigation", () => ({
     useRouter: () => ({ refresh: vi.fn() }),
@@ -32,7 +33,7 @@ function openMenu() {
 
 describe("AddExpenseButton", () => {
     it("shows the partner transfer items in Shared mode", () => {
-        render(<AddExpenseButton {...props} sharesExpenses />);
+        renderWithIntl(<AddExpenseButton {...props} sharesExpenses />);
         openMenu();
         expect(screen.getByText("Expense")).toBeDefined();
         expect(screen.getByText("Card payment")).toBeDefined();
@@ -43,13 +44,13 @@ describe("AddExpenseButton", () => {
     it("never offers 'I owe {partner}', even in Shared mode", () => {
         // A debt is created on the settlement page, where the balance it moves is in
         // view. The row itself still SHOWS in the expenses feed.
-        render(<AddExpenseButton {...props} sharesExpenses />);
+        renderWithIntl(<AddExpenseButton {...props} sharesExpenses />);
         openMenu();
         expect(screen.queryByText("I owe Brenda")).toBeNull();
     });
 
     it("hides the partner transfer items in Solo mode (CHORE-6.b)", () => {
-        render(<AddExpenseButton {...props} sharesExpenses={false} />);
+        renderWithIntl(<AddExpenseButton {...props} sharesExpenses={false} />);
         openMenu();
         // Non-partner options remain.
         expect(screen.getByText("Expense")).toBeDefined();

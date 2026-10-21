@@ -1,3 +1,5 @@
+import { getLocale } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { getScopedMonth } from "@/lib/month-scope.server";
@@ -26,6 +28,7 @@ export default async function ExpensesPage({
 }) {
     const { month: monthParam } = await searchParams;
     const month = await getScopedMonth(monthParam);
+    const locale = await getLocale();
     const currentMonth = getCurrentMonthCdmx();
 
     const session = await auth();
@@ -94,7 +97,7 @@ export default async function ExpensesPage({
                     defaultSharePercentage={defaultSharePercentage}
                     partnerName={partnerName}
                     sharesExpenses={sharesExpenses}
-                    monthLabel={formatMonthLabel(month)}
+                    monthLabel={formatMonthLabel(month, locale)}
                     isCurrentMonth={month === currentMonth}
                     settlement={settlement.balance}
                     incomeTotal={income.total}

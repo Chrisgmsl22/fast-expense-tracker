@@ -38,6 +38,7 @@ import {
     partnerDebtLabel,
     type PartnerDebtDirection,
 } from "@/lib/domain/movement";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
 
@@ -76,7 +77,7 @@ const LOCKED_REASON = "in a closed settlement · locked";
 function debtSubtitle(row: PartnerDebtRow, partnerName: string): string {
     const label = defaultDebtDescription(partnerName, row.direction);
     return [
-        formatExpenseDate(row.date),
+        formatExpenseDate(row.date, "es"),
         row.description === label ? null : label,
         row.locked ? LOCKED_REASON : null,
     ]
@@ -86,7 +87,7 @@ function debtSubtitle(row: PartnerDebtRow, partnerName: string): string {
 
 function transferSubtitle(row: TransferRow): string {
     return [
-        formatExpenseDate(row.date),
+        formatExpenseDate(row.date, "es"),
         row.note,
         row.locked ? LOCKED_REASON : null,
     ]
@@ -522,7 +523,7 @@ function JournalRow({
                 // Say why this row has no controls; inert for no stated reason is the
                 // thing to avoid. It must not point at the Expenses screen — the same
                 // close froze it there.
-                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32% · ${
+                subtitle={`${formatExpenseDate(item.date, "es")} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32% · ${
                     item.locked ? LOCKED_REASON : "edit on the Expenses screen"
                 }`}
                 amount={`+${formatMxn(item.partnerShare)}`}

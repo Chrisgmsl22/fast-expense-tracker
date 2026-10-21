@@ -4,6 +4,7 @@ import type {
     CoupleBalance,
     SettlementBreakdownKey,
 } from "@/lib/domain/settlement";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type {
     SettlementBreakdownItem,
@@ -182,8 +183,8 @@ function BreakdownItemRow({
 }) {
     const subtitle =
         item.gross === null
-            ? formatExpenseDate(item.date)
-            : `${formatExpenseDate(item.date)} · ${partnerName}'s share of ${formatMxn(item.gross)} you paid`;
+            ? formatExpenseDate(item.date, "es")
+            : `${formatExpenseDate(item.date, "es")} · ${partnerName}'s share of ${formatMxn(item.gross)} you paid`;
 
     return (
         <li className="flex items-start justify-between gap-3">

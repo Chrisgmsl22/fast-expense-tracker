@@ -99,7 +99,7 @@ describe("FundingSplit", () => {
         expect(within(savingsList).getByText("New laptop")).toBeDefined();
         expect(
             within(savingsList).getByText(
-                formatExpenseDate(new Date("2026-10-04T12:00:00Z")),
+                formatExpenseDate(new Date("2026-10-04T12:00:00Z"), "es"),
             ),
         ).toBeDefined();
         expect(within(savingsList).getByText("$4,758.00")).toBeDefined();

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 import { SummaryRail } from "@/components/money/SummaryRail";
 import { SummaryStrip } from "@/components/money/SummaryStrip";
 import { summaryCost, summaryMetrics } from "@/components/money/summary-model";
@@ -139,7 +140,7 @@ describe("summary layout", () => {
             incomePercent: 0,
             outsideIncomePercent: 0,
         });
-        render(
+        renderWithIntl(
             <SummaryRail
                 totals={computeFeedTotals([])}
                 {...sharedProps}
@@ -159,7 +160,7 @@ describe("summary layout", () => {
     });
 
     it("partitions the headline with its two legend rows", () => {
-        render(<SummaryRail totals={totals} {...sharedProps} />);
+        renderWithIntl(<SummaryRail totals={totals} {...sharedProps} />);
         const rail = within(screen.getByTestId("feed-totals"));
         const figure = (label: string) =>
             rail.getByText(label).nextElementSibling?.textContent;
@@ -182,21 +183,21 @@ describe("summary layout", () => {
                 countedInBudget: false,
             },
         ]);
-        render(<SummaryRail totals={savingsOnly} {...sharedProps} />);
+        renderWithIntl(<SummaryRail totals={savingsOnly} {...sharedProps} />);
         const rail = within(screen.getByTestId("feed-totals"));
         expect(rail.queryByText("From this month's income")).toBeNull();
         expect(rail.getByText("From savings")).toBeDefined();
     });
 
     it("shows what was kept in a green Saved pill", () => {
-        render(<SummaryRail totals={totals} {...sharedProps} />);
+        renderWithIntl(<SummaryRail totals={totals} {...sharedProps} />);
         const saved = screen.getByText("Saved").nextElementSibling!;
         expect(saved.textContent).toBe("$50.00");
         expect(saved.className).toContain("text-positive");
     });
 
     it("names both partner flows in words, with no net", () => {
-        render(<SummaryRail totals={totals} {...sharedProps} />);
+        renderWithIntl(<SummaryRail totals={totals} {...sharedProps} />);
         const rail = within(screen.getByTestId("feed-totals"));
         // 20 payment-expense + 15 legacy transfer out; 10 back from her.
         const sent = rail.getByRole("listitem", {
@@ -235,7 +236,7 @@ describe("summary layout", () => {
                 },
             ],
         );
-        render(
+        renderWithIntl(
             <>
                 <SummaryRail totals={totalsA} {...sharedProps} />
                 <SummaryRail totals={totalsB} {...sharedProps} />
@@ -259,7 +260,7 @@ describe("summary layout", () => {
         "draws the partner pill on a month with no partner cash only when sharing ($sharesExpenses)",
         ({ sharesExpenses, drawn }) => {
             const solo = computeFeedTotals([row]);
-            render(
+            renderWithIntl(
                 <SummaryRail
                     totals={solo}
                     {...sharedProps}
@@ -275,7 +276,7 @@ describe("summary layout", () => {
     );
 
     it("keeps a solo user's partner history in the pill", () => {
-        render(
+        renderWithIntl(
             <SummaryRail
                 totals={totals}
                 {...sharedProps}
@@ -302,7 +303,7 @@ describe("summary layout", () => {
                 },
             ],
         );
-        render(
+        renderWithIntl(
             <SummaryRail
                 totals={receivedOnly}
                 {...sharedProps}
@@ -315,7 +316,7 @@ describe("summary layout", () => {
     });
 
     it("opens the breakdown with the same income total", async () => {
-        render(
+        renderWithIntl(
             <SummaryRail totals={totals} {...sharedProps} incomeTotal={200} />,
         );
         expect(screen.queryByText("$75.00 left")).toBeNull();
@@ -340,7 +341,7 @@ describe("summary layout", () => {
                 disconnect = disconnect;
             },
         );
-        const { container, unmount } = render(
+        const { container, unmount } = renderWithIntl(
             <SummaryStrip
                 totals={totals}
                 {...sharedProps}

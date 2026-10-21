@@ -7,13 +7,8 @@ import {
     vi,
     type Mock,
 } from "vitest";
-import {
-    fireEvent,
-    render,
-    screen,
-    waitFor,
-    within,
-} from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const refresh = vi.fn();
 const push = vi.fn();
@@ -95,11 +90,11 @@ function renderScreen(
     currentMonth = "2026-09",
     month = "2026-09",
 ) {
-    return render(
+    return renderWithIntl(
         <CardBalancesScreen
             summary={summarizeCardBalances(cards)}
             month={month}
-            monthName={formatMonthName(month)}
+            monthName={formatMonthName(month, "en")}
             currentMonth={currentMonth}
         />,
     );

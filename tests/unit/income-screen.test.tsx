@@ -7,7 +7,8 @@ import {
     beforeEach,
     type Mock,
 } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const refreshMock = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -51,7 +52,7 @@ const variable = [
 ];
 
 function renderScreen(over: Record<string, unknown> = {}) {
-    return render(
+    return renderWithIntl(
         <IncomeScreen
             fixed={44000}
             variableTotal={4200}

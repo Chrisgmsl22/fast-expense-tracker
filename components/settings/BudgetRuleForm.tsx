@@ -20,6 +20,7 @@ import {
 import type { FieldErrors } from "@/lib/actions/result";
 import type { BucketKey } from "@/lib/domain/dashboard";
 import { DEFAULT_BUDGET_RULE, type BudgetRule } from "@/lib/domain/budget-rule";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatMonthLabel } from "@/lib/format";
 import type { BudgetRuleInput } from "@/lib/schemas/budget-rule";
 
@@ -115,7 +116,10 @@ export function BudgetRuleForm({ rule, monthLabel }: Props) {
                     setFormError(null);
                     setInForce({
                         rule: res.data.rule,
-                        monthLabel: formatMonthLabel(res.data.effectiveMonth),
+                        monthLabel: formatMonthLabel(
+                            res.data.effectiveMonth,
+                            "en",
+                        ),
                     });
                     setSaved(true);
                     revertTimer.current = setTimeout(() => {

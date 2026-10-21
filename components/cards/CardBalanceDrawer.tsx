@@ -5,6 +5,7 @@ import { ArrowDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import type { CardHistoryLine } from "@/lib/domain/card-balance";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatBalance, formatExpenseDate, formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -36,7 +37,7 @@ const FIRST_PAGE = 20;
 function HistoryRow({ line }: { line: CardHistoryLine }) {
     const isCharge = line.kind === "charge";
     const detail = [
-        formatExpenseDate(line.date),
+        formatExpenseDate(line.date, "es"),
         line.detail,
         line.isShared ? "shared, full amount" : null,
     ]

@@ -28,15 +28,15 @@ describe("sidebar model", () => {
         expect(model.alerts).toEqual([
             {
                 key: "essentials",
-                label: "Essentials",
                 kind: "bucket",
+                bucket: "essentials",
                 amount: 100,
                 href: "/dashboard?month=2026-09",
             },
             {
                 key: "food",
-                label: "Food",
                 kind: "category",
+                name: "Food",
                 amount: 150,
                 href: "/category/food?month=2026-09",
             },
@@ -63,8 +63,8 @@ describe("sidebar model", () => {
         expect(model.alerts).toEqual([
             {
                 key: "override",
-                label: "Food",
                 kind: "category",
+                name: "Food",
                 amount: 250,
                 href: "/category/override?month=2026-09",
             },
@@ -93,14 +93,14 @@ describe("sidebar model", () => {
         });
     });
     it.each([
-        ["she_owes", 75, true, "Taylor owes you"],
-        ["you_owe", -75, true, "You owe Taylor"],
-        ["settled", 0, true, "Settled"],
-        ["she_owes", 75, false, "Taylor owes you"],
-        ["you_owe", -75, false, "You owe Taylor"],
+        ["she_owes", 75, true],
+        ["you_owe", -75, true],
+        ["settled", 0, true],
+        ["she_owes", 75, false],
+        ["you_owe", -75, false],
     ] as const)(
         "shows %s with shared mode %s",
-        (direction, balance, sharesExpenses, label) => {
+        (direction, balance, sharesExpenses) => {
             expect(
                 buildSidebarModel(
                     sidebarSummary,
@@ -114,7 +114,11 @@ describe("sidebar model", () => {
                     "Taylor",
                     sidebarNow,
                 ).settlement,
-            ).toMatchObject({ direction, label });
+            ).toMatchObject({
+                direction,
+                amount: Math.abs(balance),
+                partnerName: "Taylor",
+            });
         },
     );
     it("hides all partner information for a settled solo account", () => {

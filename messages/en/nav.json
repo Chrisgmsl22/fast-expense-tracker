@@ -1,0 +1,41 @@
+{
+    "home": "Fast Expense home",
+    "sidebar": "Sidebar",
+    "mainNavigation": "Main navigation",
+    "navigation": "Navigation",
+    "openMenu": "Open menu",
+    "groups": {
+        "overview": "Overview",
+        "money": "Money",
+        "setup": "Setup"
+    },
+    "links": {
+        "dashboard": "Dashboard",
+        "expenses": "Expenses",
+        "income": "Income",
+        "settlement": "Settlement",
+        "cards": "Card balances",
+        "savings": "Savings",
+        "settings": "Settings"
+    },
+    "settlement": {
+        "sheOwes": "{partner} owes you",
+        "youOwe": "You owe {partner}",
+        "settled": "Settled",
+        "linkLabel": "Settlement, open cycle: {status}, {amount}"
+    },
+    "thisMonth": "This month",
+    "dayProgress": "day {day} / {days}",
+    "totals": {
+        "spent": "Really spent",
+        "saved": "Saved",
+        "net": "Net so far"
+    },
+    "overBudget": "Over budget",
+    "alertKind": {
+        "bucket": "bucket",
+        "category": "category"
+    },
+    "alertLabel": "{name}, {kind}, {amount} over budget for {month}",
+    "account": "Account"
+}

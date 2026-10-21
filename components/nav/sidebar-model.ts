@@ -3,14 +3,20 @@ import {
     getMonthProgress,
     getMonthRangeUtc,
 } from "@/lib/dates";
-import { formatMonthLabel } from "@/lib/format";
 import { isBalanceSettled, type CoupleBalance } from "@/lib/domain/settlement";
+import type { BucketKey } from "@/lib/domain/dashboard";
 import type { DashboardSummary } from "@/lib/services/dashboard/dashboard.service";
 
 type SidebarSummary = Pick<
     DashboardSummary,
     "consumptionSpent" | "savingsSpent" | "net" | "buckets" | "categoryBudgets"
 >;
+
+type AlertBase = { key: string; amount: number; href: string };
+
+export type SidebarAlert =
+    | (AlertBase & { kind: "bucket"; bucket: Exclude<BucketKey, "savings"> })
+    | (AlertBase & { kind: "category"; name: string });
 
 export function getSidebarDate(now: Date) {
     const month = getCurrentMonthCdmx(now);
@@ -32,19 +38,13 @@ export function buildSidebarModel(
     now: Date,
 ) {
     const date = getSidebarDate(now);
-    const alerts: {
-        key: string;
-        kind: "bucket" | "category";
-        label: string;
-        amount: number;
-        href: string;
-    }[] = [];
+    const alerts: SidebarAlert[] = [];
     for (const bucket of summary.buckets) {
         if (bucket.key === "savings" || bucket.spent <= bucket.target) continue;
         alerts.push({
             key: bucket.key,
             kind: "bucket",
-            label: bucket.key === "essentials" ? "Essentials" : "Discretionary",
+            bucket: bucket.key,
             amount: bucket.spent - bucket.target,
             href: `/dashboard?month=${date.month}`,
         });
@@ -59,7 +59,7 @@ export function buildSidebarModel(
         alerts.push({
             key: category.slug,
             kind: "category",
-            label: category.name,
+            name: category.name,
             amount: category.spent - category.monthlyBudget,
             href: `/category/${encodeURIComponent(category.slug)}?month=${date.month}`,
         });
@@ -67,7 +67,6 @@ export function buildSidebarModel(
     return {
         period: {
             ...date,
-            monthLabel: formatMonthLabel(date.month),
             progress: (date.day / date.daysInMonth) * 100,
         },
         totals: {
@@ -81,12 +80,7 @@ export function buildSidebarModel(
                 ? {
                       direction: balance.direction,
                       amount: balance.amount,
-                      label:
-                          balance.direction === "she_owes"
-                              ? `${partnerName} owes you`
-                              : balance.direction === "you_owe"
-                                ? `You owe ${partnerName}`
-                                : "Settled",
+                      partnerName,
                   }
                 : null,
     };

@@ -6,6 +6,7 @@ import {
     REIMBURSED_NOTE,
 } from "@/lib/domain/funding";
 import type { FeedTotalExpense, NonIncomeSource } from "@/lib/domain/movement";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -72,7 +73,7 @@ export function FundingPart({ source, amount, rows, className }: PartProps) {
                             {row.description}
                         </span>
                         <span className="shrink-0">
-                            {formatExpenseDate(row.date)}
+                            {formatExpenseDate(row.date, "es")}
                         </span>
                         <span className="shrink-0 tabular-nums">
                             {formatMxn(row.actualExpenditure)}

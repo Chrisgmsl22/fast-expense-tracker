@@ -9,6 +9,7 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { TotalsBar } from "@/components/money/TotalsBar";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type {
     ClosedCycleSummary,
@@ -258,7 +259,8 @@ function ClosedCycles({
                             <span className="flex min-w-0 items-center gap-1.5">
                                 <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-aria-expanded:rotate-90" />
                                 <span className="truncate font-medium">
-                                    Settled {formatExpenseDate(cycle.closedOn)}
+                                    Settled{" "}
+                                    {formatExpenseDate(cycle.closedOn, "es")}
                                 </span>
                             </span>
                             <span className="shrink-0 text-xs text-muted-foreground tabular-nums">

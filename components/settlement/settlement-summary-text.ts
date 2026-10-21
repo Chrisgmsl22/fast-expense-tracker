@@ -4,6 +4,7 @@ import {
     type CoupleBalance,
     type SettlementInputs,
 } from "@/lib/domain/settlement";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
 
@@ -108,8 +109,9 @@ function header(
     const oldest = rows[0];
     const newest = rows.at(-1);
     if (!oldest || !newest) return "🧾 *Settlement*";
-    const first = formatExpenseDate(oldest.date);
-    const last = scope === "open" ? "present" : formatExpenseDate(newest.date);
+    const first = formatExpenseDate(oldest.date, "es");
+    const last =
+        scope === "open" ? "present" : formatExpenseDate(newest.date, "es");
     return first === last
         ? `🧾 *Settlement ${first}*`
         : `🧾 *Settlement ${first} – ${last}*`;

@@ -6,6 +6,11 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
+
+function CloseLabel() {
+    return useTranslations("common.actions")("close");
+}
 
 /**
  * Slide-in drawer, built on the same Base UI Dialog as `dialog.tsx` but pinned
@@ -73,7 +78,9 @@ function SheetContent({
                         }
                     >
                         <XIcon />
-                        <span className="sr-only">Close</span>
+                        <span className="sr-only">
+                            <CloseLabel />
+                        </span>
                     </SheetPrimitive.Close>
                 )}
             </SheetPrimitive.Popup>

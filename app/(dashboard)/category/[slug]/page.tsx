@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
 
 import { auth } from "@/auth";
 import { getScopedMonth } from "@/lib/month-scope.server";
@@ -36,7 +37,7 @@ export default async function CategoryDetailPage({
         notFound();
     }
 
-    const monthLabel = formatMonthLabel(month);
+    const monthLabel = formatMonthLabel(month, await getLocale());
 
     return (
         <main className="mx-auto max-w-3xl p-6 lg:p-8">

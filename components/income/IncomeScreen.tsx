@@ -18,6 +18,7 @@ import { addVariableIncome } from "@/app/_actions/income/add-variable";
 import { deleteVariableIncome } from "@/app/_actions/income/delete-variable";
 import { setFixedIncome } from "@/app/_actions/income/set-fixed";
 import { getTodayCdmx } from "@/lib/dates";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMonthLabel, formatMxn } from "@/lib/format";
 import type { VariableIncomeItem } from "@/lib/repositories/income.repository";
 
@@ -248,14 +249,14 @@ export function IncomeScreen({
                             >
                                 {/* Date — desktop column / mobile subline */}
                                 <span className="hidden whitespace-nowrap text-sm text-muted-foreground sm:block">
-                                    {formatExpenseDate(row.date)}
+                                    {formatExpenseDate(row.date, "es")}
                                 </span>
                                 <span className="min-w-0">
                                     <span className="block truncate font-medium sm:font-normal">
                                         {row.source}
                                     </span>
                                     <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">
-                                        {formatExpenseDate(row.date)}
+                                        {formatExpenseDate(row.date, "es")}
                                     </span>
                                 </span>
                                 <span className="text-right font-semibold whitespace-nowrap text-positive">
@@ -422,8 +423,8 @@ function FixedEditor({
             </div>
             <p id={helpId} className="mt-1 text-xs text-muted-foreground">
                 {pastMonth
-                    ? `Changes ${formatMonthLabel(pastMonth)} only. Other months keep theirs.`
-                    : `Applies from ${formatMonthLabel(currentMonth)} onward. Past months keep theirs.`}
+                    ? `Changes ${formatMonthLabel(pastMonth, "en")} only. Other months keep theirs.`
+                    : `Applies from ${formatMonthLabel(currentMonth, "en")} onward. Past months keep theirs.`}
             </p>
             {error && (
                 <p

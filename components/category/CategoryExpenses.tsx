@@ -1,4 +1,5 @@
 import { RowFundingBadge } from "@/components/expense/FundingBadge";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { CategoryExpenseListItem } from "@/lib/repositories/category.repository";
 
@@ -47,7 +48,7 @@ export function CategoryExpenses({
                             </span>
 
                             <span className="hidden whitespace-nowrap text-xs text-muted-foreground sm:block">
-                                {formatExpenseDate(e.date)}
+                                {formatExpenseDate(e.date, "es")}
                                 {e.card ? ` · ${e.card.name}` : ""}
                             </span>
 

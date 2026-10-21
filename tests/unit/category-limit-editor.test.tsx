@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 // Isolate the component from the server action (and its auth/db imports) + router.
 vi.mock("@/app/_actions/category/set-budget", () => ({
@@ -23,7 +24,7 @@ const props = {
 };
 
 function openEditor() {
-    render(<CategoryLimitEditor {...props} />);
+    renderWithIntl(<CategoryLimitEditor {...props} />);
     fireEvent.click(screen.getByRole("button", { name: /edit limit/i }));
     return screen.findByText("Monthly limit · Health");
 }

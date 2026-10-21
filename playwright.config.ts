@@ -22,6 +22,22 @@ export default defineConfig({
     use: {
         baseURL,
         trace: "on-first-retry",
+        // The app defaults to Spanish; the specs assert the English copy.
+        storageState: {
+            cookies: [
+                {
+                    name: "NEXT_LOCALE",
+                    value: "en",
+                    domain: "localhost",
+                    path: "/",
+                    expires: -1,
+                    httpOnly: true,
+                    secure: false,
+                    sameSite: "Lax",
+                },
+            ],
+            origins: [],
+        },
     },
     // PW_CHANNEL lets a constrained machine (no bundled-browser download) run
     // against an installed browser, e.g. `PW_CHANNEL=chrome`. Unset in CI → the

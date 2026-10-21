@@ -4,6 +4,7 @@ import { RowFundingBadge } from "@/components/expense/FundingBadge";
 import { SummaryRail } from "@/components/money/SummaryRail";
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { buildFeed } from "@/lib/feed";
+// TODO(i18n): pass the active locale; the literal keeps the pre-i18n output.
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { ExpenseListItem } from "@/lib/repositories/expense.repository";
 import type { MovementListItem } from "@/lib/repositories/movement.repository";
@@ -144,7 +145,7 @@ function ExpenseRow({
                     <RowFundingBadge row={e} />
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    {formatExpenseDate(e.date)}
+                    {formatExpenseDate(e.date, "es")}
                     {isSavings ? null : (
                         <>
                             {" · "}
@@ -206,7 +207,7 @@ function MovementRow({
                     <RowFundingBadge row={m} />
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                    {formatExpenseDate(m.date)}
+                    {formatExpenseDate(m.date, "es")}
                     {subline ? ` · ${subline}` : ""}
                 </span>
             </span>

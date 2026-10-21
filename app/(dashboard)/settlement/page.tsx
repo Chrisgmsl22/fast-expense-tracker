@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
+import { formatMonthLabel } from "@/lib/format";
 import { getScopedMonth } from "@/lib/month-scope.server";
 import { isBalanceSettled } from "@/lib/domain/settlement";
 import { resolvePartnerName } from "@/lib/domain/settings";
@@ -57,12 +59,10 @@ export default async function SettlementPage({
     const canClose =
         isBalanceSettled(settlement.balance) &&
         settlement.closableMarker !== null;
-    // UTC: the value is a calendar month, not a timestamp to shift.
-    const monthLabel = new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-    }).format(new Date(`${settlement.month.label}-01T12:00:00Z`));
+    const monthLabel = formatMonthLabel(
+        settlement.month.label,
+        await getLocale(),
+    );
 
     return (
         <main className="p-4 sm:p-6 lg:p-8">

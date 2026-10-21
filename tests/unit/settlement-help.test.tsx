@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { screen, fireEvent, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { SettlementHelp } from "@/components/settlement/SettlementHelp";
 
 describe("SettlementHelp", () => {
     it("opens a cheat-sheet of common operations", async () => {
-        render(<SettlementHelp partnerName="Brenda" />);
+        renderWithIntl(<SettlementHelp partnerName="Brenda" />);
         fireEvent.click(
             screen.getByRole("button", { name: /how to use settlement/i }),
         );
