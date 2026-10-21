@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { AuthShell } from "@/components/auth/AuthShell";
 import { LoginForm } from "@/components/auth/LoginForm";
 
@@ -10,14 +12,15 @@ export default async function LoginPage({
     searchParams: Promise<{ reason?: string | string[] }>;
 }) {
     const { reason } = await searchParams;
+    const t = await getTranslations("auth.login");
     return (
         <AuthShell
-            heading="Log in"
-            tagline="Log in to keep tracking."
+            heading={t("heading")}
+            tagline={t("tagline")}
             switchPrompt={{
-                text: "No account?",
+                text: t("switchText"),
                 href: "/signup",
-                label: "Sign up",
+                label: t("switchLink"),
             }}
         >
             <LoginForm sessionExpired={reason === "session-expired"} />

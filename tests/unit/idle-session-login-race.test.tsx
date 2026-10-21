@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 import { IDLE_TIMEOUT_MS } from "@/lib/auth/idle-session";
 const { getSession, signOut, loginAction, replace } = vi.hoisted(() => ({
     getSession: vi.fn(),
@@ -37,7 +38,7 @@ it("Should keep login behind an unfinished sign-out even after the visible expir
         code: "invalid_credentials",
         message: "Invented test response.",
     });
-    render(
+    renderWithIntl(
         <>
             <IdleSessionGuard
                 idleExpiresAt={NOW + IDLE_TIMEOUT_MS}

@@ -1,1 +1,142 @@
-{}
+{
+    "title": "Settings",
+    "saveButton": {
+        "save": "Save changes",
+        "saving": "Saving…",
+        "saved": "Saved"
+    },
+    "errors": {
+        "fixFields": "Please fix the highlighted fields.",
+        "unauthenticated": "Not authenticated"
+    },
+    "comingSoon": {
+        "ariaLabel": "Coming soon",
+        "title": "More settings",
+        "description": "These are on the way — configure them here soon.",
+        "badge": "· coming soon",
+        "items": {
+            "categoryLimits": "Category limits",
+            "preferences": "Preferences",
+            "privacy": "Privacy",
+            "exportData": "Export data",
+            "account": "Account"
+        }
+    },
+    "split": {
+        "title": "Expense split rule",
+        "appliesTo": "applies to shared expenses",
+        "description": "Turn this on if you split expenses with a partner. It reveals the split controls across the app; leave it off for a plain tracker.",
+        "sharesToggle": "I share expenses",
+        "partnerName": "Partner name",
+        "partnerPlaceholder": "e.g. Alex",
+        "yourShare": "Your share",
+        "previewYou": "You {percent}%",
+        "previewPartner": "Partner {percent}%",
+        "unexpectedError": "Something went wrong saving your settings.",
+        "errors": {
+            "dbError": "Could not save your settings. Please try again.",
+            "nameTooLong": "Name is too long",
+            "wholeNumber": "Enter a whole number",
+            "min": "Must be at least 1%",
+            "max": "Can't exceed 100%",
+            "partnerRequired": "Add your partner's name to share expenses",
+            "shareRequired": "Enter your share (1–100%)"
+        }
+    },
+    "budget": {
+        "title": "Budget rule",
+        "inForce": "In force for {month}: {essentials} / {discretionary} / {savings}",
+        "description": "How your income splits across the three buckets. The three must total 100%. A change applies from {month} onward; past months keep the split they had.",
+        "savingsField": "Savings/Inv",
+        "fieldLabel": "{label} (%)",
+        "totalExact": "Total 100%",
+        "totalUnder": "Total {total}% · {left}% left to assign",
+        "totalOver": "Total {total}% · {over}% over 100%",
+        "reset": "Reset to {essentials}/{discretionary}/{savings}",
+        "unexpectedError": "Something went wrong saving your budget rule.",
+        "errors": {
+            "dbError": "Could not save your budget rule. Please try again.",
+            "wholeNumber": "Enter a whole number",
+            "min": "Must be at least 0%",
+            "max": "Can't exceed 100%",
+            "sumTo100": "The three buckets must add up to 100%"
+        }
+    },
+    "cards": {
+        "title": "Cards",
+        "add": "Add card",
+        "adding": "Adding…",
+        "limitHint": "Up to {max} cards.",
+        "atCap": "You've reached the {max}-card limit. Archive one to add another.",
+        "empty": "No cards yet — add your first one.",
+        "archivedHeading": "Archived",
+        "name": "Card name",
+        "namePlaceholder": "e.g. Amex Gold",
+        "type": "Type",
+        "typeAria": "Card type",
+        "types": {
+            "credit": "Credit",
+            "debit": "Debit",
+            "cash": "Cash"
+        },
+        "color": "Color",
+        "swatchesAria": "Color swatches",
+        "customToggle": "Enter a custom color (HEX)",
+        "hexAria": "HEX color",
+        "swatches": {
+            "Slate": "Slate",
+            "Gold": "Gold",
+            "Purple": "Purple",
+            "Blue": "Blue",
+            "Green": "Green",
+            "Red": "Red",
+            "Teal": "Teal",
+            "Pink": "Pink",
+            "Amber": "Amber",
+            "Indigo": "Indigo"
+        },
+        "editAria": "Edit {name}",
+        "locked": "locked",
+        "archive": "Archive",
+        "restore": "Restore",
+        "restoring": "Restoring…",
+        "restoreAria": "Restore {name}",
+        "deleteTitle": "Delete {name}?",
+        "deleteDescription": "This can't be undone.",
+        "deleting": "Deleting…",
+        "unexpected": {
+            "add": "Something went wrong adding the card.",
+            "save": "Something went wrong saving the card.",
+            "archive": "Something went wrong archiving the card.",
+            "delete": "Something went wrong deleting the card.",
+            "restore": "Something went wrong restoring the card."
+        },
+        "errors": {
+            "nameRequired": "Card name is required",
+            "nameTooLong": "Card name is too long",
+            "invalidColor": "Enter a valid #RRGGBB color",
+            "cardRequired": "Card is required",
+            "pickToArchive": "Please pick a card to archive.",
+            "pickToDelete": "Please pick a card to delete.",
+            "pickToRestore": "Please pick a card to restore.",
+            "pickForHistory": "Please pick a card and a month.",
+            "limitReached": "You can have at most {max} active cards. Archive one to add another.",
+            "restoreLimit": "You're at the {max}-card limit — archive or delete an active card first.",
+            "duplicateName": "You already have an active card with that name.",
+            "duplicateNameField": "A card with that name already exists",
+            "nameConflict": "You already have an active card named \"{name}\" — rename or archive that one first.",
+            "notFound": "That card no longer exists.",
+            "archivedNotFound": "That archived card no longer exists.",
+            "cashArchive": "The Cash card can't be archived.",
+            "cashDelete": "The Cash card can't be deleted.",
+            "cashEdit": "The Cash card can't be edited.",
+            "hasReferences": "This card is used by past records — archive it instead.",
+            "addFailed": "Could not add the card. Please try again.",
+            "saveFailed": "Could not save the card. Please try again.",
+            "archiveFailed": "Could not archive the card. Please try again.",
+            "deleteFailed": "Could not delete the card. Please try again.",
+            "restoreFailed": "Could not restore the card. Please try again.",
+            "historyFailed": "Could not load the card history. Please try again."
+        }
+    }
+}

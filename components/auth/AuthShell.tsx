@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import { CARD_PALETTE } from "@/lib/palette";
 
@@ -37,6 +38,7 @@ type Props = {
  * to one dark column on mobile.
  */
 export function AuthShell({ heading, tagline, switchPrompt, children }: Props) {
+    const t = useTranslations("auth.shell");
     return (
         <main className="flex min-h-screen flex-col bg-foreground">
             <div className="flex min-h-screen flex-1 flex-col md:flex-row">
@@ -59,10 +61,10 @@ export function AuthShell({ heading, tagline, switchPrompt, children }: Props) {
                         </span>
                         <div className="mt-auto">
                             <h2 className="text-3xl leading-tight font-bold">
-                                Know exactly where the money goes.
+                                {t("headline")}
                             </h2>
                             <p className="mt-3 text-sm text-white/50">
-                                For better and smarter finances
+                                {t("subline")}
                             </p>
                         </div>
                         <div className="mt-10">

@@ -7,13 +7,8 @@ import {
     vi,
     type Mock,
 } from "vitest";
-import {
-    act,
-    fireEvent,
-    render,
-    screen,
-    waitFor,
-} from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/app/_actions/settings/save-budget-rule", () => ({
@@ -22,13 +17,14 @@ vi.mock("@/app/_actions/settings/save-budget-rule", () => ({
 
 import { BudgetRuleForm } from "@/components/settings/BudgetRuleForm";
 import { saveBudgetRule } from "@/app/_actions/settings/save-budget-rule";
+import { formatMonthLabel } from "@/lib/format";
 
 const saveMock = saveBudgetRule as unknown as Mock;
 
 const rule = { essentials: 60, discretionary: 30, savings: 10 };
 
 function renderForm() {
-    render(<BudgetRuleForm rule={rule} monthLabel="September 2026" />);
+    renderWithIntl(<BudgetRuleForm rule={rule} monthLabel="September 2026" />);
 }
 
 function field(label: string): HTMLInputElement {
@@ -249,6 +245,54 @@ describe("BudgetRuleForm", () => {
         expect(
             await screen.findByText(
                 "Something went wrong saving your budget rule.",
+            ),
+        ).toBeDefined();
+    });
+});
+
+describe("BudgetRuleForm in Spanish", () => {
+    it("Should render the bucket labels, total and reset in Spanish", () => {
+        renderWithIntl(
+            <BudgetRuleForm rule={rule} monthLabel="septiembre de 2026" />,
+            { locale: "es" },
+        );
+        expect(
+            screen.getByText("Vigente en septiembre de 2026: 60 / 30 / 10"),
+        ).toBeDefined();
+        expect(screen.getByLabelText("Esenciales (%)")).toBeDefined();
+        expect(screen.getByLabelText("Gustos (%)")).toBeDefined();
+        expect(screen.getByLabelText("Ahorro/Inv (%)")).toBeDefined();
+        expect(screen.getByText("Total 100%")).toBeDefined();
+        fireEvent.change(screen.getByLabelText("Ahorro/Inv (%)"), {
+            target: { value: "5" },
+        });
+        expect(screen.getByText("Total 95% · falta asignar 5%")).toBeDefined();
+        fireEvent.change(screen.getByLabelText("Ahorro/Inv (%)"), {
+            target: { value: "20" },
+        });
+        expect(
+            screen.getByText("Total 110% · 10% por encima de 100%"),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Restablecer a 50/25/25" }),
+        ).toBeDefined();
+    });
+
+    it("Should label the saved month in the active locale", async () => {
+        saveMock.mockResolvedValue({
+            ok: true,
+            data: { effectiveMonth: "2026-10", rule },
+        });
+        renderWithIntl(
+            <BudgetRuleForm rule={rule} monthLabel="septiembre de 2026" />,
+            { locale: "es" },
+        );
+        fireEvent.click(
+            screen.getByRole("button", { name: "Guardar cambios" }),
+        );
+        expect(
+            await screen.findByText(
+                `Vigente en ${formatMonthLabel("2026-10", "es")}: 60 / 30 / 10`,
             ),
         ).toBeDefined();
     });

@@ -1,5 +1,7 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
@@ -7,6 +9,8 @@ import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
 import { cardRepository } from "@/lib/repositories";
 import type { CardRepository } from "@/lib/repositories/card.repository";
 import { addCardInputSchema, type AddCardInput } from "@/lib/schemas/card";
+import { localizeFieldErrors } from "@/app/_actions/settings/localize";
+import { cardSchemaMessages } from "./schema-messages";
 
 /** Failure modes the caller can branch on. */
 export type AddCardCode =
@@ -31,13 +35,17 @@ export async function addCard(
     input: unknown,
     repo: CardRepository = cardRepository,
 ): Promise<AddCardResult> {
+    const t = await getTranslations("settings");
     const parsed = addCardInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Please fix the highlighted fields.",
-            fieldErrors: toFieldErrors<AddCardInput>(parsed.error),
+            message: t("errors.fixFields"),
+            fieldErrors: localizeFieldErrors(
+                toFieldErrors<AddCardInput>(parsed.error),
+                await cardSchemaMessages(),
+            ),
         };
     }
 
@@ -47,7 +55,7 @@ export async function addCard(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -57,7 +65,9 @@ export async function addCard(
             return {
                 ok: false,
                 code: "limit_reached",
-                message: `You can have at most ${MAX_ACTIVE_CARDS} active cards. Archive one to add another.`,
+                message: t("cards.errors.limitReached", {
+                    max: MAX_ACTIVE_CARDS,
+                }),
             };
         }
 
@@ -66,8 +76,8 @@ export async function addCard(
             return {
                 ok: false,
                 code: "duplicate_name",
-                message: "You already have an active card with that name.",
-                fieldErrors: { name: ["A card with that name already exists"] },
+                message: t("cards.errors.duplicateName"),
+                fieldErrors: { name: [t("cards.errors.duplicateNameField")] },
             };
         }
 
@@ -82,7 +92,7 @@ export async function addCard(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not add the card. Please try again.",
+            message: t("cards.errors.addFailed"),
         };
     }
 }

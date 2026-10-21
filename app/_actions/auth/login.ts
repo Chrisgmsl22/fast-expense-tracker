@@ -1,10 +1,13 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { getTranslations } from "next-intl/server";
 
 import { signIn } from "@/auth";
 import { loginSchema, type LoginInput } from "@/lib/schemas/auth";
 import type { ActionResult, FieldErrors } from "@/lib/actions/result";
+import { localizeFieldErrors } from "@/app/_actions/settings/localize";
+import { authMessages } from "./schema-messages";
 
 /** Failure modes the login form can branch on. */
 export type LoginCode = "validation" | "invalid_credentials" | "error";
@@ -13,6 +16,7 @@ export type LoginResult = ActionResult<void, LoginInput, LoginCode>;
 
 /** Authenticate credentials and return a result without a redirect. */
 export async function loginAction(input: unknown): Promise<LoginResult> {
+    const t = await getTranslations("auth.errors");
     const parsed = loginSchema.safeParse(input);
     if (!parsed.success) {
         const fieldErrors: FieldErrors<LoginInput> = {};
@@ -26,8 +30,8 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
         return {
             ok: false,
             code: "validation",
-            message: "Enter a valid email and password.",
-            fieldErrors,
+            message: t("loginInvalid"),
+            fieldErrors: localizeFieldErrors(fieldErrors, await authMessages()),
         };
     }
 
@@ -50,7 +54,7 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
                 return {
                     ok: false,
                     code: "invalid_credentials",
-                    message: "Invalid email or password.",
+                    message: t("invalidCredentials"),
                 };
             }
             // Any other auth error is unexpected — surface a generic failure
@@ -59,7 +63,7 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
             return {
                 ok: false,
                 code: "error",
-                message: "Something went wrong. Please try again.",
+                message: t("unexpected"),
             };
         }
         throw error;

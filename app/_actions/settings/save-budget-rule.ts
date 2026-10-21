@@ -1,5 +1,7 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
@@ -11,6 +13,8 @@ import {
     budgetRuleInputSchema,
     type BudgetRuleInput,
 } from "@/lib/schemas/budget-rule";
+import { localizeFieldErrors, localizeMessage } from "./localize";
+import { budgetRuleMessages } from "./schema-messages";
 
 export type SaveBudgetRuleCode = "validation" | "unauthenticated" | "db_error";
 
@@ -27,14 +31,21 @@ export async function saveBudgetRule(
     input: unknown,
     repo: BudgetRuleRepository = budgetRuleRepository,
 ): Promise<SaveBudgetRuleResult> {
+    const t = await getTranslations("settings");
     const parsed = budgetRuleInputSchema.safeParse(input);
     if (!parsed.success) {
+        const translations = await budgetRuleMessages();
         const sumIssue = parsed.error.issues.find((i) => i.path.length === 0);
         return {
             ok: false,
             code: "validation",
-            message: sumIssue?.message ?? "Please fix the highlighted fields.",
-            fieldErrors: toFieldErrors<BudgetRuleInput>(parsed.error),
+            message: sumIssue
+                ? localizeMessage(sumIssue.message, translations)
+                : t("errors.fixFields"),
+            fieldErrors: localizeFieldErrors(
+                toFieldErrors<BudgetRuleInput>(parsed.error),
+                translations,
+            ),
         };
     }
 
@@ -44,7 +55,7 @@ export async function saveBudgetRule(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -62,7 +73,7 @@ export async function saveBudgetRule(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save your budget rule. Please try again.",
+            message: t("budget.errors.dbError"),
         };
     }
 }
