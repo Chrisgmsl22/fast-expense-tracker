@@ -52,6 +52,9 @@ export function BudgetStep({
     } = useStepSubmit<BudgetRuleInput>(FIELDS);
     const total = budgetDraftTotal(draft);
     const tb = useTranslations("settings.budget");
+    const t = useTranslations("onboarding");
+    const tc = useTranslations("common.buckets");
+    const ts = useTranslations("settings.saveButton");
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -64,11 +67,11 @@ export function BudgetStep({
     return (
         <StepFrame
             headingRef={headingRef}
-            title="Your budgeting rule"
+            title={t("budget.title")}
             description={
                 <ResponsiveText
-                    desktop="We default to 50/25/25. Keep it, or tweak — it always totals 100%."
-                    phone="Default 50/25/25. Keep it or tweak."
+                    desktop={t("budget.descriptionDesktop")}
+                    phone={t("budget.descriptionPhone")}
                 />
             }
             footer={
@@ -77,19 +80,19 @@ export function BudgetStep({
                     onSkip={onNext}
                     skipLabel={
                         <ResponsiveText
-                            desktop="Skip — use default"
-                            phone="Skip"
+                            desktop={t("budget.skipDesktop")}
+                            phone={t("footer.skip")}
                         />
                     }
-                    primaryLabel="Continue"
-                    pendingLabel="Saving…"
+                    primaryLabel={t("footer.continue")}
+                    pendingLabel={ts("saving")}
                     pending={pending || leavingAfterSave}
                     formId={FORM_ID}
                 />
             }
         >
             <form id={FORM_ID} ref={formRef} onSubmit={handleSubmit} noValidate>
-                {BUCKETS.map(({ key, label, helper, accent, fill }) => {
+                {BUCKETS.map(({ key, accent, fill }) => {
                     const error = fieldError(key);
                     const errorId = `onboarding-budget-${key}-error`;
                     return (
@@ -106,7 +109,9 @@ export function BudgetStep({
                                         htmlFor={`onboarding-budget-${key}`}
                                         className="text-[13px] font-semibold text-foreground"
                                     >
-                                        {label}
+                                        {key === "savings"
+                                            ? t("budget.savings")
+                                            : tc(key)}
                                     </Label>
                                     <p
                                         className={cn(
@@ -114,7 +119,7 @@ export function BudgetStep({
                                             WIZARD_FAINT_TEXT_CLASS,
                                         )}
                                     >
-                                        {helper}
+                                        {t(`budget.helpers.${key}`)}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-1 text-[13px] font-semibold">

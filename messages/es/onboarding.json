@@ -1,0 +1,85 @@
+{
+    "progress": {
+        "aria": "Progreso de la configuración",
+        "label": "Paso {step} de {total}"
+    },
+    "footer": {
+        "back": "Regresar",
+        "skip": "Omitir",
+        "continue": "Continuar"
+    },
+    "welcome": {
+        "title": "Te damos la bienvenida a Fast Expense",
+        "descriptionDesktop": "Un registro privado para ti y tu pareja. Anota tus gastos en segundos, ve siempre tu parte real y sigue tu plan 50/25/25. Vamos a configurarlo; toma un minuto.",
+        "descriptionPhone": "Un registro privado para ti y tu pareja. Anota tus gastos en segundos, ve siempre tu parte real y sigue tu plan.",
+        "start": "Empezar"
+    },
+    "name": {
+        "title": "¿Cómo te llamas?",
+        "descriptionDesktop": "Lo usaremos en la app. Puedes cambiarlo después.",
+        "descriptionPhone": "Lo usaremos en la app. Cámbialo cuando quieras.",
+        "label": "Tu nombre"
+    },
+    "sharing": {
+        "title": "¿Compartes gastos?",
+        "descriptionDesktop": "Si divides gastos con tu pareja, solo contaremos tu parte en tu presupuesto.",
+        "descriptionPhone": "Solo contaremos tu parte en tu presupuesto.",
+        "yesDesktop": "Sí, con alguien",
+        "yesPhone": "Sí",
+        "solo": "Solo yo",
+        "partnerName": "Nombre de tu pareja",
+        "partnerFallback": "Pareja",
+        "shareDesktop": "Tu parte de los gastos compartidos",
+        "valueText": "Tú {you}%, {partner} {partnerPercent}%"
+    },
+    "income": {
+        "titleDesktop": "¿Cuánto ganas al mes, más o menos?",
+        "titlePhone": "¿Tu ingreso mensual?",
+        "descriptionDesktop": "Un aproximado está bien; con él fijamos tus metas 50/25/25. Ajústalo en Configuración cuando quieras.",
+        "descriptionPhone": "Un aproximado está bien; con él fijamos tus metas 50/25/25.",
+        "label": "Ingreso mensual (MXN)"
+    },
+    "budget": {
+        "title": "Tu regla de presupuesto",
+        "descriptionDesktop": "Por defecto usamos 50/25/25. Déjala así o ajústala; siempre suma 100%.",
+        "descriptionPhone": "50/25/25 por defecto. Déjala así o ajústala.",
+        "skipDesktop": "Omitir",
+        "savings": "Inversión / Ahorro",
+        "helpers": {
+            "essentials": "Renta, súper, servicios, salud",
+            "discretionary": "Comer fuera, diversión, gustos",
+            "savings": "Una bolsa aparte: págate a ti primero"
+        }
+    },
+    "cards": {
+        "title": "¿Agregas un método de pago?",
+        "descriptionDesktop": "Marca cada gasto con su tarjeta para ver a dónde se va tu dinero. Es opcional; agrégalas o edítalas en Configuración cuando quieras.",
+        "descriptionPhone": "Marca tus gastos por tarjeta. Es opcional.",
+        "formAria": "Agregar una tarjeta",
+        "addedAria": "Tarjetas agregadas",
+        "added": "Agregada ✓",
+        "cashIncluded": "El efectivo siempre está incluido."
+    },
+    "categories": {
+        "titleDesktop": "Tus categorías están listas",
+        "titlePhone": "Categorías listas",
+        "descriptionDesktop": "{count, plural, one {# categoría} other {# categorías}} con subcategorías útiles. Pon un límite mensual desde la página de cualquier categoría.",
+        "descriptionPhone": "{count, plural, one {# categoría lista} other {# categorías listas}} para ti.",
+        "noteDesktop": "Pronto habrá más opciones de categorías en Configuración.",
+        "notePhone": "Pronto habrá más opciones de categorías.",
+        "listAria": "Tus categorías",
+        "more": "+{count} más"
+    },
+    "done": {
+        "title": "Todo listo, {name}",
+        "descriptionDesktop": "Tu presupuesto, tus categorías y tus tarjetas están listos. Es hora de registrar tu primer gasto.",
+        "descriptionPhone": "Tu presupuesto, tus categorías y tus tarjetas están listos. Registra tu primer gasto.",
+        "open": "Abrir la app",
+        "finishing": "Terminando…"
+    },
+    "errors": {
+        "checkField": "Revisa el campo marcado.",
+        "nameSaveFailed": "No se pudo guardar tu nombre. Inténtalo de nuevo.",
+        "finishFailed": "No se pudo terminar la configuración. Inténtalo de nuevo."
+    }
+}

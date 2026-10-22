@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { useTranslations } from "next-intl";
 
 import { setFixedIncome } from "@/app/_actions/income/set-fixed";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,6 @@ import { useStepSubmit } from "./use-step-submit";
 
 const FORM_ID = "onboarding-income-form";
 const FIELDS = ["amount"] as const;
-const SUBTEXT = "A ballpark is fine — it sets your 50/25/25 targets.";
 
 type Props = StepNav & {
     value: string;
@@ -51,6 +51,8 @@ export function IncomeStep({
         submit,
     } = useStepSubmit<FixedIncomeInput>(FIELDS);
     const error = fieldError("amount");
+    const t = useTranslations("onboarding");
+    const ts = useTranslations("settings.saveButton");
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -73,22 +75,22 @@ export function IncomeStep({
             headingRef={headingRef}
             title={
                 <ResponsiveText
-                    desktop="Roughly, your monthly income?"
-                    phone="Your monthly income?"
+                    desktop={t("income.titleDesktop")}
+                    phone={t("income.titlePhone")}
                 />
             }
             description={
                 <ResponsiveText
-                    desktop={`${SUBTEXT} Refine it in Settings anytime.`}
-                    phone={SUBTEXT}
+                    desktop={t("income.descriptionDesktop")}
+                    phone={t("income.descriptionPhone")}
                 />
             }
             footer={
                 <StepFooter
                     onBack={onBack}
                     onSkip={onNext}
-                    primaryLabel="Continue"
-                    pendingLabel="Saving…"
+                    primaryLabel={t("footer.continue")}
+                    pendingLabel={ts("saving")}
                     pending={pending || leavingAfterSave}
                     formId={FORM_ID}
                 />
@@ -99,7 +101,7 @@ export function IncomeStep({
                     htmlFor="onboarding-income"
                     className={WIZARD_LABEL_CLASS}
                 >
-                    Monthly income (MXN)
+                    {t("income.label")}
                 </Label>
                 <MoneyField
                     id="onboarding-income"

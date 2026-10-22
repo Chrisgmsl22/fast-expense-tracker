@@ -80,7 +80,7 @@ export function CardColorField({
                         aria-label={t("hexAria")}
                         value={color}
                         onChange={(e) => onColor(e.target.value)}
-                        placeholder="#RRGGBB"
+                        placeholder={t("hexPlaceholder")}
                         aria-invalid={Boolean(error)}
                         aria-describedby={describedBy}
                         className="w-32 font-mono"

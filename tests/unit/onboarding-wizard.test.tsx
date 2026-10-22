@@ -61,6 +61,7 @@ import { saveBudgetRule } from "@/app/_actions/settings/save-budget-rule";
 import { saveSplitRule } from "@/app/_actions/settings/save-split-rule";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import type * as DialogModule from "@/components/ui/dialog";
+import type { Locale } from "@/i18n/config";
 import type { OnboardingData } from "@/lib/onboarding/load-onboarding";
 import { renderWithIntl } from "@/tests/support/intl";
 
@@ -114,7 +115,8 @@ async function renderWizard(
     {
         withPage = false,
         mainTabIndex,
-    }: { withPage?: boolean; mainTabIndex?: number } = {},
+        locale = "en",
+    }: { withPage?: boolean; mainTabIndex?: number; locale?: Locale } = {},
 ) {
     const wizard = <OnboardingWizard data={wizardData} />;
     const view = renderWithIntl(
@@ -128,6 +130,7 @@ async function renderWizard(
         ) : (
             wizard
         ),
+        { locale },
     );
     await act(async () => {
         // Let Base UI queue its focus frame first, then wait for that frame.
@@ -1060,6 +1063,9 @@ describe("Budget step", () => {
         expect(
             (screen.getByLabelText("Essentials") as HTMLInputElement).value,
         ).toBe("50");
+        expect(
+            screen.getByText("Its own bucket — pay yourself first"),
+        ).toBeTruthy();
         expect(screen.getByText("Total 100%")).toBeTruthy();
         fireEvent.click(button("Continue"));
 
@@ -1529,6 +1535,22 @@ describe("Categories step", () => {
         ).toBeTruthy();
     });
 
+    it("uses the singular count for a single category", async () => {
+        await renderWizard(
+            data({
+                categories: [{ id: "k0", name: "Housing", color: "#4f46e5" }],
+            }),
+        );
+        await goTo(7);
+
+        expect(
+            screen.getByText(
+                "1 category with sensible subcategories. Set a monthly limit from any category's page.",
+            ),
+        ).toBeTruthy();
+        expect(screen.getByText("1 category set up for you.")).toBeTruthy();
+    });
+
     it("folds categories past six into +N more on a phone", async () => {
         const many = Array.from({ length: 13 }, (_, i) => ({
             id: `k${i}`,
@@ -1925,5 +1947,187 @@ describe("Transitions", () => {
         expect(progressStep()).toBe("2");
         expect(heading().textContent).toBe("What's your name?");
         expect(document.activeElement).toBe(heading());
+    });
+});
+
+describe("In Spanish", () => {
+    const renderEs = (wizardData: OnboardingData = data()) =>
+        renderWizard(wizardData, { locale: "es" });
+
+    /** Walks forward in Spanish without writing anything, from step 1 to `step`. */
+    async function goToEs(step: number) {
+        for (let at = 1; at < step; at += 1) {
+            if (at === 1) fireEvent.click(button("Empezar"));
+            else if (at === 2 || at === 7) fireEvent.click(button("Continuar"));
+            else fireEvent.click(button(/^Omitir/));
+            await expectStep(at + 1);
+        }
+    }
+
+    it("opens on the welcome step with the progress in Spanish", async () => {
+        await renderEs();
+
+        expect(
+            screen.getByRole("dialog", {
+                name: /Te damos la bienvenida a Fast Expense/,
+            }),
+        ).toBeTruthy();
+        const progress = screen.getByRole("progressbar", {
+            name: "Progreso de la configuración",
+        });
+        expect(progress.getAttribute("aria-valuetext")).toBe("Paso 1 de 8");
+        expect(button("Empezar")).toBeTruthy();
+    });
+
+    it("asks for the name and shows a failed save in Spanish", async () => {
+        nameMock.mockRejectedValue(new Error("network"));
+        await renderEs();
+        await goToEs(2);
+
+        expect(heading().textContent).toBe("¿Cómo te llamas?");
+        expect(button("Regresar")).toBeTruthy();
+        fireEvent.change(screen.getByLabelText("Tu nombre"), {
+            target: { value: "Otra" },
+        });
+        fireEvent.click(button("Continuar"));
+
+        expect((await screen.findByRole("alert")).textContent).toBe(
+            "Algo salió mal. Inténtalo de nuevo.",
+        );
+        await expectStep(2);
+    });
+
+    it("asks about sharing with Spanish options, partner field and slider", async () => {
+        await renderEs();
+        await goToEs(3);
+
+        expect(heading().textContent).toBe("¿Compartes gastos?");
+        expect(
+            screen.getByRole("radiogroup", { name: "¿Compartes gastos?" }),
+        ).toBeTruthy();
+        expect(screen.getByRole("radio", { name: /Solo yo/ })).toBeTruthy();
+        fireEvent.click(screen.getByRole("radio", { name: /Sí, con alguien/ }));
+
+        expect(screen.getByLabelText("Nombre de tu pareja")).toBeTruthy();
+        expect(screen.getByRole("slider").getAttribute("aria-valuetext")).toBe(
+            "Tú 50%, Pareja 50%",
+        );
+        expect(button("Continuar")).toBeTruthy();
+    });
+
+    it("asks for the income in Spanish", async () => {
+        await renderEs();
+        await goToEs(4);
+
+        expect(heading().textContent).toContain(
+            "¿Cuánto ganas al mes, más o menos?",
+        );
+        expect(screen.getByLabelText("Ingreso mensual (MXN)")).toBeTruthy();
+        expect(button("Continuar")).toBeTruthy();
+    });
+
+    it("shows the budget buckets and the unassigned remainder in Spanish", async () => {
+        await renderEs();
+        await goToEs(5);
+
+        expect(heading().textContent).toBe("Tu regla de presupuesto");
+        expect(screen.getByLabelText("Esenciales")).toBeTruthy();
+        expect(screen.getByLabelText("Gustos")).toBeTruthy();
+        expect(
+            screen.getByText("Una bolsa aparte: págate a ti primero"),
+        ).toBeTruthy();
+        fireEvent.change(screen.getByLabelText("Inversión / Ahorro"), {
+            target: { value: "15" },
+        });
+
+        expect(screen.getByText("Total 90% · falta asignar 10%")).toBeTruthy();
+        // Desktop and phone share one short wording so the footer fits the 420px dialog.
+        expect(within(button(/^Omitir/)).getAllByText("Omitir")).toHaveLength(
+            2,
+        );
+    });
+
+    it("offers the card form in Spanish", async () => {
+        await renderEs(data({ cards: [{ name: "Oro", color: "#c79a3b" }] }));
+        await goToEs(6);
+
+        expect(heading().textContent).toBe("¿Agregas un método de pago?");
+        const added = screen.getByRole("list", { name: "Tarjetas agregadas" });
+        expect(added.textContent).toContain("Agregada ✓");
+        expect(
+            screen.getByRole("form", { name: "Agregar una tarjeta" }),
+        ).toBeTruthy();
+        expect(
+            screen
+                .getByLabelText("Nombre de la tarjeta")
+                .getAttribute("placeholder"),
+        ).toBe("p. ej. Amex Gold");
+        expect(button("Agregar tarjeta")).toBeTruthy();
+        expect(
+            screen.getByText("El efectivo siempre está incluido."),
+        ).toBeTruthy();
+    });
+
+    it("lists the categories under their Spanish names with a Spanish count", async () => {
+        await renderEs();
+        await goToEs(7);
+
+        expect(heading().textContent).toContain("Tus categorías están listas");
+        const chips = within(
+            screen.getByRole("list", { name: "Tus categorías" }),
+        ).getAllByRole("listitem");
+        expect(chips.map((chip) => chip.textContent)).toEqual([
+            "Vivienda",
+            "Despensa",
+            "Salud",
+        ]);
+        expect(
+            screen.getByText(
+                "3 categorías con subcategorías útiles. Pon un límite mensual desde la página de cualquier categoría.",
+            ),
+        ).toBeTruthy();
+        expect(button("Continuar")).toBeTruthy();
+    });
+
+    it("uses the Spanish singular count for a single category", async () => {
+        await renderEs(
+            data({
+                categories: [{ id: "k0", name: "Vivienda", color: "#4f46e5" }],
+            }),
+        );
+        await goToEs(7);
+
+        expect(
+            screen.getByText(
+                "1 categoría con subcategorías útiles. Pon un límite mensual desde la página de cualquier categoría.",
+            ),
+        ).toBeTruthy();
+        expect(screen.getByText("1 categoría lista para ti.")).toBeTruthy();
+    });
+
+    it("folds extra categories into a Spanish +N on a phone", async () => {
+        const many = Array.from({ length: 8 }, (_, i) => ({
+            id: `k${i}`,
+            name: `Category ${i}`,
+            color: "#4f46e5",
+        }));
+        await renderEs(data({ categories: many }));
+        await goToEs(7);
+
+        expect(screen.getByText("+2 más")).toBeTruthy();
+    });
+
+    it("greets by name and shows a failed finish in Spanish", async () => {
+        completeMock.mockRejectedValue(new Error("network"));
+        await renderEs();
+        await goToEs(8);
+
+        expect(heading().textContent).toBe("Todo listo, Lupe Inventada");
+        fireEvent.click(button("Abrir la app"));
+
+        expect((await screen.findByRole("alert")).textContent).toBe(
+            "Algo salió mal. Inténtalo de nuevo.",
+        );
+        expect(completeMock).toHaveBeenCalledTimes(1);
     });
 });

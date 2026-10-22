@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { completeOnboarding } from "@/app/_actions/account/complete-onboarding";
 
@@ -12,7 +13,6 @@ import { StepFrame } from "./StepFrame";
 import { useStepSubmit } from "./use-step-submit";
 
 const NO_FIELDS = [] as const;
-const READY = "Your budget, categories, and cards are ready.";
 
 type Props = Pick<StepNav, "headingRef"> & {
     name: string;
@@ -22,6 +22,7 @@ type Props = Pick<StepNav, "headingRef"> & {
 };
 
 export function DoneStep({ headingRef, name, onFinished, closing }: Props) {
+    const t = useTranslations("onboarding.done");
     // The wizard refreshes once its close animation ends, so the dashboard never jumps under it.
     const { pending, formError, submit } = useStepSubmit<Record<string, never>>(
         NO_FIELDS,
@@ -40,17 +41,17 @@ export function DoneStep({ headingRef, name, onFinished, closing }: Props) {
                     <Check className="size-8 text-positive" strokeWidth={2.5} />
                 </div>
             }
-            title={`You're all set, ${name}`}
+            title={t("title", { name })}
             description={
                 <ResponsiveText
-                    desktop={`${READY} Time to log your first expense.`}
-                    phone={`${READY} Log your first expense.`}
+                    desktop={t("descriptionDesktop")}
+                    phone={t("descriptionPhone")}
                 />
             }
             footer={
                 <StepFooter
-                    primaryLabel="Open the app"
-                    pendingLabel="Finishing…"
+                    primaryLabel={t("open")}
+                    pendingLabel={t("finishing")}
                     pending={pending || closing}
                     onPrimary={() => submit(completeOnboarding, onFinished)}
                     fullWidth

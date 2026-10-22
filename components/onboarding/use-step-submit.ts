@@ -2,10 +2,9 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import type { ActionResult, FieldErrors } from "@/lib/actions/result";
-
-const UNEXPECTED = "Something went wrong. Please try again.";
 
 type Options = {
     /** Codes whose message already shows on a field, so it is not repeated for the form. */
@@ -35,6 +34,7 @@ export function useStepSubmit<TInput>(
     type Field = keyof TInput & string;
 
     const router = useRouter();
+    const t = useTranslations("auth.errors");
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<TInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
@@ -89,7 +89,7 @@ export function useStepSubmit<TInput>(
                     });
                 });
             } catch {
-                startTransition(() => setFormError(UNEXPECTED));
+                startTransition(() => setFormError(t("unexpected")));
             } finally {
                 savingRef.current = false;
             }

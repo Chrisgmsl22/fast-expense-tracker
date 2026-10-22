@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { addCard } from "@/app/_actions/card/add";
 import {
@@ -67,6 +68,8 @@ export function CardsStep({
     const error = fieldError("name");
     // A save on Continue keeps both buttons busy until the step has faded out.
     const busy = pending || leavingAfterSave;
+    const t = useTranslations("onboarding");
+    const tc = useTranslations("settings.cards");
 
     function saveCard(then?: () => void) {
         submit(
@@ -95,18 +98,18 @@ export function CardsStep({
     return (
         <StepFrame
             headingRef={headingRef}
-            title="Add a payment method?"
+            title={t("cards.title")}
             description={
                 <ResponsiveText
-                    desktop="Tag each expense by card so you see where spend lands. Optional — add or edit in Settings anytime."
-                    phone="Tag expenses by card. Optional."
+                    desktop={t("cards.descriptionDesktop")}
+                    phone={t("cards.descriptionPhone")}
                 />
             }
             footer={
                 <StepFooter
                     onBack={onBack}
                     onSkip={onNext}
-                    primaryLabel="Continue"
+                    primaryLabel={t("footer.continue")}
                     pending={busy}
                     onPrimary={handleContinue}
                 />
@@ -116,7 +119,7 @@ export function CardsStep({
             <form
                 ref={formRef}
                 onSubmit={handleAdd}
-                aria-label="Add a card"
+                aria-label={t("cards.formAria")}
                 noValidate
                 className="space-y-3 rounded-xl border p-3.5"
             >
@@ -125,7 +128,7 @@ export function CardsStep({
                         htmlFor="onboarding-card-name"
                         className={WIZARD_LABEL_CLASS}
                     >
-                        Card name
+                        {tc("name")}
                     </Label>
                     <Input
                         id="onboarding-card-name"
@@ -135,7 +138,7 @@ export function CardsStep({
                             edited("name");
                             setName(e.target.value);
                         }}
-                        placeholder="e.g. Amex Gold"
+                        placeholder={tc("namePlaceholder")}
                         aria-invalid={error ? true : undefined}
                         aria-describedby={
                             error ? "onboarding-card-name-error" : undefined
@@ -159,7 +162,7 @@ export function CardsStep({
                     triggerClassName={WIZARD_SELECT_CLASS}
                 />
                 <div>
-                    <span className={WIZARD_LABEL_CLASS}>Colour</span>
+                    <span className={WIZARD_LABEL_CLASS}>{tc("color")}</span>
                     <CardSwatchGrid
                         selected={color}
                         onColor={(next) => {
@@ -182,7 +185,7 @@ export function CardsStep({
                     )}
                 >
                     <Plus aria-hidden="true" />
-                    {busy ? "Adding…" : "Add card"}
+                    {busy ? tc("adding") : tc("add")}
                 </Button>
             </form>
             <p
@@ -191,7 +194,7 @@ export function CardsStep({
                     WIZARD_FAINT_TEXT_CLASS,
                 )}
             >
-                Cash is always included.
+                {t("cards.cashIncluded")}
             </p>
         </StepFrame>
     );

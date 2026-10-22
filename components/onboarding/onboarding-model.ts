@@ -39,29 +39,21 @@ export type WizardValues = {
 
 export const BUCKETS: ReadonlyArray<{
     key: BucketKey;
-    label: string;
-    helper: string;
     accent: string;
     fill: string;
 }> = [
     {
         key: "essentials",
-        label: "Essentials",
-        helper: "Rent, groceries, utilities, health",
         accent: "border-t-bucket-essentials",
         fill: "bg-bucket-essentials",
     },
     {
         key: "discretionary",
-        label: "Discretionary",
-        helper: "Eating out, fun, wants",
         accent: "border-t-bucket-discretionary",
         fill: "bg-bucket-discretionary",
     },
     {
         key: "savings",
-        label: "Investing / Savings",
-        helper: "Its own bucket — pay yourself first",
         accent: "border-t-bucket-savings",
         fill: "bg-bucket-savings",
     },
@@ -116,10 +108,6 @@ export function normalizeAmount(value: string): string {
 /** An empty or zero income means "nothing to save", not "clear my income". */
 export function isBlankAmount(normalized: string): boolean {
     return normalized === "" || Number(normalized) === 0;
-}
-
-export function partnerLabel(partnerName: string): string {
-    return partnerName.trim() || "Partner";
 }
 
 /** What every step gets from the wizard to move between steps. */

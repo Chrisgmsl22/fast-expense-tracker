@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { CardDots } from "@/components/auth/CardDots";
 
 import type { StepNav } from "./onboarding-model";
@@ -5,10 +7,8 @@ import { ResponsiveText } from "./ResponsiveText";
 import { StepFooter } from "./StepFooter";
 import { StepFrame } from "./StepFrame";
 
-const LEAD =
-    "A private tracker for you and your partner. Log spending in seconds, always see your real share, and stay on your";
-
 export function WelcomeStep({ headingRef, onNext }: Omit<StepNav, "onBack">) {
+    const t = useTranslations("onboarding.welcome");
     return (
         <StepFrame
             headingRef={headingRef}
@@ -19,16 +19,16 @@ export function WelcomeStep({ headingRef, onNext }: Omit<StepNav, "onBack">) {
                     dotClassName="size-[11px]"
                 />
             }
-            title="Welcome to Fast Expense"
+            title={t("title")}
             description={
                 <ResponsiveText
-                    desktop={`${LEAD} 50/25/25 plan. Let's set it up — takes a minute.`}
-                    phone={`${LEAD} plan.`}
+                    desktop={t("descriptionDesktop")}
+                    phone={t("descriptionPhone")}
                 />
             }
             footer={
                 <StepFooter
-                    primaryLabel="Get started"
+                    primaryLabel={t("start")}
                     onPrimary={onNext}
                     fullWidth
                 />

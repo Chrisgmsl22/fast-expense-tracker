@@ -20,6 +20,7 @@ type Props = {
  */
 export function AuthShell({ heading, tagline, switchPrompt, children }: Props) {
     const t = useTranslations("auth.shell");
+    const tc = useTranslations("common");
     return (
         <main className="flex min-h-screen flex-col bg-foreground">
             <div className="flex min-h-screen flex-1 flex-col md:flex-row">
@@ -29,7 +30,9 @@ export function AuthShell({ heading, tagline, switchPrompt, children }: Props) {
                     <div className="flex flex-1 flex-col md:hidden">
                         <CardDots />
                         <div className="mt-auto pt-20">
-                            <h1 className="text-3xl font-bold">Fast Expense</h1>
+                            <h1 className="text-3xl font-bold">
+                                {tc("appName")}
+                            </h1>
                             <p className="mt-1.5 text-sm text-white/50">
                                 {tagline}
                             </p>
@@ -38,7 +41,7 @@ export function AuthShell({ heading, tagline, switchPrompt, children }: Props) {
                     {/* Desktop brand */}
                     <div className="hidden flex-1 flex-col md:flex">
                         <span className="text-lg font-semibold">
-                            Fast Expense
+                            {tc("appName")}
                         </span>
                         <div className="mt-auto">
                             <h2 className="text-3xl leading-tight font-bold">

@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { cn } from "@/lib/utils";
 
 import { STEP_COUNT } from "./onboarding-model";
@@ -6,12 +8,13 @@ import { WIZARD_FAINT_TEXT_CLASS } from "./onboarding-styles";
 const SEGMENTS = Array.from({ length: STEP_COUNT }, (_, i) => i + 1);
 
 export function WizardProgress({ step }: { step: number }) {
-    const label = `Step ${step} of ${STEP_COUNT}`;
+    const t = useTranslations("onboarding.progress");
+    const label = t("label", { step, total: STEP_COUNT });
     return (
         <div className="flex items-center gap-3 px-[22px] pt-[18px]">
             <div
                 role="progressbar"
-                aria-label="Setup progress"
+                aria-label={t("aria")}
                 aria-valuemin={1}
                 aria-valuemax={STEP_COUNT}
                 aria-valuenow={step}

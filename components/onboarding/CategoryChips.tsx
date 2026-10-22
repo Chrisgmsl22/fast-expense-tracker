@@ -1,3 +1,6 @@
+import { useTranslations } from "next-intl";
+
+import { useCategoryName } from "@/i18n/category-name";
 import type { OnboardingCategory } from "@/lib/onboarding/load-onboarding";
 import { cn } from "@/lib/utils";
 
@@ -12,10 +15,12 @@ export function CategoryChips({
 }: {
     categories: readonly OnboardingCategory[];
 }) {
+    const t = useTranslations("onboarding.categories");
+    const categoryName = useCategoryName();
     const folded = Math.max(0, categories.length - PHONE_CHIP_LIMIT);
     return (
         <ul
-            aria-label="Your categories"
+            aria-label={t("listAria")}
             className="flex flex-wrap gap-[7px] sm:gap-2"
         >
             {categories.map((category, index) => (
@@ -31,11 +36,13 @@ export function CategoryChips({
                         className="size-[9px] rounded-[3px]"
                         style={{ backgroundColor: category.color }}
                     />
-                    {category.name}
+                    {categoryName(category.name)}
                 </li>
             ))}
             {folded > 0 && (
-                <li className={cn(CHIP_CLASS, "sm:hidden")}>+{folded} more</li>
+                <li className={cn(CHIP_CLASS, "sm:hidden")}>
+                    {t("more", { count: folded })}
+                </li>
             )}
         </ul>
     );

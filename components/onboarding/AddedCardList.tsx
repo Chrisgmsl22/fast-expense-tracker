@@ -1,12 +1,15 @@
+import { useTranslations } from "next-intl";
+
 import type { OnboardingCard } from "@/lib/onboarding/load-onboarding";
 
 import { ResponsiveText } from "./ResponsiveText";
 
 /** Cards already on the account, each marked as added. */
 export function AddedCardList({ cards }: { cards: readonly OnboardingCard[] }) {
+    const t = useTranslations("onboarding.cards");
     if (cards.length === 0) return null;
     return (
-        <ul aria-label="Added cards" className="mb-3.5 space-y-[9px]">
+        <ul aria-label={t("addedAria")} className="mb-3.5 space-y-[9px]">
             {cards.map((card) => (
                 <li
                     key={card.name}
@@ -21,7 +24,7 @@ export function AddedCardList({ cards }: { cards: readonly OnboardingCard[] }) {
                         {card.name}
                     </span>
                     <span className="ml-auto text-xs font-semibold text-positive">
-                        <ResponsiveText desktop="Added ✓" phone="✓" />
+                        <ResponsiveText desktop={t("added")} phone="✓" />
                     </span>
                 </li>
             ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { useTranslations } from "next-intl";
 
 import { saveSplitRule } from "@/app/_actions/settings/save-split-rule";
 import { Input } from "@/components/ui/input";
@@ -27,10 +28,6 @@ import { useStepSubmit } from "./use-step-submit";
 
 const FORM_ID = "onboarding-sharing-form";
 const FIELDS = ["partnerName", "sharePercentage"] as const;
-const OPTIONS: readonly OptionCard<ShareChoice>[] = [
-    { value: "yes", desktop: "Yes, with someone", phone: "Yes" },
-    { value: "solo", desktop: "Just me", phone: "Just me" },
-];
 
 type Props = StepNav & {
     values: SharingValues;
@@ -59,6 +56,16 @@ export function SharingStep({
     const { choice, partnerName, percent } = values;
     const nameError = fieldError("partnerName");
     const percentError = fieldError("sharePercentage");
+    const t = useTranslations("onboarding");
+    const ts = useTranslations("settings.saveButton");
+    const options: readonly OptionCard<ShareChoice>[] = [
+        {
+            value: "yes",
+            desktop: t("sharing.yesDesktop"),
+            phone: t("sharing.yesPhone"),
+        },
+        { value: "solo", desktop: t("sharing.solo"), phone: t("sharing.solo") },
+    ];
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -82,19 +89,19 @@ export function SharingStep({
     return (
         <StepFrame
             headingRef={headingRef}
-            title="Do you share expenses?"
+            title={t("sharing.title")}
             description={
                 <ResponsiveText
-                    desktop="If you split costs with a partner, we'll only count your share toward your budget."
-                    phone="We'll only count your share toward your budget."
+                    desktop={t("sharing.descriptionDesktop")}
+                    phone={t("sharing.descriptionPhone")}
                 />
             }
             footer={
                 <StepFooter
                     onBack={onBack}
                     onSkip={onNext}
-                    primaryLabel="Continue"
-                    pendingLabel="Saving…"
+                    primaryLabel={t("footer.continue")}
+                    pendingLabel={ts("saving")}
                     pending={pending || leavingAfterSave}
                     primaryDisabled={!choice}
                     formId={FORM_ID}
@@ -104,8 +111,8 @@ export function SharingStep({
             <form id={FORM_ID} ref={formRef} onSubmit={handleSubmit} noValidate>
                 <OptionCards
                     name="sharing"
-                    label="Do you share expenses?"
-                    options={OPTIONS}
+                    label={t("sharing.title")}
+                    options={options}
                     value={choice}
                     onChange={(next) => {
                         clearErrors();
@@ -118,7 +125,7 @@ export function SharingStep({
                             htmlFor="onboarding-partner"
                             className={WIZARD_LABEL_CLASS}
                         >
-                            Partner&apos;s name
+                            {t("sharing.partnerName")}
                         </Label>
                         <Input
                             id="onboarding-partner"

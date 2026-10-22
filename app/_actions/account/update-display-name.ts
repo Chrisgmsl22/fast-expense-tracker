@@ -1,10 +1,15 @@
 "use server";
 
 import {
+    localizeFieldErrors,
+    localizeMessage,
+} from "@/lib/actions/field-errors";
+import {
     changeDisplayName,
     type UpdateDisplayNameResult,
 } from "@/lib/account/display-name";
 import { userRepository } from "@/lib/repositories";
+import { accountMessages } from "./schema-messages";
 
 export type {
     UpdateDisplayNameCode,
@@ -15,5 +20,14 @@ export type {
 export async function updateDisplayName(
     input: unknown,
 ): Promise<UpdateDisplayNameResult> {
-    return changeDisplayName(input, userRepository);
+    const result = await changeDisplayName(input, userRepository);
+    if (result.ok) return result;
+    const translations = await accountMessages();
+    return {
+        ...result,
+        message: localizeMessage(result.message, translations),
+        ...(result.fieldErrors && {
+            fieldErrors: localizeFieldErrors(result.fieldErrors, translations),
+        }),
+    };
 }

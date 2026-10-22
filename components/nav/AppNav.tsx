@@ -45,6 +45,7 @@ type Props = {
 
 function Brand() {
     const t = useTranslations("nav");
+    const tc = useTranslations("common");
     return (
         <Link
             href="/dashboard"
@@ -59,7 +60,7 @@ function Brand() {
                 <span className="h-[11px] w-1 rounded-sm bg-bucket-discretionary" />
                 <span className="h-2 w-1 rounded-sm bg-positive" />
             </span>
-            Fast Expense
+            {tc("appName")}
         </Link>
     );
 }

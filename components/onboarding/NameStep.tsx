@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { useTranslations } from "next-intl";
 
 import { updateDisplayName } from "@/app/_actions/account/update-display-name";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,8 @@ export function NameStep({
         submit,
     } = useStepSubmit<DisplayNameInput>(FIELDS);
     const error = fieldError("name");
+    const t = useTranslations("onboarding");
+    const ts = useTranslations("settings.saveButton");
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -68,18 +71,18 @@ export function NameStep({
     return (
         <StepFrame
             headingRef={headingRef}
-            title="What's your name?"
+            title={t("name.title")}
             description={
                 <ResponsiveText
-                    desktop="We'll use it around the app. You can change it later."
-                    phone="We'll use it around the app. Change it later anytime."
+                    desktop={t("name.descriptionDesktop")}
+                    phone={t("name.descriptionPhone")}
                 />
             }
             footer={
                 <StepFooter
                     onBack={onBack}
-                    primaryLabel="Continue"
-                    pendingLabel="Saving…"
+                    primaryLabel={t("footer.continue")}
+                    pendingLabel={ts("saving")}
                     pending={pending || leavingAfterSave}
                     formId={FORM_ID}
                 />
@@ -87,7 +90,7 @@ export function NameStep({
         >
             <form id={FORM_ID} ref={formRef} onSubmit={handleSubmit} noValidate>
                 <Label htmlFor="onboarding-name" className={WIZARD_LABEL_CLASS}>
-                    Your name
+                    {t("name.label")}
                 </Label>
                 <Input
                     id="onboarding-name"

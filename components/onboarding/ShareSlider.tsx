@@ -1,8 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { cn } from "@/lib/utils";
 
-import { partnerLabel } from "./onboarding-model";
 import {
     WIZARD_FAINT_TEXT_CLASS,
     WIZARD_LABEL_CLASS,
@@ -34,7 +35,9 @@ export function ShareSlider({
     onChange,
     errorId,
 }: Props) {
-    const partner = partnerLabel(partnerName);
+    const t = useTranslations("onboarding.sharing");
+    const ts = useTranslations("settings.split");
+    const partner = partnerName.trim() || t("partnerFallback");
     const partnerPercent = 100 - percent;
     return (
         <div>
@@ -43,8 +46,8 @@ export function ShareSlider({
                 className={cn(WIZARD_LABEL_CLASS, "mb-2.5 block")}
             >
                 <ResponsiveText
-                    desktop="Your share of shared expenses"
-                    phone="Your share"
+                    desktop={t("shareDesktop")}
+                    phone={ts("yourShare")}
                 />{" "}
                 — <b className="text-foreground">{percent}%</b>
             </label>
@@ -57,7 +60,11 @@ export function ShareSlider({
                 step={1}
                 value={percent}
                 onChange={(e) => onChange(Number(e.target.value))}
-                aria-valuetext={`You ${percent}%, ${partner} ${partnerPercent}%`}
+                aria-valuetext={t("valueText", {
+                    you: percent,
+                    partner,
+                    partnerPercent,
+                })}
                 aria-invalid={errorId ? true : undefined}
                 aria-describedby={errorId}
                 style={{
@@ -76,7 +83,7 @@ export function ShareSlider({
                     WIZARD_FAINT_TEXT_CLASS,
                 )}
             >
-                <span>You {percent}%</span>
+                <span>{ts("previewYou", { percent })}</span>
                 <span>
                     {partner} {partnerPercent}%
                 </span>

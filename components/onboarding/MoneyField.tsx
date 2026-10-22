@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { cn } from "@/lib/utils";
 
 import { WIZARD_FAINT_TEXT_CLASS } from "./onboarding-styles";
@@ -14,6 +16,7 @@ type Props = {
 
 /** A large MXN amount field with its "$" and "MXN" marks inside the box. */
 export function MoneyField({ id, name, value, onChange, errorId }: Props) {
+    const t = useTranslations("common");
     return (
         <div
             className={cn(
@@ -48,7 +51,7 @@ export function MoneyField({ id, name, value, onChange, errorId }: Props) {
                     WIZARD_FAINT_TEXT_CLASS,
                 )}
             >
-                MXN
+                {t("currency")}
             </span>
         </div>
     );

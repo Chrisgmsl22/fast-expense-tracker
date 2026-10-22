@@ -20,6 +20,7 @@ export function SettlementBalanceCard({
     partnerName: string;
 }) {
     const t = useTranslations("settlement");
+    const tc = useTranslations("common");
     const tone = balanceTone(balance.direction, partnerName, t);
     const settled = balance.direction === "settled";
 
@@ -51,7 +52,7 @@ export function SettlementBalanceCard({
                     <p className="mt-1 text-4xl font-bold tabular-nums">
                         {formatMxn(balance.amount)}
                         <span className="ml-2 align-top text-sm font-medium text-muted-foreground">
-                            MXN
+                            {tc("currency")}
                         </span>
                     </p>
                     {carriedOver.present && (

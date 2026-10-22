@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import type { OnboardingCategory } from "@/lib/onboarding/load-onboarding";
 import { cn } from "@/lib/utils";
 
@@ -16,28 +18,28 @@ export function CategoriesStep({
     onNext,
     categories,
 }: Props) {
+    const t = useTranslations("onboarding");
     const count = categories.length;
-    const counted = `${count} ${count === 1 ? "category" : "categories"}`;
     return (
         <StepFrame
             headingRef={headingRef}
             title={
                 <ResponsiveText
-                    desktop="Your categories are ready"
-                    phone="Categories are ready"
+                    desktop={t("categories.titleDesktop")}
+                    phone={t("categories.titlePhone")}
                 />
             }
             description={
                 <ResponsiveText
-                    desktop={`${counted} with sensible subcategories. Set a monthly limit from any category's page.`}
-                    phone={`${counted} set up for you.`}
+                    desktop={t("categories.descriptionDesktop", { count })}
+                    phone={t("categories.descriptionPhone", { count })}
                 />
             }
             footer={
                 <StepFooter
                     onBack={onBack}
                     onSkip={onNext}
-                    primaryLabel="Continue"
+                    primaryLabel={t("footer.continue")}
                     onPrimary={onNext}
                 />
             }
@@ -50,8 +52,8 @@ export function CategoriesStep({
                 )}
             >
                 <ResponsiveText
-                    desktop="More category settings are coming to Settings."
-                    phone="More category settings coming soon."
+                    desktop={t("categories.noteDesktop")}
+                    phone={t("categories.notePhone")}
                 />
             </p>
         </StepFrame>

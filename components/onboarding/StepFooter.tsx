@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -36,7 +37,7 @@ const TEXT_BUTTON_CLASS = cn(
 export function StepFooter({
     onBack,
     onSkip,
-    skipLabel = "Skip",
+    skipLabel,
     primaryLabel,
     pendingLabel,
     pending = false,
@@ -45,6 +46,7 @@ export function StepFooter({
     primaryDisabled = false,
     fullWidth = false,
 }: Props) {
+    const t = useTranslations("onboarding.footer");
     return (
         <div className="flex items-center gap-3 border-t border-muted px-[22px] pt-4 pb-[22px]">
             {onBack && (
@@ -59,7 +61,7 @@ export function StepFooter({
                         "text-muted-foreground aria-disabled:hover:text-muted-foreground",
                     )}
                 >
-                    Back
+                    {t("back")}
                 </Button>
             )}
             {onSkip && (
@@ -75,7 +77,7 @@ export function StepFooter({
                         "aria-disabled:hover:text-muted-foreground/70",
                     )}
                 >
-                    {skipLabel}
+                    {skipLabel ?? t("skip")}
                 </Button>
             )}
             <Button

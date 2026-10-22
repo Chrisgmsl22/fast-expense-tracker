@@ -1,0 +1,85 @@
+{
+    "progress": {
+        "aria": "Setup progress",
+        "label": "Step {step} of {total}"
+    },
+    "footer": {
+        "back": "Back",
+        "skip": "Skip",
+        "continue": "Continue"
+    },
+    "welcome": {
+        "title": "Welcome to Fast Expense",
+        "descriptionDesktop": "A private tracker for you and your partner. Log spending in seconds, always see your real share, and stay on your 50/25/25 plan. Let's set it up — takes a minute.",
+        "descriptionPhone": "A private tracker for you and your partner. Log spending in seconds, always see your real share, and stay on your plan.",
+        "start": "Get started"
+    },
+    "name": {
+        "title": "What's your name?",
+        "descriptionDesktop": "We'll use it around the app. You can change it later.",
+        "descriptionPhone": "We'll use it around the app. Change it later anytime.",
+        "label": "Your name"
+    },
+    "sharing": {
+        "title": "Do you share expenses?",
+        "descriptionDesktop": "If you split costs with a partner, we'll only count your share toward your budget.",
+        "descriptionPhone": "We'll only count your share toward your budget.",
+        "yesDesktop": "Yes, with someone",
+        "yesPhone": "Yes",
+        "solo": "Just me",
+        "partnerName": "Partner's name",
+        "partnerFallback": "Partner",
+        "shareDesktop": "Your share of shared expenses",
+        "valueText": "You {you}%, {partner} {partnerPercent}%"
+    },
+    "income": {
+        "titleDesktop": "Roughly, your monthly income?",
+        "titlePhone": "Your monthly income?",
+        "descriptionDesktop": "A ballpark is fine — it sets your 50/25/25 targets. Refine it in Settings anytime.",
+        "descriptionPhone": "A ballpark is fine — it sets your 50/25/25 targets.",
+        "label": "Monthly income (MXN)"
+    },
+    "budget": {
+        "title": "Your budgeting rule",
+        "descriptionDesktop": "We default to 50/25/25. Keep it, or tweak — it always totals 100%.",
+        "descriptionPhone": "Default 50/25/25. Keep it or tweak.",
+        "skipDesktop": "Skip — use default",
+        "savings": "Investing / Savings",
+        "helpers": {
+            "essentials": "Rent, groceries, utilities, health",
+            "discretionary": "Eating out, fun, wants",
+            "savings": "Its own bucket — pay yourself first"
+        }
+    },
+    "cards": {
+        "title": "Add a payment method?",
+        "descriptionDesktop": "Tag each expense by card so you see where spend lands. Optional — add or edit in Settings anytime.",
+        "descriptionPhone": "Tag expenses by card. Optional.",
+        "formAria": "Add a card",
+        "addedAria": "Added cards",
+        "added": "Added ✓",
+        "cashIncluded": "Cash is always included."
+    },
+    "categories": {
+        "titleDesktop": "Your categories are ready",
+        "titlePhone": "Categories are ready",
+        "descriptionDesktop": "{count, plural, one {# category} other {# categories}} with sensible subcategories. Set a monthly limit from any category's page.",
+        "descriptionPhone": "{count, plural, one {# category} other {# categories}} set up for you.",
+        "noteDesktop": "More category settings are coming to Settings.",
+        "notePhone": "More category settings coming soon.",
+        "listAria": "Your categories",
+        "more": "+{count} more"
+    },
+    "done": {
+        "title": "You're all set, {name}",
+        "descriptionDesktop": "Your budget, categories, and cards are ready. Time to log your first expense.",
+        "descriptionPhone": "Your budget, categories, and cards are ready. Log your first expense.",
+        "open": "Open the app",
+        "finishing": "Finishing…"
+    },
+    "errors": {
+        "checkField": "Check the highlighted field.",
+        "nameSaveFailed": "Could not save your name. Please try again.",
+        "finishFailed": "Could not finish setup. Please try again."
+    }
+}
