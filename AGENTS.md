@@ -97,6 +97,7 @@ Always:
   paths outside the repo.
 - **Fix the failing hook** rather than reaching for `--no-verify`.
 - **Install from the default registry** through pnpm — no GitHub URLs, no tarballs.
+- **Put user-visible frontend text in `messages/`**, with the key in every locale; logs, logic and server-only values stay English. Lint fails on literal text in JSX and text-like props, not on strings held in variables or objects.
 - **Reach the network only through URLs already referenced in committed code.**
   `curl`/`wget` to anywhere else needs sign-off first. You hold Bash in a public
   repo; treat egress as the boundary it is.
