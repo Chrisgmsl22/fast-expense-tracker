@@ -182,7 +182,7 @@ describe("PrismaDashboardRepository.getCardSpends (integration)", () => {
         const rows = await repo.getCardSpends(user.id, "2026-06");
         expect(rows).toEqual([
             { id: bbva.id, name: "BBVA", color: "#2563eb", spent: 800 },
-            { id: "cash", name: "Cash", color: "#16a34a", spent: 300 },
+            { id: "cash", name: null, color: "#16a34a", spent: 300 },
         ]);
     });
 
@@ -237,7 +237,7 @@ describe("PrismaDashboardRepository.getCardSpends (integration)", () => {
 
         const rows = await repo.getCardSpends(user.id, "2026-06");
         expect(rows).toEqual([
-            { id: "cash", name: "Cash", color: "#16a34a", spent: 100 },
+            { id: "cash", name: null, color: "#16a34a", spent: 100 },
         ]);
     });
 
@@ -264,7 +264,7 @@ describe("PrismaDashboardRepository.getCardSpends (integration)", () => {
 
         const rows = await repo.getCardSpends(user.id, "2026-06");
         expect(rows).toEqual([
-            { id: "cash", name: "Cash", color: "#16a34a", spent: 300 },
+            { id: "cash", name: null, color: "#16a34a", spent: 300 },
         ]);
     });
 });

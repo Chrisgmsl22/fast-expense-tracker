@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-    render,
-    screen,
-    fireEvent,
-    waitFor,
-    act,
-} from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 // Isolate the component from the server action (and its auth/db imports).
 const { loginActionMock, replaceMock } = vi.hoisted(() => ({
@@ -43,7 +38,7 @@ describe("LoginForm", () => {
             code: "invalid_credentials",
             message: "Invalid email or password.",
         });
-        render(<LoginForm />);
+        renderWithIntl(<LoginForm />);
 
         fillAndSubmit("admin@example.com", "secret123");
 
@@ -61,7 +56,7 @@ describe("LoginForm", () => {
             code: "invalid_credentials",
             message: "Invalid email or password.",
         });
-        render(<LoginForm />);
+        renderWithIntl(<LoginForm />);
 
         fillAndSubmit();
 
@@ -79,7 +74,7 @@ describe("LoginForm", () => {
                 password: ["Password is required."],
             },
         });
-        render(<LoginForm />);
+        renderWithIntl(<LoginForm />);
 
         fillAndSubmit();
 
@@ -89,7 +84,7 @@ describe("LoginForm", () => {
 
     it("shows a generic error when the action throws", async () => {
         loginActionMock.mockRejectedValue(new Error("network down"));
-        render(<LoginForm />);
+        renderWithIntl(<LoginForm />);
 
         fillAndSubmit();
 
@@ -104,7 +99,7 @@ describe("LoginForm", () => {
                 release = resolve;
             }),
         );
-        render(<LoginForm />);
+        renderWithIntl(<LoginForm />);
 
         fillAndSubmit();
 
@@ -129,7 +124,7 @@ describe("LoginForm", () => {
                 message: "Invalid email or password.",
             })
             .mockResolvedValueOnce({ ok: true, data: undefined });
-        render(<LoginForm />);
+        renderWithIntl(<LoginForm />);
 
         fillAndSubmit();
         expect((await screen.findByRole("alert")).textContent).toBe(
@@ -157,7 +152,7 @@ describe("LoginForm", () => {
 
 describe("login password toggle", () => {
     it("Should show and hide the password without submitting", () => {
-        render(<LoginForm />);
+        renderWithIntl(<LoginForm />);
         const password = screen.getByLabelText("Password");
         fireEvent.change(password, { target: { value: "hunter2" } });
 
@@ -181,7 +176,7 @@ describe("login password toggle", () => {
             );
             return { ok: true, data: undefined };
         });
-        render(<LoginForm />);
+        renderWithIntl(<LoginForm />);
         fireEvent.click(screen.getByRole("button", { name: "Show password" }));
 
         fillAndSubmit();
@@ -194,15 +189,50 @@ describe("login password toggle", () => {
 
 describe("expired login notice", () => {
     it("Should show the exact notice when the session expired", () => {
-        render(<LoginForm sessionExpired />);
+        renderWithIntl(<LoginForm sessionExpired />);
         expect(screen.getByRole("status").textContent).toBe(
             "Your session expired. Please log back in.",
         );
     });
     it("Should omit the notice when login has no expiry reason", () => {
-        render(<LoginForm />);
+        renderWithIntl(<LoginForm />);
         expect(
             screen.queryByText("Your session expired. Please log back in."),
         ).toBeNull();
+    });
+});
+
+describe("LoginForm in Spanish", () => {
+    it("Should render its labels, toggle, button and expiry notice in Spanish", () => {
+        renderWithIntl(<LoginForm sessionExpired />, { locale: "es" });
+        expect(
+            screen.getByRole("form", { name: "Iniciar sesión" }),
+        ).toBeDefined();
+        expect(screen.getByLabelText("Correo")).toBeDefined();
+        expect(screen.getByLabelText("Contraseña")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Mostrar contraseña" }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Iniciar sesión" }),
+        ).toBeDefined();
+        expect(screen.getByRole("status").textContent).toBe(
+            "Tu sesión expiró. Vuelve a iniciar sesión.",
+        );
+    });
+
+    it("Should show the Spanish fallback when the action throws", async () => {
+        loginActionMock.mockRejectedValue(new Error("network"));
+        renderWithIntl(<LoginForm />, { locale: "es" });
+        fireEvent.change(screen.getByLabelText("Correo"), {
+            target: { value: "user@example.com" },
+        });
+        fireEvent.change(screen.getByLabelText("Contraseña"), {
+            target: { value: "hunter2" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Iniciar sesión" }));
+        expect(
+            await screen.findByText("Algo salió mal. Inténtalo de nuevo."),
+        ).toBeDefined();
     });
 });

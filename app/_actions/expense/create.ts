@@ -1,7 +1,9 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { computeActualExpenditure } from "@/lib/domain/expense";
@@ -13,6 +15,8 @@ import {
     expenseInputSchema,
     type ExpenseInput,
 } from "@/lib/schemas/expense";
+
+import { expenseSchemaMessages } from "./field-messages";
 
 /** Failure modes the caller can branch on. */
 export type CreateExpenseCode = "validation" | "unauthenticated" | "db_error";
@@ -40,13 +44,17 @@ export async function createExpense(
     repo: ExpenseRepository = expenseRepository,
     cards: CardRepository = cardRepository,
 ): Promise<CreateExpenseResult> {
+    const t = await getTranslations("expenses");
     const parsed = expenseInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid expense",
-            fieldErrors: toFieldErrors<ExpenseInput>(parsed.error),
+            message: t("errors.invalidExpense"),
+            fieldErrors: localizeFieldErrors(
+                toFieldErrors<ExpenseInput>(parsed.error),
+                expenseSchemaMessages(t),
+            ),
         };
     }
 
@@ -56,7 +64,7 @@ export async function createExpense(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -71,8 +79,8 @@ export async function createExpense(
             return {
                 ok: false,
                 code: "validation",
-                message: "Invalid expense",
-                fieldErrors: { categoryId: ["Category not found"] },
+                message: t("errors.invalidExpense"),
+                fieldErrors: { categoryId: [t("fields.categoryNotFound")] },
             };
         }
         const funding = expenseFundingSchema.safeParse({
@@ -83,8 +91,11 @@ export async function createExpense(
             return {
                 ok: false,
                 code: "validation",
-                message: "Invalid expense",
-                fieldErrors: toFieldErrors<ExpenseInput>(funding.error),
+                message: t("errors.invalidExpense"),
+                fieldErrors: localizeFieldErrors(
+                    toFieldErrors<ExpenseInput>(funding.error),
+                    expenseSchemaMessages(t),
+                ),
             };
         }
 
@@ -100,11 +111,9 @@ export async function createExpense(
                 return {
                     ok: false,
                     code: "validation",
-                    message: "Invalid expense",
+                    message: t("errors.invalidExpense"),
                     fieldErrors: {
-                        subcategoryId: [
-                            "Subcategory doesn't belong to the selected category",
-                        ],
+                        subcategoryId: [t("fields.subcategoryMismatch")],
                     },
                 };
             }
@@ -114,8 +123,8 @@ export async function createExpense(
             return {
                 ok: false,
                 code: "validation",
-                message: "Invalid expense",
-                fieldErrors: { cardId: ["Card not found"] },
+                message: t("errors.invalidExpense"),
+                fieldErrors: { cardId: [t("fields.cardNotFound")] },
             };
         }
 
@@ -144,7 +153,7 @@ export async function createExpense(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the expense. Please try again.",
+            message: t("errors.saveExpenseFailed"),
         };
     }
 }

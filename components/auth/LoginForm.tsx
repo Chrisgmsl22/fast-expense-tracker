@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ export function LoginForm({
 }: {
     sessionExpired?: boolean;
 }) {
+    const t = useTranslations("auth");
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<LoginInput>>({});
@@ -52,7 +54,7 @@ export function LoginForm({
                     setFormError(res.message);
                 }
             } catch {
-                setFormError("Something went wrong. Please try again.");
+                setFormError(t("errors.unexpected"));
             }
         });
     }
@@ -70,12 +72,12 @@ export function LoginForm({
         <form
             onSubmit={handleSubmit}
             className="flex w-full flex-col gap-5"
-            aria-label="Log in"
+            aria-label={t("login.formAria")}
         >
             {sessionExpired && <SessionExpiredNotice />}
             <div>
                 <Label htmlFor="email" className={AUTH_LABEL_CLASS}>
-                    Email
+                    {t("fields.email")}
                 </Label>
                 <Input
                     id="email"
@@ -90,7 +92,7 @@ export function LoginForm({
 
             <div>
                 <Label htmlFor="password" className={AUTH_LABEL_CLASS}>
-                    Password
+                    {t("fields.password")}
                 </Label>
                 <PasswordInput
                     id="password"
@@ -113,7 +115,7 @@ export function LoginForm({
                 disabled={pending}
                 className={AUTH_SUBMIT_CLASS}
             >
-                {pending ? "Signing in…" : "Sign in"}
+                {pending ? t("login.submitting") : t("login.submit")}
             </Button>
         </form>
     );

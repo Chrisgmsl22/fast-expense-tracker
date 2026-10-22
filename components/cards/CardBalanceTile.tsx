@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatBalance } from "@/lib/format";
@@ -31,9 +32,10 @@ export function CardBalanceTile({
     onOpen,
     onLogPayment,
 }: Props) {
+    const t = useTranslations("money.cards");
     const head = headlineState(card);
     const quiet = head === "untouched";
-    const foot = balanceFootnote(card, monthName, head);
+    const foot = balanceFootnote(card, monthName, head, t);
     return (
         <article
             aria-label={card.name}
@@ -42,7 +44,7 @@ export function CardBalanceTile({
             <button
                 type="button"
                 onClick={(e) => onOpen(card, e.currentTarget)}
-                aria-label={`${card.name} details`}
+                aria-label={t("details", { card: card.name })}
                 data-card-trigger={card.id}
                 className={cn(
                     "flex min-w-0 items-center gap-2.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
@@ -64,7 +66,7 @@ export function CardBalanceTile({
                     {card.name}
                 </span>
                 <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
-                    {cardTypeLabel(card.type)}
+                    {cardTypeLabel(card.type, t)}
                 </span>
                 <ChevronRight
                     aria-hidden
@@ -80,7 +82,7 @@ export function CardBalanceTile({
                             : "text-muted-foreground",
                     )}
                 >
-                    {stateLabel(head, monthName)}
+                    {stateLabel(head, t, monthName)}
                 </p>
                 {/* A quiet card's $0.00 would read as paid off: the label says it all. */}
                 {quiet ? null : (
@@ -107,9 +109,9 @@ export function CardBalanceTile({
                 variant="outline"
                 className="relative z-10"
                 onClick={(e) => onLogPayment(card, e.currentTarget)}
-                aria-label={`Log a payment on ${card.name}`}
+                aria-label={t("logPaymentOn", { card: card.name })}
             >
-                Log a payment
+                {t("logPayment")}
             </Button>
         </article>
     );

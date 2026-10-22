@@ -1,26 +1,34 @@
+import { useLocale, useTranslations } from "next-intl";
+
 import { RowFundingBadge } from "@/components/expense/FundingBadge";
+import { paymentTitle } from "@/components/movement/movement-display";
+import { useCategoryName } from "@/i18n/category-name";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { CategoryExpenseListItem } from "@/lib/repositories/category.repository";
 
 export function CategoryExpenses({
     expenses,
     color,
+    partnerName,
 }: {
     expenses: CategoryExpenseListItem[];
     color: string;
+    partnerName: string;
 }) {
+    const t = useTranslations("category.expenses");
+    const tm = useTranslations("movements");
+    const locale = useLocale();
+    const categoryName = useCategoryName();
     return (
         <section>
             <h2 className="mb-3 text-sm font-semibold">
-                <span className="sm:hidden">Expenses</span>
-                <span className="hidden sm:inline">
-                    Expenses in this category
-                </span>
+                <span className="sm:hidden">{t("titleShort")}</span>
+                <span className="hidden sm:inline">{t("title")}</span>
             </h2>
 
             {expenses.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
-                    No expenses in this category this month.
+                    {t("empty")}
                 </p>
             ) : (
                 <ul className="divide-y rounded-lg border">
@@ -32,7 +40,11 @@ export function CategoryExpenses({
                             <span className="min-w-0 flex-1">
                                 <span className="flex min-w-0 items-center gap-2">
                                     <span className="truncate text-sm font-medium">
-                                        {e.description}
+                                        {paymentTitle(
+                                            e.description,
+                                            partnerName,
+                                            tm,
+                                        )}
                                     </span>
                                     <RowFundingBadge row={e} />
                                 </span>
@@ -41,13 +53,13 @@ export function CategoryExpenses({
                                         className="mt-0.5 block truncate text-xs font-medium"
                                         style={{ color }}
                                     >
-                                        {e.subcategory.name}
+                                        {categoryName(e.subcategory.name)}
                                     </span>
                                 )}
                             </span>
 
                             <span className="hidden whitespace-nowrap text-xs text-muted-foreground sm:block">
-                                {formatExpenseDate(e.date)}
+                                {formatExpenseDate(e.date, locale)}
                                 {e.card ? ` · ${e.card.name}` : ""}
                             </span>
 
@@ -57,8 +69,11 @@ export function CategoryExpenses({
                                 </span>
                                 {e.isShared && (
                                     <span className="block text-xs text-positive">
-                                        my share{" "}
-                                        {formatMxn(e.actualExpenditure)}
+                                        {t("myShare", {
+                                            amount: formatMxn(
+                                                e.actualExpenditure,
+                                            ),
+                                        })}
                                     </span>
                                 )}
                             </span>

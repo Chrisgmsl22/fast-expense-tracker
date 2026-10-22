@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { screen, fireEvent, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/app/_actions/movement/add-transfer", () => ({
@@ -22,11 +23,10 @@ vi.mock("@/app/_actions/expense/update-partner-payment", () => ({
 }));
 
 import { SettlementActions } from "@/components/settlement/SettlementActions";
-import { pastMonthNotice } from "@/components/settlement/past-month-notice";
 
 describe("SettlementActions", () => {
     it("opens the partner debt form at zero with the configured name", async () => {
-        render(
+        renderWithIntl(
             <SettlementActions
                 direction="settled"
                 netAmount={0}
@@ -43,7 +43,7 @@ describe("SettlementActions", () => {
         ).toBeDefined();
     });
     it("shows both debt actions and hides payment at zero", () => {
-        render(
+        renderWithIntl(
             <SettlementActions
                 direction="settled"
                 netAmount={0}
@@ -62,7 +62,7 @@ describe("SettlementActions", () => {
     });
 
     it("quick-settle prefills 'Brenda paid me' + the net amount when she owes you", async () => {
-        render(
+        renderWithIntl(
             <SettlementActions
                 direction="she_owes"
                 netAmount={700}
@@ -85,7 +85,7 @@ describe("SettlementActions", () => {
     });
 
     it("quick-settle uses 'I paid Brenda' when you owe her", async () => {
-        render(
+        renderWithIntl(
             <SettlementActions
                 direction="you_owe"
                 netAmount={200}
@@ -103,7 +103,7 @@ describe("SettlementActions", () => {
     });
 
     it("opens the debt form (settlement-only — no category picker)", async () => {
-        render(
+        renderWithIntl(
             <SettlementActions
                 direction="she_owes"
                 netAmount={700}
@@ -122,8 +122,9 @@ describe("SettlementActions", () => {
     it("carries the past-month warning INTO the transfer dialog", async () => {
         // The dialog covers the page, so the page's own copy of this sentence
         // is invisible at exactly the moment it matters.
-        const notice = pastMonthNotice("August 2026");
-        render(
+        const notice =
+            "You are viewing August 2026. Anything you log is dated today and joins the open settlement.";
+        renderWithIntl(
             <SettlementActions
                 direction="she_owes"
                 netAmount={700}
@@ -138,8 +139,9 @@ describe("SettlementActions", () => {
     });
 
     it("carries the past-month warning INTO the debt dialog", async () => {
-        const notice = pastMonthNotice("August 2026");
-        render(
+        const notice =
+            "You are viewing August 2026. Anything you log is dated today and joins the open settlement.";
+        renderWithIntl(
             <SettlementActions
                 direction="she_owes"
                 netAmount={700}
@@ -154,7 +156,7 @@ describe("SettlementActions", () => {
     });
 
     it("shows no such warning while on the current month", async () => {
-        render(
+        renderWithIntl(
             <SettlementActions
                 direction="she_owes"
                 netAmount={700}

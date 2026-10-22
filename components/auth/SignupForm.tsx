@@ -8,6 +8,7 @@ import {
     type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,26 +28,15 @@ import { PasswordInput } from "./PasswordInput";
 
 type Field = {
     name: keyof SignupInput;
-    label: string;
     type: "text" | "email" | "password";
     autoComplete: string;
 };
 
 const FIELDS: readonly Field[] = [
-    { name: "name", label: "Name", type: "text", autoComplete: "name" },
-    { name: "email", label: "Email", type: "email", autoComplete: "email" },
-    {
-        name: "password",
-        label: "Password",
-        type: "password",
-        autoComplete: "new-password",
-    },
-    {
-        name: "confirmPassword",
-        label: "Confirm password",
-        type: "password",
-        autoComplete: "new-password",
-    },
+    { name: "name", type: "text", autoComplete: "name" },
+    { name: "email", type: "email", autoComplete: "email" },
+    { name: "password", type: "password", autoComplete: "new-password" },
+    { name: "confirmPassword", type: "password", autoComplete: "new-password" },
 ];
 
 function firstInvalidField(
@@ -57,6 +47,7 @@ function firstInvalidField(
 
 /** Create an account and navigate once the server has signed it in. */
 export function SignupForm() {
+    const t = useTranslations("auth");
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<SignupInput>>({});
@@ -105,7 +96,7 @@ export function SignupForm() {
                 });
             } catch {
                 startTransition(() => {
-                    setFormError("Something went wrong. Please try again.");
+                    setFormError(t("errors.unexpected"));
                 });
             }
         });
@@ -116,10 +107,10 @@ export function SignupForm() {
             ref={formRef}
             onSubmit={handleSubmit}
             className="flex w-full flex-col gap-5"
-            aria-label="Sign up"
+            aria-label={t("signup.formAria")}
             noValidate
         >
-            {FIELDS.map(({ name, label, type, autoComplete }) => {
+            {FIELDS.map(({ name, type, autoComplete }) => {
                 const message = errors[name]?.[0];
                 const errorId = `${name}-error`;
                 const inputProps = {
@@ -134,12 +125,18 @@ export function SignupForm() {
                 return (
                     <div key={name}>
                         <Label htmlFor={name} className={AUTH_LABEL_CLASS}>
-                            {label}
+                            {t(`fields.${name}`)}
                         </Label>
                         {type === "password" ? (
                             <PasswordInput
                                 {...inputProps}
-                                toggleSubject={label.toLowerCase()}
+                                toggleSubject={
+                                    name === "confirmPassword"
+                                        ? t(
+                                              "passwordToggle.subjects.confirmPassword",
+                                          )
+                                        : t("passwordToggle.subjects.password")
+                                }
                                 onChange={
                                     name === "password"
                                         ? (e) => setPassword(e.target.value)
@@ -180,7 +177,7 @@ export function SignupForm() {
                 disabled={pending}
                 className={AUTH_SUBMIT_CLASS}
             >
-                {pending ? "Creating account…" : "Create account"}
+                {pending ? t("signup.submitting") : t("signup.submit")}
             </Button>
         </form>
     );

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { StatStrip } from "@/components/dashboard/StatStrip";
 import { FundingPart } from "@/components/money/FundingSplit";
@@ -127,7 +128,7 @@ describe("the fixture", () => {
 
 describe("every surface shows parts that add up to their parent", () => {
     it("dashboard rail: income + From savings = What October cost me", () => {
-        render(<SummaryRail {...shared} />);
+        renderWithIntl(<SummaryRail {...shared} />);
         const rail = screen.getByTestId("feed-totals");
         const headline = money(
             within(rail).getByRole("heading", { name: /cost me/ })
@@ -151,7 +152,7 @@ describe("every surface shows parts that add up to their parent", () => {
     });
 
     it("Expenses footer: From savings + Reimbursed = Outside income", () => {
-        render(
+        renderWithIntl(
             <SummaryStrip
                 {...shared}
                 visibleCount={5}
@@ -172,7 +173,7 @@ describe("every surface shows parts that add up to their parent", () => {
     });
 
     it("breakdown pot: each of its two cuts adds up to the headline", () => {
-        render(<MonthBreakdown {...shared} />);
+        renderWithIntl(<MonthBreakdown {...shared} />);
         const pot = screen.getByText("outside the budget").parentElement!;
         const headline = money(
             within(pot).getByText("outside the budget").previousElementSibling,
@@ -201,7 +202,7 @@ describe("every surface shows parts that add up to their parent", () => {
     });
 
     it("dashboard stat strip: From savings + Reimbursed = Not from this month's income", () => {
-        render(
+        renderWithIntl(
             <StatStrip
                 income={20000}
                 spent={680}
@@ -209,6 +210,7 @@ describe("every surface shows parts that add up to their parent", () => {
                 dailyAvg={100}
                 daysLeft={10}
                 expenses={expenses}
+                partnerName="Avery"
             />,
         );
         const line = screen.getByText(/^Not from this month's income:/);
@@ -224,11 +226,12 @@ describe("every surface shows parts that add up to their parent", () => {
 
 describe("a funding sub-row", () => {
     it("gives its tap target at least 24px (WCAG 2.5.8)", () => {
-        render(
+        renderWithIntl(
             <FundingPart
                 source="fromSavings"
                 amount={4758}
                 rows={fundingRows.fromSavings}
+                partnerName="Avery"
             />,
         );
         const summary = screen.getByText("From savings").closest("summary")!;
@@ -238,7 +241,7 @@ describe("a funding sub-row", () => {
 
 describe("the expanded mobile chin", () => {
     it("caps its panel so an opened list scrolls inside it and the toggle stays on screen", () => {
-        render(
+        renderWithIntl(
             <SummaryStrip
                 {...shared}
                 visibleCount={5}

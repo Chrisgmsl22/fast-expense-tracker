@@ -1,3 +1,6 @@
+import type { Locale } from "@/i18n/config";
+
+// Money is MXN, so it keeps the Mexican format in every locale.
 const mxnFormatter = new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
@@ -32,36 +35,51 @@ export function formatMxnWhole(amount: number): string {
     return mxnWholeFormatter.format(amount);
 }
 
+const INTL_TAG = { es: "es-MX", en: "en" } as const satisfies Record<
+    Locale,
+    string
+>;
+
+function dateFormatters(
+    options: Intl.DateTimeFormatOptions,
+): Record<Locale, Intl.DateTimeFormat> {
+    return {
+        es: new Intl.DateTimeFormat(INTL_TAG.es, options),
+        en: new Intl.DateTimeFormat(INTL_TAG.en, options),
+    };
+}
+
 // Stored dates are a CDMX calendar day as 06:00Z (see lib/dates). Formatting in
 // UTC recovers that calendar date instead of shifting it back a day in CDMX.
-const dateFormatter = new Intl.DateTimeFormat("es-MX", {
+const dateFormatter = dateFormatters({
     timeZone: "UTC",
-    day: "2-digit",
+    day: "numeric",
     month: "short",
     year: "numeric",
 });
 
-export function formatExpenseDate(date: Date): string {
-    return dateFormatter.format(date);
+/** "15 may 2026" in Spanish, "May 15, 2026" in English. */
+export function formatExpenseDate(date: Date, locale: Locale): string {
+    return dateFormatter[locale].format(date);
 }
 
-const monthFormatter = new Intl.DateTimeFormat("en-US", {
+const monthFormatter = dateFormatters({
     month: "long",
     year: "numeric",
     timeZone: "UTC",
 });
 
-/** "2026-06" → "June 2026" (UTC: a calendar month, not a timestamp to shift). */
-export function formatMonthLabel(month: string): string {
-    return monthFormatter.format(new Date(`${month}-01T12:00:00Z`));
+/** "2026-06" → "junio de 2026" / "June 2026" (UTC: a calendar month, not a timestamp to shift). */
+export function formatMonthLabel(month: string, locale: Locale): string {
+    return monthFormatter[locale].format(new Date(`${month}-01T12:00:00Z`));
 }
 
-const monthNameFormatter = new Intl.DateTimeFormat("en-US", {
+const monthNameFormatter = dateFormatters({
     month: "long",
     timeZone: "UTC",
 });
 
-/** "2026-06" → "June": the month alone, for labels beside a month picker. */
-export function formatMonthName(month: string): string {
-    return monthNameFormatter.format(new Date(`${month}-01T12:00:00Z`));
+/** "2026-06" → "junio" / "June": the month alone, for labels beside a month picker. */
+export function formatMonthName(month: string, locale: Locale): string {
+    return monthNameFormatter[locale].format(new Date(`${month}-01T12:00:00Z`));
 }

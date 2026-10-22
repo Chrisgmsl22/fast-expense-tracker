@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "description": "Control de gastos personales en MXN, con gastos compartidos y revisión semanal."
+    },
+    "buckets": {
+        "essentials": "Esenciales",
+        "discretionary": "Gustos",
+        "savings": "Ahorro"
+    },
+    "actions": {
+        "save": "Guardar",
+        "cancel": "Cancelar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "close": "Cerrar"
+    },
+    "language": {
+        "title": "Idioma",
+        "description": "Elige el idioma de la app en este navegador.",
+        "invalid": "Elige Español o English.",
+        "error": "No se pudo cambiar el idioma. Inténtalo de nuevo."
+    },
+    "cardLabel": {
+        "paidPartner": "Pagado a {partner}",
+        "cash": "Efectivo"
+    },
+    "notFromIncome": "No salió del ingreso de este mes"
+}

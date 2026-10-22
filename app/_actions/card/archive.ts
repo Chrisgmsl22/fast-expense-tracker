@@ -1,5 +1,7 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
 import { cardRepository } from "@/lib/repositories";
@@ -29,12 +31,13 @@ export async function archiveCard(
     input: unknown,
     repo: CardRepository = cardRepository,
 ): Promise<ArchiveCardResult> {
+    const t = await getTranslations("settings");
     const parsed = cardIdInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Please pick a card to archive.",
+            message: t("cards.errors.pickToArchive"),
         };
     }
 
@@ -44,7 +47,7 @@ export async function archiveCard(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -55,7 +58,7 @@ export async function archiveCard(
             return {
                 ok: false,
                 code: "cash_locked",
-                message: "The Cash card can't be archived.",
+                message: t("cards.errors.cashArchive"),
             };
         }
 
@@ -64,7 +67,7 @@ export async function archiveCard(
             return {
                 ok: false,
                 code: "not_found",
-                message: "That card no longer exists.",
+                message: t("cards.errors.notFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -73,7 +76,7 @@ export async function archiveCard(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not archive the card. Please try again.",
+            message: t("cards.errors.archiveFailed"),
         };
     }
 }

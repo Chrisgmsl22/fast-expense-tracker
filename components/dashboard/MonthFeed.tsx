@@ -1,3 +1,5 @@
+import { useLocale, useTranslations } from "next-intl";
+
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { computeFeedTotals, nonIncomeFundedRows } from "@/lib/domain/movement";
 import { RowFundingBadge } from "@/components/expense/FundingBadge";
@@ -11,6 +13,7 @@ import { expenseCardLabel } from "@/lib/expense-display";
 import {
     movementDisplay,
     movementRowText,
+    paymentTitle,
 } from "@/components/movement/movement-display";
 
 /**
@@ -51,6 +54,7 @@ export function MonthFeed({
     /** This month's income, for the breakdown modal's "% of income" line. */
     incomeTotal?: number;
 }) {
+    const t = useTranslations("dashboard.feed");
     const feed = buildFeed(expenses, movements);
 
     // Movements go in because a legacy `gf_paid` transfer is still a movement until
@@ -64,17 +68,17 @@ export function MonthFeed({
         <div className="flex flex-col rounded-lg border xl:sticky xl:top-6">
             <div className="border-b p-4">
                 <p className="text-sm font-medium">
-                    All activity · {monthLabel}
+                    {t("title", { month: monthLabel })}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                    {count} {count === 1 ? "entry" : "entries"}
-                    {count > 0 ? " · scroll" : ""}
+                    {t("entries", { count })}
+                    {count > 0 ? ` · ${t("scroll")}` : ""}
                 </p>
             </div>
 
             {count === 0 ? (
                 <p className="flex-1 p-8 text-center text-sm text-muted-foreground">
-                    Nothing logged this month yet.
+                    {t("empty")}
                 </p>
             ) : (
                 <ul className="max-h-[45vh] min-h-24 flex-1 divide-y overflow-x-hidden overflow-y-auto xl:max-h-[calc(100vh-38rem)]">
@@ -118,13 +122,17 @@ function ExpenseRow({
     expense: ExpenseListItem;
     partnerName: string;
 }) {
+    const t = useTranslations("dashboard.feed");
+    const tCard = useTranslations("common.cardLabel");
+    const tm = useTranslations("movements");
+    const locale = useLocale();
     const isSavings = e.category.slug === SAVINGS_SLUG;
     // Same helper the Expenses list uses, so the two screens cannot print
     // different words for the same row.
-    const { name: cardName, color: cardColor } = expenseCardLabel(
-        e,
-        partnerName,
-    );
+    const { name: cardName, color: cardColor } = expenseCardLabel(e, {
+        paidPartner: tCard("paidPartner", { partner: partnerName }),
+        cash: tCard("cash"),
+    });
     return (
         <li
             className={`flex items-center gap-3 py-2.5 pr-4 pl-4 ${isSavings ? "border-l-[3px] border-positive bg-positive-tint" : "relative"}`}
@@ -139,12 +147,12 @@ function ExpenseRow({
             <span className="min-w-0 flex-1">
                 <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-medium">
-                        {e.description}
+                        {paymentTitle(e.description, partnerName, tm)}
                     </span>
                     <RowFundingBadge row={e} />
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    {formatExpenseDate(e.date)}
+                    {formatExpenseDate(e.date, locale)}
                     {isSavings ? null : (
                         <>
                             {" · "}
@@ -166,15 +174,17 @@ function ExpenseRow({
                 </span>
                 {isSavings ? (
                     <span className="block text-xs text-positive">
-                        set aside
+                        {t("setAside")}
                     </span>
                 ) : e.isShared ? (
                     <span className="block text-xs text-positive">
-                        {`share ${formatMxn(e.actualExpenditure)}`}
+                        {t("share", {
+                            amount: formatMxn(e.actualExpenditure),
+                        })}
                     </span>
                 ) : (
                     <span className="block text-xs text-muted-foreground">
-                        solo
+                        {t("solo")}
                     </span>
                 )}
             </span>
@@ -190,9 +200,11 @@ function MovementRow({
     movement: MovementListItem;
     partnerName: string;
 }) {
-    const { amountClass, rowTint } = movementDisplay(m.type, partnerName);
+    const locale = useLocale();
+    const tm = useTranslations("movements");
+    const { amountClass, rowTint } = movementDisplay(m.type);
     // `buildFeed` drops a debt she fronted, so only card payments and transfers reach here.
-    const { title, subline } = movementRowText(m, partnerName);
+    const { title, subline } = movementRowText(m, partnerName, tm);
 
     return (
         <li
@@ -206,7 +218,7 @@ function MovementRow({
                     <RowFundingBadge row={m} />
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                    {formatExpenseDate(m.date)}
+                    {formatExpenseDate(m.date, locale)}
                     {subline ? ` · ${subline}` : ""}
                 </span>
             </span>

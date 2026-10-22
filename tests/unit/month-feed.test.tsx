@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
+import { formatExpenseDate } from "@/lib/format";
 
 import { MonthFeed } from "@/components/dashboard/MonthFeed";
 import { PARTNER_PAYMENT_SUBCATEGORY_NAME } from "@/lib/domain/expense";
@@ -96,7 +98,7 @@ const debt: MovementListItem = {
 
 describe("MonthFeed", () => {
     it("lists the month's expenses with share subtext and card fallback", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -115,7 +117,7 @@ describe("MonthFeed", () => {
 
     it("labels a partner payment, never Cash", () => {
         // A payment has no card; the bare `?? "Cash"` fallback is BUG-1's symptom.
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[
                     {
@@ -141,8 +143,34 @@ describe("MonthFeed", () => {
         expect(screen.queryByText(/\bCash\b/)).toBeNull();
     });
 
+    it("shows a stored partner-payment auto-label in Spanish, and a typed note as typed", () => {
+        renderWithIntl(
+            <MonthFeed
+                expenses={[
+                    {
+                        ...partnerPayment,
+                        description: "Transfer — you paid Brenda",
+                    },
+                    { ...partnerPayment, id: "ePay2" },
+                ]}
+                movements={[]}
+                monthLabel="junio 2026"
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth
+            />,
+            { locale: "es" },
+        );
+
+        expect(
+            screen.getByText("Transferencia — le pagaste a Brenda"),
+        ).toBeDefined();
+        expect(screen.queryByText(/Transfer — you paid/)).toBeNull();
+        expect(screen.getByText("Settled up")).toBeDefined();
+    });
+
     it("totals Charged + What I really spent in the footer", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -159,7 +187,7 @@ describe("MonthFeed", () => {
     });
 
     it("shows an empty state and no footer with nothing logged", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[]}
                 movements={[]}
@@ -190,7 +218,7 @@ describe("MonthFeed", () => {
                 cycleClosedAt: null,
             },
         ];
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[]}
                 movements={received}
@@ -251,7 +279,7 @@ describe("MonthFeed", () => {
                 card: null,
             },
         ];
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={mixed}
                 movements={[]}
@@ -278,7 +306,7 @@ describe("MonthFeed", () => {
     });
 
     it("draws no Saved pill for a month that set nothing aside", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -311,7 +339,7 @@ describe("MonthFeed", () => {
                 cycleClosedAt: null,
             },
         ];
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[...expenses, partnerPayment]}
                 movements={movements}
@@ -340,7 +368,7 @@ describe("MonthFeed", () => {
             fundedFrom: "savings",
             countedInBudget: false,
         };
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[
@@ -375,7 +403,7 @@ describe("MonthFeed", () => {
         // `FundingBadge` cannot represent `income`, so a dropped guard is a type
         // error first; this is the behavioural half. Without either, every
         // ordinary row grows a false "not from income" chip.
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[
@@ -419,7 +447,7 @@ describe("MonthFeed", () => {
             fundedFrom: "income",
             countedInBudget: false,
         };
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[outOfBand]}
@@ -450,7 +478,7 @@ describe("MonthFeed", () => {
             fundedFrom: "income",
             countedInBudget: false,
         };
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[...expenses, outOfBand]}
                 movements={[]}
@@ -492,7 +520,7 @@ describe("MonthFeed", () => {
             fundedFrom: "savings",
             countedInBudget: false,
         };
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[expense]}
                 movements={[movement]}
@@ -520,7 +548,7 @@ describe("MonthFeed", () => {
             fundedFrom: "savings" as const,
             countedInBudget: false,
         };
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[pay]}
                 movements={[]}
@@ -541,7 +569,7 @@ describe("MonthFeed", () => {
     });
 
     it("shows $0 sent when no money reached her", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -561,7 +589,7 @@ describe("MonthFeed", () => {
     it("keeps the reminder, and its scope, on an empty month", () => {
         // The empty branch renders no chin, and it is the branch a past month is
         // most likely to hit — the one place the caption was still missing.
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[]}
                 movements={[]}
@@ -585,7 +613,7 @@ describe("MonthFeed", () => {
     it("says the balance is the open cycle when another month is on screen", () => {
         // The rail's own figures are the viewed month and the dashboard carries a
         // month picker, so an unqualified chip reads as that month's debt.
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -603,7 +631,7 @@ describe("MonthFeed", () => {
     });
 
     it("renders the settlement chip in Shared mode when a balance is passed", () => {
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[]}
@@ -635,7 +663,7 @@ describe("MonthFeed", () => {
                 cycleClosedAt: null,
             },
         ];
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={[...expenses, partnerPayment]}
                 movements={movements}
@@ -664,7 +692,7 @@ describe("MonthFeed", () => {
     it("never shows a debt she fronted, even when handed one", () => {
         // Settlement-only (spec 0007 §6b): the month query excludes it and `buildFeed`
         // drops it again.
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[debt]}
@@ -682,7 +710,7 @@ describe("MonthFeed", () => {
         // A debt reaches NO ledger (spec 0007 §6b), so adding one must not move a
         // figure. Both renders carry the same expenses; only the debt differs.
         const movements: MovementListItem[] = [];
-        const { unmount } = render(
+        const { unmount } = renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={movements}
@@ -695,7 +723,7 @@ describe("MonthFeed", () => {
         const without = screen.getByTestId("feed-totals").textContent;
         unmount();
 
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={expenses}
                 movements={[...movements, debt]}
@@ -735,7 +763,7 @@ describe("MonthFeed", () => {
                 card: null,
             },
         ];
-        render(
+        renderWithIntl(
             <MonthFeed
                 expenses={savings}
                 movements={[]}
@@ -747,5 +775,68 @@ describe("MonthFeed", () => {
         );
         expect(screen.getByText("Emergency fund")).toBeDefined();
         expect(screen.queryByText(/Cash/)).toBeNull();
+    });
+});
+
+describe("MonthFeed in Spanish", () => {
+    it("prints the header, row words, and dates in the Spanish locale", () => {
+        renderWithIntl(
+            <MonthFeed
+                expenses={expenses}
+                movements={[]}
+                monthLabel="junio de 2026"
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth
+            />,
+            { locale: "es" },
+        );
+        expect(
+            screen.getByText("Toda la actividad · junio de 2026"),
+        ).toBeDefined();
+        expect(screen.getByText("2 registros · desliza")).toBeDefined();
+        expect(screen.getByText("mi parte $1,237.00")).toBeDefined();
+        const date = expenses[0]!.date;
+        expect(
+            screen.getByText(formatExpenseDate(date, "es"), { exact: false }),
+        ).toBeDefined();
+        expect(
+            screen.queryByText(formatExpenseDate(date, "en"), { exact: false }),
+        ).toBeNull();
+    });
+
+    it("shows the Spanish empty state", () => {
+        renderWithIntl(
+            <MonthFeed
+                expenses={[]}
+                movements={[]}
+                monthLabel="junio de 2026"
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("0 registros")).toBeDefined();
+        expect(
+            screen.getByText("Aún no hay nada registrado este mes."),
+        ).toBeDefined();
+    });
+
+    it("names a cash row and a partner payment in Spanish", () => {
+        renderWithIntl(
+            <MonthFeed
+                expenses={[expenses[1]!, partnerPayment]}
+                movements={[]}
+                monthLabel="junio de 2026"
+                partnerName="Brenda"
+                sharesExpenses
+                isCurrentMonth
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByText(/Efectivo/)).toBeDefined();
+        expect(screen.getByText(/Pagado a Brenda/)).toBeDefined();
+        expect(screen.queryByText(/\bCash\b|Paid Brenda/)).toBeNull();
     });
 });

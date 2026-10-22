@@ -1,7 +1,9 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { incomeRepository } from "@/lib/repositories";
@@ -10,6 +12,8 @@ import {
     variableIncomeInputSchema,
     type VariableIncomeInput,
 } from "@/lib/schemas/income";
+
+import { incomeSchemaMessages } from "./field-messages";
 
 /** Failure modes the caller can branch on. */
 export type AddVariableIncomeCode =
@@ -34,13 +38,17 @@ export async function addVariableIncome(
     input: unknown,
     repo: IncomeRepository = incomeRepository,
 ): Promise<AddVariableIncomeResult> {
+    const t = await getTranslations("income");
     const parsed = variableIncomeInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid income",
-            fieldErrors: toFieldErrors<VariableIncomeInput>(parsed.error),
+            message: t("errors.invalidIncome"),
+            fieldErrors: localizeFieldErrors(
+                toFieldErrors<VariableIncomeInput>(parsed.error),
+                incomeSchemaMessages(t),
+            ),
         };
     }
 
@@ -50,7 +58,7 @@ export async function addVariableIncome(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -67,7 +75,7 @@ export async function addVariableIncome(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the income. Please try again.",
+            message: t("errors.saveFailed"),
         };
     }
 }

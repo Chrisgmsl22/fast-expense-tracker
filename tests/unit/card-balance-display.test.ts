@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { createTranslator } from "next-intl";
+
+import { MESSAGES } from "@/i18n/messages";
 
 import {
     balanceFootnote,
@@ -9,6 +12,17 @@ import {
     stateLabel,
     type CardBalanceView,
 } from "@/components/cards/card-balance-display";
+
+const t = createTranslator({
+    locale: "en",
+    messages: MESSAGES.en,
+    namespace: "money.cards",
+});
+const tEs = createTranslator({
+    locale: "es",
+    messages: MESSAGES.es,
+    namespace: "money.cards",
+});
 
 const view = (
     over: Partial<CardBalanceView> & Pick<CardBalanceView, "name">,
@@ -30,25 +44,27 @@ describe("stateLabel", () => {
         ["paid", "Paid in full"],
         ["credit", "Paid more than charged"],
     ] as const)("labels %s as %s", (state, label) => {
-        expect(stateLabel(state)).toBe(label);
+        expect(stateLabel(state, t)).toBe(label);
     });
 
     it("names the month an owed or overpaid balance belongs to", () => {
-        expect(stateLabel("owed", "September")).toBe("Owed for September");
-        expect(stateLabel("credit", "October")).toBe(
+        expect(stateLabel("owed", t, "September")).toBe("Owed for September");
+        expect(stateLabel("credit", t, "October")).toBe(
             "Paid more than charged in October",
         );
-        expect(stateLabel("paid", "September")).toBe("Paid in full");
+        expect(stateLabel("paid", t, "September")).toBe("Paid in full");
     });
 
     it("names the month on an untouched card", () => {
-        expect(stateLabel("untouched")).toBe("No activity");
-        expect(stateLabel("untouched", "March")).toBe("No activity in March");
+        expect(stateLabel("untouched", t)).toBe("No activity");
+        expect(stateLabel("untouched", t, "March")).toBe(
+            "No activity in March",
+        );
     });
 
     it("never says a card owes you", () => {
         for (const state of ["owed", "paid", "credit", "untouched"] as const) {
-            expect(stateLabel(state, "October")).not.toMatch(/owes you/i);
+            expect(stateLabel(state, t, "October")).not.toMatch(/owes you/i);
         }
     });
 });
@@ -93,6 +109,7 @@ describe("balanceFootnote", () => {
                 view({ name: "NU", charged: 500, paid: 500 }),
                 "September",
                 "paid",
+                t,
             ),
         ).toBe("Nothing owed for September");
     });
@@ -108,20 +125,45 @@ describe("balanceFootnote", () => {
                 }),
                 "October",
                 "credit",
+                t,
             ),
         ).toBe("You paid $416.00 more than you charged in October.");
     });
 
     it.each(["owed", "untouched"] as const)("has no line for %s", (state) => {
         expect(
-            balanceFootnote(view({ name: "Gold" }), "October", state),
+            balanceFootnote(view({ name: "Gold" }), "October", state, t),
         ).toBeNull();
     });
 });
 
 describe("cardTypeLabel", () => {
-    it("capitalises the stored type", () => {
-        expect(cardTypeLabel("credit")).toBe("Credit");
+    it("names a seeded type in the active locale", () => {
+        expect(cardTypeLabel("credit", t)).toBe("Credit");
+        expect(cardTypeLabel("debit", tEs)).toBe("Débito");
+    });
+
+    it("capitalises a type it has no message for", () => {
+        expect(cardTypeLabel("store", t)).toBe("Store");
+    });
+});
+
+describe("Spanish labels", () => {
+    it("names the month in Spanish", () => {
+        expect(stateLabel("owed", tEs, "septiembre")).toBe(
+            "Por pagar de septiembre",
+        );
+        expect(stateLabel("paid", tEs, "septiembre")).toBe(
+            "Pagada por completo",
+        );
+        expect(
+            balanceFootnote(
+                view({ name: "Gold", balance: -416, state: "credit" }),
+                "octubre",
+                "credit",
+                tEs,
+            ),
+        ).toBe("Pagaste $416.00 más de lo que cargaste en octubre.");
     });
 });
 

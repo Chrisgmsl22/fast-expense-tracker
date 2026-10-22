@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { SavingsSpendCard } from "@/components/dashboard/SavingsSpendCard";
 import { MonthBreakdown } from "@/components/money/MonthBreakdown";
@@ -291,7 +292,7 @@ describe("SavingsSpendCard", () => {
     };
 
     it("shows one savings total and the two parts beneath the outside-income qualifier", () => {
-        render(<SavingsSpendCard {...props} />);
+        renderWithIntl(<SavingsSpendCard {...props} />);
         const card = screen.getByRole("region", { name: "Spent from savings" });
         expect(within(card).getByText("$1,300.00")).toBeDefined();
         expect(
@@ -309,7 +310,9 @@ describe("SavingsSpendCard", () => {
         { rows: [allocation] },
         { rows: [expense({ id: "refund", fundedFrom: "reimbursed" })] },
     ])("hides the whole card without savings-funded money", ({ rows }) => {
-        render(<SavingsSpendCard {...props} expenses={rows} movements={[]} />);
+        renderWithIntl(
+            <SavingsSpendCard {...props} expenses={rows} movements={[]} />,
+        );
         expect(
             screen.queryByRole("region", { name: "Spent from savings" }),
         ).toBeNull();
@@ -319,7 +322,7 @@ describe("SavingsSpendCard", () => {
     });
 
     it("shows only the purchase amount beside a savings allocation", () => {
-        render(
+        renderWithIntl(
             <SavingsSpendCard
                 {...props}
                 expenses={[
@@ -340,7 +343,7 @@ describe("SavingsSpendCard", () => {
     });
 
     it("opens the selected month's existing full breakdown and updates with the month", async () => {
-        const { rerender } = render(<SavingsSpendCard {...props} />);
+        const { rerender } = renderWithIntl(<SavingsSpendCard {...props} />);
         rerender(
             <SavingsSpendCard
                 {...props}
@@ -371,7 +374,7 @@ describe("SavingsSpendCard", () => {
     });
 
     it("agrees with the expenses breakdown and leaves its separate reimbursement intact", () => {
-        render(
+        renderWithIntl(
             <>
                 <SavingsSpendCard {...props} />
                 <MonthBreakdown
@@ -389,5 +392,27 @@ describe("SavingsSpendCard", () => {
         expect(within(otherMoney).getByText("$1,375.00")).toBeDefined();
         expect(within(otherMoney).getByText("$905.00")).toBeDefined();
         expect(within(otherMoney).getByText("$470.00")).toBeDefined();
+    });
+});
+
+describe("SavingsSpendCard in Spanish", () => {
+    it("titles the card and names its parts in Spanish", () => {
+        renderWithIntl(
+            <SavingsSpendCard
+                expenses={expenses}
+                movements={movements}
+                monthLabel="junio de 2026"
+                partnerName="Alex"
+                incomeTotal={4000}
+            />,
+            { locale: "es" },
+        );
+        const card = screen.getByRole("region", { name: "Gastado del ahorro" });
+        expect(
+            within(card).getByText("Fuera del ingreso de este mes"),
+        ).toBeDefined();
+        expect(within(card).getByText("Tus compras")).toBeDefined();
+        expect(within(card).getByText("Pagado a Alex")).toBeDefined();
+        expect(within(card).getByText("Ver desglose")).toBeDefined();
     });
 });

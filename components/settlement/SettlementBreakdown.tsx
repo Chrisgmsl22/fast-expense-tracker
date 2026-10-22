@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import type {
     CoupleBalance,
@@ -9,26 +10,18 @@ import type {
     SettlementBreakdownItem,
     SettlementBreakdownItems,
 } from "@/lib/services/settlement/settlement.service";
+import { isPartnerReceivedAutoLabel } from "@/lib/domain/movement";
 import {
     Collapsible,
     CollapsiblePanel,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { balanceTone } from "./balance-display";
-
-const labelsFor = (
-    partnerName: string,
-): Record<SettlementBreakdownKey, string> => ({
-    partner_share: `${partnerName}'s 32% of shared expenses you logged`,
-    partner_debt: `Debts you logged as "${partnerName} owes me"`,
-    your_debt: `Debts you logged as "I owe ${partnerName}"`,
-    partner_paid: `Money ${partnerName} paid you`,
-    you_paid: `Money you paid ${partnerName}`,
-});
-
-const SUBLABELS: Partial<Record<SettlementBreakdownKey, string>> = {
-    partner_paid: "transfers she sent you",
-};
+import {
+    debtTitle,
+    paymentTitle,
+    type MovementsTranslator,
+} from "@/components/movement/movement-display";
+import { balanceTone, type SettlementTranslator } from "./balance-display";
 
 // Money lines carry the journal's colour language: green = she paid you,
 // gold = you paid her, orange = a debt you owe (matches the journal key).
@@ -57,26 +50,31 @@ export function SettlementBreakdown({
     breakdownItems: SettlementBreakdownItems;
     partnerName: string;
 }) {
-    const tone = balanceTone(balance.direction, partnerName);
-    const labels = labelsFor(partnerName);
+    const t = useTranslations("settlement");
+    const tone = balanceTone(balance.direction, partnerName, t);
     const netLabel =
         balance.direction === "settled"
-            ? "Settled"
-            : `${tone.chipLabel} ${formatMxn(balance.amount)}`;
+            ? t("breakdown.settled")
+            : t("breakdown.net", {
+                  label: tone.chipLabel,
+                  amount: formatMxn(balance.amount),
+              });
 
     return (
         <div className="rounded-xl border p-5">
-            <p className="font-semibold">How this balance is made</p>
+            <p className="font-semibold">{t("breakdown.title")}</p>
             <ul className="mt-3 space-y-1 text-sm">
                 {balance.breakdown.map((line) => {
                     const items = breakdownItems[line.key];
                     const label = (
                         <>
-                            {labels[line.key]}
-                            {SUBLABELS[line.key] ? (
+                            {t(`breakdown.lines.${line.key}`, {
+                                partner: partnerName,
+                            })}
+                            {line.key === "partner_paid" ? (
                                 <span className="text-muted-foreground">
                                     {" "}
-                                    ({SUBLABELS[line.key]})
+                                    ({t("breakdown.partnerPaidSublabel")})
                                 </span>
                             ) : null}
                         </>
@@ -107,8 +105,10 @@ export function SettlementBreakdown({
                                         <span className="text-muted-foreground">
                                             {" "}
                                             {isZeroCents(line.amount)
-                                                ? "— nothing this window"
-                                                : "— no itemized rows"}
+                                                ? t(
+                                                      "breakdown.nothingThisWindow",
+                                                  )
+                                                : t("breakdown.noItemizedRows")}
                                         </span>
                                     </span>
                                     {total}
@@ -139,6 +139,7 @@ export function SettlementBreakdown({
                                                 <BreakdownItemRow
                                                     key={item.id}
                                                     item={item}
+                                                    line={line.key}
                                                     sign={line.sign}
                                                     amountClass={
                                                         AMOUNT_CLASS[line.key]
@@ -158,7 +159,7 @@ export function SettlementBreakdown({
                 high-contrast treatment as the expenses totals bar, so the
                 bottom line is the easiest thing to spot. */}
             <div className="-mx-5 -mb-5 mt-4 flex items-center justify-between rounded-b-xl bg-foreground px-5 py-3 text-sm text-background">
-                <span className="font-medium">Net balance</span>
+                <span className="font-medium">{t("breakdown.netBalance")}</span>
                 <span className="font-bold tabular-nums">{netLabel}</span>
             </div>
         </div>
@@ -171,25 +172,34 @@ export function SettlementBreakdown({
  */
 function BreakdownItemRow({
     item,
+    line,
     sign,
     amountClass,
     partnerName,
 }: {
     item: SettlementBreakdownItem;
+    line: SettlementBreakdownKey;
     sign: "+" | "-";
     amountClass: string;
     partnerName: string;
 }) {
+    const t = useTranslations("settlement");
+    const tm = useTranslations("movements");
+    const date = formatExpenseDate(item.date, useLocale());
     const subtitle =
         item.gross === null
-            ? formatExpenseDate(item.date)
-            : `${formatExpenseDate(item.date)} · ${partnerName}'s share of ${formatMxn(item.gross)} you paid`;
+            ? date
+            : t("breakdown.shareOf", {
+                  date,
+                  partner: partnerName,
+                  gross: formatMxn(item.gross),
+              });
 
     return (
         <li className="flex items-start justify-between gap-3">
             <span className="min-w-0">
                 <span className="block truncate text-xs font-medium">
-                    {item.description}
+                    {itemTitle(item.description, line, partnerName, t, tm)}
                 </span>
                 <span className="block text-xs text-muted-foreground">
                     {subtitle}
@@ -201,4 +211,31 @@ function BreakdownItemRow({
             </span>
         </li>
     );
+}
+
+/**
+ * A row's title. A note-less debt or transfer stores an English auto-label, so that
+ * one shows in the active locale; the user's own note shows as typed.
+ */
+function itemTitle(
+    description: string,
+    line: SettlementBreakdownKey,
+    partnerName: string,
+    t: SettlementTranslator,
+    tm: MovementsTranslator,
+): string {
+    switch (line) {
+        case "partner_debt":
+            return debtTitle(description, "partner_debt", partnerName, tm);
+        case "your_debt":
+            return debtTitle(description, "gf_fronted", partnerName, tm);
+        case "partner_paid":
+            return isPartnerReceivedAutoLabel(description)
+                ? t("journal.transferPartnerPaid", { partner: partnerName })
+                : description;
+        case "you_paid":
+            return paymentTitle(description, partnerName, tm);
+        case "partner_share":
+            return description;
+    }
 }

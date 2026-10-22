@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { BottomLine } from "@/components/money/BottomLine";
 import { FundingSplit } from "@/components/money/FundingSplit";
@@ -64,22 +65,24 @@ function subRow(label: string) {
 
 describe("FundingSplit", () => {
     it("draws nothing when neither source holds money", () => {
-        const { container } = render(
+        const { container } = renderWithIntl(
             <FundingSplit
                 fromSavings={0}
                 reimbursed={0}
                 rows={fundingRowsOf([])}
+                partnerName="Avery"
             />,
         );
         expect(container.innerHTML).toBe("");
     });
 
     it("shows both sub-rows collapsed, each opening onto its own rows", () => {
-        render(
+        renderWithIntl(
             <FundingSplit
                 fromSavings={4758}
                 reimbursed={3500}
                 rows={fundingRows}
+                partnerName="Avery"
             />,
         );
 
@@ -99,7 +102,7 @@ describe("FundingSplit", () => {
         expect(within(savingsList).getByText("New laptop")).toBeDefined();
         expect(
             within(savingsList).getByText(
-                formatExpenseDate(new Date("2026-10-04T12:00:00Z")),
+                formatExpenseDate(new Date("2026-10-04T12:00:00Z"), "en"),
             ),
         ).toBeDefined();
         expect(within(savingsList).getByText("$4,758.00")).toBeDefined();
@@ -111,15 +114,84 @@ describe("FundingSplit", () => {
     });
 
     it("drops a zero sub-row", () => {
-        render(
+        renderWithIntl(
             <FundingSplit
                 fromSavings={4758}
                 reimbursed={0}
                 rows={fundingRows}
+                partnerName="Avery"
             />,
         );
         expect(screen.getByText("From savings")).toBeDefined();
         expect(screen.queryByText("Reimbursed")).toBeNull();
+    });
+
+    it("names both halves and dates the rows in Spanish", () => {
+        renderWithIntl(
+            <FundingSplit
+                fromSavings={4758}
+                reimbursed={3500}
+                rows={fundingRows}
+                partnerName="Avery"
+            />,
+            { locale: "es" },
+        );
+        const savings = subRow("Del ahorro");
+        const list = within(savings).getByRole("list", {
+            name: "Gastos: Del ahorro",
+        });
+        expect(within(list).getByText("4 oct 2026")).toBeDefined();
+        expect(
+            within(subRow("Reembolsado")).getByText(
+                "te lo devolvieron · neto $0",
+            ),
+        ).toBeDefined();
+    });
+});
+
+describe("FundingSplit partner-payment rows in Spanish", () => {
+    it("translates the auto-label and keeps a typed note", () => {
+        const payments = [
+            funded({
+                id: "p1",
+                amount: 2000,
+                actualExpenditure: 2000,
+                isPartnerPayment: true,
+                category: { slug: "debt" },
+                fundedFrom: "savings",
+                countedInBudget: false,
+                description: "Transfer — you paid Avery",
+            }),
+            funded({
+                id: "p2",
+                amount: 1500,
+                actualExpenditure: 1500,
+                isPartnerPayment: true,
+                category: { slug: "debt" },
+                fundedFrom: "savings",
+                countedInBudget: false,
+                description: "Half of the rent",
+            }),
+        ];
+        renderWithIntl(
+            <FundingSplit
+                fromSavings={3500}
+                reimbursed={0}
+                rows={fundingRowsOf(payments)}
+                partnerName="Avery"
+            />,
+            { locale: "es" },
+        );
+        const list = within(subRow("Del ahorro")).getByRole("list", {
+            name: "Gastos: Del ahorro",
+        });
+        expect(
+            within(list).getByText("Transferencia — le pagaste a Avery"),
+        ).toBeDefined();
+        expect(
+            within(list).queryByText("Transfer — you paid Avery"),
+        ).toBeNull();
+        expect(within(list).getByText("Half of the rent")).toBeDefined();
     });
 });
 
@@ -133,7 +205,7 @@ describe("the split on every surface that names outside-income money", () => {
     };
 
     it("tells one story on the dashboard rail: cost = income + savings", () => {
-        render(<SummaryRail totals={totals} {...shared} />);
+        renderWithIntl(<SummaryRail totals={totals} {...shared} />);
         const rail = within(screen.getByTestId("feed-totals"));
 
         // 680 + 4,758. The refund is outside the cost, and off the rail.
@@ -149,7 +221,7 @@ describe("the split on every surface that names outside-income money", () => {
     });
 
     it("splits the other-money pot in the breakdown and greens Set aside", () => {
-        render(<MonthBreakdown totals={totals} {...shared} />);
+        renderWithIntl(<MonthBreakdown totals={totals} {...shared} />);
 
         const pot = screen.getByText("outside the budget").parentElement!;
         expect(within(pot).getByText("From savings")).toBeDefined();
@@ -165,7 +237,7 @@ describe("the split on every surface that names outside-income money", () => {
     });
 
     it("keeps both halves in the Expenses footer, collapsed on mobile by default", () => {
-        render(
+        renderWithIntl(
             <SummaryStrip
                 totals={totals}
                 {...shared}
@@ -182,7 +254,7 @@ describe("the split on every surface that names outside-income money", () => {
 
 describe("BottomLine", () => {
     it("heads the block as where the income went, and reads Set aside as kept", () => {
-        render(<BottomLine totals={totals} partnerName="Avery" />);
+        renderWithIntl(<BottomLine totals={totals} partnerName="Avery" />);
 
         expect(
             screen.getByText("Where this month's income went"),
@@ -202,7 +274,7 @@ describe("the mobile chin on the Expenses screen", () => {
         breakdown: [],
     };
     const renderChin = () =>
-        render(
+        renderWithIntl(
             <SummaryStrip
                 totals={totals}
                 monthLabel="October 2026"
@@ -271,7 +343,7 @@ describe("the mobile chin on the Expenses screen", () => {
                 amount: row.actualExpenditure,
             })),
         );
-        render(
+        renderWithIntl(
             <SummaryStrip
                 totals={solo}
                 monthLabel="October 2026"

@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-    FUNDING_TOGGLE_LABEL,
-    type TransferFundingSource,
-} from "@/lib/domain/funding";
+import type { TransferFundingSource } from "@/lib/domain/funding";
+import { useCategoryName } from "@/i18n/category-name";
 import { addTransfer } from "@/app/_actions/movement/add-transfer";
 import { updateTransfer } from "@/app/_actions/movement/update-transfer";
 import { addPartnerPayment } from "@/app/_actions/expense/add-partner-payment";
@@ -16,6 +15,9 @@ import { updatePartnerPayment } from "@/app/_actions/expense/update-partner-paym
 import type { FieldErrors } from "@/lib/actions/result";
 import { getTodayCdmx } from "@/lib/dates";
 import type { TransferInput } from "@/lib/schemas/movement";
+
+/** The seeded category a payment to the partner is filed under (spec 0007 §6b). */
+const PARTNER_PAYMENT_CATEGORY = "Combined Expenses";
 
 type Direction = "gf_paid" | "gf_received";
 
@@ -64,6 +66,9 @@ export function TransferForm({
     onSuccess,
     onCancel,
 }: Props) {
+    const t = useTranslations("movements");
+    const tc = useTranslations("common.actions");
+    const categoryName = useCategoryName();
     const [date, setDate] = useState(transfer?.date ?? "");
     const [amount, setAmount] = useState(transfer?.amount ?? initialAmount);
     const [note, setNote] = useState(transfer?.note ?? "");
@@ -77,14 +82,18 @@ export function TransferForm({
 
     const inbound = direction === "gf_received";
     const outbound = !inbound;
+    const values = { partner: partnerName };
     const blurb = inbound
-        ? `Money ${partnerName} sent you — settles what she owes you. Not an expense.`
-        : `Money you sent ${partnerName} — this IS your expense, counted in your budget under Combined Expenses.`;
+        ? t("transfer.blurbIn", values)
+        : t("transfer.blurbOut", {
+              ...values,
+              category: categoryName(PARTNER_PAYMENT_CATEGORY),
+          });
     const submitLabel = transfer
-        ? "Save changes"
+        ? t("form.saveChanges")
         : inbound
-          ? `Log ${partnerName}'s payment`
-          : `Log payment to ${partnerName}`;
+          ? t("transfer.submitIn", values)
+          : t("transfer.submitOut", values);
 
     // Inbound money is funded by nothing of yours, so the control is hidden and
     // `income` is sent — which also clears the tag when an outbound transfer is
@@ -146,7 +155,7 @@ export function TransferForm({
                     setFormError(res.message);
                 }
             } catch {
-                setFormError("Something went wrong saving the transfer.");
+                setFormError(t("transfer.unexpected"));
             }
         });
     }
@@ -166,15 +175,15 @@ export function TransferForm({
             className="flex flex-col gap-4"
             aria-label={
                 inbound
-                    ? `Log money received from ${partnerName}`
-                    : `Log money sent to ${partnerName}`
+                    ? t("transfer.formIn", values)
+                    : t("transfer.formOut", values)
             }
         >
             <p className="text-sm text-muted-foreground">{blurb}</p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                    <Label htmlFor="tr-date">Date</Label>
+                    <Label htmlFor="tr-date">{t("form.date")}</Label>
                     <Input
                         id="tr-date"
                         name="date"
@@ -188,7 +197,7 @@ export function TransferForm({
                     {fieldError("date")}
                 </div>
                 <div className="sm:col-span-2">
-                    <Label htmlFor="tr-amount">Amount (MXN)</Label>
+                    <Label htmlFor="tr-amount">{t("form.amount")}</Label>
                     <div className="relative mt-1.5">
                         <span
                             aria-hidden
@@ -216,9 +225,9 @@ export function TransferForm({
 
             <div>
                 <Label htmlFor="tr-note">
-                    Note{" "}
+                    {t("form.note")}{" "}
                     <span className="font-normal text-muted-foreground">
-                        (optional)
+                        {t("form.optional")}
                     </span>
                 </Label>
                 <Input
@@ -257,7 +266,7 @@ export function TransferForm({
                             id={SAVINGS_LABEL_ID}
                             className="text-sm font-medium"
                         >
-                            {FUNDING_TOGGLE_LABEL.savings}
+                            {t("transfer.savingsToggle")}
                         </span>
                     </label>
                     {fundedFrom === "savings" ? (
@@ -265,9 +274,7 @@ export function TransferForm({
                             id={SAVINGS_HINT_ID}
                             className="pl-[1.625rem] text-sm text-muted-foreground"
                         >
-                            Doesn&apos;t count toward this month&apos;s budget
-                            or what you really spent. It still settles what you
-                            owe {partnerName}.
+                            {t("transfer.savingsHint", values)}
                         </p>
                     ) : null}
                 </div>
@@ -292,11 +299,11 @@ export function TransferForm({
                         onClick={onCancel}
                         disabled={pending}
                     >
-                        Cancel
+                        {tc("cancel")}
                     </Button>
                 ) : null}
                 <Button type="submit" disabled={pending}>
-                    {pending ? "Saving…" : submitLabel}
+                    {pending ? t("form.saving") : submitLabel}
                 </Button>
             </div>
         </form>

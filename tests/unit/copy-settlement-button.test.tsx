@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, fireEvent, within } from "@testing-library/react";
+import { act, screen, fireEvent, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 vi.mock("next/navigation", () => ({
     useRouter: () => ({ refresh: vi.fn() }),
@@ -35,6 +36,9 @@ vi.mock("@/app/_actions/movement/update-transfer", () => ({
 
 import { CopySettlementButton } from "@/components/settlement/CopySettlementButton";
 import { SettlementViews } from "@/components/settlement/SettlementViews";
+import { createTranslator } from "next-intl";
+import type { Locale } from "@/i18n/config";
+import { MESSAGES } from "@/i18n/messages";
 import { buildSettlementSummaryText } from "@/components/settlement/settlement-summary-text";
 import type {
     ClosedSettlementCycle,
@@ -42,6 +46,20 @@ import type {
 } from "@/lib/services/settlement/settlement.service";
 
 const LABEL = "Copy settlement summary to clipboard";
+
+const intlFor = (locale: Locale) => ({
+    t: createTranslator({
+        locale,
+        messages: MESSAGES[locale],
+        namespace: "settlement",
+    }),
+    tm: createTranslator({
+        locale,
+        messages: MESSAGES[locale],
+        namespace: "movements",
+    }),
+    locale,
+});
 
 const openRow: SettlementJournalItem = {
     kind: "your_expense",
@@ -83,7 +101,7 @@ function cycle(
 function renderViews(
     over: Partial<Parameters<typeof SettlementViews>[0]> = {},
 ) {
-    return render(
+    return renderWithIntl(
         <SettlementViews
             openJournal={[openRow]}
             monthJournal={[openRow]}
@@ -124,7 +142,7 @@ afterEach(() => {
 
 describe("CopySettlementButton", () => {
     it("renders nothing for an empty journal", () => {
-        const { container } = render(
+        const { container } = renderWithIntl(
             <CopySettlementButton
                 journal={[]}
                 partnerName="Brenda"
@@ -135,7 +153,7 @@ describe("CopySettlementButton", () => {
     });
 
     it("opens its tooltip on hover", async () => {
-        render(
+        renderWithIntl(
             <CopySettlementButton
                 journal={[openRow]}
                 partnerName="Brenda"
@@ -157,7 +175,7 @@ describe("CopySettlementButton", () => {
     });
 
     it("opens its tooltip on keyboard focus", async () => {
-        render(
+        renderWithIntl(
             <CopySettlementButton
                 journal={[openRow]}
                 partnerName="Brenda"
@@ -174,7 +192,7 @@ describe("CopySettlementButton", () => {
     });
 
     it("writes the overview text to the clipboard", async () => {
-        render(
+        renderWithIntl(
             <CopySettlementButton
                 journal={[openRow]}
                 partnerName="Brenda"
@@ -183,13 +201,43 @@ describe("CopySettlementButton", () => {
         );
         await clickCopy(screen.getByRole("button", { name: LABEL }));
         expect(writeText).toHaveBeenCalledWith(
-            buildSettlementSummaryText([openRow], "Brenda", "closed"),
+            buildSettlementSummaryText(
+                [openRow],
+                "Brenda",
+                "closed",
+                intlFor("en"),
+            ),
         );
+    });
+
+    it("copies the Spanish summary under a Spanish label", async () => {
+        renderWithIntl(
+            <CopySettlementButton
+                journal={[openRow]}
+                partnerName="Brenda"
+                scope="open"
+            />,
+            { locale: "es" },
+        );
+        await clickCopy(
+            screen.getByRole("button", {
+                name: "Copiar el resumen de la cuenta",
+            }),
+        );
+        const text = buildSettlementSummaryText(
+            [openRow],
+            "Brenda",
+            "open",
+            intlFor("es"),
+        );
+        expect(text.split("\n")[0]).toBe("🧾 *Cuenta 10 jul 2026 – hoy*");
+        expect(writeText).toHaveBeenCalledWith(text);
+        expect(await screen.findByText("Copiado")).toBeDefined();
     });
 
     it("announces Copied, then returns to idle after two seconds", async () => {
         vi.useFakeTimers();
-        const { container } = render(
+        const { container } = renderWithIntl(
             <CopySettlementButton
                 journal={[openRow]}
                 partnerName="Brenda"
@@ -216,7 +264,7 @@ describe("CopySettlementButton", () => {
 
     it("restarts the timer and re-announces on a second copy", async () => {
         vi.useFakeTimers();
-        const { container } = render(
+        const { container } = renderWithIntl(
             <CopySettlementButton
                 journal={[openRow]}
                 partnerName="Brenda"
@@ -249,7 +297,7 @@ describe("CopySettlementButton", () => {
 
     it("says it could not copy when the write rejects", async () => {
         writeText.mockRejectedValue(new Error("denied"));
-        render(
+        renderWithIntl(
             <CopySettlementButton
                 journal={[openRow]}
                 partnerName="Brenda"
@@ -269,7 +317,7 @@ describe("CopySettlementButton", () => {
 
     it("says it could not copy when the clipboard API is missing", async () => {
         setClipboard(undefined);
-        render(
+        renderWithIntl(
             <CopySettlementButton
                 journal={[openRow]}
                 partnerName="Brenda"
@@ -282,7 +330,7 @@ describe("CopySettlementButton", () => {
 
     it("clears the failure once a retry succeeds", async () => {
         writeText.mockRejectedValueOnce(new Error("denied"));
-        render(
+        renderWithIntl(
             <CopySettlementButton
                 journal={[openRow]}
                 partnerName="Brenda"
@@ -303,7 +351,12 @@ describe("SettlementViews copy button", () => {
         renderViews();
         await clickCopy(screen.getByRole("button", { name: LABEL }));
         expect(writeText).toHaveBeenCalledWith(
-            buildSettlementSummaryText([openRow], "Brenda", "open"),
+            buildSettlementSummaryText(
+                [openRow],
+                "Brenda",
+                "open",
+                intlFor("en"),
+            ),
         );
     });
 
@@ -347,7 +400,12 @@ describe("SettlementViews copy button", () => {
 
         await clickCopy(button);
         expect(writeText).toHaveBeenCalledWith(
-            buildSettlementSummaryText([closedRow], "Brenda", "closed"),
+            buildSettlementSummaryText(
+                [closedRow],
+                "Brenda",
+                "closed",
+                intlFor("en"),
+            ),
         );
     });
 

@@ -12,8 +12,13 @@ import {
 
 describe("formatMonthName", () => {
     it("names the month alone, without shifting it a day", () => {
-        expect(formatMonthName("2026-09")).toBe("September");
-        expect(formatMonthName("2027-01")).toBe("January");
+        expect(formatMonthName("2026-09", "en")).toBe("September");
+        expect(formatMonthName("2027-01", "en")).toBe("January");
+    });
+
+    it("names the month in Spanish when the locale is es", () => {
+        expect(formatMonthName("2026-09", "es")).toBe("septiembre");
+        expect(formatMonthName("2027-01", "es")).toBe("enero");
     });
 });
 
@@ -72,20 +77,45 @@ describe("formatMxn", () => {
 });
 
 describe("formatExpenseDate", () => {
-    it("renders the stored CDMX calendar day from its 06:00Z instant (no day shift)", () => {
-        const s = formatExpenseDate(new Date("2026-05-15T06:00:00Z"));
-        expect(s).toMatch(/15/);
-        expect(s).toMatch(/2026/);
-    });
+    it.each([
+        ["en", "May 15, 2026"],
+        ["es", "15 may 2026"],
+    ] as const)(
+        "renders the stored CDMX calendar day from its 06:00Z instant in %s (no day shift)",
+        (locale, text) => {
+            expect(
+                formatExpenseDate(new Date("2026-05-15T06:00:00Z"), locale),
+            ).toBe(text);
+        },
+    );
+
+    it.each([
+        ["en", "Sep 1, 2026"],
+        ["es", "1 sep 2026"],
+    ] as const)(
+        "keeps the first of the month on the first, without a zero pad, in %s",
+        (locale, text) => {
+            expect(
+                formatExpenseDate(new Date("2026-09-01T06:00:00Z"), locale),
+            ).toBe(text);
+        },
+    );
 });
 
 describe("formatMonthLabel", () => {
-    it("names the calendar month a `YYYY-MM` string stands for", () => {
-        expect(formatMonthLabel("2026-06")).toBe("June 2026");
-    });
+    it.each([
+        ["en", "June 2026"],
+        ["es", "junio de 2026"],
+    ] as const)(
+        "names the calendar month a `YYYY-MM` string stands for in %s",
+        (locale, text) => {
+            expect(formatMonthLabel("2026-06", locale)).toBe(text);
+        },
+    );
 
     it("does not shift January back into the previous year", () => {
-        expect(formatMonthLabel("2026-01")).toBe("January 2026");
+        expect(formatMonthLabel("2026-01", "en")).toBe("January 2026");
+        expect(formatMonthLabel("2026-01", "es")).toBe("enero de 2026");
     });
 });
 

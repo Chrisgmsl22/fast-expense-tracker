@@ -1,0 +1,69 @@
+{
+    "screen": {
+        "title": "Income",
+        "show": "Show",
+        "hide": "Hide",
+        "drivesTargets": "drives your bucket targets",
+        "fixedMonthly": "Fixed income · monthly",
+        "editFixed": "Edit fixed income",
+        "carriesForward": "carries forward until you change it",
+        "variableMonth": "Variable · {month}",
+        "loggedThisMonth": "logged this month",
+        "totalMonth": "Total · {month}",
+        "fixedPlusVariable": "fixed + variable",
+        "mobileSplitHidden": "fixed · variable",
+        "mobileSplit": "{fixed} fixed · {variable} variable",
+        "logTitle": "Variable income log",
+        "logTitleShort": "Variable income",
+        "addIncome": "+ Add income",
+        "addShort": "+ Add",
+        "empty": "No variable income logged for {month} yet.",
+        "columns": {
+            "date": "Date",
+            "source": "Source",
+            "amount": "Amount",
+            "actions": "Actions"
+        },
+        "deleteRow": "Delete {source}",
+        "deleteTitle": "Delete income?",
+        "deleteBody": "\"{source}\" will be permanently removed.",
+        "deleting": "Deleting…"
+    },
+    "fixed": {
+        "inputLabel": "Fixed monthly income",
+        "save": "Save fixed income",
+        "pastMonthHelp": "Changes {month} only. Other months keep theirs.",
+        "forwardHelp": "Applies from {month} onward. Past months keep theirs."
+    },
+    "addForm": {
+        "title": "Add income",
+        "source": "Source",
+        "sourcePlaceholder": "e.g. Freelance — logo",
+        "amount": "Amount (MXN)",
+        "date": "Date",
+        "saving": "Saving…",
+        "submit": "Add income"
+    },
+    "errors": {
+        "invalidIncome": "Invalid income",
+        "invalidMonth": "Invalid month",
+        "invalidAmount": "Invalid amount",
+        "unauthenticated": "Not authenticated",
+        "missingId": "Missing income id",
+        "notFound": "Income not found.",
+        "futureMonth": "Fixed income can't be set for a future month",
+        "saveFailed": "Could not save the income. Please try again.",
+        "deleteFailed": "Could not delete the income. Please try again.",
+        "fixedFailed": "Could not update fixed income. Please try again."
+    },
+    "fields": {
+        "sourceRequired": "Source is required",
+        "amountPositive": "Amount must be greater than 0",
+        "amountNotNegative": "Amount can't be negative",
+        "monthFormat": "Month must be YYYY-MM",
+        "monthTooEarly": "Month can't be before 2000",
+        "monthAfterCurrent": "Month can't be after the current month",
+        "futureDate": "Date can't be later than today",
+        "dateInvalid": "Enter a valid date"
+    }
+}

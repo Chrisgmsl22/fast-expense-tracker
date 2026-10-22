@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
+import { formatMonthLabel } from "@/lib/format";
 import { getScopedMonth } from "@/lib/month-scope.server";
 import { isBalanceSettled } from "@/lib/domain/settlement";
 import { resolvePartnerName } from "@/lib/domain/settings";
@@ -14,7 +16,6 @@ import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown
 import { SettlementCloseCard } from "@/components/settlement/SettlementCloseCard";
 import { SettlementHelp } from "@/components/settlement/SettlementHelp";
 import { SettlementJournalKey } from "@/components/settlement/SettlementJournalKey";
-import { pastMonthNotice } from "@/components/settlement/past-month-notice";
 import { toMonthPosition } from "@/components/settlement/month-position";
 import { SettlementViews } from "@/components/settlement/SettlementViews";
 
@@ -57,22 +58,26 @@ export default async function SettlementPage({
     const canClose =
         isBalanceSettled(settlement.balance) &&
         settlement.closableMarker !== null;
-    // UTC: the value is a calendar month, not a timestamp to shift.
-    const monthLabel = new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-    }).format(new Date(`${settlement.month.label}-01T12:00:00Z`));
+    const monthLabel = formatMonthLabel(
+        settlement.month.label,
+        await getLocale(),
+    );
+    const t = await getTranslations("settlement");
+    // One sentence for the page and the dialogs: a modal covers the page, so the
+    // warning has to travel INTO the dialog, where it matters most.
+    const pastMonthNotice = settlement.month.isCurrent
+        ? undefined
+        : t("pastMonthNotice", { month: monthLabel });
 
     return (
         <main className="p-4 sm:p-6 lg:p-8">
             <header className="flex items-baseline justify-between">
                 <div className="flex items-center gap-1.5">
-                    <h1 className="text-2xl font-bold">Settlement</h1>
+                    <h1 className="text-2xl font-bold">{t("page.title")}</h1>
                     <SettlementHelp partnerName={partnerName} />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                    with {partnerName}
+                    {t("page.with", { partner: partnerName })}
                 </p>
             </header>
 
@@ -101,20 +106,16 @@ export default async function SettlementPage({
                         and joins the OPEN settlement, not the month on screen.
                         Say so next to the buttons rather than back-dating the
                         form — see the hand-back note. */}
-                    {!settlement.month.isCurrent && (
+                    {pastMonthNotice && (
                         <p className="text-sm text-muted-foreground">
-                            {pastMonthNotice(monthLabel)}
+                            {pastMonthNotice}
                         </p>
                     )}
                     <SettlementActions
                         direction={settlement.balance.direction}
                         netAmount={settlement.balance.amount}
                         partnerName={partnerName}
-                        pastMonthNotice={
-                            settlement.month.isCurrent
-                                ? undefined
-                                : pastMonthNotice(monthLabel)
-                        }
+                        pastMonthNotice={pastMonthNotice}
                     />
                     <SettlementBreakdown
                         balance={settlement.balance}

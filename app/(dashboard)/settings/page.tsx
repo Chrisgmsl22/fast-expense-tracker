@@ -1,7 +1,8 @@
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { resolveBudgetRule } from "@/lib/domain/budget-rule";
-import { formatMonthLabel } from "@/lib/format";
 import {
     budgetRuleRepository,
     cardRepository,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/repositories";
 import { BudgetRuleForm } from "@/components/settings/BudgetRuleForm";
 import { CardsForm } from "@/components/settings/CardsForm";
+import { LanguageSection } from "@/components/settings/LanguageSection";
 import { SplitRuleForm } from "@/components/settings/SplitRuleForm";
 
 // Per-request, DB-backed data — never prerender at build (no DB in preview builds, ADR-0004).
@@ -16,11 +18,11 @@ export const dynamic = "force-dynamic";
 
 /** Sections designed in the mockup but deferred past CHORE-6.a (spec 0006 §8). */
 const COMING_SOON = [
-    "Category limits",
-    "Preferences",
-    "Privacy",
-    "Export data",
-    "Account",
+    "categoryLimits",
+    "preferences",
+    "privacy",
+    "exportData",
+    "account",
 ] as const;
 
 export default async function SettingsPage() {
@@ -33,6 +35,7 @@ export default async function SettingsPage() {
     }
 
     const currentMonth = getCurrentMonthCdmx();
+    const t = await getTranslations("settings");
     const [settings, cards, budgetRules] = await Promise.all([
         settingsRepository.getSettings(userId),
         cardRepository.listForSettings(userId),
@@ -41,7 +44,7 @@ export default async function SettingsPage() {
 
     return (
         <main className="mx-auto max-w-2xl p-4 sm:p-6 lg:p-8">
-            <h1 className="text-2xl font-semibold">Settings</h1>
+            <h1 className="text-2xl font-semibold">{t("title")}</h1>
 
             <div className="mt-6 space-y-4">
                 <SplitRuleForm
@@ -52,29 +55,33 @@ export default async function SettingsPage() {
 
                 <BudgetRuleForm
                     rule={resolveBudgetRule(budgetRules, currentMonth)}
-                    monthLabel={formatMonthLabel(currentMonth)}
+                    month={currentMonth}
                 />
 
                 <CardsForm cards={cards} />
 
+                <LanguageSection />
+
                 {/* Deferred sections (spec 0006 §8) — placeholders so the page
                     reads as the full Settings surface without shipping them yet. */}
                 <section
-                    aria-label="Coming soon"
+                    aria-label={t("comingSoon.ariaLabel")}
                     className="rounded-xl border border-dashed p-5"
                 >
-                    <p className="font-semibold">More settings</p>
+                    <p className="font-semibold">{t("comingSoon.title")}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        These are on the way — configure them here soon.
+                        {t("comingSoon.description")}
                     </p>
                     <ul className="mt-3 flex flex-wrap gap-2">
-                        {COMING_SOON.map((label) => (
+                        {COMING_SOON.map((item) => (
                             <li
-                                key={label}
+                                key={item}
                                 className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground"
                             >
-                                {label}{" "}
-                                <span className="text-xs">· coming soon</span>
+                                {t(`comingSoon.items.${item}`)}{" "}
+                                <span className="text-xs">
+                                    {t("comingSoon.badge")}
+                                </span>
                             </li>
                         ))}
                     </ul>

@@ -18,7 +18,10 @@ export default defineConfig({
         // Apply migrations once before the suite.
         globalSetup: ["tests/integration/global-setup.ts"],
         // Truncate between tests for isolation.
-        setupFiles: ["tests/integration/truncate.ts"],
+        setupFiles: [
+            "tests/integration/truncate.ts",
+            "tests/support/intl-setup.ts",
+        ],
         // One shared database — run files serially so they don't race on truncation.
         fileParallelism: false,
     },

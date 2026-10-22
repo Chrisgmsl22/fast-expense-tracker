@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CreditCard } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { buttonVariants } from "@/components/ui/button";
 import { getCardHistory } from "@/app/_actions/card/get-history";
 import { formatMxn } from "@/lib/format";
@@ -55,14 +56,13 @@ function shownTrigger(
 }
 
 function EmptyState() {
+    const t = useTranslations("money.cards.empty");
     return (
         <div className="flex flex-col items-center gap-2.5 rounded-xl border border-dashed bg-card px-6 py-12 text-center">
             <CreditCard aria-hidden className="size-8 text-muted-foreground" />
-            <p className="font-semibold">No cards yet</p>
+            <p className="font-semibold">{t("title")}</p>
             <p className="max-w-sm text-sm text-muted-foreground">
-                Add a credit card in Settings → Cards. Its balance shows up
-                here. Cash and debit cards spend money you already have, so they
-                never appear here.
+                {t("body")}
             </p>
             <Link
                 href="/settings#cards"
@@ -71,59 +71,64 @@ function EmptyState() {
                     className: "mt-1.5",
                 })}
             >
-                Go to Cards
+                {t("cta")}
             </Link>
         </div>
     );
 }
 
 function Totals({ summary, monthName }: TotalsProps) {
+    const t = useTranslations("money.cards.totals");
+    const values = { month: monthName };
     const breakdown = breakdownInState(summary.cards, "owed");
     return (
         <section
-            aria-label="Totals"
+            aria-label={t("region")}
             className="hidden rounded-xl border bg-card sm:flex sm:flex-col md:flex-row"
         >
             <div className="border-b px-5 py-4 md:min-w-[300px] md:border-r md:border-b-0">
                 <p className="text-[11px] text-muted-foreground">
-                    Owed for {monthName}
+                    {t("owedFor", values)}
                 </p>
                 <p className="mt-0.5 text-3xl font-bold tracking-tight tabular-nums">
                     {formatMxn(summary.totalOwed)}
                 </p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {breakdown || `Nothing owed for ${monthName}`}
+                    {breakdown || t("nothingOwed", values)}
                 </p>
             </div>
             {summary.totalCredit > 0 ? (
                 <div className="border-b px-5 py-4 md:border-r md:border-b-0">
                     <p className="text-[11px] text-muted-foreground">
-                        Paid more than charged in {monthName}
+                        {t("creditIn", values)}
                     </p>
                     <p className="mt-1.5 text-lg font-bold tabular-nums">
                         {formatMxn(summary.totalCredit)}
                     </p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {breakdownInState(summary.cards, "credit")} · not
-                        subtracted above
+                        {t("notSubtracted", {
+                            cards: breakdownInState(summary.cards, "credit"),
+                        })}
                     </p>
                 </div>
             ) : null}
             <div className="flex flex-1 flex-col justify-center gap-1.5 px-5 py-4">
                 <p className="text-[11px] text-muted-foreground">
-                    How a balance is made
+                    {t("howMade")}
                 </p>
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                    <span className="font-semibold">Charged</span>
+                    <span className="font-semibold">{t("charged")}</span>
                     <span className="text-muted-foreground">
-                        full amount, even when split
+                        {t("fullAmount")}
                     </span>
                     <span className="text-muted-foreground">−</span>
-                    <span className="font-semibold text-payment">Payments</span>
+                    <span className="font-semibold text-payment">
+                        {t("payments")}
+                    </span>
                     <span className="text-muted-foreground">−</span>
-                    <span className="font-semibold">Points redeemed</span>
+                    <span className="font-semibold">{t("redeemed")}</span>
                     <span className="text-muted-foreground">=</span>
-                    <span className="font-bold">Owed</span>
+                    <span className="font-bold">{t("owed")}</span>
                 </p>
             </div>
         </section>
@@ -131,15 +136,16 @@ function Totals({ summary, monthName }: TotalsProps) {
 }
 
 function CompactTotals({ summary, monthName }: TotalsProps) {
+    const t = useTranslations("money.cards.totals");
     const credits = summary.cards.filter((c) => c.state === "credit");
     return (
         <section
-            aria-label={`Owed for ${monthName}`}
+            aria-label={t("owedFor", { month: monthName })}
             className="flex flex-col gap-3 sm:hidden"
         >
             <div className="rounded-xl border bg-card px-4 py-3.5">
                 <p className="text-[11px] text-muted-foreground">
-                    Owed for {monthName}
+                    {t("owedFor", { month: monthName })}
                 </p>
                 <p className="text-3xl font-bold tracking-tight tabular-nums">
                     {formatMxn(summary.totalOwed)}
@@ -149,7 +155,7 @@ function CompactTotals({ summary, monthName }: TotalsProps) {
                         key={card.id}
                         className="mt-2 flex items-center gap-1.5 border-t pt-2 text-xs"
                     >
-                        Paid more than charged in {monthName}: {card.name}
+                        {t("creditCard", { month: monthName, card: card.name })}
                         <span className="ml-auto font-bold tabular-nums">
                             {formatMxn(Math.abs(card.balance))}
                         </span>
@@ -157,8 +163,7 @@ function CompactTotals({ summary, monthName }: TotalsProps) {
                 ))}
             </div>
             <p className="px-0.5 text-[11px] text-muted-foreground">
-                Charged (full amount, even when split) − payments − points
-                redeemed
+                {t("formula")}
             </p>
         </section>
     );
@@ -171,6 +176,7 @@ export function CardBalancesScreen({
     currentMonth,
 }: Props) {
     const router = useRouter();
+    const t = useTranslations("money.cards");
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [drawerCard, setDrawerCard] = useState<CardBalanceView | null>(null);
     const [history, setHistory] = useState<CardHistoryState>({
@@ -201,7 +207,7 @@ export function CardBalancesScreen({
         const request = ++latestRequest.current;
         const failed = {
             status: "error",
-            message: "Could not load the card history. Please try again.",
+            message: t("historyError"),
         } as const;
         try {
             const res = await getCardHistory({ id: card.id, month });

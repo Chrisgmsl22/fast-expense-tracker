@@ -1,5 +1,8 @@
+import { getLocale } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
+import { formatMonthName } from "@/lib/format";
 import { getScopedMonth } from "@/lib/month-scope.server";
 import { incomeRepository } from "@/lib/repositories";
 import { IncomeScreen } from "@/components/income/IncomeScreen";
@@ -30,12 +33,8 @@ export default async function IncomePage({
         incomeRepository.getVariableForMonth(userId, month),
     ]);
 
-    // "2026-06" → "June" — the short month label the design uses on the stat
-    // cards. UTC: the value is a calendar month, not a timestamp to shift.
-    const monthLabel = new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        timeZone: "UTC",
-    }).format(new Date(`${month}-01T12:00:00Z`));
+    // The short month label the design uses on the stat cards.
+    const monthLabel = formatMonthName(month, await getLocale());
 
     return (
         <main className="p-8">

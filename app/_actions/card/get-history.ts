@@ -1,5 +1,7 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
 import {
@@ -30,12 +32,13 @@ export async function getCardHistory(
     input: unknown,
     repo: CardRepository = cardRepository,
 ): Promise<GetCardHistoryResult> {
+    const t = await getTranslations("settings");
     const parsed = cardHistoryInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Please pick a card and a month.",
+            message: t("cards.errors.pickForHistory"),
         };
     }
 
@@ -45,7 +48,7 @@ export async function getCardHistory(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -56,7 +59,7 @@ export async function getCardHistory(
             return {
                 ok: false,
                 code: "not_found",
-                message: "That card no longer exists.",
+                message: t("cards.errors.notFound"),
             };
         }
         return { ok: true, data: { lines: withRunningBalance(entries) } };
@@ -65,7 +68,7 @@ export async function getCardHistory(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not load the card history. Please try again.",
+            message: t("cards.errors.historyFailed"),
         };
     }
 }

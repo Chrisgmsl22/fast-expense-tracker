@@ -1,0 +1,53 @@
+{
+    "header": {
+        "back": "Back",
+        "overBy": "over by {amount}",
+        "left": "{amount} left"
+    },
+    "stats": {
+        "spentMyShare": "Spent (my share)",
+        "monthlyLimit": "Monthly limit",
+        "noLimit": "No limit",
+        "remaining": "Remaining",
+        "pctOfLimit": "{pct}% of limit",
+        "progress": "{daysLeft} days left · {expenseCount, plural, one {# expense} other {# expenses}} across {subcatCount, plural, one {# subcategory} other {# subcategories}}",
+        "overYourLimit": "{amount} over your {limit} limit",
+        "leftOfYourLimit": "{amount} left of your {limit} limit",
+        "noLimitSet": "No limit set",
+        "nonIncome": "{label}: {amount} — in the list below, outside the budget."
+    },
+    "limitEditor": {
+        "editLimit": "Edit limit",
+        "title": "Monthly limit · {category}",
+        "thisMonth": "This month ({month})",
+        "noLimitPlaceholder": "No limit",
+        "blankHint": "Leave blank to use the default.",
+        "defaultLabel": "Default (other months)",
+        "reset": "Reset to default",
+        "saving": "Saving…"
+    },
+    "breakdown": {
+        "title": "Spend by subcategory",
+        "subtitle": "where the money actually went",
+        "scope": "Amounts and % below cover spend from this month's income only.",
+        "emptyFiltered": "No spend from this month's income — see \"{label}\" above.",
+        "empty": "No spend in this category this month.",
+        "zeroFiltered": "No spend from this month's income in:",
+        "zeroItem": "{name} — $0"
+    },
+    "expenses": {
+        "titleShort": "Expenses",
+        "title": "Expenses in this category",
+        "empty": "No expenses in this category this month.",
+        "myShare": "my share {amount}"
+    },
+    "actions": {
+        "invalid": "Invalid budget",
+        "unauthenticated": "Not authenticated",
+        "notFound": "Category not found",
+        "dbError": "Could not save the limit. Please try again.",
+        "categoryRequired": "Category is required",
+        "invalidMonth": "Invalid month",
+        "amountPositive": "Amount must be greater than 0"
+    }
+}

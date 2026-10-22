@@ -4,6 +4,7 @@ import { expenseCardLabel, PARTNER_PAYMENT_COLOR } from "@/lib/expense-display";
 import { CASH_COLOR } from "@/lib/palette";
 
 const card = { name: "BBVA", color: "#2563eb" };
+const text = { paidPartner: "Paid Brenda", cash: "Cash" };
 
 describe("expenseCardLabel", () => {
     it("never prints Cash for a payment you sent the partner", () => {
@@ -11,7 +12,7 @@ describe("expenseCardLabel", () => {
         // `?? "Cash"` fallback puts BUG-1's symptom back on screen.
         const label = expenseCardLabel(
             { isPartnerPayment: true, card: null },
-            "Brenda",
+            text,
         );
 
         expect(label.name).toBe("Paid Brenda");
@@ -22,10 +23,7 @@ describe("expenseCardLabel", () => {
     it("ignores a stray card on a payment row", () => {
         // Belt and braces: the write paths keep `cardId` null, but the label
         // must not start naming her card if one ever survives.
-        const label = expenseCardLabel(
-            { isPartnerPayment: true, card },
-            "Brenda",
-        );
+        const label = expenseCardLabel({ isPartnerPayment: true, card }, text);
 
         expect(label.name).toBe("Paid Brenda");
     });
@@ -33,17 +31,14 @@ describe("expenseCardLabel", () => {
     it("still says Cash for a genuine cash purchase", () => {
         const label = expenseCardLabel(
             { isPartnerPayment: false, card: null },
-            "Brenda",
+            text,
         );
 
         expect(label).toEqual({ name: "Cash", color: CASH_COLOR });
     });
 
     it("names the card on an ordinary card purchase", () => {
-        const label = expenseCardLabel(
-            { isPartnerPayment: false, card },
-            "Brenda",
-        );
+        const label = expenseCardLabel({ isPartnerPayment: false, card }, text);
 
         expect(label).toEqual({ name: "BBVA", color: card.color });
     });

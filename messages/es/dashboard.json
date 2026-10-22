@@ -1,0 +1,61 @@
+{
+    "topbar": {
+        "totalIncome": "Ingreso total",
+        "myView": "Mi parte · {percent}%"
+    },
+    "incomeNudge": {
+        "title": "Registra tu ingreso mensual",
+        "body": "Tus metas de presupuesto se calculan a partir de él."
+    },
+    "buckets": {
+        "savingsShort": "Ahorro/Inv",
+        "ofTarget": "de {target}",
+        "goalMet": "meta cumplida",
+        "toGo": "faltan {amount}",
+        "over": "{amount} de más",
+        "left": "quedan {amount}",
+        "progressLabel": "Gasto en {bucket}"
+    },
+    "savingsSpend": {
+        "title": "Gastado del ahorro",
+        "caption": "Fuera del ingreso de este mes",
+        "ownPurchases": "Tus compras",
+        "paidToPartner": "Pagado a {partner}",
+        "viewBreakdown": "Ver desglose"
+    },
+    "radar": {
+        "title": "A dónde se fue el dinero",
+        "subtitle": "Forma más grande = más gasto en esa área",
+        "empty": "No hay gastos que graficar este mes."
+    },
+    "spendByCard": {
+        "title": "Gasto por tarjeta",
+        "empty": "No hay gastos con tarjeta este mes."
+    },
+    "stats": {
+        "incomeIn": "Ingresos",
+        "spentMyShare": "Gastado (mi parte)",
+        "netSoFar": "Neto a la fecha",
+        "dailyAvg": "Promedio diario · {daysLeft, plural, one {queda # día} other {quedan # días}}",
+        "notFromIncome": "{label}: {amount} — fuera del presupuesto."
+    },
+    "categories": {
+        "title": "Categorías",
+        "subtitle": "cada una tiene su propio límite",
+        "empty": "Aún no hay gastos por categoría este mes.",
+        "noLimit": "sin límite",
+        "overBy": "excedido por {amount}",
+        "maxed": "límite {limit} · al tope",
+        "limitLeft": "límite {limit} · quedan {remaining}",
+        "subcats": "{withSpend} de {total} subcat."
+    },
+    "feed": {
+        "title": "Toda la actividad · {month}",
+        "entries": "{count, plural, one {# registro} other {# registros}}",
+        "scroll": "desliza",
+        "empty": "Aún no hay nada registrado este mes.",
+        "setAside": "apartado",
+        "share": "mi parte {amount}",
+        "solo": "solo"
+    }
+}

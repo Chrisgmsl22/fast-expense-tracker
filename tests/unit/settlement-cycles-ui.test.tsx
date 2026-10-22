@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-    render,
-    screen,
-    fireEvent,
-    waitFor,
-    within,
-} from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const { refreshMock } = vi.hoisted(() => ({ refreshMock: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -114,7 +109,7 @@ const closedCycle: ClosedSettlementCycle = {
 function renderViews(
     over: Partial<Parameters<typeof SettlementViews>[0]> = {},
 ) {
-    return render(
+    return renderWithIntl(
         <SettlementViews
             openJournal={[openRow]}
             monthJournal={[monthRow]}
@@ -329,7 +324,7 @@ describe("a locked row", () => {
     // The Month view passes no `readOnly`, so a locked row must carry its own lock —
     // otherwise the refusal only arrives after the user confirms the delete.
     it("offers no edit or delete control in a view that never passes readOnly", () => {
-        render(
+        renderWithIntl(
             <SettlementJournal
                 journal={[lockedTransfer, openTransfer]}
                 partnerName="Brenda"
@@ -347,7 +342,7 @@ describe("a locked row", () => {
     });
 
     it("says why it cannot be changed, rather than looking inert", () => {
-        render(
+        renderWithIntl(
             <SettlementJournal
                 journal={[lockedTransfer]}
                 partnerName="Brenda"
@@ -404,7 +399,7 @@ describe("a locked row", () => {
     // A frozen shared expense must not point at the Expenses screen: the same
     // close froze it there too, so that names a way out that is not there.
     it("does not send a locked shared expense to the Expenses screen", () => {
-        render(
+        renderWithIntl(
             <SettlementJournal
                 journal={[{ ...openRow, locked: true }]}
                 partnerName="Brenda"
@@ -424,7 +419,7 @@ describe("SettlementCloseCard", () => {
     });
 
     it("never closes without an explicit confirmation", () => {
-        render(<SettlementCloseCard partnerName="Brenda" />);
+        renderWithIntl(<SettlementCloseCard partnerName="Brenda" />);
         fireEvent.click(
             screen.getByRole("button", { name: "Close settlement" }),
         );
@@ -442,7 +437,7 @@ describe("SettlementCloseCard", () => {
                 alreadyClosed: false,
             },
         });
-        render(<SettlementCloseCard partnerName="Brenda" />);
+        renderWithIntl(<SettlementCloseCard partnerName="Brenda" />);
         fireEvent.click(
             screen.getByRole("button", { name: "Close settlement" }),
         );
@@ -461,7 +456,7 @@ describe("SettlementCloseCard", () => {
             code: "not_settled",
             message: "This settlement isn't square yet, so it can't be closed.",
         });
-        render(<SettlementCloseCard partnerName="Brenda" />);
+        renderWithIntl(<SettlementCloseCard partnerName="Brenda" />);
         fireEvent.click(
             screen.getByRole("button", { name: "Close settlement" }),
         );
@@ -474,5 +469,65 @@ describe("SettlementCloseCard", () => {
             /isn.t square yet/i,
         );
         expect(refreshMock).not.toHaveBeenCalled();
+    });
+});
+
+describe("SettlementViews in Spanish", () => {
+    function renderEs(
+        over: Partial<Parameters<typeof SettlementViews>[0]> = {},
+    ) {
+        return renderWithIntl(
+            <SettlementViews
+                openJournal={[openRow]}
+                monthJournal={[monthRow]}
+                monthLabel="septiembre de 2026"
+                monthPosition="past"
+                history={[closedCycle]}
+                partnerName="Brenda"
+                {...over}
+            />,
+            { locale: "es" },
+        );
+    }
+
+    it("names the tabs, the count and the past month in Spanish", () => {
+        renderEs();
+        expect(
+            screen.getByRole("tab", { name: "Cuenta abierta" }),
+        ).toBeDefined();
+        const month = screen.getByRole("tab", { name: "septiembre de 2026" });
+        expect(month.getAttribute("aria-selected")).toBe("true");
+        expect(within(month).getByText("sep 2026")).toBeDefined();
+        expect(screen.getByText("1 registro")).toBeDefined();
+        expect(
+            screen.getByText(
+                "septiembre de 2026 ya terminó. Esto es lo que tuvo; la cuenta abierta está en su propia pestaña.",
+            ),
+        ).toBeDefined();
+    });
+
+    it("dates and sums a closed cycle in Spanish", () => {
+        renderEs();
+        fireEvent.click(screen.getByRole("tab", { name: "Historial" }));
+        expect(screen.getByText("1 cuenta")).toBeDefined();
+        const trigger = screen.getByRole("button", {
+            name: /Saldado el 30 jun 2026/,
+        });
+        expect(within(trigger).getByText("$420.00 · 1 registro")).toBeDefined();
+        fireEvent.click(trigger);
+        const footer = screen.getByTestId("cycle-summary");
+        expect(footer.textContent).toContain("Gastado (sin dividir)");
+        expect(footer.textContent).toContain("Le debías a Brenda");
+        expect(footer.textContent).toContain("Brenda te pagó");
+    });
+
+    it("explains an empty history in Spanish", () => {
+        renderEs({ history: [] });
+        fireEvent.click(screen.getByRole("tab", { name: "Historial" }));
+        expect(
+            screen.getByText(
+                /No se cerró ninguna cuenta en septiembre de 2026/,
+            ),
+        ).toBeDefined();
     });
 });

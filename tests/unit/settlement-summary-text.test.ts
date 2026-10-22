@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
+import { createTranslator } from "next-intl";
 
-import { buildSettlementSummaryText } from "@/components/settlement/settlement-summary-text";
+import type { Locale } from "@/i18n/config";
+import { MESSAGES } from "@/i18n/messages";
+import {
+    buildSettlementSummaryText,
+    type SettlementSummaryIntl,
+} from "@/components/settlement/settlement-summary-text";
 import { computeCoupleBalance } from "@/lib/domain/settlement";
 import { formatMxn } from "@/lib/format";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
@@ -73,9 +79,28 @@ const newestFirst = (rows: SettlementJournalItem[]) =>
 
 const lines = (text: string) => text.split("\n");
 
+const intlFor = (locale: Locale): SettlementSummaryIntl => ({
+    t: createTranslator({
+        locale,
+        messages: MESSAGES[locale],
+        namespace: "settlement",
+    }),
+    tm: createTranslator({
+        locale,
+        messages: MESSAGES[locale],
+        namespace: "movements",
+    }),
+    locale,
+});
+
 /** Every fixture goes through here: no "×", and no old ➕ / ➖ group emoji. */
-function build(...args: Parameters<typeof buildSettlementSummaryText>) {
-    const text = buildSettlementSummaryText(...args);
+function build(
+    journal: SettlementJournalItem[],
+    partnerName: string,
+    scope: "open" | "closed",
+    intl: SettlementSummaryIntl = intlFor("en"),
+) {
+    const text = buildSettlementSummaryText(journal, partnerName, scope, intl);
     expect(text).not.toMatch(/[×➕➖]/u);
     return text;
 }
@@ -121,7 +146,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "open")).toBe(
             [
-                "🧾 *Settlement 01 oct 2026 – present*",
+                "🧾 *Settlement Oct 1, 2026 – present*",
                 "",
                 "*Shared expenses*",
                 "    • Groceries: $500.00",
@@ -159,7 +184,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "closed")).toBe(
             [
-                "🧾 *Settlement 02 sep 2026 – 06 sep 2026*",
+                "🧾 *Settlement Sep 2, 2026 – Sep 6, 2026*",
                 "",
                 "*Shared expenses*",
                 "    • Dinner: $1,000.00",
@@ -195,7 +220,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "open")).toBe(
             [
-                "🧾 *Settlement 03 sep 2026 – present*",
+                "🧾 *Settlement Sep 3, 2026 – present*",
                 "",
                 "🍔 *You owe Brenda*",
                 "    • Uber: $85.00",
@@ -231,7 +256,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "closed")).toBe(
             [
-                "🧾 *Settlement 01 sep 2026 – 02 sep 2026*",
+                "🧾 *Settlement Sep 1, 2026 – Sep 2, 2026*",
                 "",
                 "*Shared expenses*",
                 "    • Groceries: $1,000.00 (Brenda's 32%: $320.00)",
@@ -276,7 +301,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "closed")).toBe(
             [
-                "🧾 *Settlement 01 sep 2026 – 02 sep 2026*",
+                "🧾 *Settlement Sep 1, 2026 – Sep 2, 2026*",
                 "",
                 "*Shared expenses*",
                 "    • Lunch: $1,000.00",
@@ -307,7 +332,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "open")).toBe(
             [
-                "🧾 *Settlement 01 sep 2026 – present*",
+                "🧾 *Settlement Sep 1, 2026 – present*",
                 "",
                 "🌸 *Brenda owes you*",
                 "    • Concert: $300.00",
@@ -337,7 +362,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "open")).toBe(
             [
-                "🧾 *Settlement 01 sep 2026 – present*",
+                "🧾 *Settlement Sep 1, 2026 – present*",
                 "",
                 "*Shared expenses*",
                 "    • Lunch: $500.00",
@@ -361,15 +386,15 @@ describe("buildSettlementSummaryText", () => {
             expense("e2", "2026-06-20", "B", 100, 32),
         ]);
         expect(lines(build(range, PARTNER, "closed"))[0]).toBe(
-            "🧾 *Settlement 02 jun 2026 – 20 jun 2026*",
+            "🧾 *Settlement Jun 2, 2026 – Jun 20, 2026*",
         );
 
         const oneDay = [expense("e1", "2026-09-03", "Lunch", 100, 32)];
         expect(lines(build(oneDay, PARTNER, "closed"))[0]).toBe(
-            "🧾 *Settlement 03 sep 2026*",
+            "🧾 *Settlement Sep 3, 2026*",
         );
         expect(lines(build(oneDay, PARTNER, "open"))[0]).toBe(
-            "🧾 *Settlement 03 sep 2026 – present*",
+            "🧾 *Settlement Sep 3, 2026 – present*",
         );
     });
 
@@ -390,7 +415,7 @@ describe("buildSettlementSummaryText", () => {
         );
         expect(text).toBe(
             [
-                "🧾 *Settlement 01 sep 2026 – 02 sep 2026*",
+                "🧾 *Settlement Sep 1, 2026 – Sep 2, 2026*",
                 "",
                 "💸 *Payments*",
                 "    • You paid Brenda: $100.00 (Rent share)",
@@ -461,5 +486,60 @@ describe("buildSettlementSummaryText", () => {
         expect(text).toContain(
             `🟰 *$1,087.02 − $99.99 + $150.25 − $300.01 = ${amount}*`,
         );
+    });
+
+    it("writes the whole summary in Spanish, dates and the auto-label included", () => {
+        const journal = newestFirst([
+            expense("e1", "2026-10-01", "Súper", 500, 160),
+            debt("d1", "2026-10-03", "gf_fronted", "I owe Brenda", 600),
+            transfer("t1", "2026-10-07", "gf_received", 100),
+        ]);
+
+        expect(build(journal, PARTNER, "open", intlFor("es"))).toBe(
+            [
+                "🧾 *Cuenta 1 oct 2026 – hoy*",
+                "",
+                "*Gastos compartidos*",
+                "    • Súper: $500.00",
+                "",
+                "*Subtotal: $500.00*",
+                DIVIDER,
+                "🌸 *Brenda te debe*",
+                "    • 32% de Brenda en gastos compartidos: $160.00",
+                "",
+                "*Subtotal: $160.00*",
+                "",
+                "🍔 *Le debes a Brenda*",
+                "    • Le debo a Brenda: $600.00",
+                "",
+                "*Subtotal: $600.00*",
+                "",
+                "💸 *Pagos*",
+                "    • Brenda te pagó: $100.00",
+                DIVIDER,
+                "🟰 *$160.00 − $600.00 − $100.00 = −$540.00*",
+                "",
+                "✅ *Resultado final: Brenda recibe $540.00 MXN*",
+            ].join("\n"),
+        );
+    });
+
+    it("puts each row's split on the row in Spanish when the percents differ", () => {
+        const text = build(
+            newestFirst([
+                expense("e1", "2026-09-01", "Súper", 1000, 320),
+                expense("e2", "2026-09-02", "Renta", 500, 250),
+            ]),
+            PARTNER,
+            "closed",
+            intlFor("es"),
+        );
+        expect(text).toContain(
+            "    • Súper: $1,000.00 (32% de Brenda: $320.00)",
+        );
+        expect(text).toContain(
+            "    • Parte de Brenda en gastos compartidos: $570.00",
+        );
+        expect(lines(text)[0]).toBe("🧾 *Cuenta 1 sep 2026 – 2 sep 2026*");
     });
 });

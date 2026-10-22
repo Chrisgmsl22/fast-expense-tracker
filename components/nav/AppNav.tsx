@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import {
     ArrowDownLeft,
     ArrowUpRight,
@@ -17,7 +18,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isValidMonth } from "@/lib/dates";
-import { formatMxn, formatMxnWhole } from "@/lib/format";
+import { formatMonthLabel, formatMxn, formatMxnWhole } from "@/lib/format";
+import { useCategoryName } from "@/i18n/category-name";
 import { Button } from "@/components/ui/button";
 import {
     Sheet,
@@ -26,8 +28,14 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet";
 import { LogoutButton } from "@/components/auth/LogoutButton";
-import { isSidebarLinkActive, type SidebarModel } from "./sidebar-model";
+import {
+    isSidebarLinkActive,
+    type SidebarAlert,
+    type SidebarModel,
+} from "./sidebar-model";
 import { nextNavScrollState, type NavScrollState } from "./scroll-header";
+
+const SETTLEMENT_HREF = "/settlement";
 
 type Props = {
     email?: string;
@@ -36,10 +44,11 @@ type Props = {
 };
 
 function Brand() {
+    const t = useTranslations("nav");
     return (
         <Link
             href="/dashboard"
-            aria-label="Fast Expense home"
+            aria-label={t("home")}
             className="flex shrink-0 items-center gap-2.5 px-2 py-1 text-[15px] font-bold tracking-tight"
         >
             <span
@@ -69,41 +78,74 @@ function SidebarContents({
     explicitMonth?: string;
     onNavigate?: () => void;
 }) {
+    const t = useTranslations("nav");
+    const tBuckets = useTranslations("common.buckets");
+    const locale = useLocale();
+    const categoryName = useCategoryName();
     const groups = [
         {
-            title: "Overview",
+            title: t("groups.overview"),
             links: [
                 {
                     href: "/dashboard",
-                    label: "Dashboard",
+                    label: t("links.dashboard"),
                     Icon: LayoutDashboard,
                 },
-                { href: "/expenses", label: "Expenses", Icon: ReceiptText },
+                {
+                    href: "/expenses",
+                    label: t("links.expenses"),
+                    Icon: ReceiptText,
+                },
             ],
         },
         {
-            title: "Money",
+            title: t("groups.money"),
             links: [
-                { href: "/income", label: "Income", Icon: Wallet },
+                { href: "/income", label: t("links.income"), Icon: Wallet },
                 ...(model.settlement
                     ? [
                           {
-                              href: "/settlement",
-                              label: "Settlement",
+                              href: SETTLEMENT_HREF,
+                              label: t("links.settlement"),
                               Icon: CircleDollarSign,
                           },
                       ]
                     : []),
-                { href: "/cards", label: "Card balances", Icon: CreditCard },
-                { href: savingsHref, label: "Savings", Icon: PiggyBank },
+                {
+                    href: "/cards",
+                    label: t("links.cards"),
+                    Icon: CreditCard,
+                },
+                {
+                    href: savingsHref,
+                    label: t("links.savings"),
+                    Icon: PiggyBank,
+                },
             ],
         },
         {
-            title: "Setup",
-            links: [{ href: "/settings", label: "Settings", Icon: Settings }],
+            title: t("groups.setup"),
+            links: [
+                {
+                    href: "/settings",
+                    label: t("links.settings"),
+                    Icon: Settings,
+                },
+            ],
         },
     ];
+    const monthLabel = formatMonthLabel(model.period.month, locale);
     const settlement = model.settlement;
+    const settlementStatus =
+        settlement?.direction === "she_owes"
+            ? t("settlement.sheOwes", { partner: settlement.partnerName })
+            : settlement?.direction === "you_owe"
+              ? t("settlement.youOwe", { partner: settlement.partnerName })
+              : t("settlement.settled");
+    const alertName = (alert: SidebarAlert) =>
+        alert.kind === "bucket"
+            ? tBuckets(alert.bucket)
+            : categoryName(alert.name);
     const SettlementIcon =
         settlement?.direction === "she_owes"
             ? ArrowUpRight
@@ -115,7 +157,7 @@ function SidebarContents({
             <div onClick={onNavigate}>
                 <Brand />
             </div>
-            <nav aria-label="Main navigation" className="mt-5">
+            <nav aria-label={t("mainNavigation")} className="mt-5">
                 {groups.map((group) => (
                     <div key={group.title} className="mb-4">
                         <p className="mb-2 px-3 text-[10px] font-semibold tracking-[0.12em] text-sidebar-muted uppercase">
@@ -139,8 +181,13 @@ function SidebarContents({
                                             : undefined
                                     }
                                     aria-label={
-                                        label === "Settlement" && settlement
-                                            ? `Settlement, open cycle: ${settlement.label}, ${formatMxn(settlement.amount)}`
+                                        href === SETTLEMENT_HREF && settlement
+                                            ? t("settlement.linkLabel", {
+                                                  status: settlementStatus,
+                                                  amount: formatMxn(
+                                                      settlement.amount,
+                                                  ),
+                                              })
                                             : undefined
                                     }
                                     className={cn(
@@ -156,7 +203,7 @@ function SidebarContents({
                                         />
                                         {label}
                                     </span>
-                                    {label === "Settlement" && settlement && (
+                                    {href === SETTLEMENT_HREF && settlement && (
                                         <span
                                             className={cn(
                                                 "ml-auto flex shrink-0 items-center gap-1 rounded-full px-1.5 py-1 text-[10px] leading-tight",
@@ -176,7 +223,7 @@ function SidebarContents({
                                             <span>
                                                 {settlement.direction ===
                                                 "settled"
-                                                    ? "Settled"
+                                                    ? t("settlement.settled")
                                                     : formatMxn(
                                                           settlement.amount,
                                                       )}
@@ -190,17 +237,22 @@ function SidebarContents({
                 ))}
             </nav>
             <section
-                aria-label="This month"
+                aria-label={t("thisMonth")}
                 className="rounded-[11px] bg-sidebar-panel p-[14px]"
             >
                 <div className="flex items-center justify-between text-[10px] text-sidebar-muted">
-                    <span className="font-semibold uppercase">This month</span>
+                    <span className="font-semibold uppercase">
+                        {t("thisMonth")}
+                    </span>
                     <span>
-                        day {model.period.day} / {model.period.daysInMonth}
+                        {t("dayProgress", {
+                            day: model.period.day,
+                            days: model.period.daysInMonth,
+                        })}
                     </span>
                 </div>
                 <p className="mt-1 text-[10px] text-sidebar-muted">
-                    {model.period.monthLabel}
+                    {monthLabel}
                 </p>
                 <div
                     aria-hidden="true"
@@ -213,19 +265,25 @@ function SidebarContents({
                 </div>
                 <dl className="space-y-[9px] text-xs">
                     <div className="flex justify-between gap-2">
-                        <dt className="text-sidebar-muted">Really spent</dt>
+                        <dt className="text-sidebar-muted">
+                            {t("totals.spent")}
+                        </dt>
                         <dd className="font-semibold tabular-nums text-sidebar-spent">
                             {formatMxnWhole(model.totals.spent)}
                         </dd>
                     </div>
                     <div className="flex justify-between gap-2">
-                        <dt className="text-sidebar-muted">Saved</dt>
+                        <dt className="text-sidebar-muted">
+                            {t("totals.saved")}
+                        </dt>
                         <dd className="font-semibold tabular-nums text-sidebar-saved">
                             {formatMxnWhole(model.totals.saved)}
                         </dd>
                     </div>
                     <div className="flex justify-between gap-2">
-                        <dt className="text-sidebar-muted">Net so far</dt>
+                        <dt className="text-sidebar-muted">
+                            {t("totals.net")}
+                        </dt>
                         <dd
                             className={cn(
                                 "font-semibold tabular-nums",
@@ -240,12 +298,12 @@ function SidebarContents({
                 </dl>
                 {model.alerts.length > 0 && (
                     <section
-                        aria-label="Over budget"
+                        aria-label={t("overBudget")}
                         className="mt-3 border-t border-sidebar-neutral pt-3"
                     >
                         <div className="mb-2 flex items-center justify-between text-[10px]">
                             <span className="font-semibold text-sidebar-muted uppercase">
-                                Over budget
+                                {t("overBudget")}
                             </span>
                             <span className="rounded bg-sidebar-danger-tint px-1.5 py-0.5 text-sidebar-danger">
                                 {model.alerts.length}
@@ -257,7 +315,12 @@ function SidebarContents({
                                     <Link
                                         href={alert.href}
                                         onClick={onNavigate}
-                                        aria-label={`${alert.label}, ${alert.kind}, ${formatMxn(alert.amount)} over budget for ${model.period.monthLabel}`}
+                                        aria-label={t("alertLabel", {
+                                            name: alertName(alert),
+                                            kind: t(`alertKind.${alert.kind}`),
+                                            amount: formatMxn(alert.amount),
+                                            month: monthLabel,
+                                        })}
                                         className="flex items-center gap-1.5 rounded-md bg-sidebar-alert px-2 py-1.5 text-[10px] text-sidebar-alert-text hover:brightness-125"
                                     >
                                         <span
@@ -265,7 +328,8 @@ function SidebarContents({
                                             className="size-1 shrink-0 rounded-full bg-sidebar-danger"
                                         />
                                         <span className="min-w-0 flex-1 truncate">
-                                            {alert.label} · {alert.kind}
+                                            {alertName(alert)} ·{" "}
+                                            {t(`alertKind.${alert.kind}`)}
                                         </span>
                                         <span className="shrink-0 font-semibold tabular-nums text-sidebar-danger">
                                             +{formatMxn(alert.amount)}
@@ -283,11 +347,13 @@ function SidebarContents({
                         aria-hidden="true"
                         className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sidebar-neutral text-[10px] font-semibold"
                     >
-                        {(name || email || "Account").slice(0, 2).toUpperCase()}
+                        {(name || email || t("account"))
+                            .slice(0, 2)
+                            .toUpperCase()}
                     </span>
                     <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium">
-                            {name || "Account"}
+                            {name || t("account")}
                         </p>
                         {email && (
                             <p
@@ -306,6 +372,7 @@ function SidebarContents({
 }
 
 export function AppNav(props: Props) {
+    const t = useTranslations("nav");
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [open, setOpen] = useState(false);
@@ -342,7 +409,7 @@ export function AppNav(props: Props) {
     return (
         <>
             <aside
-                aria-label="Sidebar"
+                aria-label={t("sidebar")}
                 className="sidebar-theme fixed inset-y-0 left-0 z-40 hidden w-[252px] overflow-x-hidden overflow-y-auto bg-sidebar text-sidebar-foreground lg:block"
             >
                 <SidebarContents {...contentProps} />
@@ -363,7 +430,7 @@ export function AppNav(props: Props) {
                                 variant="ghost"
                                 size="icon-sm"
                                 className="text-white hover:bg-sidebar-panel hover:text-white"
-                                aria-label="Open menu"
+                                aria-label={t("openMenu")}
                             >
                                 <Menu />
                             </Button>
@@ -373,7 +440,9 @@ export function AppNav(props: Props) {
                         className="sidebar-theme w-[252px] max-w-[calc(100vw-2rem)] gap-0 overflow-x-hidden overflow-y-auto border-0 bg-sidebar p-0 text-sidebar-foreground"
                         showCloseButton={false}
                     >
-                        <SheetTitle className="sr-only">Navigation</SheetTitle>
+                        <SheetTitle className="sr-only">
+                            {t("navigation")}
+                        </SheetTitle>
                         <SidebarContents
                             {...contentProps}
                             onNavigate={() => setOpen(false)}

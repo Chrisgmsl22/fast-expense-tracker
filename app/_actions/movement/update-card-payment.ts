@@ -2,8 +2,9 @@
 
 import { z } from "zod";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { cardRepository, movementRepository } from "@/lib/repositories";
@@ -13,6 +14,7 @@ import {
     cardPaymentInputSchema,
     type CardPaymentInput,
 } from "@/lib/schemas/movement";
+import { translatedFieldErrors } from "./messages";
 
 /** The edit payload carries the row id alongside the card-payment fields. */
 const idSchema = z.object({ id: z.string().min(1) });
@@ -42,13 +44,16 @@ export async function updateCardPayment(
     repo: MovementRepository = movementRepository,
     cards: CardRepository = cardRepository,
 ): Promise<UpdateCardPaymentResult> {
+    const t = await getTranslations("movements");
     const parsed = cardPaymentInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid card payment",
-            fieldErrors: toFieldErrors<CardPaymentInput>(parsed.error),
+            message: t("errors.invalidCardPayment"),
+            fieldErrors: await translatedFieldErrors<CardPaymentInput>(
+                parsed.error,
+            ),
         };
     }
     const idParsed = idSchema.safeParse(input);
@@ -56,7 +61,7 @@ export async function updateCardPayment(
         return {
             ok: false,
             code: "validation",
-            message: "Invalid card payment",
+            message: t("errors.invalidCardPayment"),
         };
     }
     const { id } = idParsed.data;
@@ -67,7 +72,7 @@ export async function updateCardPayment(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -78,7 +83,7 @@ export async function updateCardPayment(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Card payment not found.",
+                message: t("errors.cardPaymentNotFound"),
             };
         }
 
@@ -86,8 +91,8 @@ export async function updateCardPayment(
             return {
                 ok: false,
                 code: "validation",
-                message: "Invalid card payment",
-                fieldErrors: { cardId: ["Card not found"] },
+                message: t("errors.invalidCardPayment"),
+                fieldErrors: { cardId: [t("fieldErrors.cardNotFound")] },
             };
         }
 
@@ -102,7 +107,7 @@ export async function updateCardPayment(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Card payment not found.",
+                message: t("errors.cardPaymentNotFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -111,7 +116,7 @@ export async function updateCardPayment(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the card payment. Please try again.",
+            message: t("errors.cardPaymentDbError"),
         };
     }
 }

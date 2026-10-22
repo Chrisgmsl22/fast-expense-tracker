@@ -1,18 +1,14 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { computeActualExpenditure } from "@/lib/domain/expense";
-import {
-    frozenExpenseRefusal,
-    isExpenseFrozen,
-    SPLIT_INTO_CLOSED_CYCLE_FIELD_ERROR,
-    SPLIT_INTO_CLOSED_CYCLE_MESSAGE,
-} from "@/lib/domain/frozen-row";
+import { isExpenseFrozen } from "@/lib/domain/frozen-row";
 import { cardRepository, expenseRepository } from "@/lib/repositories";
 import type { CardRepository } from "@/lib/repositories/card.repository";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
@@ -21,6 +17,8 @@ import {
     expenseInputSchema,
     type ExpenseInput,
 } from "@/lib/schemas/expense";
+
+import { expenseSchemaMessages, frozenRefusalKey } from "./field-messages";
 
 /** The edit payload carries the row id alongside the expense fields. */
 const idSchema = z.object({ id: z.string().min(1) });
@@ -54,20 +52,28 @@ export async function updateExpense(
     repo: ExpenseRepository = expenseRepository,
     cards: CardRepository = cardRepository,
 ): Promise<UpdateExpenseResult> {
+    const t = await getTranslations("expenses");
     const parsed = expenseInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid expense",
-            fieldErrors: toFieldErrors<ExpenseInput>(parsed.error),
+            message: t("errors.invalidExpense"),
+            fieldErrors: localizeFieldErrors(
+                toFieldErrors<ExpenseInput>(parsed.error),
+                expenseSchemaMessages(t),
+            ),
         };
     }
     // Validate the id through Zod too, rather than hand-casting `input` — the
     // action's argument is `unknown` precisely so nothing is read untyped.
     const idParsed = idSchema.safeParse(input);
     if (!idParsed.success) {
-        return { ok: false, code: "validation", message: "Invalid expense" };
+        return {
+            ok: false,
+            code: "validation",
+            message: t("errors.invalidExpense"),
+        };
     }
     const { id } = idParsed.data;
 
@@ -77,7 +83,7 @@ export async function updateExpense(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -92,7 +98,7 @@ export async function updateExpense(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Expense not found.",
+                message: t("errors.notFound"),
             };
         }
 
@@ -102,8 +108,8 @@ export async function updateExpense(
             return {
                 ok: false,
                 code: "validation",
-                message: "Invalid expense",
-                fieldErrors: { categoryId: ["Category not found"] },
+                message: t("errors.invalidExpense"),
+                fieldErrors: { categoryId: [t("fields.categoryNotFound")] },
             };
         }
         const funding = expenseFundingSchema.safeParse({
@@ -114,8 +120,11 @@ export async function updateExpense(
             return {
                 ok: false,
                 code: "validation",
-                message: "Invalid expense",
-                fieldErrors: toFieldErrors<ExpenseInput>(funding.error),
+                message: t("errors.invalidExpense"),
+                fieldErrors: localizeFieldErrors(
+                    toFieldErrors<ExpenseInput>(funding.error),
+                    expenseSchemaMessages(t),
+                ),
             };
         }
 
@@ -128,11 +137,9 @@ export async function updateExpense(
                 return {
                     ok: false,
                     code: "validation",
-                    message: "Invalid expense",
+                    message: t("errors.invalidExpense"),
                     fieldErrors: {
-                        subcategoryId: [
-                            "Subcategory doesn't belong to the selected category",
-                        ],
+                        subcategoryId: [t("fields.subcategoryMismatch")],
                     },
                 };
             }
@@ -154,9 +161,13 @@ export async function updateExpense(
         // The repository's write is not scoped by the cycle, so the refusal is here.
         // Both the row as stored and the row as it WOULD be are checked: ticking "shared"
         // inside a closed cycle adds a partner share to a filed balance.
-        const refusal = frozenExpenseRefusal(existing, "edit");
+        const refusal = frozenRefusalKey(existing, "edit");
         if (refusal) {
-            return { ok: false, code: "cycle_closed", message: refusal };
+            return {
+                ok: false,
+                code: "cycle_closed",
+                message: t(`errors.frozen.${refusal}`),
+            };
         }
         const after = {
             amount: v.amount,
@@ -168,9 +179,9 @@ export async function updateExpense(
             return {
                 ok: false,
                 code: "cycle_closed",
-                message: SPLIT_INTO_CLOSED_CYCLE_MESSAGE,
+                message: t("errors.splitIntoClosedCycle"),
                 fieldErrors: {
-                    isShared: [SPLIT_INTO_CLOSED_CYCLE_FIELD_ERROR],
+                    isShared: [t("fields.splitClosedCycle")],
                 },
             };
         }
@@ -182,21 +193,16 @@ export async function updateExpense(
             return {
                 ok: false,
                 code: "validation",
-                message:
-                    "A payment you sent your partner can't be split or charged to a card — the amount you enter is the whole transfer.",
+                message: t("errors.paymentNoSplitOrCard"),
                 fieldErrors: {
                     ...(v.isShared
                         ? {
-                              yourPercentage: [
-                                  "This amount is the whole payment you sent",
-                              ],
+                              yourPercentage: [t("fields.paymentWholeAmount")],
                           }
                         : {}),
                     ...(v.cardId
                         ? {
-                              cardId: [
-                                  "A transfer leaves a bank account, so there is no card",
-                              ],
+                              cardId: [t("fields.paymentNoCard")],
                           }
                         : {}),
                 },
@@ -215,27 +221,26 @@ export async function updateExpense(
                 return {
                     ok: false,
                     code: "validation",
-                    message:
-                        "A payment you sent your partner keeps its category, and can never be marked reimbursed.",
+                    message: t("errors.paymentKeepsCategory"),
                     fieldErrors: {
                         ...(categoryChanged
                             ? {
                                   categoryId: [
-                                      "A payment's category can't be changed",
+                                      t("fields.paymentCategoryFixed"),
                                   ],
                               }
                             : {}),
                         ...(subcategoryChanged
                             ? {
                                   subcategoryId: [
-                                      "A payment's category can't be changed",
+                                      t("fields.paymentCategoryFixed"),
                                   ],
                               }
                             : {}),
                         ...(reimbursed
                             ? {
                                   fundedFrom: [
-                                      "A payment you sent your partner can never be reimbursed",
+                                      t("fields.paymentNeverReimbursed"),
                                   ],
                               }
                             : {}),
@@ -248,8 +253,8 @@ export async function updateExpense(
             return {
                 ok: false,
                 code: "validation",
-                message: "Invalid expense",
-                fieldErrors: { cardId: ["Card not found"] },
+                message: t("errors.invalidExpense"),
+                fieldErrors: { cardId: [t("fields.cardNotFound")] },
             };
         }
 
@@ -271,7 +276,7 @@ export async function updateExpense(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Expense not found.",
+                message: t("errors.notFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -280,7 +285,7 @@ export async function updateExpense(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save changes. Please try again.",
+            message: t("errors.saveChangesFailed"),
         };
     }
 }

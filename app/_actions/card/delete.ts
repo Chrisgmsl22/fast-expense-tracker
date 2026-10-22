@@ -1,5 +1,7 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
 import { cardRepository } from "@/lib/repositories";
@@ -32,12 +34,13 @@ export async function deleteCard(
     input: unknown,
     repo: CardRepository = cardRepository,
 ): Promise<DeleteCardResult> {
+    const t = await getTranslations("settings");
     const parsed = cardIdInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Please pick a card to delete.",
+            message: t("cards.errors.pickToDelete"),
         };
     }
 
@@ -47,7 +50,7 @@ export async function deleteCard(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -58,7 +61,7 @@ export async function deleteCard(
             return {
                 ok: false,
                 code: "cash_locked",
-                message: "The Cash card can't be deleted.",
+                message: t("cards.errors.cashDelete"),
             };
         }
 
@@ -68,8 +71,7 @@ export async function deleteCard(
             return {
                 ok: false,
                 code: "has_references",
-                message:
-                    "This card is used by past records — archive it instead.",
+                message: t("cards.errors.hasReferences"),
             };
         }
 
@@ -78,7 +80,7 @@ export async function deleteCard(
             return {
                 ok: false,
                 code: "not_found",
-                message: "That card no longer exists.",
+                message: t("cards.errors.notFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -87,7 +89,7 @@ export async function deleteCard(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not delete the card. Please try again.",
+            message: t("cards.errors.deleteFailed"),
         };
     }
 }

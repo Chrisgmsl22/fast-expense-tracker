@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { SubcategoryBreakdown } from "@/components/category/SubcategoryBreakdown";
 import type { SubcategoryBar } from "@/lib/domain/category";
@@ -22,7 +23,7 @@ function rowText(label: string): string {
 
 describe("SubcategoryBreakdown", () => {
     it("renders a bar per spent subcategory with amount and percent of category", () => {
-        render(
+        renderWithIntl(
             <SubcategoryBreakdown
                 bars={bars}
                 color="#0d9488"
@@ -36,7 +37,7 @@ describe("SubcategoryBreakdown", () => {
     });
 
     it("collapses zero-spend subcategories into a faint footer, not bars", () => {
-        render(
+        renderWithIntl(
             <SubcategoryBreakdown
                 bars={bars}
                 color="#0d9488"
@@ -50,7 +51,7 @@ describe("SubcategoryBreakdown", () => {
     });
 
     it("renders the null-id 'Other' rollup as a bar when it has spend", () => {
-        render(
+        renderWithIntl(
             <SubcategoryBreakdown
                 bars={[
                     { id: "s1", name: "Dentist", spent: 100, pct: 25 },
@@ -65,7 +66,7 @@ describe("SubcategoryBreakdown", () => {
     });
 
     it("shows an empty state when nothing was spent", () => {
-        render(
+        renderWithIntl(
             <SubcategoryBreakdown
                 bars={[{ id: "s1", name: "Doctors appt", spent: 0, pct: 0 }]}
                 color="#0d9488"
@@ -83,7 +84,7 @@ describe("SubcategoryBreakdown", () => {
         // The bars are empty because of the funding filter, not because the
         // month was; "no spend this month" would contradict the header above it
         // and the list below it.
-        render(
+        renderWithIntl(
             <SubcategoryBreakdown
                 bars={[{ id: "s1", name: "Shoes", spent: 0, pct: 0 }]}
                 color="#0d9488"
@@ -114,7 +115,7 @@ describe("SubcategoryBreakdown", () => {
         ];
 
         function renderMixed() {
-            render(
+            renderWithIntl(
                 <SubcategoryBreakdown
                     bars={mixed}
                     color="#0d9488"
@@ -160,7 +161,7 @@ describe("SubcategoryBreakdown", () => {
         });
 
         it("keeps the plain caption and the $0 amounts when nothing was filtered", () => {
-            render(
+            renderWithIntl(
                 <SubcategoryBreakdown
                     bars={mixed}
                     color="#0d9488"
@@ -174,5 +175,35 @@ describe("SubcategoryBreakdown", () => {
             // With no filtered money, "$0" is simply true.
             expect(screen.getByText(/Entertainment — \$0/)).toBeDefined();
         });
+    });
+});
+
+describe("SubcategoryBreakdown in Spanish", () => {
+    it("translates the heading, subcategory names, and the zero footer", () => {
+        renderWithIntl(
+            <SubcategoryBreakdown
+                bars={bars}
+                color="#0d9488"
+                spentNotFromIncome={0}
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("Gasto por subcategoría")).toBeDefined();
+        expect(screen.getByText("Dentista")).toBeDefined();
+        expect(screen.getByText("Otros — $0")).toBeDefined();
+    });
+
+    it("points at the Spanish non-income label when the filter emptied it", () => {
+        renderWithIntl(
+            <SubcategoryBreakdown
+                bars={bars.map((b) => ({ ...b, spent: 0, pct: 0 }))}
+                color="#0d9488"
+                spentNotFromIncome={500}
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByTestId("breakdown-empty").textContent).toBe(
+            'No hay gasto del ingreso de este mes. Revisa "No salió del ingreso de este mes" arriba.',
+        );
     });
 });

@@ -1,7 +1,9 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { incomeRepository } from "@/lib/repositories";
@@ -10,6 +12,8 @@ import {
     fixedIncomeInputSchema,
     type FixedIncomeInput,
 } from "@/lib/schemas/income";
+
+import { incomeSchemaMessages } from "./field-messages";
 
 /** Failure modes the caller can branch on. */
 export type SetFixedIncomeCode = "validation" | "unauthenticated" | "db_error";
@@ -27,13 +31,19 @@ export async function setFixedIncome(
     input: unknown,
     repo: IncomeRepository = incomeRepository,
 ): Promise<SetFixedIncomeResult> {
+    const t = await getTranslations("income");
     const parsed = fixedIncomeInputSchema.safeParse(input);
     if (!parsed.success) {
-        const fieldErrors = toFieldErrors<FixedIncomeInput>(parsed.error);
+        const fieldErrors = localizeFieldErrors(
+            toFieldErrors<FixedIncomeInput>(parsed.error),
+            incomeSchemaMessages(t),
+        );
         return {
             ok: false,
             code: "validation",
-            message: fieldErrors.month ? "Invalid month" : "Invalid amount",
+            message: fieldErrors.month
+                ? t("errors.invalidMonth")
+                : t("errors.invalidAmount"),
             fieldErrors,
         };
     }
@@ -44,7 +54,7 @@ export async function setFixedIncome(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -54,8 +64,8 @@ export async function setFixedIncome(
         return {
             ok: false,
             code: "validation",
-            message: "Fixed income can't be set for a future month",
-            fieldErrors: { month: ["Month can't be after the current month"] },
+            message: t("errors.futureMonth"),
+            fieldErrors: { month: [t("fields.monthAfterCurrent")] },
         };
     }
 
@@ -72,7 +82,7 @@ export async function setFixedIncome(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not update fixed income. Please try again.",
+            message: t("errors.fixedFailed"),
         };
     }
 }

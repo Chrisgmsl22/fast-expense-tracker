@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,10 +16,8 @@ import {
 import type { FieldErrors } from "@/lib/actions/result";
 import { getTodayCdmx } from "@/lib/dates";
 import type { PartnerDebtInput } from "@/lib/schemas/movement";
-import {
-    partnerDebtLabel,
-    type PartnerDebtDirection,
-} from "@/lib/domain/movement";
+import type { PartnerDebtDirection } from "@/lib/domain/movement";
+import { debtLabel } from "./movement-display";
 
 /** Prefilled fields when the form edits an existing debt (strings for inputs). */
 export type PartnerDebtEditable = {
@@ -49,8 +48,10 @@ export function PartnerDebtForm({
     onSuccess,
     onCancel,
 }: Props) {
+    const t = useTranslations("movements");
+    const tc = useTranslations("common.actions");
     const partnerOwes = direction === "partner_debt";
-    const debtLabel = partnerDebtLabel(direction, partnerName);
+    const values = { partner: partnerName };
     const [date, setDate] = useState(debt?.date ?? "");
     const [amount, setAmount] = useState(debt?.amount ?? "");
     const [note, setNote] = useState(debt?.note ?? "");
@@ -91,7 +92,7 @@ export function PartnerDebtForm({
                     setFormError(res.message);
                 }
             } catch {
-                setFormError("Something went wrong saving the debt.");
+                setFormError(t("debt.unexpected"));
             }
         });
     }
@@ -111,19 +112,23 @@ export function PartnerDebtForm({
             className="flex flex-col gap-4"
             aria-label={
                 debt
-                    ? `Edit a debt ${partnerOwes ? `${partnerName} owes you` : `you owe ${partnerName}`}`
-                    : `Log a debt ${partnerOwes ? `${partnerName} owes you` : `you owe ${partnerName}`}`
+                    ? partnerOwes
+                        ? t("debt.formEditPartnerOwes", values)
+                        : t("debt.formEditYouOwe", values)
+                    : partnerOwes
+                      ? t("debt.formLogPartnerOwes", values)
+                      : t("debt.formLogYouOwe", values)
             }
         >
             <p className="text-sm text-muted-foreground">
                 {partnerOwes
-                    ? `Record money ${partnerName} owes you. Enter the full debt amount. This is settlement only. It adds no expense, income, or payment.`
-                    : `Something ${partnerName} fronted that you owe her back. Enter what YOU owe, not what she paid. This is settlement only — it does not touch your budget. The payment you make later is the expense.`}
+                    ? t("debt.blurbPartnerOwes", values)
+                    : t("debt.blurbYouOwe", values)}
             </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                    <Label htmlFor="debt-date">Date</Label>
+                    <Label htmlFor="debt-date">{t("form.date")}</Label>
                     <Input
                         id="debt-date"
                         name="date"
@@ -139,8 +144,8 @@ export function PartnerDebtForm({
                 <div className="sm:col-span-2">
                     <Label htmlFor="debt-amount">
                         {partnerOwes
-                            ? `What ${partnerName} owes you (MXN)`
-                            : `What you owe ${partnerName} (MXN)`}
+                            ? t("debt.amountPartnerOwes", values)
+                            : t("debt.amountYouOwe", values)}
                     </Label>
                     {/* The $500 carwash: he typed what SHE paid because the
                         question was ambiguous. Say whose figure this is, at the
@@ -150,8 +155,8 @@ export function PartnerDebtForm({
                         className="mt-0.5 text-xs text-muted-foreground"
                     >
                         {partnerOwes
-                            ? "The full debt amount — no split applies."
-                            : `Your share only — not what ${partnerName} paid.`}
+                            ? t("debt.helpPartnerOwes")
+                            : t("debt.helpYouOwe", values)}
                     </p>
                     <div className="relative mt-1.5">
                         <span
@@ -181,16 +186,16 @@ export function PartnerDebtForm({
 
             <div>
                 <Label htmlFor="debt-note">
-                    Note{" "}
+                    {t("form.note")}{" "}
                     <span className="font-normal text-muted-foreground">
-                        (optional)
+                        {t("form.optional")}
                     </span>
                 </Label>
                 <Input
                     id="debt-note"
                     name="note"
                     type="text"
-                    placeholder={debtLabel}
+                    placeholder={debtLabel(direction, partnerName, t)}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     className="mt-1.5"
@@ -211,11 +216,15 @@ export function PartnerDebtForm({
                         onClick={onCancel}
                         disabled={pending}
                     >
-                        Cancel
+                        {tc("cancel")}
                     </Button>
                 ) : null}
                 <Button type="submit" disabled={pending}>
-                    {pending ? "Saving…" : debt ? "Save changes" : "Log debt"}
+                    {pending
+                        ? t("form.saving")
+                        : debt
+                          ? t("form.saveChanges")
+                          : t("debt.submit")}
                 </Button>
             </div>
         </form>

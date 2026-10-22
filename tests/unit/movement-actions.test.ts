@@ -10,6 +10,7 @@ import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
 import { updateTransfer } from "@/app/_actions/movement/update-transfer";
 import { FakeCardRepository } from "@/tests/support/fake-card-repository";
 import { FakeMovementRepository } from "@/tests/support/fake-movement-repository";
+import { setServerLocale } from "@/tests/support/intl";
 
 function ownCards() {
     const cards = new FakeCardRepository();
@@ -418,6 +419,81 @@ describe("movement actions (unit, injected fake repo)", () => {
 
             expect(res.ok).toBe(true);
             expect(await repo.getById("u1", "mv1")).toBeNull();
+        });
+    });
+});
+
+describe("movement actions in Spanish", () => {
+    beforeEach(() => {
+        authMock.mockReset();
+        authMock.mockResolvedValue({ user: { id: "u1" } });
+        setServerLocale("es");
+    });
+
+    it("refuses an invalid card payment in Spanish and keeps the code", async () => {
+        const res = await addCardPayment(
+            { date: "2026-06-20", amount: "0", cardId: "" },
+            new FakeMovementRepository(),
+        );
+        expect(res).toEqual({
+            ok: false,
+            code: "validation",
+            message: "Pago de tarjeta no válido",
+            fieldErrors: {
+                amount: ["El monto debe ser mayor que 0"],
+                cardId: ["Elige una tarjeta"],
+            },
+        });
+    });
+
+    it("names a card that is not yours in Spanish", async () => {
+        const res = await addCardPayment(
+            { date: "2026-06-20", amount: "10", cardId: "card_x" },
+            new FakeMovementRepository(),
+            ownCards(),
+        );
+        expect(res).toMatchObject({
+            code: "validation",
+            fieldErrors: { cardId: ["No se encontró la tarjeta"] },
+        });
+    });
+
+    it("refuses a frozen delete in Spanish", async () => {
+        const repo = new FakeMovementRepository();
+        repo.seed("mv1", "u1", {
+            type: "gf_fronted",
+            amount: 220,
+            cycleClosedAt: new Date("2026-07-12T00:00:00Z"),
+        });
+        const res = await deleteMovement({ id: "mv1" }, repo);
+        expect(res).toEqual({
+            ok: false,
+            code: "cycle_closed",
+            message:
+                "Este registro forma parte de una cuenta que ya cerraste, así que no se puede eliminar.",
+        });
+    });
+
+    it("reports a missing movement in Spanish", async () => {
+        const res = await deleteMovement(
+            { id: "nope" },
+            new FakeMovementRepository(),
+        );
+        expect(res).toMatchObject({
+            code: "not_found",
+            message: "No se encontró el movimiento.",
+        });
+    });
+
+    it("says you are signed out in Spanish", async () => {
+        authMock.mockResolvedValue(null);
+        const res = await addTransfer(
+            { date: "2026-06-20", amount: "10" },
+            new FakeMovementRepository(),
+        );
+        expect(res).toMatchObject({
+            code: "unauthenticated",
+            message: "No has iniciado sesión",
         });
     });
 });

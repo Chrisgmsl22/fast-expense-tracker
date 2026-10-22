@@ -7,13 +7,8 @@ import {
     vi,
     type Mock,
 } from "vitest";
-import {
-    fireEvent,
-    render,
-    screen,
-    waitFor,
-    within,
-} from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const refresh = vi.fn();
 const push = vi.fn();
@@ -95,11 +90,11 @@ function renderScreen(
     currentMonth = "2026-09",
     month = "2026-09",
 ) {
-    return render(
+    return renderWithIntl(
         <CardBalancesScreen
             summary={summarizeCardBalances(cards)}
             month={month}
-            monthName={formatMonthName(month)}
+            monthName={formatMonthName(month, "en")}
             currentMonth={currentMonth}
         />,
     );
@@ -1042,5 +1037,72 @@ describe("CardBalancesScreen month statement", () => {
 
         expect(within(dialog).queryByText("BBVA balance")).toBeNull();
         expect(within(dialog).getByText(/Lands in August 2026/)).toBeDefined();
+    });
+});
+
+describe("CardBalancesScreen in Spanish", () => {
+    function renderEs() {
+        return renderWithIntl(
+            <CardBalancesScreen
+                summary={summarizeCardBalances(CARDS)}
+                month="2026-09"
+                monthName={formatMonthName("2026-09", "es")}
+                currentMonth="2026-09"
+            />,
+            { locale: "es" },
+        );
+    }
+
+    it("labels the totals, the tiles and the notice in Spanish", () => {
+        renderEs();
+        expect(
+            within(screen.getByRole("region", { name: "Totales" })).getByText(
+                "Por pagar de septiembre",
+            ),
+        ).toBeDefined();
+        const bbva = tile("BBVA");
+        expect(within(bbva).getByText("Crédito")).toBeDefined();
+        expect(within(bbva).getByText("Cargado en septiembre")).toBeDefined();
+        expect(
+            within(bbva).getByRole("button", {
+                name: "Registrar un pago en BBVA",
+            }),
+        ).toBeDefined();
+        expect(
+            within(tile("NU")).getByText("Pagada por completo"),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("complementary", { name: "En construcción" }),
+        ).toBeDefined();
+    });
+
+    it("shows the drawer history in Spanish, the category name translated", async () => {
+        renderEs();
+        fireEvent.click(
+            screen.getByRole("button", { name: "Detalles de BBVA" }),
+        );
+        const drawer = await screen.findByRole("dialog", { name: "BBVA" });
+        const rows = within(
+            await within(drawer).findByRole("list", { name: "Historial" }),
+        ).getAllByRole("listitem");
+        expect(rows[0]?.textContent).toContain("Pago");
+        expect(rows[0]?.textContent).toContain("28 sep 2026 · from checking");
+        expect(rows[0]?.textContent).toContain("saldo $6,130.00");
+        expect(rows[1]?.textContent).toContain(
+            "26 sep 2026 · Despensa · compartido, monto completo",
+        );
+    });
+
+    it("says the history failed in Spanish when the request throws", async () => {
+        historyMock.mockRejectedValueOnce(new Error("network"));
+        renderEs();
+        fireEvent.click(
+            screen.getByRole("button", { name: "Detalles de BBVA" }),
+        );
+        expect(
+            await screen.findByText(
+                "No se pudo cargar el historial de la tarjeta. Inténtalo de nuevo.",
+            ),
+        ).toBeDefined();
     });
 });

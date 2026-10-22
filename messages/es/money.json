@@ -1,0 +1,166 @@
+{
+    "fullBreakdown": "Desglose completo",
+    "breakdownDialog": {
+        "title": "Desglose de {month}",
+        "description": "Lo que se gastó en el mes, agrupado según de qué fondo salió"
+    },
+    "reminder": {
+        "openCycle": "Cuenta abierta · no depende de los filtros",
+        "notThisMonth": "La cuenta abierta, no {month}."
+    },
+    "funding": {
+        "fromSavings": "Del ahorro",
+        "reimbursed": "Reembolsado",
+        "reimbursedNote": "te lo devolvieron · neto $0",
+        "expensesList": "Gastos: {label}"
+    },
+    "metrics": {
+        "charged": "Cargado",
+        "cost": "Mi costo",
+        "outsideIncome": "Fuera del ingreso",
+        "partnerShare": "Parte de {partner}",
+        "setAside": "Apartado"
+    },
+    "strip": {
+        "region": "Totales de la actividad visible",
+        "entries": "{count, plural, one {# registro} other {# registros}}",
+        "followFilters": "Los totales siguen los filtros",
+        "collapsed": "Mi costo {cost} · Cargado {charged}",
+        "hide": "Ocultar totales",
+        "show": "Mostrar totales"
+    },
+    "rail": {
+        "region": "Resumen de {month}",
+        "costTitle": "Lo que me costó {month}",
+        "charged": "{amount} cargado",
+        "fromIncome": "Del ingreso de este mes",
+        "saved": "Ahorrado",
+        "youSent": "Le mandaste a {partner}",
+        "partnerSent": "{partner} te mandó"
+    },
+    "bottomLine": {
+        "title": "En resumen",
+        "whatIReallySpent": "Gastado real",
+        "ofWhichSent": "de eso, mandado a {partner}",
+        "incomeWent": "A dónde se fue el ingreso de este mes",
+        "spentOnMyself": "Gastado en mí",
+        "sentTo": "Mandado a {partner}",
+        "setAside": "Apartado",
+        "keptNotSpent": "guardado, no gastado",
+        "total": "Total",
+        "totalQualifier": "— del ingreso de este mes"
+    },
+    "breakdown": {
+        "whichPot": "De qué fondo salió",
+        "thisMonthsIncome": "Ingreso de este mes",
+        "incomeCaptionNone": "nada de esto cuenta para tus bolsas del presupuesto",
+        "incomeCaptionButTransfers": "todo menos las transferencias cuenta para tus bolsas del presupuesto",
+        "incomeCaption": "cuenta para tus bolsas del presupuesto",
+        "spent": "Gastado",
+        "setAside": "Apartado",
+        "transfersTo": "Transferencias a {partner}",
+        "outsideBudget": "fuera del presupuesto",
+        "byWho": "Para quién fue",
+        "ownSpending": "Gasto propio",
+        "paidTo": "Pagado a {partner}",
+        "byWhichMoney": "Con qué dinero se pagó",
+        "transfersFromSavings": "Transferencias a {partner} (del ahorro)",
+        "incomeShare": "{percent} de tu ingreso",
+        "income": "Ingreso",
+        "overIncome": "{amount} sobre el ingreso",
+        "left": "{amount} restante",
+        "whatCharged": "Lo que me cargaron",
+        "myIncome": "Mi ingreso",
+        "myOtherMoney": "Mi otro dinero",
+        "partnerShare": "Parte de {partner}",
+        "chargedCaption": "cargado",
+        "whatIReallySpent": "Gastado real",
+        "cashSent": "{partner}: dinero que te mandó este mes",
+        "partnerPaidYou": "{partner} te pagó",
+        "owedBelongs": "Lo que cualquiera de los dos todavía deba pertenece a Cuentas por pagar, no a un mes.",
+        "whatIPaid": "{partner}: lo que le pagué",
+        "fromIncome": "Del ingreso de este mes",
+        "iPaidHer": "le pagué",
+        "alsoCountedAbove": "todo esto ya está dentro de las cifras de arriba",
+        "everyFigure": "Todas las cifras son de {month}."
+    },
+    "cards": {
+        "title": "Saldos de tarjetas",
+        "subtitle": "Según los gastos registrados, no tu estado de cuenta · MXN",
+        "loadError": "No se pudieron cargar los saldos de tus tarjetas. Inténtalo de nuevo.",
+        "retry": "Reintentar",
+        "historyError": "No se pudo cargar el historial de la tarjeta. Inténtalo de nuevo.",
+        "state": {
+            "owed": "Por pagar",
+            "paid": "Pagada por completo",
+            "credit": "Pagaste más de lo cargado",
+            "untouched": "Sin movimientos"
+        },
+        "stateIn": {
+            "owed": "Por pagar de {month}",
+            "credit": "Pagaste más de lo cargado en {month}",
+            "untouched": "Sin movimientos en {month}"
+        },
+        "footPaid": "Nada por pagar de {month}",
+        "footCredit": "Pagaste {amount} más de lo que cargaste en {month}.",
+        "type": {
+            "credit": "Crédito",
+            "debit": "Débito",
+            "cash": "Efectivo"
+        },
+        "lines": {
+            "charged": "Cargado en {month}",
+            "paid": "Pagado en {month}",
+            "redeemed": "Canjeado en {month}"
+        },
+        "notice": {
+            "region": "En construcción",
+            "lead": "En construcción:",
+            "body": "es posible que los saldos todavía no coincidan con tu banco. Cada mes muestra solo los cargos y pagos de tarjeta que registraste en ese mes. Un monto sin pagar se queda en su propio mes.",
+            "howItWorks": "Cómo funciona este saldo",
+            "rules": {
+                "fullAmount": "Los cargos cuentan por su monto completo, aunque los dividas.",
+                "payments": "Los pagos de tarjeta bajan el saldo.",
+                "partnerMoney": "El dinero de tu pareja, los reembolsos del seguro y la opción de reembolsado no lo cambian.",
+                "cashDebit": "El efectivo y las tarjetas de débito gastan dinero que ya tienes, así que no aparecen. Las transferencias a Ahorro no son cargos de tarjeta.",
+                "archived": "Las tarjetas archivadas no aparecen."
+            }
+        },
+        "logPayment": "Registrar un pago",
+        "logPaymentOn": "Registrar un pago en {card}",
+        "details": "Detalles de {card}",
+        "rowLabel": "{card}, {state}",
+        "rowLabelBalance": "{card}, {balance}, {state}",
+        "drawer": {
+            "payment": "Pago",
+            "shared": "compartido, monto completo",
+            "balanceAfter": "saldo {amount}",
+            "loading": "Cargando historial…",
+            "history": "Historial",
+            "newestFirst": "· lo más reciente primero",
+            "empty": "No hay nada registrado en esta tarjeta en {month}.",
+            "showEarlier": "{count, plural, one {Mostrar # registro anterior} other {Mostrar # registros anteriores}}",
+            "monthNote": "Cada mes muestra solo los cargos y pagos de tarjeta de ese mes. Un monto sin pagar se queda en su propio mes, así que el saldo de tu banco puede ser distinto."
+        },
+        "empty": {
+            "title": "Todavía no tienes tarjetas",
+            "body": "Agrega una tarjeta de crédito en Configuración → Tarjetas. Su saldo aparece aquí. El efectivo y las tarjetas de débito gastan dinero que ya tienes, así que nunca aparecen aquí.",
+            "cta": "Ir a Tarjetas"
+        },
+        "totals": {
+            "region": "Totales",
+            "owedFor": "Por pagar de {month}",
+            "nothingOwed": "Nada por pagar de {month}",
+            "creditIn": "Pagaste más de lo cargado en {month}",
+            "notSubtracted": "{cards} · no se resta arriba",
+            "howMade": "Cómo se forma un saldo",
+            "charged": "Cargado",
+            "fullAmount": "monto completo, aunque se divida",
+            "payments": "Pagos",
+            "redeemed": "Puntos canjeados",
+            "owed": "Por pagar",
+            "creditCard": "Pagaste más de lo cargado en {month}: {card}",
+            "formula": "Cargado (monto completo, aunque se divida) − pagos − puntos canjeados"
+        }
+    }
+}

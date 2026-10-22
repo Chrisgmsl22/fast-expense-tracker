@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { SettlementBreakdown } from "@/components/settlement/SettlementBreakdown";
 import { computeCoupleBalance } from "@/lib/domain/settlement";
@@ -352,7 +353,7 @@ describe("SettlementBreakdown disclosure", () => {
     };
 
     const renderIt = () =>
-        render(
+        renderWithIntl(
             <SettlementBreakdown
                 balance={balance}
                 breakdownItems={breakdownItems}
@@ -410,7 +411,7 @@ describe("SettlementBreakdown disclosure", () => {
     });
 
     it("says so plainly when a line has a total but no rows behind it", () => {
-        render(
+        renderWithIntl(
             <SettlementBreakdown
                 balance={balance}
                 breakdownItems={{ ...breakdownItems, partner_share: [] }}
@@ -442,7 +443,7 @@ describe("SettlementBreakdown disclosure", () => {
                 },
             ],
         };
-        const { unmount } = render(
+        const { unmount } = renderWithIntl(
             <SettlementBreakdown
                 balance={youOwe}
                 breakdownItems={debtItems}
@@ -463,7 +464,7 @@ describe("SettlementBreakdown disclosure", () => {
             moneyPartnerPaidYou: 0,
             moneyYouPaidPartner: 0,
         });
-        render(
+        renderWithIntl(
             <SettlementBreakdown
                 balance={settled}
                 breakdownItems={{
@@ -486,5 +487,109 @@ describe("SettlementBreakdown disclosure", () => {
             screen.getByRole("button", { name: /Debts you logged/ }),
         );
         expect(screen.getByText("Uber home")).toBeDefined();
+    });
+});
+
+describe("SettlementBreakdown partner-payment rows in Spanish", () => {
+    it("translates the auto-label and keeps a typed note", () => {
+        const balance = computeCoupleBalance({
+            partnerShareOfYourExpenses: 0,
+            yourDebtToPartner: 0,
+            moneyPartnerPaidYou: 0,
+            moneyYouPaidPartner: 900,
+        });
+        renderWithIntl(
+            <SettlementBreakdown
+                balance={balance}
+                breakdownItems={{
+                    partner_share: [],
+                    your_debt: [],
+                    partner_debt: [],
+                    partner_paid: [],
+                    you_paid: [
+                        {
+                            id: "p1",
+                            date: JULY,
+                            description: "Transfer — you paid Brenda",
+                            amount: 500,
+                            gross: null,
+                        },
+                        {
+                            id: "p2",
+                            date: JULY,
+                            description: "Half of the rent",
+                            amount: 400,
+                            gross: null,
+                        },
+                    ],
+                }}
+                partnerName="Brenda"
+            />,
+            { locale: "es" },
+        );
+        expect(
+            screen.getByText("Transferencia — le pagaste a Brenda"),
+        ).toBeDefined();
+        expect(screen.queryByText("Transfer — you paid Brenda")).toBeNull();
+        expect(screen.getByText("Half of the rent")).toBeDefined();
+    });
+});
+
+describe("SettlementBreakdown debt and received rows in Spanish", () => {
+    const balance = computeCoupleBalance({
+        partnerShareOfYourExpenses: 0,
+        yourDebtToPartner: 500,
+        moneyPartnerPaidYou: 900,
+        moneyYouPaidPartner: 0,
+    });
+    const row = (id: string, description: string, amount: number) => ({
+        id,
+        date: JULY,
+        description,
+        amount,
+        gross: null,
+    });
+    const renderIt = () =>
+        renderWithIntl(
+            <SettlementBreakdown
+                balance={balance}
+                breakdownItems={{
+                    partner_share: [],
+                    partner_debt: [
+                        row("d1", "Brenda owes me", 300),
+                        row("d2", "Concert tickets", 200),
+                    ],
+                    your_debt: [
+                        row("d3", "I owe Brenda", 250),
+                        row("d4", "Uber home", 250),
+                    ],
+                    partner_paid: [
+                        row("t1", "Transfer — Brenda paid you", 500),
+                        row("t2", "Rent back", 400),
+                    ],
+                    you_paid: [],
+                }}
+                partnerName="Brenda"
+            />,
+            { locale: "es" },
+        );
+
+    it("translates both debt auto-labels and keeps typed notes", () => {
+        renderIt();
+        expect(screen.getByText("Brenda me debe")).toBeDefined();
+        expect(screen.getByText("Le debo a Brenda")).toBeDefined();
+        expect(screen.queryByText("Brenda owes me")).toBeNull();
+        expect(screen.queryByText("I owe Brenda")).toBeNull();
+        expect(screen.getByText("Concert tickets")).toBeDefined();
+        expect(screen.getByText("Uber home")).toBeDefined();
+    });
+
+    it("translates a received transfer's auto-label and keeps a typed note", () => {
+        renderIt();
+        expect(
+            screen.getByText("Transferencia — Brenda te pagó"),
+        ).toBeDefined();
+        expect(screen.queryByText("Transfer — Brenda paid you")).toBeNull();
+        expect(screen.getByText("Rent back")).toBeDefined();
     });
 });

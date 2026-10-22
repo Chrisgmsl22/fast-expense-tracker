@@ -1,0 +1,153 @@
+{
+    "page": {
+        "title": "Settlement",
+        "with": "with {partner}"
+    },
+    "pastMonthNotice": "You are viewing {month}. Anything you log is dated today and joins the open settlement.",
+    "tone": {
+        "sheOwes": "{partner} owes you",
+        "youOwe": "You owe {partner}",
+        "settled": "All settled"
+    },
+    "balance": {
+        "settledTitle": "All settled",
+        "settledBody": "Nobody owes anything.",
+        "carriedOver": "includes {amount} from last month",
+        "barYouOwe": "you owe",
+        "barPartnerOwes": "{partner} owes"
+    },
+    "close": {
+        "square": "You and {partner} are square",
+        "body": "Close this settlement to file it away. The next one opens straight away, and anything you log from now on joins it.",
+        "button": "Close settlement",
+        "dialogTitle": "Close this settlement?",
+        "dialogBody": "Everything logged so far is filed under this settlement and stays there. A new settlement opens immediately — a late shared expense joins that one, not this one. Closed settlements cannot be reopened.",
+        "closing": "Closing…"
+    },
+    "actions": {
+        "recordPayment": "Record payment",
+        "addDebt": "+ {label}"
+    },
+    "help": {
+        "trigger": "How to use settlement",
+        "title": "Common operations",
+        "ops": {
+            "sharedWhen": "You pay for something shared",
+            "sharedThen": "Log it as a normal expense — {partner}'s 32% is added to what she owes you automatically.",
+            "paidBackWhen": "{partner} sends you money / pays you back",
+            "paidBackThen": "{add} → \"{receive}\" (or \"{recordPayment}\" here). It lowers what she owes you — whatever you do with the money after is separate.",
+            "frontedWhen": "{partner} paid for shared things",
+            "frontedThen": "\"{iOwe}\" here — your share. It raises what you owe her.",
+            "payHerWhen": "You end up owing {partner}, so you pay her",
+            "payHerThen": "\"{recordPayment}\" here (it will say \"{transfer}\").",
+            "cardWhen": "You pay off a credit card",
+            "cardThen": "{add} → {cardPayment}. It just records the payment — it doesn't touch the settlement balance.",
+            "owesWhen": "{partner} owes you money without a shared expense",
+            "owesThen": "\"{owesMe}\" records the full debt. It adds no expense, income, or payment.",
+            "zeroWhen": "The balance is zero",
+            "zeroThen": "Both debt actions remain available. {recordPayment} appears only when a balance remains."
+        }
+    },
+    "journalKey": {
+        "title": "Journal key",
+        "partnerPaidYou": "{partner} paid you",
+        "partnerOwesYou": "{partner} owes you",
+        "youPaidPartner": "You paid {partner}",
+        "youOwePartner": "You owe {partner}"
+    },
+    "breakdown": {
+        "title": "How this balance is made",
+        "lines": {
+            "partner_share": "{partner}'s 32% of shared expenses you logged",
+            "partner_debt": "Debts you logged as \"{partner} owes me\"",
+            "your_debt": "Debts you logged as \"I owe {partner}\"",
+            "partner_paid": "Money {partner} paid you",
+            "you_paid": "Money you paid {partner}"
+        },
+        "partnerPaidSublabel": "transfers she sent you",
+        "nothingThisWindow": "— nothing this window",
+        "noItemizedRows": "— no itemized rows",
+        "netBalance": "Net balance",
+        "settled": "Settled",
+        "net": "{label} {amount}",
+        "shareOf": "{date} · {partner}'s share of {gross} you paid"
+    },
+    "views": {
+        "tablist": "Settlement views",
+        "open": "Open settlement",
+        "openShort": "Open",
+        "history": "History",
+        "items": "{count, plural, one {# item} other {# items}}",
+        "settlements": "{count, plural, one {# settlement} other {# settlements}}",
+        "descriptor": "· shared expenses · debts · transfers",
+        "openEmpty": "This settlement is empty — nothing has been logged since the last close.",
+        "monthPast": "{month} has ended. This is what it held — the open settlement is on its own tab.",
+        "monthFuture": "{month} has not started. This is what is already dated to it — the open settlement is on its own tab.",
+        "monthEmpty": "No shared expenses or transfers in {month}.",
+        "historyEmpty": "No settlement was closed in {month}. When a balance reaches zero you can close it, and it is filed under the month you closed it in.",
+        "settledOn": "Settled {date}",
+        "cycleMeta": "{amount} · {count} rows",
+        "closedEmpty": "This settlement closed with no rows in it.",
+        "outcome": {
+            "even": "Came out even",
+            "youPaid": "You paid {partner}",
+            "partnerPaid": "{partner} paid you"
+        },
+        "summary": {
+            "spentUnsplit": "Spent (unsplit)",
+            "youOwed": "You owed {partner}",
+            "sheOwed": "{partner} owed you"
+        }
+    },
+    "journal": {
+        "title": "Movement journal",
+        "empty": "Nothing to settle yet.",
+        "descriptor": "shared expenses · debts · transfers",
+        "earlierMonths": "Earlier months",
+        "transferPartnerPaid": "Transfer — {partner} paid you",
+        "transferYouPaid": "Transfer — you paid {partner}",
+        "locked": "in a closed settlement · locked",
+        "expenseSubtitle": "{date} · you paid {gross} · {partner}'s 32% · {status}",
+        "editOnExpenses": "edit on the Expenses screen",
+        "loadDebtError": "Couldn't load that debt. Please refresh.",
+        "editDebtTitle": "Edit \"{label}\"",
+        "editTransferTitle": "Edit transfer",
+        "deleteTransferTitle": "Delete this transfer?",
+        "deleteDebtTitle": "Delete this debt?",
+        "deleteBody": "{title} ({amount}) will be permanently removed.",
+        "deleting": "Deleting…",
+        "editRow": "Edit {label}",
+        "deleteRow": "Delete {label}"
+    },
+    "copy": {
+        "label": "Copy settlement summary to clipboard",
+        "copied": "Copied",
+        "failed": "Could not copy"
+    },
+    "summaryText": {
+        "header": "🧾 *Settlement*",
+        "headerOne": "🧾 *Settlement {date}*",
+        "headerRange": "🧾 *Settlement {first} – {last}*",
+        "present": "present",
+        "sharedExpenses": "*Shared expenses*",
+        "subtotal": "*Subtotal: {amount}*",
+        "rowSplit": "{line} ({partner}'s {percent}%: {share})",
+        "shareOfShared": "{partner}'s share of shared expenses",
+        "percentOfShared": "{partner}'s {percent}% of shared expenses",
+        "partnerOwesYou": "🌸 *{partner} owes you*",
+        "youOwePartner": "🍔 *You owe {partner}*",
+        "payments": "💸 *Payments*",
+        "youPaid": "You paid {partner}",
+        "partnerPaid": "{partner} paid you",
+        "finalSettled": "✅ *Final outcome: settled, {amount} MXN*",
+        "finalOwes": "✅ *Final outcome: {partner} owes {amount} MXN*",
+        "finalReceives": "✅ *Final outcome: {partner} receives {amount} MXN*"
+    },
+    "errors": {
+        "unauthenticated": "Not authenticated",
+        "notSettled": "This settlement isn't square yet, so it can't be closed.",
+        "noMarker": "This settlement can't be closed yet: closing marks a payment or transfer with your partner, and this one holds neither.",
+        "markerGone": "The row that would close this settlement is no longer there. Refresh the page and try again.",
+        "dbError": "Could not close the settlement. Please try again."
+    }
+}

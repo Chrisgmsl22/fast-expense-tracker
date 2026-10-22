@@ -1,0 +1,28 @@
+{
+    "metadata": {
+        "description": "Personal expense tracker — MXN, shared-split aware, weekly review."
+    },
+    "buckets": {
+        "essentials": "Essentials",
+        "discretionary": "Discretionary",
+        "savings": "Savings"
+    },
+    "actions": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "close": "Close"
+    },
+    "language": {
+        "title": "Language",
+        "description": "Choose the app's language on this browser.",
+        "invalid": "Choose Español or English.",
+        "error": "Could not change the language. Please try again."
+    },
+    "cardLabel": {
+        "paidPartner": "Paid {partner}",
+        "cash": "Cash"
+    },
+    "notFromIncome": "Not from this month's income"
+}

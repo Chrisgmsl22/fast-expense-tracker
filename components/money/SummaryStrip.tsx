@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronRight, ChevronUp } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import type { FeedTotals } from "@/lib/domain/movement";
@@ -47,7 +48,8 @@ export function SummaryStrip({
     categoryLabel,
     fundingRows,
 }: Props) {
-    const metrics = summaryMetrics(totals, partnerName, sharesExpenses);
+    const t = useTranslations("money");
+    const metrics = summaryMetrics(totals, partnerName, sharesExpenses, t);
     const footerRef = useRef<HTMLElement>(null);
     const [footerHeight, setFooterHeight] = useState(350);
     const [expanded, setExpanded] = useState(false);
@@ -76,7 +78,7 @@ export function SummaryStrip({
             <section
                 ref={footerRef}
                 data-testid="totals-footer"
-                aria-label="Visible activity totals"
+                aria-label={t("strip.region")}
                 className="fixed inset-x-0 bottom-0 z-40 overflow-hidden border bg-background pb-[env(safe-area-inset-bottom)] shadow-lg sm:sticky sm:bottom-4 sm:z-30 sm:mt-4 sm:rounded-xl sm:pb-0"
             >
                 <div
@@ -85,12 +87,11 @@ export function SummaryStrip({
                 >
                     <p>
                         <span className="font-semibold text-foreground">
-                            {visibleCount}{" "}
-                            {visibleCount === 1 ? "entry" : "entries"}
+                            {t("strip.entries", { count: visibleCount })}
                         </span>{" "}
                         · {monthLabel} · {categoryLabel}
                     </p>
-                    <p>Totals follow filters</p>
+                    <p>{t("strip.followFilters")}</p>
                 </div>
                 <SettlementReminder
                     settlement={settlement}
@@ -108,10 +109,13 @@ export function SummaryStrip({
                     className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm focus-visible:outline-2 focus-visible:outline-ring sm:hidden"
                 >
                     <span className="min-w-0 flex-1 truncate font-semibold tabular-nums">
-                        {`My cost ${formatMxn(summaryCost(totals).amount)} · Charged ${formatMxn(totals.charged.amount)}`}
+                        {t("strip.collapsed", {
+                            cost: formatMxn(summaryCost(totals).amount),
+                            charged: formatMxn(totals.charged.amount),
+                        })}
                     </span>
                     <span className="sr-only">
-                        {expanded ? "Hide totals" : "Show totals"}
+                        {expanded ? t("strip.hide") : t("strip.show")}
                     </span>
                     <ChevronUp
                         aria-hidden
@@ -143,6 +147,7 @@ export function SummaryStrip({
                         fromSavings={totals.notFromIncome.fromSavings.amount}
                         reimbursed={totals.notFromIncome.reimbursed.amount}
                         rows={fundingRows}
+                        partnerName={partnerName}
                         className="border-b px-4 py-2 sm:order-last sm:basis-full sm:border-t sm:border-b-0"
                     />
                     <div className="flex items-center justify-center border-t px-4 py-2 sm:border-t-0">
@@ -155,7 +160,7 @@ export function SummaryStrip({
                             triggerClassName="flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-semibold transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring sm:w-auto sm:border"
                             trigger={
                                 <>
-                                    Full breakdown
+                                    {t("fullBreakdown")}
                                     <ChevronRight
                                         aria-hidden
                                         className="size-3.5"

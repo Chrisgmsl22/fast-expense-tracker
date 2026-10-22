@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { BucketsHero } from "@/components/dashboard/BucketsHero";
 import type { Bucket } from "@/lib/domain/dashboard";
@@ -18,7 +19,7 @@ function barValue(label: string): string | null {
 
 describe("BucketsHero", () => {
     it("renders the three buckets with spend and target", () => {
-        render(<BucketsHero buckets={buckets} />);
+        renderWithIntl(<BucketsHero buckets={buckets} />);
         expect(screen.getByText("Essentials")).toBeDefined();
         expect(screen.getByText("Discretionary")).toBeDefined();
         expect(screen.getByText("Savings/Inv")).toBeDefined();
@@ -26,17 +27,17 @@ describe("BucketsHero", () => {
     });
 
     it("shows money left for an under-budget essentials bucket", () => {
-        render(<BucketsHero buckets={buckets} />);
+        renderWithIntl(<BucketsHero buckets={buckets} />);
         expect(screen.getByText(/\$5,600\.00 left/)).toBeDefined();
     });
 
     it("shows 'goal met' when savings reaches its target", () => {
-        render(<BucketsHero buckets={buckets} />);
+        renderWithIntl(<BucketsHero buckets={buckets} />);
         expect(screen.getByText("goal met")).toBeDefined();
     });
 
     it("shows an 'over' amount (danger) when essentials exceeds target", () => {
-        render(
+        renderWithIntl(
             <BucketsHero
                 buckets={[
                     {
@@ -59,7 +60,7 @@ describe("BucketsHero", () => {
     });
 
     it("shows 'to go' for savings below target", () => {
-        render(
+        renderWithIntl(
             <BucketsHero
                 buckets={[
                     { key: "essentials", spent: 0, target: 24000, percent: 50 },
@@ -78,7 +79,7 @@ describe("BucketsHero", () => {
 
     // Guard: fails pre-fix, where the labels were the literals 50% / 25% / 25%.
     it("Should label each bucket with the percent from its data", () => {
-        render(
+        renderWithIntl(
             <BucketsHero
                 buckets={[
                     { key: "essentials", spent: 0, target: 28800, percent: 60 },
@@ -101,7 +102,7 @@ describe("BucketsHero", () => {
 
     // Guard: fails pre-fix, where a 0-target bucket with spend drew an empty bar.
     it("Should fill a 0% bucket's bar and flag its spend as over", () => {
-        render(
+        renderWithIntl(
             <BucketsHero
                 buckets={[
                     {
@@ -128,7 +129,7 @@ describe("BucketsHero", () => {
 
     // Guard: fails pre-fix, where savings spend over a 0 target read "-$500 to go".
     it("Should read 'goal met' for spend into a 0% savings bucket", () => {
-        render(
+        renderWithIntl(
             <BucketsHero
                 buckets={[
                     {
@@ -148,7 +149,7 @@ describe("BucketsHero", () => {
 
     // Pin: an empty 0% bucket already drew an empty bar before the change.
     it("Should draw an empty bar for a 0% bucket with no spend", () => {
-        render(
+        renderWithIntl(
             <BucketsHero
                 buckets={[
                     {
@@ -165,5 +166,20 @@ describe("BucketsHero", () => {
         expect(barValue("Discretionary")).toBe("0");
         expect(barValue("Savings/Inv")).toBe("0");
         expect(document.body.textContent).not.toMatch(/NaN|Infinity/);
+    });
+});
+
+describe("BucketsHero in Spanish", () => {
+    it("names the buckets, their status, and the bars in Spanish", () => {
+        renderWithIntl(<BucketsHero buckets={buckets} />, { locale: "es" });
+        expect(screen.getByText("Esenciales")).toBeDefined();
+        expect(screen.getByText("Gustos")).toBeDefined();
+        expect(screen.getByText("Ahorro/Inv")).toBeDefined();
+        expect(screen.getByText("meta cumplida")).toBeDefined();
+        expect(screen.getByText(/^de \$24,000\.00/)).toBeDefined();
+        expect(screen.getByText("quedan $5,600.00")).toBeDefined();
+        expect(
+            screen.getByRole("progressbar", { name: "Gasto en Esenciales" }),
+        ).toBeDefined();
     });
 });

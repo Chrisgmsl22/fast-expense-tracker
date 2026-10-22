@@ -1,9 +1,9 @@
 import { useId } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import type { FeedTotals } from "@/lib/domain/movement";
-import { FROM_SAVINGS_LABEL } from "@/lib/domain/funding";
 import { formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { SettlementReminder } from "@/components/money/SettlementReminder";
@@ -34,6 +34,7 @@ export function SummaryRail({
     isCurrentMonth: boolean;
     incomeTotal?: number;
 }) {
+    const t = useTranslations("money");
     const cost = summaryCost(totals);
     const fromSavings = totals.notFromIncome.fromSavings.amount;
     const sent = totals.paidToPartner.amount;
@@ -43,7 +44,7 @@ export function SummaryRail({
     return (
         <section
             data-testid="feed-totals"
-            aria-label={`${monthLabel} summary`}
+            aria-label={t("rail.region", { month: monthLabel })}
             className="shrink-0 space-y-2.5 border-t p-4 text-sm"
         >
             <SettlementReminder
@@ -56,13 +57,15 @@ export function SummaryRail({
             <div className="overflow-hidden rounded-xl border border-l-4 border-l-spent">
                 <div className="p-3.5">
                     <h3 className="text-[13px] font-semibold text-muted-foreground">
-                        What {monthLabel} cost me
+                        {t("rail.costTitle", { month: monthLabel })}
                     </h3>
                     <p className="mt-0.5 text-[28px] leading-tight font-bold tracking-tight tabular-nums">
                         {formatMxn(cost.amount)}
                     </p>
                     <p className="text-xs text-muted-foreground tabular-nums">
-                        {formatMxn(totals.charged.amount)} charged
+                        {t("rail.charged", {
+                            amount: formatMxn(totals.charged.amount),
+                        })}
                     </p>
                     <div
                         aria-hidden
@@ -82,14 +85,14 @@ export function SummaryRail({
                     <dl className="tabular-nums">
                         {totals.whatIReallySpent.amount > 0 && (
                             <LegendRow
-                                label="From this month's income"
+                                label={t("rail.fromIncome")}
                                 amount={totals.whatIReallySpent.amount}
                                 swatchClassName="bg-spent"
                             />
                         )}
                         {fromSavings > 0 && (
                             <LegendRow
-                                label={FROM_SAVINGS_LABEL}
+                                label={t("funding.fromSavings")}
                                 amount={fromSavings}
                                 swatchClassName="bg-bucket-discretionary"
                                 amountClassName="text-bucket-discretionary"
@@ -106,7 +109,7 @@ export function SummaryRail({
                     triggerClassName="flex w-full items-center gap-2 border-t px-3.5 py-3 text-left text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                     trigger={
                         <>
-                            Full breakdown
+                            {t("fullBreakdown")}
                             <ChevronRight
                                 aria-hidden
                                 className="ml-auto size-4"
@@ -124,7 +127,7 @@ export function SummaryRail({
                         >
                             <Plus className="size-3" strokeWidth={3} />
                         </span>
-                        Saved
+                        {t("rail.saved")}
                     </dt>
                     <dd className="ml-auto font-bold text-positive">
                         {formatMxn(totals.setAside)}
@@ -139,12 +142,14 @@ export function SummaryRail({
                         each flow is named in words. */}
                     <ul className="ml-auto flex flex-wrap justify-end gap-x-3.5 gap-y-1 text-[13px] tabular-nums">
                         <Flow
-                            label={`You sent ${partnerName}`}
+                            label={t("rail.youSent", { partner: partnerName })}
                             amount={sent}
                             direction="out"
                         />
                         <Flow
-                            label={`${partnerName} sent you`}
+                            label={t("rail.partnerSent", {
+                                partner: partnerName,
+                            })}
                             amount={received}
                             direction="in"
                         />

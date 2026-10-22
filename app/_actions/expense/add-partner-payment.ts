@@ -1,7 +1,9 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { partnerPaymentDescription } from "@/lib/domain/expense";
@@ -18,6 +20,8 @@ import {
     partnerPaymentInputSchema,
     type PartnerPaymentInput,
 } from "@/lib/schemas/expense";
+
+import { expenseSchemaMessages } from "./field-messages";
 
 export type AddPartnerPaymentCode =
     | "validation"
@@ -48,14 +52,18 @@ export async function addPartnerPayment(
     const expenseRepo = deps.expenseRepo ?? expenseRepository;
     const categoryRepo = deps.categoryRepo ?? categoryRepository;
     const settingsRepo = deps.settingsRepo ?? settingsRepository;
+    const t = await getTranslations("expenses");
 
     const parsed = partnerPaymentInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Invalid payment",
-            fieldErrors: toFieldErrors<PartnerPaymentInput>(parsed.error),
+            message: t("errors.invalidPayment"),
+            fieldErrors: localizeFieldErrors(
+                toFieldErrors<PartnerPaymentInput>(parsed.error),
+                expenseSchemaMessages(t),
+            ),
         };
     }
 
@@ -65,7 +73,7 @@ export async function addPartnerPayment(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -79,9 +87,8 @@ export async function addPartnerPayment(
             return {
                 ok: false,
                 code: "validation",
-                message:
-                    "No category to file this under. Add a Combined Expenses category first.",
-                fieldErrors: { categoryId: ["Category is required"] },
+                message: t("errors.noPaymentCategory"),
+                fieldErrors: { categoryId: [t("fields.categoryRequired")] },
             };
         }
 
@@ -93,8 +100,8 @@ export async function addPartnerPayment(
             return {
                 ok: false,
                 code: "validation",
-                message: "Invalid payment",
-                fieldErrors: { categoryId: ["Category not found"] },
+                message: t("errors.invalidPayment"),
+                fieldErrors: { categoryId: [t("fields.categoryNotFound")] },
             };
         }
 
@@ -112,11 +119,9 @@ export async function addPartnerPayment(
                 return {
                     ok: false,
                     code: "validation",
-                    message: "Invalid payment",
+                    message: t("errors.invalidPayment"),
                     fieldErrors: {
-                        subcategoryId: [
-                            "Subcategory doesn't belong to the selected category",
-                        ],
+                        subcategoryId: [t("fields.subcategoryMismatch")],
                     },
                 };
             }
@@ -150,7 +155,7 @@ export async function addPartnerPayment(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the payment. Please try again.",
+            message: t("errors.savePaymentFailed"),
         };
     }
 }

@@ -1,3 +1,5 @@
+import { getLocale, getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { getScopedMonth } from "@/lib/month-scope.server";
@@ -26,6 +28,8 @@ export default async function ExpensesPage({
 }) {
     const { month: monthParam } = await searchParams;
     const month = await getScopedMonth(monthParam);
+    const locale = await getLocale();
+    const t = await getTranslations("expenses.page");
     const currentMonth = getCurrentMonthCdmx();
 
     const session = await auth();
@@ -67,7 +71,7 @@ export default async function ExpensesPage({
     return (
         <main className="p-8">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Expenses</h1>
+                <h1 className="text-2xl font-semibold">{t("title")}</h1>
                 <AddExpenseButton
                     categories={categories}
                     subcategories={subcategories}
@@ -94,7 +98,7 @@ export default async function ExpensesPage({
                     defaultSharePercentage={defaultSharePercentage}
                     partnerName={partnerName}
                     sharesExpenses={sharesExpenses}
-                    monthLabel={formatMonthLabel(month)}
+                    monthLabel={formatMonthLabel(month, locale)}
                     isCurrentMonth={month === currentMonth}
                     settlement={settlement.balance}
                     incomeTotal={income.total}
