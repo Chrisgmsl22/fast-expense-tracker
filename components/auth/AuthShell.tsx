@@ -2,26 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-import { CARD_PALETTE } from "@/lib/palette";
-
-// Card-method colors: Amex Platinum · Amex Gold · NU · BBVA · Cash — the first
-// five palette swatches are exactly the seeded card colours (spec 0006 §6).
-// Sourced from the shared palette so these brand dots can't drift from the seed.
-const CARD_DOT_COLORS = CARD_PALETTE.slice(0, 5).map((swatch) => swatch.hex);
-
-function CardDots() {
-    return (
-        <div className="flex items-center gap-2" aria-hidden="true">
-            {CARD_DOT_COLORS.map((color) => (
-                <span
-                    key={color}
-                    className="size-2.5 rounded-full"
-                    style={{ backgroundColor: color }}
-                />
-            ))}
-        </div>
-    );
-}
+import { CardDots } from "./CardDots";
 
 type Props = {
     /** Desktop form heading, e.g. "Log in". */
@@ -39,6 +20,7 @@ type Props = {
  */
 export function AuthShell({ heading, tagline, switchPrompt, children }: Props) {
     const t = useTranslations("auth.shell");
+    const tc = useTranslations("common");
     return (
         <main className="flex min-h-screen flex-col bg-foreground">
             <div className="flex min-h-screen flex-1 flex-col md:flex-row">
@@ -48,7 +30,9 @@ export function AuthShell({ heading, tagline, switchPrompt, children }: Props) {
                     <div className="flex flex-1 flex-col md:hidden">
                         <CardDots />
                         <div className="mt-auto pt-20">
-                            <h1 className="text-3xl font-bold">Fast Expense</h1>
+                            <h1 className="text-3xl font-bold">
+                                {tc("appName")}
+                            </h1>
                             <p className="mt-1.5 text-sm text-white/50">
                                 {tagline}
                             </p>
@@ -57,7 +41,7 @@ export function AuthShell({ heading, tagline, switchPrompt, children }: Props) {
                     {/* Desktop brand */}
                     <div className="hidden flex-1 flex-col md:flex">
                         <span className="text-lg font-semibold">
-                            Fast Expense
+                            {tc("appName")}
                         </span>
                         <div className="mt-auto">
                             <h2 className="text-3xl leading-tight font-bold">

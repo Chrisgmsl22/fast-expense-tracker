@@ -183,3 +183,42 @@ it("Should preserve a newer deadline when an old activity event arrives", async 
         }),
     ).toEqual(validToken());
 });
+
+describe("display name updates", () => {
+    it("Should carry a renamed user's trimmed name into the token", async () => {
+        const token = await callJwt({
+            trigger: "update",
+            session: { user: { name: "  Invented Rename  " } },
+        });
+        expect(token).toEqual({ ...validToken(), name: "Invented Rename" });
+    });
+    it("Should accept a name at exactly the 50-character limit", async () => {
+        const name = "x".repeat(50);
+        const token = await callJwt({
+            trigger: "update",
+            session: { user: { name } },
+        });
+        expect(token).toEqual({ ...validToken(), name });
+    });
+    it.each([
+        { name: "", label: "blank" },
+        { name: "   ", label: "only whitespace" },
+        { name: "x".repeat(51), label: "too long" },
+        { name: 42, label: "not text" },
+    ])(
+        "Should keep the token name when the update name is $label",
+        async ({ name }) => {
+            const token = await callJwt({
+                token: { ...validToken(), name: "Kept Name" },
+                trigger: "update",
+                session: { user: { name } },
+            });
+            expect(token).toEqual({ ...validToken(), name: "Kept Name" });
+        },
+    );
+    it("Should ignore a name sent outside an update", async () => {
+        expect(
+            await callJwt({ session: { user: { name: "Invented Rename" } } }),
+        ).toEqual(validToken());
+    });
+});

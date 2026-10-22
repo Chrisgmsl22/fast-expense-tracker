@@ -3,7 +3,7 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, Lock, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { useMessages, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 
 import { addCard } from "@/app/_actions/card/add";
 import { archiveCard } from "@/app/_actions/card/archive";
@@ -12,12 +12,16 @@ import { restoreCard } from "@/app/_actions/card/restore";
 import { updateCard } from "@/app/_actions/card/update";
 import type { FieldErrors } from "@/lib/actions/result";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
-import { CARD_PALETTE, isPaletteColor, isValidHex } from "@/lib/palette";
 import type { CardSettingsItem } from "@/lib/repositories/card.repository";
 import type { AddCardInput, UpdateCardInput } from "@/lib/schemas/card";
-import { cn } from "@/lib/utils";
+import {
+    DEFAULT_CARD_COLOR,
+    useCardTypeLabel,
+    type AddCardType,
+} from "@/components/cards/card-type-options";
+import { CardColorField } from "@/components/cards/CardColorField";
+import { CardTypeField } from "@/components/cards/CardTypeField";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     Dialog,
     DialogContent,
@@ -28,34 +32,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-} from "@/components/ui/select";
-
-const DEFAULT_COLOR = CARD_PALETTE[0]?.hex ?? "#6b7280";
-
-/** Types a user may add — Cash is excluded on purpose (see `addCardTypeSchema`). */
-type AddCardType = AddCardInput["type"];
-const ADD_TYPES: readonly AddCardType[] = ["credit", "debit"];
-
-/** Display label for every card type (Cash is a locked, non-addable system card). */
-function useTypeLabel(): (type: string) => string {
-    const t = useTranslations("settings.cards.types");
-    return (type) =>
-        type === "credit" || type === "debit" || type === "cash"
-            ? t(type)
-            : type;
-}
-
-/** Palette names are English data in lib/palette.ts; a name with no key shows as written. */
-function useSwatchName(): (name: string) => string {
-    const names: Readonly<Record<string, string>> =
-        useMessages().settings.cards.swatches;
-    return (name) => names[name] ?? name;
-}
 
 function FieldError({ id, message }: { id: string; message?: string }) {
     if (!message) return null;
@@ -66,146 +42,6 @@ function FieldError({ id, message }: { id: string; message?: string }) {
     );
 }
 
-/** Credit/Debit picker shared by the add + edit forms (Cash is never offered). */
-function TypeField({
-    id,
-    value,
-    onType,
-}: {
-    id: string;
-    value: AddCardType;
-    onType: (value: AddCardType) => void;
-}) {
-    const t = useTranslations("settings.cards");
-    const typeLabel = useTypeLabel();
-    return (
-        <div>
-            <Label htmlFor={id}>{t("type")}</Label>
-            <Select
-                value={value}
-                onValueChange={(v) =>
-                    onType(ADD_TYPES.find((type) => type === v) ?? "credit")
-                }
-            >
-                <SelectTrigger
-                    id={id}
-                    aria-label={t("typeAria")}
-                    className="mt-1.5 w-full"
-                >
-                    {typeLabel(value)}
-                </SelectTrigger>
-                <SelectContent>
-                    {ADD_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                            {typeLabel(type)}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
-}
-
-/**
- * Swatch grid over the shared palette, with the custom `#RRGGBB` field behind an
- * opt-in "advanced" checkbox. The checkbox starts checked when the initial colour
- * isn't a palette swatch (editing a card that already has a custom hex), so the
- * user sees their value; otherwise the hex input stays hidden.
- */
-function ColorField({
-    color,
-    onColor,
-    idPrefix,
-    error,
-}: {
-    color: string;
-    onColor: (value: string) => void;
-    idPrefix: string;
-    error?: string;
-}) {
-    const t = useTranslations("settings.cards");
-    const swatchName = useSwatchName();
-    const normalized = color.trim().toLowerCase();
-    const previewValid = isValidHex(normalized);
-    const [showCustom, setShowCustom] = useState(() => !isPaletteColor(color));
-    const errorId = `${idPrefix}-color-error`;
-    const describedBy = error ? errorId : undefined;
-    return (
-        <div>
-            <span className="text-sm font-medium">{t("color")}</span>
-            <div
-                role="group"
-                aria-label={t("swatchesAria")}
-                aria-describedby={describedBy}
-                className="mt-1.5 flex flex-wrap gap-2"
-            >
-                {CARD_PALETTE.map((swatch) => (
-                    <button
-                        key={swatch.hex}
-                        type="button"
-                        aria-label={swatchName(swatch.name)}
-                        aria-pressed={normalized === swatch.hex}
-                        onClick={() => onColor(swatch.hex)}
-                        style={{ backgroundColor: swatch.hex }}
-                        className={cn(
-                            "size-7 rounded-md border border-black/10 transition",
-                            normalized === swatch.hex &&
-                                "ring-2 ring-ring ring-offset-2 ring-offset-background",
-                        )}
-                    />
-                ))}
-            </div>
-
-            <div className="mt-3 flex items-center gap-2">
-                <Checkbox
-                    id={`${idPrefix}-custom-toggle`}
-                    checked={showCustom}
-                    onCheckedChange={(checked) => {
-                        const on = checked === true;
-                        setShowCustom(on);
-                        // Unchecking hides the hex field, so snap the value back to
-                        // a definite swatch — otherwise a now-invisible custom hex
-                        // would still be what gets submitted, with no swatch shown
-                        // as selected.
-                        if (!on) onColor(DEFAULT_COLOR);
-                    }}
-                />
-                <Label
-                    htmlFor={`${idPrefix}-custom-toggle`}
-                    className="text-sm"
-                >
-                    {t("customToggle")}
-                </Label>
-            </div>
-
-            {showCustom && (
-                <div className="mt-2 flex items-center gap-2">
-                    <span
-                        aria-hidden
-                        className="size-6 shrink-0 rounded-md border"
-                        style={{
-                            backgroundColor: previewValid
-                                ? normalized
-                                : "transparent",
-                        }}
-                    />
-                    <Input
-                        id={`${idPrefix}-color`}
-                        aria-label={t("hexAria")}
-                        value={color}
-                        onChange={(e) => onColor(e.target.value)}
-                        placeholder="#RRGGBB"
-                        aria-invalid={Boolean(error)}
-                        aria-describedby={describedBy}
-                        className="w-32 font-mono"
-                    />
-                </div>
-            )}
-            <FieldError id={errorId} message={error} />
-        </div>
-    );
-}
-
 /** The revealed "Add card" form: name + type + colour. */
 function AddCardForm({ onDone }: { onDone: () => void }) {
     const t = useTranslations("settings.cards");
@@ -213,7 +49,7 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
     const router = useRouter();
     const [name, setName] = useState("");
     const [type, setType] = useState<AddCardType>("credit");
-    const [color, setColor] = useState(DEFAULT_COLOR);
+    const [color, setColor] = useState(DEFAULT_CARD_COLOR);
     const [errors, setErrors] = useState<FieldErrors<AddCardInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
     const [pending, startTransition] = useTransition();
@@ -265,9 +101,9 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
                 />
             </div>
 
-            <TypeField id="add-card-type" value={type} onType={setType} />
+            <CardTypeField id="add-card-type" value={type} onType={setType} />
 
-            <ColorField
+            <CardColorField
                 color={color}
                 onColor={setColor}
                 idPrefix="add-card"
@@ -404,13 +240,13 @@ function EditCardRow({
                     />
                 </div>
 
-                <TypeField
+                <CardTypeField
                     id={`edit-card-type-${card.id}`}
                     value={type}
                     onType={setType}
                 />
 
-                <ColorField
+                <CardColorField
                     color={color}
                     onColor={setColor}
                     idPrefix={`edit-card-${card.id}`}
@@ -508,7 +344,7 @@ function DisplayRow({
 }) {
     const t = useTranslations("settings.cards");
     const tc = useTranslations("common.actions");
-    const typeLabel = useTypeLabel();
+    const typeLabel = useCardTypeLabel();
     const isCash = card.type === "cash";
     return (
         <div className="flex items-center gap-3 border-b py-2.5 last:border-b-0">
@@ -554,7 +390,7 @@ function DisplayRow({
  */
 function ArchivedRow({ card }: { card: CardSettingsItem }) {
     const t = useTranslations("settings.cards");
-    const typeLabel = useTypeLabel();
+    const typeLabel = useCardTypeLabel();
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
     const [pending, startTransition] = useTransition();

@@ -24,5 +24,7 @@
         "paidPartner": "Pagado a {partner}",
         "cash": "Efectivo"
     },
-    "notFromIncome": "No salió del ingreso de este mes"
+    "notFromIncome": "No salió del ingreso de este mes",
+    "appName": "Fast Expense",
+    "currency": "MXN"
 }

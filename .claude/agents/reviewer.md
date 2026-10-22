@@ -87,6 +87,8 @@ doesn't call out is **Important**, not a nit, at either viewport. A horizontal
 scroll, an unreachable control, or a placement the Plan block contradicts is
 **Critical**.
 
+Untranslated user-visible text, or a key missing from any `messages/<locale>/` file, is **Important** (a Warning).
+
 ## Slice type raises the bar
 
 Read the item's type first — the pattern is in

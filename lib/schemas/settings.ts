@@ -6,10 +6,16 @@ import { z } from "zod";
  * required. The share percentage arrives as a 1–100 integer from the form and is
  * converted to a fraction in the domain layer (`resolveSplitRule`).
  */
+export const PARTNER_NAME_MAX_LENGTH = 80;
+
 export const splitRuleInputSchema = z
     .object({
         sharesExpenses: z.boolean(),
-        partnerName: z.string().trim().max(80, "Name is too long").optional(),
+        partnerName: z
+            .string()
+            .trim()
+            .max(PARTNER_NAME_MAX_LENGTH, "Name is too long")
+            .optional(),
         // The share input only renders when sharing is on, so a Solo save sends
         // an empty string. Normalize blanks to `undefined` and enforce the 1–100
         // range only when a value is present; the superRefine below requires it

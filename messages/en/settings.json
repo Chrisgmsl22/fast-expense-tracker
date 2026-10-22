@@ -83,6 +83,7 @@
         "swatchesAria": "Color swatches",
         "customToggle": "Enter a custom color (HEX)",
         "hexAria": "HEX color",
+        "hexPlaceholder": "#RRGGBB",
         "swatches": {
             "Slate": "Slate",
             "Gold": "Gold",

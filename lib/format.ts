@@ -1,3 +1,5 @@
+import type { useTranslations } from "next-intl";
+
 import type { Locale } from "@/i18n/config";
 
 // Money is MXN, so it keeps the Mexican format in every locale.
@@ -82,4 +84,16 @@ const monthNameFormatter = dateFormatters({
 /** "2026-06" → "junio" / "June": the month alone, for labels beside a month picker. */
 export function formatMonthName(month: string, locale: Locale): string {
     return monthNameFormatter[locale].format(new Date(`${month}-01T12:00:00Z`));
+}
+
+export type BudgetTranslator = ReturnType<
+    typeof useTranslations<"settings.budget">
+>;
+
+/** The live line under a budget split's three inputs: the total and what is left or over. */
+export function formatBudgetTotal(total: number, t: BudgetTranslator): string {
+    if (total === 100) return t("totalExact");
+    return total < 100
+        ? t("totalUnder", { total, left: 100 - total })
+        : t("totalOver", { total, over: total - 100 });
 }

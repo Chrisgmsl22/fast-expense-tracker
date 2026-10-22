@@ -36,6 +36,24 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-10-17 — Mutation tests in a scratch copy must not go through pnpm
+
+- **Symptom:** a subagent copied the worktree to a scratch directory, symlinked `node_modules`, and ran `pnpm -C <copy> test`. pnpm tried to purge the modules directory instead of running the tests.
+- **Root cause:** `pnpm -C` runs pnpm's dependency check first. The copy does not match pnpm's install state, so pnpm wants to purge and reinstall, and the modules directory it would purge is the real worktree's, behind the symlink.
+- **Fix / decision:** call the worktree's vitest binary directly: `<worktree>/node_modules/.bin/vitest run --root <copy> <test file>`.
+- **Lesson for next time:** in a scratch copy with a symlinked `node_modules`, never run `pnpm -C <copy>`; run the tool binary from the worktree with `--root <copy>`.
+
+---
+
+### 2026-10-16 — Base UI dialogs set their first focus one frame after opening
+
+- **Symptom:** an onboarding-wizard test that checks focus on an invalid field failed most runs of the whole file and passed alone.
+- **Root cause:** Base UI's `FloatingFocusManager` applies `initialFocus` on the next animation frame. The test opened the dialog, typed and submitted inside that frame, so the late initial focus stole focus back to the heading. jsdom shares one frame timer across tests, so the outcome depended on earlier tests. No person can act within one frame, so users were not affected.
+- **Fix / decision:** the tests render through a helper that waits one microtask and one animation frame before interacting.
+- **Lesson for next time:** in any test of a Base UI dialog, wait one frame after it opens before you assert focus or interact.
+
+---
+
 ### 2026-10-02 — A pull that changes schema.prisma needs prisma generate
 
 - **Symptom:** After a pull that changed `schema.prisma`, the dev server threw `PrismaClientValidationError` on `Income.effectiveMonth`.

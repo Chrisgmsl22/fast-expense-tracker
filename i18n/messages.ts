@@ -10,6 +10,7 @@ import enIncome from "@/messages/en/income.json";
 import enMoney from "@/messages/en/money.json";
 import enMovements from "@/messages/en/movements.json";
 import enNav from "@/messages/en/nav.json";
+import enOnboarding from "@/messages/en/onboarding.json";
 import enSettings from "@/messages/en/settings.json";
 import enSettlement from "@/messages/en/settlement.json";
 import esAuth from "@/messages/es/auth.json";
@@ -22,6 +23,7 @@ import esIncome from "@/messages/es/income.json";
 import esMoney from "@/messages/es/money.json";
 import esMovements from "@/messages/es/movements.json";
 import esNav from "@/messages/es/nav.json";
+import esOnboarding from "@/messages/es/onboarding.json";
 import esSettings from "@/messages/es/settings.json";
 import esSettlement from "@/messages/es/settlement.json";
 
@@ -36,6 +38,7 @@ const en = {
     money: enMoney,
     movements: enMovements,
     nav: enNav,
+    onboarding: enOnboarding,
     settings: enSettings,
     settlement: enSettlement,
 };
@@ -56,6 +59,7 @@ export const MESSAGES: Record<Locale, Messages> = {
         money: esMoney,
         movements: esMovements,
         nav: esNav,
+        onboarding: esOnboarding,
         settings: esSettings,
         settlement: esSettlement,
     },

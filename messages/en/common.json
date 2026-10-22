@@ -24,5 +24,7 @@
         "paidPartner": "Paid {partner}",
         "cash": "Cash"
     },
-    "notFromIncome": "Not from this month's income"
+    "notFromIncome": "Not from this month's income",
+    "appName": "Fast Expense",
+    "currency": "MXN"
 }

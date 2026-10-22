@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 import { auth } from "@/auth";
-import { settingsRepository } from "@/lib/repositories";
+import {
+    budgetRuleRepository,
+    cardRepository,
+    categoryRepository,
+    incomeRepository,
+    settingsRepository,
+    userRepository,
+} from "@/lib/repositories";
+import { loadOnboarding } from "@/lib/onboarding/load-onboarding";
 import { resolvePartnerName } from "@/lib/domain/settings";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { getDashboardSummary } from "@/lib/services/dashboard/dashboard.service";
@@ -9,6 +17,7 @@ import { IdleSessionGuard } from "@/components/auth/IdleSessionGuard";
 import { AppNav } from "@/components/nav/AppNav";
 import { SidebarDateGuard } from "@/components/nav/SidebarDateGuard";
 import { buildSidebarModel } from "@/components/nav/sidebar-model";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 export default async function DashboardLayout({
     children,
@@ -20,10 +29,19 @@ export default async function DashboardLayout({
     if (!userId) return null;
     // One clock controls both the current-month query and its calendar progress.
     const now = new Date();
-    const [settings, settlement, summary] = await Promise.all([
+    const month = getCurrentMonthCdmx(now);
+    const [settings, settlement, summary, onboarding] = await Promise.all([
         settingsRepository.getSettings(userId),
         getSettlement(userId),
-        getDashboardSummary(userId, getCurrentMonthCdmx(now), { now }),
+        getDashboardSummary(userId, month, { now }),
+        loadOnboarding(userId, month, {
+            users: userRepository,
+            settings: settingsRepository,
+            income: incomeRepository,
+            budgetRules: budgetRuleRepository,
+            cards: cardRepository,
+            categories: categoryRepository,
+        }),
     ]);
     const model = buildSidebarModel(
         summary,
@@ -47,6 +65,7 @@ export default async function DashboardLayout({
                 />
                 <div className="min-w-0">{children}</div>
             </div>
+            {onboarding && <OnboardingWizard data={onboarding} />}
         </IdleSessionGuard>
     );
 }

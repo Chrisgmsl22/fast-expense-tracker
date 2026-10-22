@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
+import { createTranslator } from "next-intl";
+
+import type { Locale } from "@/i18n/config";
+import { MESSAGES } from "@/i18n/messages";
 
 import {
     formatBalance,
+    formatBudgetTotal,
     formatMxn,
     formatMxnCompactAbs,
     formatMxnWhole,
@@ -127,5 +132,31 @@ describe("formatMxnWhole", () => {
 
     it("rounds rather than truncating", () => {
         expect(formatMxnWhole(1234.6)).toMatch(/1,235/);
+    });
+});
+
+describe("formatBudgetTotal", () => {
+    const budgetT = (locale: Locale) =>
+        createTranslator({
+            locale,
+            messages: MESSAGES[locale],
+            namespace: "settings.budget",
+        });
+
+    it.each([
+        [100, "Total 100%"],
+        [90, "Total 90% · 10% left to assign"],
+        [0, "Total 0% · 100% left to assign"],
+        [115, "Total 115% · 15% over 100%"],
+    ])("formats a total of %i in English", (total, line) => {
+        expect(formatBudgetTotal(total, budgetT("en"))).toBe(line);
+    });
+
+    it.each([
+        [100, "Total 100%"],
+        [90, "Total 90% · falta asignar 10%"],
+        [115, "Total 115% · 15% por encima de 100%"],
+    ])("formats a total of %i in Spanish", (total, line) => {
+        expect(formatBudgetTotal(total, budgetT("es"))).toBe(line);
     });
 });

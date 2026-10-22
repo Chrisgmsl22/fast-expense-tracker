@@ -83,6 +83,7 @@ repo. Reference implementations: `components/expense/ExpenseForm.tsx`,
 
 ## Text and locale (i18n)
 
+- **Lint fails on lettered literals in `app/`/`components/` JSX text and text-like props** (`aria-label`, `placeholder`, `title`, `label`, `*Label`/`*Text`…), also through `?:`, `&&`, `+` or templates. The gate is for user-visible frontend text; logs, logic and server-only values stay English. Strings in variables, objects, toasts and actions are the reviewer's to catch.
 - **All user-visible text comes from `messages/<locale>/<namespace>.json`**, read
   with `useTranslations` (client, sync server) or `getTranslations` (async server,
   server actions). This covers labels, `aria-label`, `title`, placeholders, toasts

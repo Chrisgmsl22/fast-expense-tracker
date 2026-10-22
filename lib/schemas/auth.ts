@@ -24,16 +24,22 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 export const NAME_MAX_LENGTH = 50;
 
+const nameField = z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(
+        NAME_MAX_LENGTH,
+        `Name must be ${NAME_MAX_LENGTH} characters or fewer`,
+    );
+
+export const displayNameSchema = z.object({ name: nameField });
+
+export type DisplayNameInput = z.infer<typeof displayNameSchema>;
+
 export const signupSchema = z
     .object({
-        name: z
-            .string()
-            .trim()
-            .min(1, "Name is required")
-            .max(
-                NAME_MAX_LENGTH,
-                `Name must be ${NAME_MAX_LENGTH} characters or fewer`,
-            ),
+        name: nameField,
         email: emailField,
         password: z.string().superRefine((password, ctx) => {
             const problem = firstPasswordProblem(password);

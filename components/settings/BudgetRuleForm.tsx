@@ -21,7 +21,7 @@ import {
 import type { FieldErrors } from "@/lib/actions/result";
 import type { BucketKey } from "@/lib/domain/dashboard";
 import { DEFAULT_BUDGET_RULE, type BudgetRule } from "@/lib/domain/budget-rule";
-import { formatMonthLabel } from "@/lib/format";
+import { formatBudgetTotal, formatMonthLabel } from "@/lib/format";
 import type { BudgetRuleInput } from "@/lib/schemas/budget-rule";
 
 type Props = {
@@ -50,6 +50,7 @@ function toDraft(rule: BudgetRule): Draft {
 export function BudgetRuleForm({ rule, month }: Props) {
     const t = useTranslations("settings");
     const tc = useTranslations("common");
+    const tb = useTranslations("settings.budget");
     const locale = useLocale();
     const router = useRouter();
     const [draft, setDraft] = useState<Draft>(() => toDraft(rule));
@@ -129,13 +130,6 @@ export function BudgetRuleForm({ rule, month }: Props) {
 
     const monthLabel = formatMonthLabel(inForce.month, locale);
 
-    const totalLine =
-        total === 100
-            ? t("budget.totalExact")
-            : total < 100
-              ? t("budget.totalUnder", { total, left: 100 - total })
-              : t("budget.totalOver", { total, over: total - 100 });
-
     return (
         <form
             onSubmit={handleSubmit}
@@ -198,7 +192,7 @@ export function BudgetRuleForm({ rule, month }: Props) {
                 className={`mt-3 text-sm tabular-nums ${total === 100 ? "text-muted-foreground" : "text-destructive"}`}
                 aria-live="polite"
             >
-                {totalLine}
+                {formatBudgetTotal(total, tb)}
             </p>
 
             {formError && (
