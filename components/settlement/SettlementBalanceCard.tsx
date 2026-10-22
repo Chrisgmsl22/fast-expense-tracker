@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import type { CoupleBalance } from "@/lib/domain/settlement";
 import { formatMxn } from "@/lib/format";
@@ -18,7 +19,8 @@ export function SettlementBalanceCard({
     carriedOver: { present: boolean; amount: number };
     partnerName: string;
 }) {
-    const tone = balanceTone(balance.direction, partnerName);
+    const t = useTranslations("settlement");
+    const tone = balanceTone(balance.direction, partnerName, t);
     const settled = balance.direction === "settled";
 
     return (
@@ -28,9 +30,11 @@ export function SettlementBalanceCard({
                     <span className="flex size-12 items-center justify-center rounded-full bg-positive-tint text-positive">
                         <Check className="size-6" />
                     </span>
-                    <p className="text-xl font-bold">All settled</p>
+                    <p className="text-xl font-bold">
+                        {t("balance.settledTitle")}
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                        Nobody owes anything.
+                        {t("balance.settledBody")}
                     </p>
                 </div>
             ) : (
@@ -52,8 +56,9 @@ export function SettlementBalanceCard({
                     </p>
                     {carriedOver.present && (
                         <p className="mt-1 text-xs text-muted-foreground">
-                            includes {formatMxn(carriedOver.amount)} from last
-                            month
+                            {t("balance.carriedOver", {
+                                amount: formatMxn(carriedOver.amount),
+                            })}
                         </p>
                     )}
                 </>
@@ -81,9 +86,10 @@ function BalanceBar({
     fillClass: string;
     partnerName: string;
 }) {
+    const t = useTranslations("settlement.balance");
     return (
         <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-            <span>you owe</span>
+            <span>{t("barYouOwe")}</span>
             <div className="relative h-2 flex-1 rounded-full bg-black/5 dark:bg-white/10">
                 {direction === "she_owes" && (
                     <span
@@ -100,7 +106,7 @@ function BalanceBar({
                     className="absolute top-1/2 left-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-border"
                 />
             </div>
-            <span>{`${partnerName.toLowerCase()} owes`}</span>
+            <span>{t("barPartnerOwes", { partner: partnerName })}</span>
         </div>
     );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { balanceTone } from "@/components/settlement/balance-display";
 import type { CoupleBalance } from "@/lib/domain/settlement";
@@ -20,7 +21,8 @@ export function SettlementChip({
     partnerName: string;
     variant?: "pill" | "band";
 }) {
-    const tone = balanceTone(balance.direction, partnerName);
+    const t = useTranslations("settlement");
+    const tone = balanceTone(balance.direction, partnerName, t);
     const settled = balance.direction === "settled";
 
     return (

@@ -1,7 +1,9 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { resolveSplitRule } from "@/lib/domain/settings";
 import { settingsRepository } from "@/lib/repositories";
@@ -10,6 +12,7 @@ import {
     splitRuleInputSchema,
     type SplitRuleInput,
 } from "@/lib/schemas/settings";
+import { splitRuleMessages } from "./schema-messages";
 
 /** Failure modes the caller can branch on. */
 export type SaveSplitRuleCode = "validation" | "unauthenticated" | "db_error";
@@ -30,13 +33,17 @@ export async function saveSplitRule(
     input: unknown,
     repo: SettingsRepository = settingsRepository,
 ): Promise<SaveSplitRuleResult> {
+    const t = await getTranslations("settings");
     const parsed = splitRuleInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Please fix the highlighted fields.",
-            fieldErrors: toFieldErrors<SplitRuleInput>(parsed.error),
+            message: t("errors.fixFields"),
+            fieldErrors: localizeFieldErrors(
+                toFieldErrors<SplitRuleInput>(parsed.error),
+                await splitRuleMessages(),
+            ),
         };
     }
 
@@ -46,7 +53,7 @@ export async function saveSplitRule(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -61,7 +68,7 @@ export async function saveSplitRule(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save your settings. Please try again.",
+            message: t("split.errors.dbError"),
         };
     }
 }

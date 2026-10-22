@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/app/_actions/settings/save-split-rule", () => ({
@@ -18,7 +19,7 @@ beforeEach(() => {
 
 describe("SplitRuleForm", () => {
     it("Solo mode: hides the partner + share fields until the toggle is on", () => {
-        render(
+        renderWithIntl(
             <SplitRuleForm
                 sharesExpenses={false}
                 partnerName={null}
@@ -30,7 +31,7 @@ describe("SplitRuleForm", () => {
     });
 
     it("reveals the partner + share fields when sharing is toggled on", () => {
-        render(
+        renderWithIntl(
             <SplitRuleForm
                 sharesExpenses={false}
                 partnerName={null}
@@ -45,7 +46,7 @@ describe("SplitRuleForm", () => {
     });
 
     it("Shared mode: prefills the toggle, partner name and share %", () => {
-        render(
+        renderWithIntl(
             <SplitRuleForm
                 sharesExpenses={true}
                 partnerName="Brenda"
@@ -61,7 +62,7 @@ describe("SplitRuleForm", () => {
     });
 
     it("saves the shared split rule via the action", async () => {
-        render(
+        renderWithIntl(
             <SplitRuleForm
                 sharesExpenses={true}
                 partnerName="Brenda"
@@ -83,7 +84,7 @@ describe("SplitRuleForm", () => {
     });
 
     it("the Save button itself becomes a disabled 'Saved' success state", async () => {
-        render(
+        renderWithIntl(
             <SplitRuleForm
                 sharesExpenses={true}
                 partnerName="Brenda"
@@ -112,7 +113,7 @@ describe("SplitRuleForm", () => {
                 partnerName: ["Add your partner's name to share expenses"],
             },
         });
-        render(
+        renderWithIntl(
             <SplitRuleForm
                 sharesExpenses={true}
                 partnerName=""
@@ -129,7 +130,7 @@ describe("SplitRuleForm", () => {
     });
 
     it("saves Solo mode with sharing off", async () => {
-        render(
+        renderWithIntl(
             <SplitRuleForm
                 sharesExpenses={true}
                 partnerName="Brenda"
@@ -147,5 +148,51 @@ describe("SplitRuleForm", () => {
                 expect.objectContaining({ sharesExpenses: false }),
             ),
         );
+    });
+});
+
+describe("SplitRuleForm in Spanish", () => {
+    it("Should render its labels, preview and button in Spanish", () => {
+        renderWithIntl(
+            <SplitRuleForm
+                sharesExpenses
+                partnerName="Brenda"
+                defaultSharePercentage={0.68}
+            />,
+            { locale: "es" },
+        );
+        expect(
+            screen.getByRole("form", { name: "Regla para dividir gastos" }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("checkbox", { name: "Comparto gastos" }),
+        ).toBeDefined();
+        expect(screen.getByLabelText("Nombre de tu pareja")).toBeDefined();
+        expect(screen.getByLabelText("Tu parte")).toBeDefined();
+        expect(screen.getByText("Tú 68%")).toBeDefined();
+        expect(screen.getByText("Pareja 32%")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Guardar cambios" }),
+        ).toBeDefined();
+    });
+
+    it("Should show the Spanish fallback when the action throws", async () => {
+        saveMock.mockRejectedValue(new Error("network"));
+        renderWithIntl(
+            <SplitRuleForm
+                sharesExpenses={false}
+                partnerName={null}
+                defaultSharePercentage={0.68}
+            />,
+            { locale: "es" },
+        );
+        fireEvent.click(
+            screen.getByRole("button", { name: "Guardar cambios" }),
+        );
+        expect(
+            await screen.findByText(
+                "Algo salió mal al guardar tu configuración.",
+            ),
+        ).toBeDefined();
     });
 });

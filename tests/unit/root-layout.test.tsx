@@ -12,15 +12,30 @@ vi.mock("@vercel/speed-insights/next", () => ({
     SpeedInsights: () => <div data-testid="speed-insights" />,
 }));
 
-import RootLayout from "@/app/layout";
+import RootLayout, { generateMetadata } from "@/app/layout";
+import { setServerLocale } from "@/tests/support/intl";
 
 describe("Root layout", () => {
-    it("Should mount Vercel Speed Insights", () => {
+    it("Should mount Vercel Speed Insights", async () => {
         const { getByTestId } = render(
-            <RootLayout>
-                <main>child</main>
-            </RootLayout>,
+            await RootLayout({ children: <main>child</main> }),
         );
         expect(getByTestId("speed-insights")).toBeDefined();
+    });
+
+    it.each(["es", "en"] as const)(
+        "Should set the html lang to the active locale (%s)",
+        async (locale) => {
+            setServerLocale(locale);
+            const html = await RootLayout({ children: <main>child</main> });
+            expect(html.props.lang).toBe(locale);
+        },
+    );
+
+    it("Should describe the app in the active locale", async () => {
+        setServerLocale("es");
+        expect((await generateMetadata()).description).toBe(
+            "Control de gastos personales en MXN, con gastos compartidos y revisión semanal.",
+        );
     });
 });

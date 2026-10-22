@@ -1,13 +1,16 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
-import { frozenExpenseRefusal } from "@/lib/domain/frozen-row";
 import { expenseRepository } from "@/lib/repositories";
 import type {
     ExpenseEditable,
     ExpenseRepository,
 } from "@/lib/repositories/expense.repository";
+
+import { frozenRefusalKey } from "./field-messages";
 
 /** `not_found` also covers "not yours". */
 export type GetExpenseForEditCode =
@@ -32,13 +35,14 @@ export async function getExpenseForEdit(
     id: string,
     repo: ExpenseRepository = expenseRepository,
 ): Promise<GetExpenseForEditResult> {
+    const t = await getTranslations("expenses");
     const session = await auth();
     const userId = session?.user?.id;
     if (!userId) {
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -48,12 +52,16 @@ export async function getExpenseForEdit(
             return {
                 ok: false,
                 code: "not_found",
-                message: "Couldn't load that expense. Please refresh.",
+                message: t("errors.loadNotFound"),
             };
         }
-        const refusal = frozenExpenseRefusal(expense, "edit");
+        const refusal = frozenRefusalKey(expense, "edit");
         if (refusal) {
-            return { ok: false, code: "cycle_closed", message: refusal };
+            return {
+                ok: false,
+                code: "cycle_closed",
+                message: t(`errors.frozen.${refusal}`),
+            };
         }
         return { ok: true, data: expense };
     } catch (e) {
@@ -61,7 +69,7 @@ export async function getExpenseForEdit(
         return {
             ok: false,
             code: "db_error",
-            message: "Couldn't load that expense. Please try again.",
+            message: t("errors.loadFailed"),
         };
     }
 }

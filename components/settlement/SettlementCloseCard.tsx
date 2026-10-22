@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { closeSettlementCycle } from "@/app/_actions/settlement/close-cycle";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ import {
  */
 export function SettlementCloseCard({ partnerName }: { partnerName: string }) {
     const router = useRouter();
+    const t = useTranslations("settlement.close");
+    const tc = useTranslations("common.actions");
     const [open, setOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pending, startTransition] = useTransition();
@@ -46,12 +49,10 @@ export function SettlementCloseCard({ partnerName }: { partnerName: string }) {
                 <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-positive" />
                 <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold">
-                        You and {partnerName} are square
+                        {t("square", { partner: partnerName })}
                     </p>
                     <p className="mt-0.5 text-sm text-muted-foreground">
-                        Close this settlement to file it away. The next one
-                        opens straight away, and anything you log from now on
-                        joins it.
+                        {t("body")}
                     </p>
                 </div>
                 <Button
@@ -62,7 +63,7 @@ export function SettlementCloseCard({ partnerName }: { partnerName: string }) {
                         setOpen(true);
                     }}
                 >
-                    Close settlement
+                    {t("button")}
                 </Button>
             </div>
 
@@ -75,13 +76,8 @@ export function SettlementCloseCard({ partnerName }: { partnerName: string }) {
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Close this settlement?</DialogTitle>
-                        <DialogDescription>
-                            Everything logged so far is filed under this
-                            settlement and stays there. A new settlement opens
-                            immediately — a late shared expense joins that one,
-                            not this one. Closed settlements cannot be reopened.
-                        </DialogDescription>
+                        <DialogTitle>{t("dialogTitle")}</DialogTitle>
+                        <DialogDescription>{t("dialogBody")}</DialogDescription>
                     </DialogHeader>
                     {error && (
                         <p className="text-sm text-destructive" role="alert">
@@ -95,14 +91,14 @@ export function SettlementCloseCard({ partnerName }: { partnerName: string }) {
                             onClick={() => setOpen(false)}
                             disabled={pending}
                         >
-                            Cancel
+                            {tc("cancel")}
                         </Button>
                         <Button
                             type="button"
                             onClick={confirmClose}
                             disabled={pending}
                         >
-                            {pending ? "Closing…" : "Close settlement"}
+                            {pending ? t("closing") : t("button")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

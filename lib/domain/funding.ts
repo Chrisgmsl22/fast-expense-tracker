@@ -67,15 +67,10 @@ export function isBudgetFunded(storedFundedFrom: string): boolean {
     return storedFundedFrom === BUDGET_FUNDING_SOURCE;
 }
 
-export const FUNDING_TOGGLE_LABEL = {
-    savings: "Paid with money I already had",
-    reimbursed: "Fully reimbursed",
-} as const;
-
-export const FUNDING_TOGGLE_HINT =
-    "Doesn't count toward this month's budget or the dashboard.";
-
-/** One phrasing, reused by every screen that names this money. */
+/**
+ * English labels for `summaryLines`, the line-up the summary tests pin. No screen
+ * renders them: screens read `common.notFromIncome` and the `money` messages.
+ */
 export const NON_INCOME_FUNDED_LABEL = "Not from this month's income";
 
 /** Short form, for the mobile totals bar. */
@@ -84,7 +79,6 @@ export const NON_INCOME_FUNDED_SHORT_LABEL = "Not from income";
 /** The two halves of `NON_INCOME_FUNDED_LABEL`, by which money paid. */
 export const FROM_SAVINGS_LABEL = "From savings";
 export const REIMBURSED_LABEL = "Reimbursed";
-export const REIMBURSED_NOTE = "paid back · net $0";
 
 /** Names a figure as a breakdown of the line above it, never money beside it. */
 export function ofWhichPaidToPartner(partnerName: string): string {
@@ -95,21 +89,6 @@ export function ofWhichPaidToPartner(partnerName: string): string {
 export function ofWhichPaidToPartnerShort(partnerName: string): string {
     return `of which to ${partnerName}`;
 }
-
-export const FUNDING_SOURCE_BADGE: Record<
-    Exclude<FundingSource, "income">,
-    string
-> = {
-    savings: "from savings",
-    reimbursed: "reimbursed",
-};
-
-/**
- * For a row the filter dropped whose stored value narrows to `income`. It says
- * only what is certainly true, rather than claiming "from savings" about a
- * value nobody recognises.
- */
-export const UNKNOWN_FUNDING_BADGE = "not from income";
 
 /**
  * The column is a plain String, so a read has to prove the value. An unknown

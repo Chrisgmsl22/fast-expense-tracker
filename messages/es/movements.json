@@ -1,0 +1,93 @@
+{
+    "display": {
+        "cardPayment": "Pago de tarjeta",
+        "partnerPaidYou": "{partner} te pagó",
+        "paidPartner": "Le pagaste a {partner}",
+        "transferYouPaid": "Transferencia — le pagaste a {partner}"
+    },
+    "debtLabel": {
+        "gf_fronted": "Le debo a {partner}",
+        "partner_debt": "{partner} me debe"
+    },
+    "form": {
+        "date": "Fecha",
+        "amount": "Monto (MXN)",
+        "note": "Nota",
+        "optional": "(opcional)",
+        "saving": "Guardando…",
+        "saveChanges": "Guardar cambios"
+    },
+    "debt": {
+        "formEditPartnerOwes": "Editar una deuda que {partner} te debe",
+        "formEditYouOwe": "Editar una deuda que le debes a {partner}",
+        "formLogPartnerOwes": "Registrar una deuda que {partner} te debe",
+        "formLogYouOwe": "Registrar una deuda que le debes a {partner}",
+        "blurbPartnerOwes": "Registra dinero que {partner} te debe. Escribe el monto completo de la deuda. Esto solo cuenta para Cuentas por pagar. No agrega gasto, ingreso ni pago.",
+        "blurbYouOwe": "Algo que {partner} pagó por ti y que le tienes que devolver. Escribe lo que TÚ debes, no lo que ella pagó. Esto solo cuenta para Cuentas por pagar: no toca tu presupuesto. El pago que hagas después es el gasto.",
+        "amountPartnerOwes": "Lo que {partner} te debe (MXN)",
+        "amountYouOwe": "Lo que le debes a {partner} (MXN)",
+        "helpPartnerOwes": "El monto completo de la deuda, sin dividir.",
+        "helpYouOwe": "Solo tu parte, no lo que pagó {partner}.",
+        "submit": "Registrar deuda",
+        "unexpected": "Algo salió mal al guardar la deuda."
+    },
+    "transfer": {
+        "formIn": "Registrar dinero recibido de {partner}",
+        "formOut": "Registrar dinero mandado a {partner}",
+        "blurbIn": "Dinero que {partner} te mandó: salda lo que te debe. No es un gasto.",
+        "blurbOut": "Dinero que le mandaste a {partner}: esto SÍ es tu gasto y cuenta en tu presupuesto dentro de {category}.",
+        "submitIn": "Registrar pago de {partner}",
+        "submitOut": "Registrar pago a {partner}",
+        "savingsToggle": "Lo pagué con dinero que ya tenía",
+        "savingsHint": "No cuenta para el presupuesto de este mes ni para tu gasto real. Aun así salda lo que le debes a {partner}.",
+        "unexpected": "Algo salió mal al guardar la transferencia."
+    },
+    "cardPayment": {
+        "formEdit": "Editar pago de tarjeta",
+        "formAdd": "Agregar pago de tarjeta",
+        "otherMonth": "Queda en {landing}. Estás viendo {viewing}, así que este saldo no va a cambiar.",
+        "payFull": "Pagar todo {amount}",
+        "card": "Tarjeta pagada",
+        "selectCard": "Elige una tarjeta…",
+        "balance": "Saldo de {card}",
+        "afterPayment": "después de este pago",
+        "cashNote": "Dinero que mandaste a la tarjeta. Tus cifras de gasto no cambian: los gastos ya se contaron cuando hiciste los cargos.",
+        "submit": "Agregar pago de tarjeta",
+        "unexpected": "Algo salió mal al guardar el pago de tarjeta."
+    },
+    "errors": {
+        "unauthenticated": "No has iniciado sesión",
+        "invalidDebt": "Deuda no válida",
+        "invalidTransfer": "Transferencia no válida",
+        "invalidCardPayment": "Pago de tarjeta no válido",
+        "missingId": "Falta el id del movimiento",
+        "debtNotFound": "No se encontró la deuda.",
+        "transferNotFound": "No se encontró la transferencia.",
+        "cardPaymentNotFound": "No se encontró el pago de tarjeta.",
+        "movementNotFound": "No se encontró el movimiento.",
+        "debtDirectionLocked": "La dirección de una deuda no puede cambiar. Elimínala y agrega una deuda nueva.",
+        "debtDbError": "No se pudo guardar la deuda. Inténtalo de nuevo.",
+        "transferDbError": "No se pudo guardar la transferencia. Inténtalo de nuevo.",
+        "cardPaymentDbError": "No se pudo guardar el pago de tarjeta. Inténtalo de nuevo.",
+        "deleteDbError": "No se pudo eliminar el movimiento. Inténtalo de nuevo.",
+        "loadNotFound": "No se pudo cargar ese movimiento. Recarga la página.",
+        "loadDbError": "No se pudo cargar ese movimiento. Inténtalo de nuevo."
+    },
+    "fieldErrors": {
+        "futureDate": "La fecha no puede ser posterior a hoy",
+        "amountPositive": "El monto debe ser mayor que 0",
+        "cardRequired": "Elige una tarjeta",
+        "cardNotFound": "No se encontró la tarjeta",
+        "savingsOutboundOnly": "Solo el dinero que tú mandas puede salir del ahorro",
+        "noteTooLong": "La nota debe tener {max} caracteres o menos",
+        "directionMismatch": "La dirección debe ser la de la deuda original.",
+        "invalid": "Valor no válido"
+    },
+    "frozen": {
+        "transferClosedEdit": "Esta transferencia cerró una cuenta y no se puede editar.",
+        "transferClosedDelete": "Esta transferencia cerró una cuenta y no se puede eliminar.",
+        "rowDelete": "Este registro forma parte de una cuenta que ya cerraste, así que no se puede eliminar.",
+        "debtEdit": "Esta deuda forma parte de una cuenta que ya cerraste, así que no se puede editar.",
+        "transferEdit": "Esta transferencia forma parte de una cuenta que ya cerraste, así que no se puede editar."
+    }
+}

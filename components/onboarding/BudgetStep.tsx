@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { useTranslations } from "next-intl";
 
 import { saveBudgetRule } from "@/app/_actions/settings/save-budget-rule";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ export function BudgetStep({
         submit,
     } = useStepSubmit<BudgetRuleInput>(FIELDS);
     const total = budgetDraftTotal(draft);
+    const tb = useTranslations("settings.budget");
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -169,7 +171,7 @@ export function BudgetStep({
                             : "text-destructive",
                     )}
                 >
-                    {formatBudgetTotal(total)}
+                    {formatBudgetTotal(total, tb)}
                 </p>
                 <FieldMessage message={formError} announce />
             </form>

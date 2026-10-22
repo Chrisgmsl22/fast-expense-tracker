@@ -1,5 +1,7 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
@@ -33,12 +35,13 @@ export async function restoreCard(
     input: unknown,
     repo: CardRepository = cardRepository,
 ): Promise<RestoreCardResult> {
+    const t = await getTranslations("settings");
     const parsed = cardIdInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Please pick a card to restore.",
+            message: t("cards.errors.pickToRestore"),
         };
     }
 
@@ -48,7 +51,7 @@ export async function restoreCard(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -60,7 +63,7 @@ export async function restoreCard(
             return {
                 ok: false,
                 code: "not_found",
-                message: "That archived card no longer exists.",
+                message: t("cards.errors.archivedNotFound"),
             };
         }
 
@@ -70,7 +73,9 @@ export async function restoreCard(
             return {
                 ok: false,
                 code: "limit_reached",
-                message: `You're at the ${MAX_ACTIVE_CARDS}-card limit — archive or delete an active card first.`,
+                message: t("cards.errors.restoreLimit", {
+                    max: MAX_ACTIVE_CARDS,
+                }),
             };
         }
 
@@ -79,7 +84,7 @@ export async function restoreCard(
             return {
                 ok: false,
                 code: "name_conflict",
-                message: `You already have an active card named "${card.name}" — rename or archive that one first.`,
+                message: t("cards.errors.nameConflict", { name: card.name }),
             };
         }
 
@@ -88,7 +93,7 @@ export async function restoreCard(
             return {
                 ok: false,
                 code: "not_found",
-                message: "That archived card no longer exists.",
+                message: t("cards.errors.archivedNotFound"),
             };
         }
         return { ok: true, data: { id, name: card.name } };
@@ -97,7 +102,7 @@ export async function restoreCard(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not restore the card. Please try again.",
+            message: t("cards.errors.restoreFailed"),
         };
     }
 }

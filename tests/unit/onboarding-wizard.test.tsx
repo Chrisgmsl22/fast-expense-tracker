@@ -10,7 +10,6 @@ import {
 import {
     act,
     fireEvent,
-    render,
     screen,
     waitFor,
     within,
@@ -63,6 +62,7 @@ import { saveSplitRule } from "@/app/_actions/settings/save-split-rule";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import type * as DialogModule from "@/components/ui/dialog";
 import type { OnboardingData } from "@/lib/onboarding/load-onboarding";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const nameMock = updateDisplayName as unknown as Mock;
 const completeMock = completeOnboarding as unknown as Mock;
@@ -117,7 +117,7 @@ async function renderWizard(
     }: { withPage?: boolean; mainTabIndex?: number } = {},
 ) {
     const wizard = <OnboardingWizard data={wizardData} />;
-    const view = render(
+    const view = renderWithIntl(
         withPage ? (
             <>
                 <main tabIndex={mainTabIndex}>
@@ -1467,7 +1467,7 @@ describe("Cards step", () => {
         await renderWizard();
         await goTo(6);
 
-        const group = screen.getByRole("group", { name: "Colour swatches" });
+        const group = screen.getByRole("group", { name: "Color swatches" });
         expect(group.className).toContain("grid-cols-5");
         expect(button("Slate").className).toContain("size-9");
     });

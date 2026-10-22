@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const { signupActionMock, replaceMock } = vi.hoisted(() => ({
     signupActionMock: vi.fn(),
@@ -77,7 +78,7 @@ function recordFocus(input: HTMLElement): FocusSnapshot[] {
 
 describe("SignupForm", () => {
     it("Should render the four fields with signup autocomplete hints", () => {
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         expect(screen.getByLabelText("Name").getAttribute("autocomplete")).toBe(
             "name",
@@ -96,7 +97,7 @@ describe("SignupForm", () => {
         ["Password", "password"],
         ["Confirm password", "confirm password"],
     ])("Should toggle the %s field without submitting", (label, subject) => {
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
         const input = screen.getByLabelText(label);
         fireEvent.change(input, { target: { value: entered.password } });
 
@@ -125,7 +126,7 @@ describe("SignupForm", () => {
             }
             return { ok: true, data: undefined };
         });
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
         fireEvent.click(screen.getByRole("button", { name: "Show password" }));
         fireEvent.click(
             screen.getByRole("button", { name: "Show confirm password" }),
@@ -139,7 +140,7 @@ describe("SignupForm", () => {
     });
 
     it("Should show the password checklist only once the user types", () => {
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
         const password = screen.getByLabelText("Password");
         expect(
             screen.queryByRole("list", { name: "Password requirements" }),
@@ -165,7 +166,7 @@ describe("SignupForm", () => {
     });
 
     it("Should leave the checklist out of the confirm field", () => {
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         fireEvent.change(screen.getByLabelText("Confirm password"), {
             target: { value: "abc" },
@@ -180,7 +181,7 @@ describe("SignupForm", () => {
         const lower = entered.password.toLowerCase();
         const weak = { ...entered, password: lower, confirmPassword: lower };
         signupActionMock.mockResolvedValue(validationFailure(weak));
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
         const password = screen.getByLabelText("Password");
 
         fillAndSubmit(weak);
@@ -198,7 +199,7 @@ describe("SignupForm", () => {
 
     it("Should submit every field and go to the dashboard on success", async () => {
         signupActionMock.mockResolvedValue({ ok: true, data: undefined });
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         fillAndSubmit();
 
@@ -216,7 +217,7 @@ describe("SignupForm", () => {
                 resolve = r;
             }),
         );
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         fillAndSubmit();
 
@@ -238,7 +239,7 @@ describe("SignupForm", () => {
                 confirmPassword: ["Passwords do not match"],
             },
         });
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         fillAndSubmit();
 
@@ -271,7 +272,7 @@ describe("SignupForm", () => {
             confirmPassword: "",
         };
         signupActionMock.mockResolvedValue(validationFailure(empty));
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
@@ -295,7 +296,7 @@ describe("SignupForm", () => {
         signupActionMock.mockResolvedValue(
             validationFailure({ ...entered, confirmPassword: "different-123" }),
         );
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
         const confirm = screen.getByLabelText("Confirm password");
 
         fillAndSubmit();
@@ -321,7 +322,7 @@ describe("SignupForm", () => {
                 email: ["Enter a valid email"],
             },
         });
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
         const email = screen.getByLabelText("Email");
         const focused = recordFocus(email);
 
@@ -341,7 +342,7 @@ describe("SignupForm", () => {
             message,
             fieldErrors: { email: [message] },
         });
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
         const email = screen.getByLabelText("Email");
         const focused = recordFocus(email);
 
@@ -358,7 +359,7 @@ describe("SignupForm", () => {
             message: "Check the highlighted fields.",
             fieldErrors: { email: ["Enter a valid email"] },
         });
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
         const email = screen.getByLabelText("Email");
         const focused = recordFocus(email);
 
@@ -382,7 +383,7 @@ describe("SignupForm", () => {
             code: "full",
             message: "Sign-ups are currently full.",
         });
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         fillAndSubmit();
 
@@ -396,7 +397,7 @@ describe("SignupForm", () => {
         ["error", "Something went wrong. Please try again."],
     ])("Should show the %s message at form level", async (code, message) => {
         signupActionMock.mockResolvedValue({ ok: false, code, message });
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         fillAndSubmit();
 
@@ -415,7 +416,7 @@ describe("SignupForm", () => {
             message,
             fieldErrors: { email: [message] },
         });
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         fillAndSubmit();
 
@@ -428,7 +429,7 @@ describe("SignupForm", () => {
 
     it("Should show a generic error when the action throws", async () => {
         signupActionMock.mockRejectedValue(new Error("network down"));
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         fillAndSubmit();
 
@@ -450,7 +451,7 @@ describe("SignupForm", () => {
                 resolve = r;
             }),
         );
-        render(<SignupForm />);
+        renderWithIntl(<SignupForm />);
 
         fillAndSubmit();
         await screen.findByRole("alert");
@@ -460,5 +461,38 @@ describe("SignupForm", () => {
         await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
         resolve({ ok: true, data: undefined });
         await waitFor(() => expect(replaceMock).toHaveBeenCalled());
+    });
+});
+
+describe("SignupForm in Spanish", () => {
+    it("Should render its labels, toggles and button in Spanish", () => {
+        renderWithIntl(<SignupForm />, { locale: "es" });
+        expect(
+            screen.getByRole("form", { name: "Crear cuenta" }),
+        ).toBeDefined();
+        expect(screen.getByLabelText("Nombre")).toBeDefined();
+        expect(screen.getByLabelText("Correo")).toBeDefined();
+        expect(screen.getByLabelText("Contraseña")).toBeDefined();
+        expect(screen.getByLabelText("Confirmar contraseña")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Mostrar contraseña" }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", {
+                name: "Mostrar confirmación de contraseña",
+            }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Crear cuenta" }),
+        ).toBeDefined();
+    });
+
+    it("Should show the Spanish fallback when the action throws", async () => {
+        signupActionMock.mockRejectedValue(new Error("network"));
+        renderWithIntl(<SignupForm />, { locale: "es" });
+        fireEvent.click(screen.getByRole("button", { name: "Crear cuenta" }));
+        expect(
+            await screen.findByText("Algo salió mal. Inténtalo de nuevo."),
+        ).toBeDefined();
     });
 });

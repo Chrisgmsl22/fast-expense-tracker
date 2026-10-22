@@ -3,6 +3,7 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, Lock, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { addCard } from "@/app/_actions/card/add";
 import { archiveCard } from "@/app/_actions/card/archive";
@@ -15,7 +16,7 @@ import type { CardSettingsItem } from "@/lib/repositories/card.repository";
 import type { AddCardInput, UpdateCardInput } from "@/lib/schemas/card";
 import {
     DEFAULT_CARD_COLOR,
-    typeLabel,
+    useCardTypeLabel,
     type AddCardType,
 } from "@/components/cards/card-type-options";
 import { CardColorField } from "@/components/cards/CardColorField";
@@ -43,6 +44,8 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 
 /** The revealed "Add card" form: name + type + colour. */
 function AddCardForm({ onDone }: { onDone: () => void }) {
+    const t = useTranslations("settings.cards");
+    const tc = useTranslations("common.actions");
     const router = useRouter();
     const [name, setName] = useState("");
     const [type, setType] = useState<AddCardType>("credit");
@@ -64,7 +67,7 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
                     setFormError(res.message);
                 }
             } catch {
-                setFormError("Something went wrong adding the card.");
+                setFormError(t("unexpected.add"));
             }
         });
     }
@@ -72,20 +75,20 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
     return (
         <form
             onSubmit={handleSubmit}
-            aria-label="Add card"
+            aria-label={t("add")}
             className="space-y-4 rounded-lg border bg-muted/30 p-4"
         >
             <p className="text-xs text-muted-foreground">
-                Up to {MAX_ACTIVE_CARDS} cards.
+                {t("limitHint", { max: MAX_ACTIVE_CARDS })}
             </p>
 
             <div>
-                <Label htmlFor="add-card-name">Card name</Label>
+                <Label htmlFor="add-card-name">{t("name")}</Label>
                 <Input
                     id="add-card-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Amex Gold"
+                    placeholder={t("namePlaceholder")}
                     aria-invalid={Boolean(errors.name)}
                     aria-describedby={
                         errors.name ? "add-card-name-error" : undefined
@@ -104,6 +107,7 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
                 color={color}
                 onColor={setColor}
                 idPrefix="add-card"
+                error={errors.color?.[0]}
             />
 
             {formError && (
@@ -114,10 +118,10 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
 
             <div className="flex items-center justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={onDone}>
-                    Cancel
+                    {tc("cancel")}
                 </Button>
                 <Button type="submit" disabled={pending}>
-                    {pending ? "Adding…" : "Add card"}
+                    {pending ? t("adding") : t("add")}
                 </Button>
             </div>
         </form>
@@ -136,6 +140,8 @@ function EditCardRow({
     card: CardSettingsItem;
     onDone: () => void;
 }) {
+    const t = useTranslations("settings");
+    const tc = useTranslations("common.actions");
     const router = useRouter();
     const [name, setName] = useState(card.name);
     // Cash is never editable, so the current type is always credit/debit here.
@@ -166,7 +172,7 @@ function EditCardRow({
                     setFormError(res.message);
                 }
             } catch {
-                setFormError("Something went wrong saving the card.");
+                setFormError(t("cards.unexpected.save"));
             }
         });
     }
@@ -182,7 +188,7 @@ function EditCardRow({
                     setFormError(res.message);
                 }
             } catch {
-                setFormError("Something went wrong archiving the card.");
+                setFormError(t("cards.unexpected.archive"));
             }
         });
     }
@@ -200,7 +206,7 @@ function EditCardRow({
                 }
             } catch {
                 setConfirmingDelete(false);
-                setFormError("Something went wrong deleting the card.");
+                setFormError(t("cards.unexpected.delete"));
             }
         });
     }
@@ -209,12 +215,12 @@ function EditCardRow({
         <>
             <form
                 onSubmit={handleSave}
-                aria-label={`Edit ${card.name}`}
+                aria-label={t("cards.editAria", { name: card.name })}
                 className="space-y-4 border-b py-4 last:border-b-0"
             >
                 <div>
                     <Label htmlFor={`edit-card-name-${card.id}`}>
-                        Card name
+                        {t("cards.name")}
                     </Label>
                     <Input
                         id={`edit-card-name-${card.id}`}
@@ -244,6 +250,7 @@ function EditCardRow({
                     color={color}
                     onColor={setColor}
                     idPrefix={`edit-card-${card.id}`}
+                    error={errors.color?.[0]}
                 />
 
                 {formError && (
@@ -266,21 +273,23 @@ function EditCardRow({
                         {card.inUse ? (
                             <>
                                 <Archive className="size-3.5" aria-hidden />
-                                Archive
+                                {t("cards.archive")}
                             </>
                         ) : (
                             <>
                                 <Trash2 className="size-3.5" aria-hidden />
-                                Delete
+                                {tc("delete")}
                             </>
                         )}
                     </Button>
                     <div className="flex items-center gap-2">
                         <Button type="button" variant="ghost" onClick={onDone}>
-                            Cancel
+                            {tc("cancel")}
                         </Button>
                         <Button type="submit" disabled={pending}>
-                            {pending ? "Saving…" : "Save changes"}
+                            {pending
+                                ? t("saveButton.saving")
+                                : t("saveButton.save")}
                         </Button>
                     </div>
                 </div>
@@ -294,9 +303,11 @@ function EditCardRow({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete {card.name}?</DialogTitle>
+                        <DialogTitle>
+                            {t("cards.deleteTitle", { name: card.name })}
+                        </DialogTitle>
                         <DialogDescription>
-                            This can&apos;t be undone.
+                            {t("cards.deleteDescription")}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -306,7 +317,7 @@ function EditCardRow({
                             onClick={() => setConfirmingDelete(false)}
                             disabled={pending}
                         >
-                            Cancel
+                            {tc("cancel")}
                         </Button>
                         <Button
                             type="button"
@@ -314,7 +325,7 @@ function EditCardRow({
                             onClick={confirmDelete}
                             disabled={pending}
                         >
-                            {pending ? "Deleting…" : "Delete"}
+                            {pending ? t("cards.deleting") : tc("delete")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -331,6 +342,9 @@ function DisplayRow({
     card: CardSettingsItem;
     onEdit: () => void;
 }) {
+    const t = useTranslations("settings.cards");
+    const tc = useTranslations("common.actions");
+    const typeLabel = useCardTypeLabel();
     const isCash = card.type === "cash";
     return (
         <div className="flex items-center gap-3 border-b py-2.5 last:border-b-0">
@@ -350,7 +364,7 @@ function DisplayRow({
                         style={{ color: card.color }}
                     >
                         <Lock className="size-3" aria-hidden />
-                        locked
+                        {t("locked")}
                     </span>
                 ) : (
                     <Button
@@ -358,10 +372,10 @@ function DisplayRow({
                         variant="ghost"
                         size="sm"
                         onClick={onEdit}
-                        aria-label={`Edit ${card.name}`}
+                        aria-label={t("editAria", { name: card.name })}
                     >
                         <Pencil className="size-3.5" aria-hidden />
-                        Edit
+                        {tc("edit")}
                     </Button>
                 )}
             </div>
@@ -375,6 +389,8 @@ function DisplayRow({
  * surfaced inline on the row so the user knows to rename/archive the other one.
  */
 function ArchivedRow({ card }: { card: CardSettingsItem }) {
+    const t = useTranslations("settings.cards");
+    const typeLabel = useCardTypeLabel();
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
     const [pending, startTransition] = useTransition();
@@ -390,7 +406,7 @@ function ArchivedRow({ card }: { card: CardSettingsItem }) {
                     setError(res.message);
                 }
             } catch {
-                setError("Something went wrong restoring the card.");
+                setError(t("unexpected.restore"));
             }
         });
     }
@@ -416,10 +432,10 @@ function ArchivedRow({ card }: { card: CardSettingsItem }) {
                     className="ml-auto"
                     onClick={handleRestore}
                     disabled={pending}
-                    aria-label={`Restore ${card.name}`}
+                    aria-label={t("restoreAria", { name: card.name })}
                 >
                     <RotateCcw className="size-3.5" aria-hidden />
-                    {pending ? "Restoring…" : "Restore"}
+                    {pending ? t("restoring") : t("restore")}
                 </Button>
             </div>
             {error && (
@@ -440,6 +456,7 @@ function ArchivedRow({ card }: { card: CardSettingsItem }) {
  * capped at `MAX_ACTIVE_CARDS`; at the cap the Add button is disabled.
  */
 export function CardsForm({ cards }: { cards: CardSettingsItem[] }) {
+    const t = useTranslations("settings.cards");
     const [adding, setAdding] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -451,11 +468,11 @@ export function CardsForm({ cards }: { cards: CardSettingsItem[] }) {
     return (
         <section
             id="cards"
-            aria-label="Cards"
+            aria-label={t("title")}
             className="scroll-mt-20 rounded-xl border p-5"
         >
             <div className="flex items-center justify-between gap-3">
-                <h2 className="font-semibold">Cards</h2>
+                <h2 className="font-semibold">{t("title")}</h2>
                 <Button
                     type="button"
                     variant="ghost"
@@ -467,14 +484,13 @@ export function CardsForm({ cards }: { cards: CardSettingsItem[] }) {
                     }}
                 >
                     <Plus className="size-4" aria-hidden />
-                    Add card
+                    {t("add")}
                 </Button>
             </div>
 
             {atCap && !adding && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                    You&apos;ve reached the {MAX_ACTIVE_CARDS}-card limit.
-                    Archive one to add another.
+                    {t("atCap", { max: MAX_ACTIVE_CARDS })}
                 </p>
             )}
 
@@ -487,7 +503,7 @@ export function CardsForm({ cards }: { cards: CardSettingsItem[] }) {
             <div className="mt-4">
                 {active.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                        No cards yet — add your first one.
+                        {t("empty")}
                     </p>
                 ) : (
                     active.map((card) =>
@@ -514,7 +530,7 @@ export function CardsForm({ cards }: { cards: CardSettingsItem[] }) {
             {archived.length > 0 && (
                 <div className="mt-6 border-t pt-4">
                     <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                        Archived
+                        {t("archivedHeading")}
                     </h3>
                     <div className="mt-1">
                         {archived.map((card) => (

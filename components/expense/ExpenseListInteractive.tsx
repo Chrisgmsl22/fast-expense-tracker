@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { Lock, Pencil, Trash2 } from "lucide-react";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import { isExpenseFrozen, isMovementFrozen } from "@/lib/domain/frozen-row";
@@ -17,6 +18,7 @@ import { expenseCardLabel } from "@/lib/expense-display";
 import {
     movementDisplay,
     movementRowText,
+    paymentTitle,
 } from "@/components/movement/movement-display";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import { SummaryStrip } from "@/components/money/SummaryStrip";
@@ -50,6 +52,7 @@ import type {
     MovementListItem,
     MovementEditable,
 } from "@/lib/repositories/movement.repository";
+import { useCategoryName } from "@/i18n/category-name";
 
 type Props = {
     expenses: ExpenseListItem[];
@@ -103,18 +106,10 @@ const ROW_TITLE =
     "col-span-3 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap";
 const ROW_TITLE_TEXT = "min-w-0 break-words max-sm:basis-full sm:truncate";
 
-/** Same phrasing as `SettlementJournal`'s delete, so one action reads alike on both screens. */
-function movementDeleteMessage(
-    m: MovementListItem,
-    partnerName: string,
-): string {
-    const { title } = movementRowText(m, partnerName);
-    return `${title} (${formatMxn(m.amount)}) will be permanently removed.`;
-}
-
-function movementEditTitle(type: MovementType | undefined): string {
-    if (type === "card_payment") return "Edit card payment";
-    return "Edit transfer";
+function movementEditTitleKey(
+    type: MovementType | undefined,
+): "editCardPayment" | "editTransfer" {
+    return type === "card_payment" ? "editCardPayment" : "editTransfer";
 }
 
 /**
@@ -139,6 +134,11 @@ export function ExpenseListInteractive({
     incomeTotal,
 }: Props) {
     const router = useRouter();
+    const t = useTranslations("expenses.list");
+    const tActions = useTranslations("common.actions");
+    const tm = useTranslations("movements");
+    const locale = useLocale();
+    const categoryName = useCategoryName();
     const [editing, setEditing] = useState<ExpenseEditable | null>(null);
     const [editingMovement, setEditingMovement] =
         useState<MovementEditable | null>(null);
@@ -202,15 +202,23 @@ export function ExpenseListInteractive({
         setDeletingMovement(row);
     }
 
-    // Chips reflect only the categories present this month, in name order.
+    // Chips reflect only the categories present this month, in the order of the
+    // names as shown, so a translated list still reads alphabetically.
     const presentCategories = useMemo(() => {
         const byId = new Map<
             string,
             { id: string; name: string; color: string }
         >();
-        for (const e of expenses) byId.set(e.category.id, e.category);
-        return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
-    }, [expenses]);
+        for (const e of expenses) {
+            byId.set(e.category.id, {
+                ...e.category,
+                name: categoryName(e.category.name),
+            });
+        }
+        return [...byId.values()].sort((a, b) =>
+            a.name.localeCompare(b.name, locale),
+        );
+    }, [expenses, categoryName, locale]);
 
     // After a delete + refresh, the active category may no longer be present
     // (its last row is gone). Fall back to "All" so we never show an empty list
@@ -316,7 +324,7 @@ export function ExpenseListInteractive({
             <div
                 className="mb-4 flex flex-wrap gap-2"
                 role="group"
-                aria-label="Filter by category"
+                aria-label={t("filterLabel")}
             >
                 <button
                     type="button"
@@ -329,7 +337,7 @@ export function ExpenseListInteractive({
                             : "bg-muted text-muted-foreground hover:bg-muted/70")
                     }
                 >
-                    All
+                    {t("all")}
                 </button>
                 {presentCategories.map((c) => {
                     const active = effectiveActiveId === c.id;
@@ -365,12 +373,12 @@ export function ExpenseListInteractive({
             <div
                 className={`hidden border-b pb-2 text-xs font-medium text-muted-foreground sm:grid ${ROW_GRID} sm:items-center sm:gap-4`}
             >
-                <span>Date</span>
-                <span>Description</span>
-                <span>Category</span>
-                <span>Card</span>
-                <span className="text-right">Amount</span>
-                <span className="sr-only">Actions</span>
+                <span>{t("columns.date")}</span>
+                <span>{t("columns.description")}</span>
+                <span>{t("columns.category")}</span>
+                <span>{t("columns.card")}</span>
+                <span className="text-right">{t("columns.amount")}</span>
+                <span className="sr-only">{t("columns.actions")}</span>
             </div>
 
             {/* Rows — expenses + (in the All view) money movements, by date.
@@ -407,8 +415,8 @@ export function ExpenseListInteractive({
             {feed.length === 0 && (
                 <p className="py-8 text-center text-sm text-muted-foreground">
                     {expenses.length === 0 && movements.length === 0
-                        ? "Nothing logged for this month yet."
-                        : "No expenses in this category this month."}
+                        ? t("empty")
+                        : t("emptyCategory")}
                 </p>
             )}
 
@@ -416,7 +424,7 @@ export function ExpenseListInteractive({
                 visibleCount={feed.length}
                 categoryLabel={
                     presentCategories.find((c) => c.id === effectiveActiveId)
-                        ?.name ?? "All categories"
+                        ?.name ?? t("allCategories")
                 }
                 totals={totals}
                 monthLabel={monthLabel}
@@ -436,7 +444,7 @@ export function ExpenseListInteractive({
             >
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Edit expense</DialogTitle>
+                        <DialogTitle>{t("editExpense")}</DialogTitle>
                     </DialogHeader>
                     {editing && (
                         <ExpenseForm
@@ -466,7 +474,7 @@ export function ExpenseListInteractive({
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>
-                            {movementEditTitle(editingMovement?.type)}
+                            {t(movementEditTitleKey(editingMovement?.type))}
                         </DialogTitle>
                     </DialogHeader>
                     {/* No debt branch: a `gf_fronted` row never reaches this
@@ -528,10 +536,16 @@ export function ExpenseListInteractive({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete expense?</DialogTitle>
+                        <DialogTitle>{t("deleteExpenseTitle")}</DialogTitle>
                         <DialogDescription>
                             {deleting
-                                ? `"${deleting.description}" will be permanently removed.`
+                                ? t("deleteExpenseBody", {
+                                      description: paymentTitle(
+                                          deleting.description,
+                                          partnerName,
+                                          tm,
+                                      ),
+                                  })
                                 : ""}
                         </DialogDescription>
                     </DialogHeader>
@@ -552,7 +566,7 @@ export function ExpenseListInteractive({
                             onClick={closeDeleteDialogs}
                             disabled={pending}
                         >
-                            Cancel
+                            {tActions("cancel")}
                         </Button>
                         <Button
                             type="button"
@@ -560,7 +574,7 @@ export function ExpenseListInteractive({
                             onClick={confirmDelete}
                             disabled={pending || deleteFrozen}
                         >
-                            {pending ? "Deleting…" : "Delete"}
+                            {pending ? t("deleting") : tActions("delete")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -574,13 +588,21 @@ export function ExpenseListInteractive({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete this movement?</DialogTitle>
+                        <DialogTitle>{t("deleteMovementTitle")}</DialogTitle>
                         <DialogDescription>
+                            {/* Same phrasing as `SettlementJournal`'s delete, so one
+                                action reads alike on both screens. */}
                             {deletingMovement
-                                ? movementDeleteMessage(
-                                      deletingMovement,
-                                      partnerName,
-                                  )
+                                ? t("deleteMovementBody", {
+                                      title: movementRowText(
+                                          deletingMovement,
+                                          partnerName,
+                                          tm,
+                                      ).title,
+                                      amount: formatMxn(
+                                          deletingMovement.amount,
+                                      ),
+                                  })
                                 : ""}
                         </DialogDescription>
                     </DialogHeader>
@@ -601,7 +623,7 @@ export function ExpenseListInteractive({
                             onClick={closeDeleteDialogs}
                             disabled={pending}
                         >
-                            Cancel
+                            {tActions("cancel")}
                         </Button>
                         <Button
                             type="button"
@@ -609,7 +631,7 @@ export function ExpenseListInteractive({
                             onClick={confirmDeleteMovement}
                             disabled={pending || deleteFrozen}
                         >
-                            {pending ? "Deleting…" : "Delete"}
+                            {pending ? t("deleting") : tActions("delete")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -632,13 +654,19 @@ function ExpenseRow({
     onEdit: () => void;
     onDelete: () => void;
 }) {
+    const t = useTranslations("expenses.list");
+    const tCard = useTranslations("common.cardLabel");
+    const tm = useTranslations("movements");
+    const locale = useLocale();
+    const categoryName = useCategoryName();
+    const title = paymentTitle(expense.description, partnerName, tm);
     // Savings is a transfer — no card (never "Cash").
     const isSavings = expense.category.slug === SAVINGS_SLUG;
     // A payment has no card; the shared helper says so instead of "Cash" (BUG-1).
-    const { name: cardName, color: cardColor } = expenseCardLabel(
-        expense,
-        partnerName,
-    );
+    const { name: cardName, color: cardColor } = expenseCardLabel(expense, {
+        paidPartner: tCard("paidPartner", { partner: partnerName }),
+        cash: tCard("cash"),
+    });
     // A row a closed cycle counted is frozen server-side, so it shows no controls.
     // The predicate is the settlement's own: a solo expense of the same age stays editable.
     const frozen = isExpenseFrozen(expense);
@@ -665,7 +693,7 @@ function ExpenseRow({
 
             {/* Date — desktop only */}
             <span className="hidden whitespace-nowrap text-sm text-muted-foreground sm:block">
-                {formatExpenseDate(expense.date)}
+                {formatExpenseDate(expense.date, locale)}
             </span>
 
             {/* Description (+ mobile date · card subline). On mobile the wrapper
@@ -676,19 +704,19 @@ function ExpenseRow({
                     <span
                         className={`${ROW_TITLE_TEXT} font-medium sm:font-normal`}
                     >
-                        {expense.description}
+                        {title}
                     </span>
                     <RowFundingBadge row={expense} />
                 </span>
                 <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground sm:hidden">
                     {isSavings ? (
                         <span className="whitespace-nowrap">
-                            {formatExpenseDate(expense.date)}
+                            {formatExpenseDate(expense.date, locale)}
                         </span>
                     ) : (
                         <>
                             <span className="whitespace-nowrap">
-                                {formatExpenseDate(expense.date)} ·
+                                {formatExpenseDate(expense.date, locale)} ·
                             </span>
                             <Dot color={cardColor} />
                             <span className="min-w-0 truncate">{cardName}</span>
@@ -700,7 +728,7 @@ function ExpenseRow({
             {/* Category pill — desktop only (mobile uses the left border) */}
             <span className="hidden sm:block">
                 <CategoryPill
-                    name={expense.category.name}
+                    name={categoryName(expense.category.name)}
                     color={expense.category.color}
                 />
             </span>
@@ -726,15 +754,17 @@ function ExpenseRow({
                 </span>
                 {isSavings ? (
                     <span className="block text-xs text-positive">
-                        set aside
+                        {t("setAside")}
                     </span>
                 ) : expense.isShared ? (
                     <span className="block text-xs text-positive">
-                        {`my share ${formatMxn(expense.actualExpenditure)}`}
+                        {t("myShare", {
+                            amount: formatMxn(expense.actualExpenditure),
+                        })}
                     </span>
                 ) : (
                     <span className="block text-xs text-muted-foreground">
-                        not shared
+                        {t("notShared")}
                     </span>
                 )}
             </span>
@@ -742,16 +772,14 @@ function ExpenseRow({
             {/* Actions — revealed on hover/focus (desktop), always shown on
                 mobile. A frozen row shows why it has none instead. */}
             {frozen ? (
-                <LockedRowActions
-                    reason={`${expense.description} is locked: it counts in a settlement you already closed`}
-                />
+                <LockedRowActions reason={t("locked", { name: title })} />
             ) : (
                 <span className="flex justify-end gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                     <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Edit ${expense.description}`}
+                        aria-label={t("editRow", { name: title })}
                         onClick={onEdit}
                         disabled={pending}
                     >
@@ -761,7 +789,7 @@ function ExpenseRow({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Delete ${expense.description}`}
+                        aria-label={t("deleteRow", { name: title })}
                         onClick={onDelete}
                         disabled={pending}
                     >
@@ -818,13 +846,13 @@ function MovementRow({
     onEdit: () => void;
     onDelete: () => void;
 }) {
-    const { amountClass: amountColor, rowTint } = movementDisplay(
-        m.type,
-        partnerName,
-    );
+    const t = useTranslations("expenses.list");
+    const tm = useTranslations("movements");
+    const locale = useLocale();
+    const { amountClass: amountColor, rowTint } = movementDisplay(m.type);
     // `title` names the row's own thing (a debt's note), so two debts don't get
     // one shared accessible name on their edit/delete controls.
-    const { title, subline } = movementRowText(m, partnerName);
+    const { title, subline } = movementRowText(m, partnerName, tm);
     // A movement a CLOSED cycle counted is frozen server-side, so it shows no
     // controls. `closedAt` marks one transfer per cycle and cannot be the predicate.
     const frozen = isMovementFrozen(m);
@@ -841,7 +869,7 @@ function MovementRow({
                     <RowFundingBadge row={m} />
                 </span>
                 <span className="block min-w-0 truncate text-xs text-muted-foreground sm:mt-0.5">
-                    {formatExpenseDate(m.date)}
+                    {formatExpenseDate(m.date, locale)}
                     {subline ? ` · ${subline}` : ""}
                 </span>
             </span>
@@ -854,8 +882,8 @@ function MovementRow({
                 <LockedRowActions
                     reason={
                         m.closedAt
-                            ? `${title} is locked: it closed a settlement you already filed`
-                            : `${title} is locked: it counts in a settlement you already closed`
+                            ? t("lockedClosedTransfer", { name: title })
+                            : t("locked", { name: title })
                     }
                 />
             ) : (
@@ -864,7 +892,7 @@ function MovementRow({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Edit ${title}`}
+                        aria-label={t("editRow", { name: title })}
                         onClick={onEdit}
                         disabled={pending}
                     >
@@ -874,7 +902,7 @@ function MovementRow({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Delete ${title}`}
+                        aria-label={t("deleteRow", { name: title })}
                         onClick={onDelete}
                         disabled={pending}
                     >

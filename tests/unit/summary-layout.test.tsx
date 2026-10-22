@@ -1,5 +1,8 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
+import { createTranslator } from "next-intl";
+import { renderWithIntl } from "@/tests/support/intl";
+import { MESSAGES } from "@/i18n/messages";
 import { SummaryRail } from "@/components/money/SummaryRail";
 import { SummaryStrip } from "@/components/money/SummaryStrip";
 import { summaryCost, summaryMetrics } from "@/components/money/summary-model";
@@ -8,6 +11,13 @@ import {
     type FeedTotalExpense,
 } from "@/lib/domain/movement";
 import { fundingRowsOf } from "@/tests/support/funding-rows";
+import { computeCoupleBalance } from "@/lib/domain/settlement";
+
+const t = createTranslator({
+    locale: "en",
+    messages: MESSAGES.en,
+    namespace: "money",
+});
 
 const row: FeedTotalExpense = {
     id: "income",
@@ -93,7 +103,7 @@ describe("summary layout", () => {
             outsideIncomePercent: 50,
         });
         expect(totals.total).toBe(125);
-        const metrics = summaryMetrics(totals, "Avery", true);
+        const metrics = summaryMetrics(totals, "Avery", true, t);
         // Charged and "Outside income" still hold the refund at full value.
         expect(metrics.map((metric) => metric.amount)).toEqual([
             230, 120, 90, 80,
@@ -101,7 +111,7 @@ describe("summary layout", () => {
     });
 
     it("preserves historical partner shares in solo mode", () => {
-        expect(summaryMetrics(totals, "Avery", false)[3]).toEqual({
+        expect(summaryMetrics(totals, "Avery", false, t)[3]).toEqual({
             key: "partner",
             label: "Avery's share",
             amount: 80,
@@ -110,7 +120,7 @@ describe("summary layout", () => {
             { ...row, actualExpenditure: 100 },
             rows[3]!,
         ]);
-        expect(summaryMetrics(solo, "Avery", false)[3]).toEqual({
+        expect(summaryMetrics(solo, "Avery", false, t)[3]).toEqual({
             key: "set-aside",
             label: "Set aside",
             amount: 50,
@@ -129,7 +139,7 @@ describe("summary layout", () => {
         ]);
         expect(summaryCost(withSavingsCategory).amount).toBe(170);
         expect(
-            summaryMetrics(withSavingsCategory, "Avery", true)[3]?.amount,
+            summaryMetrics(withSavingsCategory, "Avery", true, t)[3]?.amount,
         ).toBe(80);
     });
 
@@ -139,7 +149,7 @@ describe("summary layout", () => {
             incomePercent: 0,
             outsideIncomePercent: 0,
         });
-        render(
+        renderWithIntl(
             <SummaryRail
                 totals={computeFeedTotals([])}
                 {...sharedProps}
@@ -159,7 +169,7 @@ describe("summary layout", () => {
     });
 
     it("partitions the headline with its two legend rows", () => {
-        render(<SummaryRail totals={totals} {...sharedProps} />);
+        renderWithIntl(<SummaryRail totals={totals} {...sharedProps} />);
         const rail = within(screen.getByTestId("feed-totals"));
         const figure = (label: string) =>
             rail.getByText(label).nextElementSibling?.textContent;
@@ -182,21 +192,21 @@ describe("summary layout", () => {
                 countedInBudget: false,
             },
         ]);
-        render(<SummaryRail totals={savingsOnly} {...sharedProps} />);
+        renderWithIntl(<SummaryRail totals={savingsOnly} {...sharedProps} />);
         const rail = within(screen.getByTestId("feed-totals"));
         expect(rail.queryByText("From this month's income")).toBeNull();
         expect(rail.getByText("From savings")).toBeDefined();
     });
 
     it("shows what was kept in a green Saved pill", () => {
-        render(<SummaryRail totals={totals} {...sharedProps} />);
+        renderWithIntl(<SummaryRail totals={totals} {...sharedProps} />);
         const saved = screen.getByText("Saved").nextElementSibling!;
         expect(saved.textContent).toBe("$50.00");
         expect(saved.className).toContain("text-positive");
     });
 
     it("names both partner flows in words, with no net", () => {
-        render(<SummaryRail totals={totals} {...sharedProps} />);
+        renderWithIntl(<SummaryRail totals={totals} {...sharedProps} />);
         const rail = within(screen.getByTestId("feed-totals"));
         // 20 payment-expense + 15 legacy transfer out; 10 back from her.
         const sent = rail.getByRole("listitem", {
@@ -235,7 +245,7 @@ describe("summary layout", () => {
                 },
             ],
         );
-        render(
+        renderWithIntl(
             <>
                 <SummaryRail totals={totalsA} {...sharedProps} />
                 <SummaryRail totals={totalsB} {...sharedProps} />
@@ -259,7 +269,7 @@ describe("summary layout", () => {
         "draws the partner pill on a month with no partner cash only when sharing ($sharesExpenses)",
         ({ sharesExpenses, drawn }) => {
             const solo = computeFeedTotals([row]);
-            render(
+            renderWithIntl(
                 <SummaryRail
                     totals={solo}
                     {...sharedProps}
@@ -275,7 +285,7 @@ describe("summary layout", () => {
     );
 
     it("keeps a solo user's partner history in the pill", () => {
-        render(
+        renderWithIntl(
             <SummaryRail
                 totals={totals}
                 {...sharedProps}
@@ -302,7 +312,7 @@ describe("summary layout", () => {
                 },
             ],
         );
-        render(
+        renderWithIntl(
             <SummaryRail
                 totals={receivedOnly}
                 {...sharedProps}
@@ -315,7 +325,7 @@ describe("summary layout", () => {
     });
 
     it("opens the breakdown with the same income total", async () => {
-        render(
+        renderWithIntl(
             <SummaryRail totals={totals} {...sharedProps} incomeTotal={200} />,
         );
         expect(screen.queryByText("$75.00 left")).toBeNull();
@@ -340,7 +350,7 @@ describe("summary layout", () => {
                 disconnect = disconnect;
             },
         );
-        const { container, unmount } = render(
+        const { container, unmount } = renderWithIntl(
             <SummaryStrip
                 totals={totals}
                 {...sharedProps}
@@ -360,5 +370,61 @@ describe("summary layout", () => {
         );
         unmount();
         expect(disconnect).toHaveBeenCalledOnce();
+    });
+});
+
+describe("summary layout in Spanish", () => {
+    const es = { ...sharedProps, monthLabel: "junio de 2026" };
+
+    it("labels the rail in Spanish", () => {
+        renderWithIntl(<SummaryRail totals={totals} {...es} />, {
+            locale: "es",
+        });
+        const rail = within(screen.getByTestId("feed-totals"));
+        expect(
+            rail.getByRole("heading", {
+                name: "Lo que me costó junio de 2026",
+            }),
+        ).toBeDefined();
+        expect(rail.getByText("$230.00 cargado")).toBeDefined();
+        expect(rail.getByText("Del ingreso de este mes")).toBeDefined();
+        expect(rail.getByText("Del ahorro")).toBeDefined();
+        expect(
+            rail.getByRole("button", { name: "Desglose completo" }),
+        ).toBeDefined();
+    });
+
+    it("labels the strip and its reminder in Spanish", () => {
+        renderWithIntl(
+            <SummaryStrip
+                totals={totals}
+                {...es}
+                isCurrentMonth={false}
+                settlement={computeCoupleBalance({
+                    partnerShareOfYourExpenses: 700,
+                    yourDebtToPartner: 0,
+                    moneyPartnerPaidYou: 0,
+                    moneyYouPaidPartner: 0,
+                })}
+                visibleCount={1}
+                categoryLabel="Todas"
+            />,
+            { locale: "es" },
+        );
+        const footer = within(
+            screen.getByRole("region", {
+                name: "Totales de la actividad visible",
+            }),
+        );
+        expect(footer.getByText("1 registro")).toBeDefined();
+        expect(
+            footer.getByText("Los totales siguen los filtros"),
+        ).toBeDefined();
+        expect(footer.getByText("Mi costo")).toBeDefined();
+        expect(footer.getByText("Parte de Avery")).toBeDefined();
+        expect(footer.getByText("Avery te debe")).toBeDefined();
+        expect(
+            footer.getByText("La cuenta abierta, no junio de 2026."),
+        ).toBeDefined();
     });
 });

@@ -1,9 +1,10 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import type { ActionResult } from "@/lib/actions/result";
 import {
-    cardBalance,
     withRunningBalance,
     type CardHistoryLine,
 } from "@/lib/domain/card-balance";
@@ -22,7 +23,7 @@ export type GetCardHistoryCode =
     | "db_error";
 
 export type GetCardHistoryResult = ActionResult<
-    { opening: number; lines: CardHistoryLine[] },
+    { lines: CardHistoryLine[] },
     CardHistoryInput,
     GetCardHistoryCode
 >;
@@ -31,12 +32,13 @@ export async function getCardHistory(
     input: unknown,
     repo: CardRepository = cardRepository,
 ): Promise<GetCardHistoryResult> {
+    const t = await getTranslations("settings");
     const parsed = cardHistoryInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Please pick a card and a month.",
+            message: t("cards.errors.pickForHistory"),
         };
     }
 
@@ -46,34 +48,27 @@ export async function getCardHistory(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
     try {
         const { id, month } = parsed.data;
-        const history = await repo.getHistory(userId, id, month);
-        if (!history) {
+        const entries = await repo.getHistory(userId, id, month);
+        if (!entries) {
             return {
                 ok: false,
                 code: "not_found",
-                message: "That card no longer exists.",
+                message: t("cards.errors.notFound"),
             };
         }
-        const opening = cardBalance(history.before);
-        return {
-            ok: true,
-            data: {
-                opening,
-                lines: withRunningBalance(history.entries, opening),
-            },
-        };
+        return { ok: true, data: { lines: withRunningBalance(entries) } };
     } catch (e) {
         console.error("getCardHistory: db read failed", e);
         return {
             ok: false,
             code: "db_error",
-            message: "Could not load the card history. Please try again.",
+            message: t("cards.errors.historyFailed"),
         };
     }
 }

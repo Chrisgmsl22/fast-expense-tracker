@@ -1,4 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { createTranslator } from "next-intl";
+
+import type { Locale } from "@/i18n/config";
+import { MESSAGES } from "@/i18n/messages";
 
 import {
     formatBalance,
@@ -13,8 +17,13 @@ import {
 
 describe("formatMonthName", () => {
     it("names the month alone, without shifting it a day", () => {
-        expect(formatMonthName("2026-09")).toBe("September");
-        expect(formatMonthName("2027-01")).toBe("January");
+        expect(formatMonthName("2026-09", "en")).toBe("September");
+        expect(formatMonthName("2027-01", "en")).toBe("January");
+    });
+
+    it("names the month in Spanish when the locale is es", () => {
+        expect(formatMonthName("2026-09", "es")).toBe("septiembre");
+        expect(formatMonthName("2027-01", "es")).toBe("enero");
     });
 });
 
@@ -42,9 +51,8 @@ describe("formatMxnCompactAbs", () => {
     });
 
     it("keeps a sub-1,000 breakdown adding up to the balance above it", () => {
-        // opening 600 + charged 250.50 − paid 100 − redeemed 0 = 750.50.
-        expect([600, 250.5, 100, 0].map(formatMxnCompactAbs)).toEqual([
-            "$600.00",
+        // charged 250.50 − paid 100 − redeemed 0 = 150.50.
+        expect([250.5, 100, 0].map(formatMxnCompactAbs)).toEqual([
             "$250.50",
             "$100.00",
             "$0.00",
@@ -52,7 +60,7 @@ describe("formatMxnCompactAbs", () => {
 
         const shown = (n: number) =>
             Number(formatMxnCompactAbs(n).replace(/[$,]/g, ""));
-        expect(shown(600) + shown(250.5) - shown(100) - shown(0)).toBe(750.5);
+        expect(shown(250.5) - shown(100) - shown(0)).toBe(150.5);
     });
 
     it("drops the sign, as its name says", () => {
@@ -74,20 +82,45 @@ describe("formatMxn", () => {
 });
 
 describe("formatExpenseDate", () => {
-    it("renders the stored CDMX calendar day from its 06:00Z instant (no day shift)", () => {
-        const s = formatExpenseDate(new Date("2026-05-15T06:00:00Z"));
-        expect(s).toMatch(/15/);
-        expect(s).toMatch(/2026/);
-    });
+    it.each([
+        ["en", "May 15, 2026"],
+        ["es", "15 may 2026"],
+    ] as const)(
+        "renders the stored CDMX calendar day from its 06:00Z instant in %s (no day shift)",
+        (locale, text) => {
+            expect(
+                formatExpenseDate(new Date("2026-05-15T06:00:00Z"), locale),
+            ).toBe(text);
+        },
+    );
+
+    it.each([
+        ["en", "Sep 1, 2026"],
+        ["es", "1 sep 2026"],
+    ] as const)(
+        "keeps the first of the month on the first, without a zero pad, in %s",
+        (locale, text) => {
+            expect(
+                formatExpenseDate(new Date("2026-09-01T06:00:00Z"), locale),
+            ).toBe(text);
+        },
+    );
 });
 
 describe("formatMonthLabel", () => {
-    it("names the calendar month a `YYYY-MM` string stands for", () => {
-        expect(formatMonthLabel("2026-06")).toBe("June 2026");
-    });
+    it.each([
+        ["en", "June 2026"],
+        ["es", "junio de 2026"],
+    ] as const)(
+        "names the calendar month a `YYYY-MM` string stands for in %s",
+        (locale, text) => {
+            expect(formatMonthLabel("2026-06", locale)).toBe(text);
+        },
+    );
 
     it("does not shift January back into the previous year", () => {
-        expect(formatMonthLabel("2026-01")).toBe("January 2026");
+        expect(formatMonthLabel("2026-01", "en")).toBe("January 2026");
+        expect(formatMonthLabel("2026-01", "es")).toBe("enero de 2026");
     });
 });
 
@@ -103,12 +136,27 @@ describe("formatMxnWhole", () => {
 });
 
 describe("formatBudgetTotal", () => {
+    const budgetT = (locale: Locale) =>
+        createTranslator({
+            locale,
+            messages: MESSAGES[locale],
+            namespace: "settings.budget",
+        });
+
     it.each([
         [100, "Total 100%"],
         [90, "Total 90% · 10% left to assign"],
         [0, "Total 0% · 100% left to assign"],
         [115, "Total 115% · 15% over 100%"],
-    ])("formats a total of %i", (total, line) => {
-        expect(formatBudgetTotal(total)).toBe(line);
+    ])("formats a total of %i in English", (total, line) => {
+        expect(formatBudgetTotal(total, budgetT("en"))).toBe(line);
+    });
+
+    it.each([
+        [100, "Total 100%"],
+        [90, "Total 90% · falta asignar 10%"],
+        [115, "Total 115% · 15% por encima de 100%"],
+    ])("formats a total of %i in Spanish", (total, line) => {
+        expect(formatBudgetTotal(total, budgetT("es"))).toBe(line);
     });
 });

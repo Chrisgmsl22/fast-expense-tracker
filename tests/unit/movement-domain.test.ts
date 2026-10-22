@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { computeFeedTotals, partnerShareTotal } from "@/lib/domain/movement";
+import {
+    computeFeedTotals,
+    isPartnerReceivedAutoLabel,
+    partnerReceivedLabel,
+    partnerShareTotal,
+} from "@/lib/domain/movement";
 
 const shared = (amount: number, yourPct: number) => ({
     amount,
@@ -491,5 +496,26 @@ describe("computeFeedTotals", () => {
             partnerPaidYou: 0,
             total: 0,
         });
+    });
+});
+
+describe("isPartnerReceivedAutoLabel", () => {
+    it("recognizes the label a note-less received transfer stores", () => {
+        expect(isPartnerReceivedAutoLabel(partnerReceivedLabel("Avery"))).toBe(
+            true,
+        );
+    });
+
+    it("still recognizes a label written under an earlier partner name", () => {
+        expect(isPartnerReceivedAutoLabel("Transfer — Brenda paid you")).toBe(
+            true,
+        );
+    });
+
+    it("treats a typed note as the user's own text", () => {
+        expect(isPartnerReceivedAutoLabel("Rent back")).toBe(false);
+        expect(isPartnerReceivedAutoLabel("Transfer — for the rent")).toBe(
+            false,
+        );
     });
 });

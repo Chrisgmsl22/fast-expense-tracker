@@ -1,5 +1,7 @@
+import { useTranslations } from "next-intl";
+
+import { useCategoryName } from "@/i18n/category-name";
 import type { SubcategoryBar } from "@/lib/domain/category";
-import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
 import { formatMxn } from "@/lib/format";
 
 /**
@@ -17,6 +19,9 @@ export function SubcategoryBreakdown({
     /** My-share the funding filter kept out of these bars; 0 when none. */
     spentNotFromIncome: number;
 }) {
+    const t = useTranslations("category");
+    const tc = useTranslations("common");
+    const categoryName = useCategoryName();
     const withSpend = bars.filter((b) => b.spent > 0);
     const zero = bars.filter((b) => b.spent === 0);
     // Bars are sorted high→low, so the first is the max used for scaling.
@@ -29,11 +34,11 @@ export function SubcategoryBreakdown({
             <div className="mb-3">
                 <div className="flex items-baseline justify-between gap-3">
                     <h2 className="text-sm font-semibold">
-                        Spend by subcategory
+                        {t("breakdown.title")}
                     </h2>
                     {!filtered && (
                         <span className="hidden text-xs text-muted-foreground sm:inline">
-                            where the money actually went
+                            {t("breakdown.subtitle")}
                         </span>
                     )}
                 </div>
@@ -46,7 +51,7 @@ export function SubcategoryBreakdown({
                         data-testid="breakdown-scope"
                         className="mt-0.5 text-xs text-muted-foreground"
                     >
-                        {`Amounts and % below cover spend from this month's income only.`}
+                        {t("breakdown.scope")}
                     </p>
                 )}
             </div>
@@ -57,15 +62,19 @@ export function SubcategoryBreakdown({
                     className="py-6 text-center text-sm text-muted-foreground"
                 >
                     {spentNotFromIncome > 0
-                        ? `No spend from this month's income — see "${NON_INCOME_FUNDED_LABEL}" above.`
-                        : "No spend in this category this month."}
+                        ? t("breakdown.emptyFiltered", {
+                              label: tc("notFromIncome"),
+                          })
+                        : t("breakdown.empty")}
                 </p>
             ) : (
                 <ul className="space-y-3">
                     {withSpend.map((b) => (
                         <li key={b.id ?? "other"}>
                             <div className="flex items-baseline justify-between gap-3 text-sm">
-                                <span className="truncate">{b.name}</span>
+                                <span className="truncate">
+                                    {categoryName(b.name)}
+                                </span>
                                 <span className="whitespace-nowrap">
                                     <span className="font-semibold">
                                         {formatMxn(b.spent)}
@@ -97,12 +106,16 @@ export function SubcategoryBreakdown({
                 >
                     {filtered && (
                         <span className="basis-full">
-                            {`No spend from this month's income in:`}
+                            {t("breakdown.zeroFiltered")}
                         </span>
                     )}
                     {zero.map((b) => (
                         <span key={b.id ?? "other"}>
-                            {filtered ? b.name : `${b.name} — $0`}
+                            {filtered
+                                ? categoryName(b.name)
+                                : t("breakdown.zeroItem", {
+                                      name: categoryName(b.name),
+                                  })}
                         </span>
                     ))}
                 </p>

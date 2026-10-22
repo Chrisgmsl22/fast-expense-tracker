@@ -7,7 +7,8 @@ import {
     beforeEach,
     type Mock,
 } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 vi.mock("@/app/_actions/movement/add-card-payment", () => ({
     addCardPayment: vi.fn(),
@@ -38,7 +39,7 @@ beforeEach(() => {
 describe("CardPaymentForm", () => {
     it("adds a new card payment", async () => {
         const onSuccess = vi.fn();
-        render(<CardPaymentForm cards={cards} onSuccess={onSuccess} />);
+        renderWithIntl(<CardPaymentForm cards={cards} onSuccess={onSuccess} />);
 
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
@@ -56,7 +57,7 @@ describe("CardPaymentForm", () => {
 
     it("edits an existing card payment via updateCardPayment, prefilled", async () => {
         const onSuccess = vi.fn();
-        render(
+        renderWithIntl(
             <CardPaymentForm
                 cards={cards}
                 payment={{
@@ -96,7 +97,7 @@ describe("CardPaymentForm", () => {
     });
 
     it("starts on the default card and shows its balance before and after", () => {
-        render(
+        renderWithIntl(
             <CardPaymentForm
                 cards={cards}
                 defaultCardId="card2"
@@ -117,7 +118,7 @@ describe("CardPaymentForm", () => {
     });
 
     it("fills the balance with Pay full", () => {
-        render(
+        renderWithIntl(
             <CardPaymentForm
                 cards={cards}
                 defaultCardId="card2"
@@ -135,7 +136,7 @@ describe("CardPaymentForm", () => {
     });
 
     it.each([0, -20])("hides Pay full when the balance is %s", (balance) => {
-        render(
+        renderWithIntl(
             <CardPaymentForm
                 cards={cards}
                 defaultCardId="card2"
@@ -147,10 +148,33 @@ describe("CardPaymentForm", () => {
         expect(screen.getByText("BBVA balance")).toBeDefined();
     });
 
-    it("keeps the before → after line for a date in an earlier month, with no note", () => {
-        // The closing balance on screen opens with every earlier row, so a
-        // payment dated last month lowers it too.
-        render(
+    it("hides Pay full while the date lands in another month than the one viewed", () => {
+        renderWithIntl(
+            <CardPaymentForm
+                cards={cards}
+                defaultCardId="card2"
+                balances={{ card2: 2750 }}
+                viewingMonth="2026-09"
+            />,
+        );
+        const date = screen.getByLabelText("Date");
+        const payFull = () =>
+            screen.queryByRole("button", { name: "Pay full $2,750.00" });
+        expect(payFull()).not.toBeNull();
+
+        fireEvent.change(date, { target: { value: "2026-10-03" } });
+        expect(payFull()).toBeNull();
+        expect(screen.getByText(/Lands in October 2026/)).toBeDefined();
+
+        fireEvent.change(date, { target: { value: "2026-08-30" } });
+        expect(payFull()).toBeNull();
+
+        fireEvent.change(date, { target: { value: "2026-09-20" } });
+        expect(payFull()).not.toBeNull();
+    });
+
+    it("keeps the before → after line for a date in the viewed month, with no note", () => {
+        renderWithIntl(
             <CardPaymentForm
                 cards={cards}
                 defaultCardId="card2"
@@ -163,7 +187,7 @@ describe("CardPaymentForm", () => {
             target: { value: "600" },
         });
 
-        fireEvent.change(date, { target: { value: "2026-09-15" } });
+        fireEvent.change(date, { target: { value: "2026-10-01" } });
 
         const preview = screen.getByText("BBVA balance").parentElement!;
         expect(preview.textContent).toContain("$2,750.00");
@@ -172,8 +196,8 @@ describe("CardPaymentForm", () => {
         expect(date.getAttribute("aria-describedby")).toBeNull();
     });
 
-    it("withholds the before → after line for a date in a later month, and says why", () => {
-        render(
+    it("withholds the before → after line for a date in another month, and says why", () => {
+        renderWithIntl(
             <CardPaymentForm
                 cards={cards}
                 defaultCardId="card2"
@@ -194,13 +218,22 @@ describe("CardPaymentForm", () => {
         ).toBeDefined();
         expect(screen.queryByText("BBVA balance")).toBeNull();
 
+        // Each month is its own statement, so an earlier month misses it too.
         fireEvent.change(date, { target: { value: "2026-08-30" } });
+        expect(
+            screen.getByText(
+                "Lands in August 2026. You are viewing September 2026, so this balance will not change.",
+            ),
+        ).toBeDefined();
+        expect(screen.queryByText("BBVA balance")).toBeNull();
+
+        fireEvent.change(date, { target: { value: "2026-09-01" } });
         expect(screen.getByText("BBVA balance")).toBeDefined();
         expect(screen.queryByText(/Lands in/)).toBeNull();
     });
 
     it("describes the date field with the cue, and only while it is shown", () => {
-        render(
+        renderWithIntl(
             <CardPaymentForm
                 cards={cards}
                 defaultCardId="card2"
@@ -220,7 +253,7 @@ describe("CardPaymentForm", () => {
     });
 
     it("shows no balance line without balances", () => {
-        render(<CardPaymentForm cards={cards} defaultCardId="card2" />);
+        renderWithIntl(<CardPaymentForm cards={cards} defaultCardId="card2" />);
 
         expect(screen.queryByText(/balance/)).toBeNull();
         expect(screen.queryByRole("button", { name: /Pay full/ })).toBeNull();
@@ -234,7 +267,7 @@ describe("CardPaymentForm", () => {
             fieldErrors: { amount: ["Amount must be greater than 0"] },
         });
         const onSuccess = vi.fn();
-        render(
+        renderWithIntl(
             <CardPaymentForm
                 cards={cards}
                 payment={{
@@ -270,9 +303,42 @@ describe("CardPaymentForm date cap", () => {
     });
 
     it("caps the date input at today in CDMX", () => {
-        render(<CardPaymentForm cards={cards} />);
+        renderWithIntl(<CardPaymentForm cards={cards} />);
         expect(screen.getByLabelText("Date").getAttribute("max")).toBe(
             "2026-10-14",
         );
+    });
+});
+
+describe("CardPaymentForm in Spanish", () => {
+    it("labels the form in Spanish and names another month in Spanish", () => {
+        renderWithIntl(
+            <CardPaymentForm
+                cards={cards}
+                defaultCardId="card1"
+                balances={{ card1: 500 }}
+                viewingMonth="2026-09"
+            />,
+            { locale: "es" },
+        );
+        expect(
+            screen.getByRole("form", { name: "Agregar pago de tarjeta" }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("combobox", { name: "Tarjeta pagada" }),
+        ).toBeDefined();
+        expect(screen.getByText("Saldo de Amex")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: /^Pagar todo/ }),
+        ).toBeDefined();
+
+        fireEvent.change(screen.getByLabelText("Fecha"), {
+            target: { value: "2026-08-15" },
+        });
+        expect(
+            screen.getByText(
+                "Queda en agosto de 2026. Estás viendo septiembre de 2026, así que este saldo no va a cambiar.",
+            ),
+        ).toBeDefined();
     });
 });

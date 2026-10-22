@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
-import { NON_INCOME_FUNDED_LABEL } from "@/lib/domain/funding";
 import { formatMxn } from "@/lib/format";
 import { CategoryLimitEditor } from "@/components/category/CategoryLimitEditor";
 
@@ -56,6 +56,8 @@ export function CategoryStats({
     expenseCount: number;
     subcatWithSpend: number;
 }) {
+    const t = useTranslations("category");
+    const tc = useTranslations("common");
     const barWidth = hasLimit ? Math.min(100, pctOfLimit) : 0;
 
     const editor = (className?: string) => (
@@ -90,14 +92,19 @@ export function CategoryStats({
                 className="hidden sm:block"
             >
                 <div className="grid grid-cols-3 gap-3">
-                    <Stat label="Spent (my share)" value={formatMxn(spent)} />
                     <Stat
-                        label="Monthly limit"
-                        value={hasLimit ? formatMxn(limit!) : "No limit"}
+                        label={t("stats.spentMyShare")}
+                        value={formatMxn(spent)}
+                    />
+                    <Stat
+                        label={t("stats.monthlyLimit")}
+                        value={
+                            hasLimit ? formatMxn(limit!) : t("stats.noLimit")
+                        }
                         action={editor("-mt-1 -mr-1")}
                     />
                     <Stat
-                        label="Remaining"
+                        label={t("stats.remaining")}
                         value={
                             !hasLimit || remaining === null
                                 ? "—"
@@ -124,15 +131,18 @@ export function CategoryStats({
                     {hasLimit && (
                         <>
                             <span className={over ? "text-danger" : undefined}>
-                                {Math.round(pctOfLimit)}% of limit
+                                {t("stats.pctOfLimit", {
+                                    pct: Math.round(pctOfLimit),
+                                })}
                             </span>
                             {" · "}
                         </>
                     )}
-                    {daysLeft} days left · {expenseCount}{" "}
-                    {expenseCount === 1 ? "expense" : "expenses"} across{" "}
-                    {subcatWithSpend}{" "}
-                    {subcatWithSpend === 1 ? "subcategory" : "subcategories"}
+                    {t("stats.progress", {
+                        daysLeft,
+                        expenseCount,
+                        subcatCount: subcatWithSpend,
+                    })}
                 </p>
             </div>
 
@@ -145,18 +155,22 @@ export function CategoryStats({
                     {hasLimit && remaining !== null ? (
                         over ? (
                             <span className="text-danger">
-                                {formatMxn(-remaining)} over your{" "}
-                                {formatMxn(limit!)} limit
+                                {t("stats.overYourLimit", {
+                                    amount: formatMxn(-remaining),
+                                    limit: formatMxn(limit!),
+                                })}
                             </span>
                         ) : (
                             <span className="text-positive">
-                                {formatMxn(remaining)} left of your{" "}
-                                {formatMxn(limit!)} limit
+                                {t("stats.leftOfYourLimit", {
+                                    amount: formatMxn(remaining),
+                                    limit: formatMxn(limit!),
+                                })}
                             </span>
                         )
                     ) : (
                         <span className="text-muted-foreground">
-                            No limit set
+                            {t("stats.noLimitSet")}
                         </span>
                     )}
                     {editor("-my-1")}
@@ -169,7 +183,10 @@ export function CategoryStats({
                     data-testid="category-non-income"
                     className="mt-2 text-center text-xs text-muted-foreground sm:text-left"
                 >
-                    {`${NON_INCOME_FUNDED_LABEL}: ${formatMxn(spentNotFromIncome)} — in the list below, outside the budget.`}
+                    {t("stats.nonIncome", {
+                        label: tc("notFromIncome"),
+                        amount: formatMxn(spentNotFromIncome),
+                    })}
                 </p>
             )}
         </div>

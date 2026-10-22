@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition, type FormEvent } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +22,6 @@ import {
 } from "@/app/_actions/expense/update";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
 import {
-    FUNDING_TOGGLE_HINT,
-    FUNDING_TOGGLE_LABEL,
     allowsReimbursed,
     fundingSourceAfterCategoryChange,
     fundingSourceFromToggles,
@@ -34,6 +33,7 @@ import { formatMxn } from "@/lib/format";
 import type { FieldErrors } from "@/lib/actions/result";
 import type { ExpenseInput } from "@/lib/schemas/expense";
 import type { ExpenseEditable } from "@/lib/repositories/expense.repository";
+import { useCategoryName } from "@/i18n/category-name";
 
 export type CategoryOption = {
     id: string;
@@ -107,6 +107,11 @@ export function ExpenseForm({
     onSuccess,
     onCancel,
 }: Props) {
+    const t = useTranslations("expenses.form");
+    const tFunding = useTranslations("expenses.funding");
+    const tActions = useTranslations("common.actions");
+    const categoryName = useCategoryName();
+    const locale = useLocale();
     const isEdit = expense !== undefined;
     // A payment is never split and leaves a bank account, not a card. The server
     // clamps both; disabling the controls stops the form taking a click it drops.
@@ -131,12 +136,13 @@ export function ExpenseForm({
     const [fundedFrom, setFundedFrom] = useState<FundingSource>(
         storedReimbursedPayment ? "income" : (expense?.fundedFrom ?? "income"),
     );
-    // Set when a category change drops `reimbursed`, or a stored payment
-    // already carried it — either way the form says where the choice went
-    // instead of silently changing it.
+    // Set when a category change drops `reimbursed` (the stored category name), or
+    // a stored payment already carried it (empty: the payment notice names no
+    // category) — either way the form says where the choice went instead of
+    // silently changing it.
     const [reimbursedClearedBy, setReimbursedClearedBy] = useState<
         string | null
-    >(storedReimbursedPayment ? "a payment" : null);
+    >(storedReimbursedPayment ? "" : null);
     // An already-shared row keeps its stored split so historical splits stay
     // correct (CLAUDE.md domain note + immutable history, ADR-0021) — even in
     // Solo mode, editing a historical shared row must not rewrite its split.
@@ -155,6 +161,17 @@ export function ExpenseForm({
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<ExpenseInput>>({});
     const [formError, setFormError] = useState<string | null>(null);
+
+    const sortedCategories = useMemo(
+        () =>
+            [...categories].sort((a, b) =>
+                categoryName(a.name).localeCompare(
+                    categoryName(b.name),
+                    locale,
+                ),
+            ),
+        [categories, categoryName, locale],
+    );
 
     const availableSubcategories = useMemo(
         () => subcategories.filter((s) => s.categoryId === categoryId),
@@ -253,7 +270,7 @@ export function ExpenseForm({
                     setFormError(res.message);
                 }
             } catch {
-                setFormError("Something went wrong saving the expense.");
+                setFormError(t("saveError"));
             }
         });
     }
@@ -271,11 +288,11 @@ export function ExpenseForm({
         <form
             onSubmit={handleSubmit}
             className="flex flex-col gap-4"
-            aria-label={isEdit ? "Edit expense" : "Add expense"}
+            aria-label={isEdit ? t("editLabel") : t("addLabel")}
         >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                    <Label htmlFor="date">Date</Label>
+                    <Label htmlFor="date">{t("date")}</Label>
                     <Input
                         id="date"
                         name="date"
@@ -289,7 +306,7 @@ export function ExpenseForm({
                     {fieldError("date")}
                 </div>
                 <div className="sm:col-span-2">
-                    <Label htmlFor="amount">Amount (MXN)</Label>
+                    <Label htmlFor="amount">{t("amount")}</Label>
                     <div className="relative mt-1.5">
                         <span
                             aria-hidden
@@ -318,11 +335,11 @@ export function ExpenseForm({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                     <Label htmlFor="categoryId">
-                        Category
+                        {t("category")}
                         {isPartnerPayment ? (
                             <span className="font-normal text-muted-foreground">
                                 {" "}
-                                (fixed for a payment)
+                                {t("categoryFixed")}
                             </span>
                         ) : null}
                     </Label>
@@ -337,25 +354,27 @@ export function ExpenseForm({
                             id="categoryId"
                             aria-label={
                                 isPartnerPayment
-                                    ? "Category (fixed for a payment)"
-                                    : "Category"
+                                    ? t("categoryFixedLabel")
+                                    : t("category")
                             }
                             className="mt-1.5 w-full"
                         >
                             {selectedCategory ? (
                                 <Dotted color={selectedCategory.color}>
-                                    {selectedCategory.name}
+                                    {categoryName(selectedCategory.name)}
                                 </Dotted>
                             ) : (
                                 <span className="text-muted-foreground">
-                                    Select a category…
+                                    {t("categoryPlaceholder")}
                                 </span>
                             )}
                         </SelectTrigger>
                         <SelectContent>
-                            {categories.map((c) => (
+                            {sortedCategories.map((c) => (
                                 <SelectItem key={c.id} value={c.id}>
-                                    <Dotted color={c.color}>{c.name}</Dotted>
+                                    <Dotted color={c.color}>
+                                        {categoryName(c.name)}
+                                    </Dotted>
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -364,7 +383,7 @@ export function ExpenseForm({
                 </div>
 
                 <div>
-                    <Label htmlFor="subcategoryId">Subcategory</Label>
+                    <Label htmlFor="subcategoryId">{t("subcategory")}</Label>
                     <Select
                         value={subcategoryId}
                         onValueChange={(value) => setSubcategoryId(value ?? "")}
@@ -372,21 +391,23 @@ export function ExpenseForm({
                     >
                         <SelectTrigger
                             id="subcategoryId"
-                            aria-label="Subcategory"
+                            aria-label={t("subcategory")}
                             className="mt-1.5 w-full"
                         >
                             {selectedSubcategory ? (
-                                selectedSubcategory.name
+                                categoryName(selectedSubcategory.name)
                             ) : (
                                 <span className="text-muted-foreground">
-                                    {categoryId ? "None" : "Pick a category"}
+                                    {categoryId
+                                        ? t("subcategoryNone")
+                                        : t("subcategoryPickCategory")}
                                 </span>
                             )}
                         </SelectTrigger>
                         <SelectContent>
                             {availableSubcategories.map((s) => (
                                 <SelectItem key={s.id} value={s.id}>
-                                    {s.name}
+                                    {categoryName(s.name)}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -396,23 +417,25 @@ export function ExpenseForm({
                         select out of line with Category and Card. */}
                     {selectedCategory ? (
                         <p className="mt-1 truncate text-xs text-muted-foreground">
-                            from {selectedCategory.name}
+                            {t("subcategoryFrom", {
+                                category: categoryName(selectedCategory.name),
+                            })}
                         </p>
                     ) : null}
                 </div>
 
                 <div>
                     <Label htmlFor="cardId">
-                        Card
+                        {t("card")}
                         {isSavings ? (
                             <span className="font-normal text-muted-foreground">
                                 {" "}
-                                (not needed for savings)
+                                {t("cardNotForSavings")}
                             </span>
                         ) : isPartnerPayment ? (
                             <span className="font-normal text-muted-foreground">
                                 {" "}
-                                (a transfer, so no card)
+                                {t("cardNotForTransfer")}
                             </span>
                         ) : null}
                     </Label>
@@ -423,16 +446,16 @@ export function ExpenseForm({
                     >
                         <SelectTrigger
                             id="cardId"
-                            aria-label="Card"
+                            aria-label={t("card")}
                             className="mt-1.5 w-full"
                         >
                             {isSavings ? (
                                 <span className="text-muted-foreground">
-                                    Savings — no card
+                                    {t("cardSavings")}
                                 </span>
                             ) : isPartnerPayment ? (
                                 <span className="text-muted-foreground">
-                                    Covered by your partner — no card
+                                    {t("cardPartner")}
                                 </span>
                             ) : selectedCard ? (
                                 <Dotted color={selectedCard.color}>
@@ -440,7 +463,7 @@ export function ExpenseForm({
                                 </Dotted>
                             ) : (
                                 <span className="text-muted-foreground">
-                                    Select a card…
+                                    {t("cardPlaceholder")}
                                 </span>
                             )}
                         </SelectTrigger>
@@ -456,7 +479,7 @@ export function ExpenseForm({
             </div>
 
             <div>
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">{t("description")}</Label>
                 <Input
                     id="description"
                     name="description"
@@ -471,9 +494,9 @@ export function ExpenseForm({
 
             <div>
                 <Label htmlFor="notes">
-                    Notes{" "}
+                    {t("notes")}{" "}
                     <span className="font-normal text-muted-foreground">
-                        (optional)
+                        {t("optional")}
                     </span>
                 </Label>
                 <textarea
@@ -513,7 +536,7 @@ export function ExpenseForm({
                             id={SAVINGS_LABEL_ID}
                             className="text-sm font-medium"
                         >
-                            {FUNDING_TOGGLE_LABEL.savings}
+                            {tFunding("toggle.savings")}
                         </span>
                     </label>
                     {toggles.paidFromSavings ? (
@@ -521,7 +544,7 @@ export function ExpenseForm({
                             id={SAVINGS_HINT_ID}
                             className="pl-[1.625rem] text-sm text-muted-foreground"
                         >
-                            {FUNDING_TOGGLE_HINT}
+                            {tFunding("hint")}
                         </p>
                     ) : null}
                 </div>
@@ -550,7 +573,7 @@ export function ExpenseForm({
                                 id={REIMBURSED_LABEL_ID}
                                 className="text-sm font-medium"
                             >
-                                {FUNDING_TOGGLE_LABEL.reimbursed}
+                                {tFunding("toggle.reimbursed")}
                             </span>
                         </label>
                         {toggles.fullyReimbursed ? (
@@ -558,17 +581,22 @@ export function ExpenseForm({
                                 id={REIMBURSED_HINT_ID}
                                 className="pl-[1.625rem] text-sm text-muted-foreground"
                             >
-                                {FUNDING_TOGGLE_HINT}
+                                {tFunding("hint")}
                             </p>
                         ) : null}
                     </div>
                 ) : null}
 
-                {reimbursedClearedBy ? (
+                {reimbursedClearedBy !== null ? (
                     <p className="text-xs text-muted-foreground">
                         {isPartnerPayment
-                            ? `This payment was marked "${FUNDING_TOGGLE_LABEL.reimbursed}", which a payment can't be. Saving records it as paid from this month's income.`
-                            : `"${FUNDING_TOGGLE_LABEL.reimbursed}" isn't available for ${reimbursedClearedBy}, so it's unchecked.`}
+                            ? t("reimbursedOnPayment", {
+                                  label: tFunding("toggle.reimbursed"),
+                              })
+                            : t("reimbursedCleared", {
+                                  label: tFunding("toggle.reimbursed"),
+                                  category: categoryName(reimbursedClearedBy),
+                              })}
                     </p>
                 ) : null}
                 {fieldError("fundedFrom")}
@@ -582,7 +610,7 @@ export function ExpenseForm({
                         <Checkbox
                             checked={isPartnerPayment ? false : isShared}
                             onCheckedChange={(checked) => setIsShared(checked)}
-                            aria-label="Shared expense"
+                            aria-label={t("shared")}
                             disabled={isPartnerPayment}
                             className="mt-0.5 data-checked:border-positive data-checked:bg-positive"
                         />
@@ -590,16 +618,20 @@ export function ExpenseForm({
                             <span
                                 className={`block font-medium ${isPartnerPayment ? "text-muted-foreground" : ""}`}
                             >
-                                {`Shared expense · ${yourPct}/${partnerPct}`}
+                                {t("sharedSplit", {
+                                    mine: yourPct,
+                                    theirs: partnerPct,
+                                })}
                             </span>
                             {isPartnerPayment ? (
                                 <span className="block text-muted-foreground">
-                                    This amount is the payment you sent your
-                                    partner — there is nothing left to split.
+                                    {t("paymentNoSplit")}
                                 </span>
                             ) : isShared ? (
                                 <span className="block text-positive">
-                                    {`your share ${formatMxn(yourShare)}`}
+                                    {t("yourShare", {
+                                        amount: formatMxn(yourShare),
+                                    })}
                                 </span>
                             ) : null}
                         </span>
@@ -622,15 +654,15 @@ export function ExpenseForm({
                         onClick={onCancel}
                         disabled={pending}
                     >
-                        Cancel
+                        {tActions("cancel")}
                     </Button>
                 ) : null}
                 <Button type="submit" disabled={pending}>
                     {pending
-                        ? "Saving…"
+                        ? t("saving")
                         : isEdit
-                          ? "Save changes"
-                          : "Add expense"}
+                          ? t("saveChanges")
+                          : t("submit")}
                 </Button>
             </div>
         </form>

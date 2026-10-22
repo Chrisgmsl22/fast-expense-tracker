@@ -93,6 +93,18 @@
             "spec": null,
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "BUG-10",
+            "name": "card-balance-start",
+            "priority": 1,
+            "title": "Card balances count every charge ever logged, and a card with a legacy colour name cannot be edited",
+            "description": "Reported 2026-10-17. (1) Each month opened with an opening balance built from every earlier charge and payment, and no card payment was logged before October 2026, so every older charge counted as still owed. The NU drawer showed Opening 830 + Charged 1,300 − Paid 416 = 1,714; the owner expected 884. BBVA, just switched from debit to credit, showed about 60k against a real 5k to 6k. (2) Editing BBVA failed with 'Please fix the highlighted fields.' and nothing highlighted: the first seed (commit 1d6da1d) stored color as a name ('blue'), updateCardInputSchema accepts only #RRGGBB, and the card form's colour field rendered no field error.",
+            "proposedSolution": "Owner decision (2026-10-17): every month is its own statement. A card's balance for month M is the full amount of its charges dated in M (CDMX, Savings-category rows left out) minus its card payments dated in M. There is no opening balance and nothing carries over, so an unpaid amount stays in its own month, for past and future months alike. listBalances and getHistory read only rows inside the month; the opening balance is gone from the statement lines, the drawer history and the formula on the page. The Card balances notice and the drawer footer state the rule in plain words. The payment form now names the landing month for a date in any other month, earlier or later, since neither changes the balance on screen. A card with no charge and no payment in the month is quiet: it sorts after the others (A to Z in each group) and shows a muted 'No activity' label instead of $0.00. The add and edit card forms now show the colour field error under the colour field. The data migration 20261017000000_card_color_names_to_hex converts the five legacy names to their palette hex, case-insensitively, on Card.color only; a hex is never touched and a second run changes nothing.",
+            "status": "in-progress",
+            "spec": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/99",
+            "issue": null
         }
     ]
 }

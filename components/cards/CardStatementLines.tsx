@@ -1,5 +1,7 @@
+import { useTranslations } from "next-intl";
+
 import type { CardStatement } from "@/lib/domain/card-balance";
-import { formatBalance, formatMxn } from "@/lib/format";
+import { formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -8,8 +10,10 @@ type Props = {
     className?: string;
 };
 
-/** Opening balance + charged − paid − redeemed for the month, as on a bank statement. */
+/** Charged − paid − redeemed for the month: the lines behind its balance. */
 export function CardStatementLines({ statement, monthName, className }: Props) {
+    const t = useTranslations("money.cards.lines");
+    const values = { month: monthName };
     return (
         <dl
             className={cn(
@@ -17,9 +21,7 @@ export function CardStatementLines({ statement, monthName, className }: Props) {
                 className,
             )}
         >
-            <dt className="text-muted-foreground">Opening balance</dt>
-            <dd className="text-right">{formatBalance(statement.opening)}</dd>
-            <dt className="text-muted-foreground">Charged in {monthName}</dt>
+            <dt className="text-muted-foreground">{t("charged", values)}</dt>
             <dd
                 className={cn(
                     "text-right",
@@ -28,7 +30,7 @@ export function CardStatementLines({ statement, monthName, className }: Props) {
             >
                 + {formatMxn(statement.charged)}
             </dd>
-            <dt className="text-muted-foreground">Paid in {monthName}</dt>
+            <dt className="text-muted-foreground">{t("paid", values)}</dt>
             {/* The payment tint marks money that moved: a zero reads like any other. */}
             <dd
                 className={cn(
@@ -40,7 +42,7 @@ export function CardStatementLines({ statement, monthName, className }: Props) {
             >
                 − {formatMxn(statement.paid)}
             </dd>
-            <dt className="text-muted-foreground">Redeemed in {monthName}</dt>
+            <dt className="text-muted-foreground">{t("redeemed", values)}</dt>
             <dd className="text-right text-muted-foreground">
                 − {formatMxn(statement.redeemed)}
             </dd>

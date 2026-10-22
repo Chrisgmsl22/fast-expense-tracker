@@ -1,3 +1,5 @@
+import { getLocale } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { getScopedMonth } from "@/lib/month-scope.server";
@@ -66,7 +68,7 @@ export default async function DashboardPage({
     const partnerName = resolvePartnerName(settings.partnerName);
     const { sharesExpenses } = settings;
 
-    const monthLabel = formatMonthLabel(month);
+    const monthLabel = formatMonthLabel(month, await getLocale());
 
     return (
         <main className="p-4 sm:p-6 lg:p-8">
@@ -110,6 +112,7 @@ export default async function DashboardPage({
                         dailyAvg={summary.dailyAvg}
                         daysLeft={summary.daysLeft}
                         expenses={expenses}
+                        partnerName={partnerName}
                     />
                     <CategoriesGrid
                         categories={summary.categoryBudgets}

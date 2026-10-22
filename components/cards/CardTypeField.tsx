@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { Label } from "@/components/ui/label";
 import {
     Select,
@@ -10,8 +12,8 @@ import {
 import { cn } from "@/lib/utils";
 
 import {
-    ADD_TYPE_OPTIONS,
-    typeLabel,
+    ADD_TYPES,
+    useCardTypeLabel,
     type AddCardType,
 } from "./card-type-options";
 
@@ -31,31 +33,30 @@ export function CardTypeField({
     labelClassName,
     triggerClassName,
 }: Props) {
+    const t = useTranslations("settings.cards");
+    const typeLabel = useCardTypeLabel();
     return (
         <div>
             <Label htmlFor={id} className={labelClassName}>
-                Type
+                {t("type")}
             </Label>
             <Select
                 value={value}
                 onValueChange={(v) =>
-                    onType(
-                        ADD_TYPE_OPTIONS.find((o) => o.value === v)?.value ??
-                            "credit",
-                    )
+                    onType(ADD_TYPES.find((type) => type === v) ?? "credit")
                 }
             >
                 <SelectTrigger
                     id={id}
-                    aria-label="Card type"
+                    aria-label={t("typeAria")}
                     className={cn("mt-1.5 w-full", triggerClassName)}
                 >
                     {typeLabel(value)}
                 </SelectTrigger>
                 <SelectContent>
-                    {ADD_TYPE_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                            {o.label}
+                    {ADD_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                            {typeLabel(type)}
                         </SelectItem>
                     ))}
                 </SelectContent>

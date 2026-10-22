@@ -1,0 +1,153 @@
+{
+    "page": {
+        "title": "Cuentas por pagar",
+        "with": "con {partner}"
+    },
+    "pastMonthNotice": "Estás viendo {month}. Lo que registres queda con fecha de hoy y entra en la cuenta abierta.",
+    "tone": {
+        "sheOwes": "{partner} te debe",
+        "youOwe": "Le debes a {partner}",
+        "settled": "Todo saldado"
+    },
+    "balance": {
+        "settledTitle": "Todo saldado",
+        "settledBody": "Nadie le debe nada a nadie.",
+        "carriedOver": "incluye {amount} del mes pasado",
+        "barYouOwe": "tú debes",
+        "barPartnerOwes": "{partner} debe"
+    },
+    "close": {
+        "square": "{partner} y tú están a mano",
+        "body": "Cierra esta cuenta para archivarla. La siguiente se abre de inmediato y todo lo que registres desde ahora entra en ella.",
+        "button": "Cerrar cuenta",
+        "dialogTitle": "¿Cerrar esta cuenta?",
+        "dialogBody": "Todo lo registrado hasta ahora queda archivado en esta cuenta y ahí se queda. Una nueva cuenta se abre de inmediato: un gasto compartido que llegue tarde entra en esa, no en esta. Las cuentas cerradas no se pueden reabrir.",
+        "closing": "Cerrando…"
+    },
+    "actions": {
+        "recordPayment": "Registrar pago",
+        "addDebt": "+ {label}"
+    },
+    "help": {
+        "trigger": "Cómo usar Cuentas por pagar",
+        "title": "Operaciones comunes",
+        "ops": {
+            "sharedWhen": "Pagas algo compartido",
+            "sharedThen": "Regístralo como un gasto normal: el 32% de {partner} se suma automáticamente a lo que te debe.",
+            "paidBackWhen": "{partner} te manda dinero o te paga",
+            "paidBackThen": "{add} → \"{receive}\" (o \"{recordPayment}\" aquí). Baja lo que te debe; lo que hagas después con ese dinero es aparte.",
+            "frontedWhen": "{partner} pagó cosas compartidas",
+            "frontedThen": "\"{iOwe}\" aquí: tu parte. Sube lo que le debes.",
+            "payHerWhen": "Terminas debiéndole a {partner}, así que le pagas",
+            "payHerThen": "\"{recordPayment}\" aquí (dirá \"{transfer}\").",
+            "cardWhen": "Pagas una tarjeta de crédito",
+            "cardThen": "{add} → {cardPayment}. Solo registra el pago; no toca el saldo de Cuentas por pagar.",
+            "owesWhen": "{partner} te debe dinero sin un gasto compartido",
+            "owesThen": "\"{owesMe}\" registra la deuda completa. No agrega gasto, ingreso ni pago.",
+            "zeroWhen": "El saldo está en cero",
+            "zeroThen": "Las dos acciones de deuda siguen disponibles. {recordPayment} solo aparece cuando queda saldo."
+        }
+    },
+    "journalKey": {
+        "title": "Leyenda del historial",
+        "partnerPaidYou": "{partner} te pagó",
+        "partnerOwesYou": "{partner} te debe",
+        "youPaidPartner": "Le pagaste a {partner}",
+        "youOwePartner": "Le debes a {partner}"
+    },
+    "breakdown": {
+        "title": "Cómo se forma este saldo",
+        "lines": {
+            "partner_share": "El 32% de {partner} en gastos compartidos que registraste",
+            "partner_debt": "Deudas que registraste como \"{partner} me debe\"",
+            "your_debt": "Deudas que registraste como \"Le debo a {partner}\"",
+            "partner_paid": "Dinero que {partner} te pagó",
+            "you_paid": "Dinero que le pagaste a {partner}"
+        },
+        "partnerPaidSublabel": "transferencias que te mandó",
+        "nothingThisWindow": "— nada en este periodo",
+        "noItemizedRows": "— sin registros detallados",
+        "netBalance": "Saldo neto",
+        "settled": "Saldado",
+        "net": "{label} {amount}",
+        "shareOf": "{date} · parte de {partner} de {gross} que pagaste"
+    },
+    "views": {
+        "tablist": "Vistas de Cuentas por pagar",
+        "open": "Cuenta abierta",
+        "openShort": "Abierta",
+        "history": "Historial",
+        "items": "{count, plural, one {# registro} other {# registros}}",
+        "settlements": "{count, plural, one {# cuenta} other {# cuentas}}",
+        "descriptor": "· gastos compartidos · deudas · transferencias",
+        "openEmpty": "Esta cuenta está vacía: no se ha registrado nada desde el último cierre.",
+        "monthPast": "{month} ya terminó. Esto es lo que tuvo; la cuenta abierta está en su propia pestaña.",
+        "monthFuture": "{month} todavía no empieza. Esto es lo que ya tiene esa fecha; la cuenta abierta está en su propia pestaña.",
+        "monthEmpty": "No hay gastos compartidos ni transferencias en {month}.",
+        "historyEmpty": "No se cerró ninguna cuenta en {month}. Cuando un saldo llega a cero puedes cerrarlo, y se archiva en el mes en que lo cerraste.",
+        "settledOn": "Saldado el {date}",
+        "cycleMeta": "{amount} · {count, plural, one {# registro} other {# registros}}",
+        "closedEmpty": "Esta cuenta se cerró sin registros.",
+        "outcome": {
+            "even": "Quedaron a mano",
+            "youPaid": "Le pagaste a {partner}",
+            "partnerPaid": "{partner} te pagó"
+        },
+        "summary": {
+            "spentUnsplit": "Gastado (sin dividir)",
+            "youOwed": "Le debías a {partner}",
+            "sheOwed": "{partner} te debía"
+        }
+    },
+    "journal": {
+        "title": "Historial de movimientos",
+        "empty": "Todavía no hay nada que saldar.",
+        "descriptor": "gastos compartidos · deudas · transferencias",
+        "earlierMonths": "Meses anteriores",
+        "transferPartnerPaid": "Transferencia — {partner} te pagó",
+        "transferYouPaid": "Transferencia — le pagaste a {partner}",
+        "locked": "en una cuenta cerrada · bloqueado",
+        "expenseSubtitle": "{date} · pagaste {gross} · 32% de {partner} · {status}",
+        "editOnExpenses": "edítalo en la pantalla de Gastos",
+        "loadDebtError": "No se pudo cargar esa deuda. Recarga la página.",
+        "editDebtTitle": "Editar \"{label}\"",
+        "editTransferTitle": "Editar transferencia",
+        "deleteTransferTitle": "¿Eliminar esta transferencia?",
+        "deleteDebtTitle": "¿Eliminar esta deuda?",
+        "deleteBody": "{title} ({amount}) se eliminará de forma permanente.",
+        "deleting": "Eliminando…",
+        "editRow": "Editar {label}",
+        "deleteRow": "Eliminar {label}"
+    },
+    "copy": {
+        "label": "Copiar el resumen de la cuenta",
+        "copied": "Copiado",
+        "failed": "No se pudo copiar"
+    },
+    "summaryText": {
+        "header": "🧾 *Cuenta*",
+        "headerOne": "🧾 *Cuenta {date}*",
+        "headerRange": "🧾 *Cuenta {first} – {last}*",
+        "present": "hoy",
+        "sharedExpenses": "*Gastos compartidos*",
+        "subtotal": "*Subtotal: {amount}*",
+        "rowSplit": "{line} ({percent}% de {partner}: {share})",
+        "shareOfShared": "Parte de {partner} en gastos compartidos",
+        "percentOfShared": "{percent}% de {partner} en gastos compartidos",
+        "partnerOwesYou": "🌸 *{partner} te debe*",
+        "youOwePartner": "🍔 *Le debes a {partner}*",
+        "payments": "💸 *Pagos*",
+        "youPaid": "Le pagaste a {partner}",
+        "partnerPaid": "{partner} te pagó",
+        "finalSettled": "✅ *Resultado final: saldado, {amount} MXN*",
+        "finalOwes": "✅ *Resultado final: {partner} debe {amount} MXN*",
+        "finalReceives": "✅ *Resultado final: {partner} recibe {amount} MXN*"
+    },
+    "errors": {
+        "unauthenticated": "No has iniciado sesión",
+        "notSettled": "Esta cuenta todavía no está a mano, así que no se puede cerrar.",
+        "noMarker": "Esta cuenta todavía no se puede cerrar: al cerrarla se marca un pago o una transferencia con tu pareja, y esta no tiene ninguno.",
+        "markerGone": "El registro que cerraría esta cuenta ya no existe. Recarga la página e inténtalo de nuevo.",
+        "dbError": "No se pudo cerrar la cuenta. Inténtalo de nuevo."
+    }
+}

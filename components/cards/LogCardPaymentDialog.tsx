@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import {
     Dialog,
     DialogContent,
@@ -34,6 +36,7 @@ export function LogCardPaymentDialog({
     onSuccess,
     returnFocus,
 }: Props) {
+    const t = useTranslations("money.cards");
     return (
         <Dialog
             open={open}
@@ -46,7 +49,7 @@ export function LogCardPaymentDialog({
                 finalFocus={() => returnFocus() ?? true}
             >
                 <DialogHeader>
-                    <DialogTitle>Log a payment</DialogTitle>
+                    <DialogTitle>{t("logPayment")}</DialogTitle>
                 </DialogHeader>
                 {card ? (
                     <CardPaymentForm

@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { ArrowDown, Plus } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import type { CardHistoryLine } from "@/lib/domain/card-balance";
+import { useCategoryName } from "@/i18n/category-name";
 import { formatBalance, formatExpenseDate, formatMxn } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
+    balanceFootnote,
     cardTypeLabel,
     headlineState,
     isSettled,
@@ -19,7 +22,7 @@ import { CardStatementLines } from "./CardStatementLines";
 export type CardHistoryState =
     | { status: "loading" }
     | { status: "error"; message: string }
-    | { status: "ready"; opening: number; lines: CardHistoryLine[] };
+    | { status: "ready"; lines: CardHistoryLine[] };
 
 type Props = {
     open: boolean;
@@ -33,11 +36,17 @@ type Props = {
 const FIRST_PAGE = 20;
 
 function HistoryRow({ line }: { line: CardHistoryLine }) {
+    const t = useTranslations("money.cards.drawer");
+    const locale = useLocale();
+    const categoryName = useCategoryName();
     const isCharge = line.kind === "charge";
+    // A charge's detail is its stored category name; a payment's is the user's note.
+    const lineDetail =
+        isCharge && line.detail ? categoryName(line.detail) : line.detail;
     const detail = [
-        formatExpenseDate(line.date),
-        line.detail,
-        line.isShared ? "shared, full amount" : null,
+        formatExpenseDate(line.date, locale),
+        lineDetail,
+        line.isShared ? t("shared") : null,
     ]
         .filter(Boolean)
         .join(" · ");
@@ -58,7 +67,7 @@ function HistoryRow({ line }: { line: CardHistoryLine }) {
             </span>
             <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">
-                    {isCharge ? line.description : "Payment"}
+                    {isCharge ? line.description : t("payment")}
                 </p>
                 <p className="truncate text-[11px] text-muted-foreground">
                     {detail}
@@ -75,18 +84,11 @@ function HistoryRow({ line }: { line: CardHistoryLine }) {
                     {formatMxn(Math.abs(line.signedAmount))}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
-                    bal {formatBalance(line.balanceAfter)}
+                    {t("balanceAfter", {
+                        amount: formatBalance(line.balanceAfter),
+                    })}
                 </p>
             </div>
-        </li>
-    );
-}
-
-function OpeningRow({ opening }: { opening: number }) {
-    return (
-        <li className="flex items-center justify-between py-2.5 text-sm tabular-nums">
-            <span className="font-semibold">Opening balance</span>
-            <span className="font-bold">{formatBalance(opening)}</span>
         </li>
     );
 }
@@ -98,11 +100,12 @@ function History({
     history: CardHistoryState;
     monthName: string;
 }) {
+    const t = useTranslations("money.cards.drawer");
     const [showAll, setShowAll] = useState(false);
     if (history.status === "loading") {
         return (
             <p role="status" className="py-3 text-sm text-muted-foreground">
-                Loading history…
+                {t("loading")}
             </p>
         );
     }
@@ -117,15 +120,14 @@ function History({
     const hidden = history.lines.length - shown.length;
     return (
         <>
-            <ul aria-label="History">
+            <ul aria-label={t("history")}>
                 {shown.map((line) => (
                     <HistoryRow key={`${line.kind}-${line.id}`} line={line} />
                 ))}
-                {hidden === 0 ? <OpeningRow opening={history.opening} /> : null}
             </ul>
             {history.lines.length === 0 ? (
                 <p className="py-1 text-sm text-muted-foreground">
-                    Nothing logged on this card in {monthName}.
+                    {t("empty", { month: monthName })}
                 </p>
             ) : null}
             {hidden > 0 ? (
@@ -136,7 +138,7 @@ function History({
                     className="my-2 self-start text-muted-foreground"
                     onClick={() => setShowAll(true)}
                 >
-                    Show {hidden} earlier {hidden === 1 ? "entry" : "entries"}
+                    {t("showEarlier", { count: hidden })}
                 </Button>
             ) : null}
         </>
@@ -152,7 +154,11 @@ export function CardBalanceDrawer({
     onClose,
     onLogPayment,
 }: Props) {
+    const t = useTranslations("money.cards");
     const head = card ? headlineState(card) : null;
+    const quiet = head === "untouched";
+    const foot =
+        card && head ? balanceFootnote(card, monthName, head, t) : null;
     return (
         <Sheet
             open={open}
@@ -177,7 +183,7 @@ export function CardBalanceDrawer({
                                     {card.name}
                                 </SheetTitle>
                                 <span className="text-xs text-muted-foreground">
-                                    {cardTypeLabel(card.type)}
+                                    {cardTypeLabel(card.type, t)}
                                 </span>
                             </div>
                             <div className="flex flex-wrap items-end gap-4">
@@ -190,19 +196,20 @@ export function CardBalanceDrawer({
                                                 : "text-muted-foreground",
                                         )}
                                     >
-                                        {stateLabel(head, monthName)}
+                                        {stateLabel(head, t, monthName)}
                                     </p>
-                                    <p
-                                        className={cn(
-                                            "text-3xl font-bold tracking-tight tabular-nums",
-                                            card.state === "credit" &&
-                                                "text-positive",
-                                        )}
-                                    >
-                                        {formatBalance(card.balance)}
-                                    </p>
+                                    {quiet ? null : (
+                                        <p className="text-3xl font-bold tracking-tight tabular-nums">
+                                            {formatBalance(card.balance)}
+                                        </p>
+                                    )}
+                                    {foot ? (
+                                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                            {foot}
+                                        </p>
+                                    ) : null}
                                 </div>
-                                {head === "untouched" ? null : (
+                                {quiet ? null : (
                                     <CardStatementLines
                                         statement={card}
                                         monthName={monthName}
@@ -215,19 +222,17 @@ export function CardBalanceDrawer({
                                 className="h-9"
                                 onClick={() => onLogPayment(card)}
                             >
-                                Log a payment
+                                {t("logPayment")}
                             </Button>
                             <p className="text-[11px] text-muted-foreground">
-                                Based on logged expenses and card payments. If
-                                your bank shows a different number, an entry is
-                                missing here.
+                                {t("drawer.monthNote")}
                             </p>
                         </div>
                         <div className="flex flex-col px-5 pt-3.5 pb-4">
                             <p className="pb-1 text-xs font-semibold">
-                                History{" "}
+                                {t("drawer.history")}{" "}
                                 <span className="font-normal text-muted-foreground">
-                                    · newest first
+                                    {t("drawer.newestFirst")}
                                 </span>
                             </p>
                             <History

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeftRight, BarChart3, Check, Pencil, Trash2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { deleteExpense } from "@/app/_actions/expense/delete";
 import { getExpenseForEdit } from "@/app/_actions/expense/get-for-edit";
@@ -18,6 +19,11 @@ import {
     TransferForm,
     type TransferEditable,
 } from "@/components/movement/TransferForm";
+import {
+    debtLabel,
+    debtTitle,
+    type MovementsTranslator,
+} from "@/components/movement/movement-display";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -33,19 +39,17 @@ import {
     BUDGET_FUNDING_SOURCE,
     toTransferFundingSource,
 } from "@/lib/domain/funding";
-import {
-    isPartnerDebt,
-    partnerDebtLabel,
-    type PartnerDebtDirection,
-} from "@/lib/domain/movement";
+import { isPartnerDebt, partnerDebtLabel } from "@/lib/domain/movement";
+import type { Locale } from "@/i18n/config";
 import { formatExpenseDate, formatMxn } from "@/lib/format";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
+import type { SettlementTranslator } from "./balance-display";
 
-/** The auto-generated description when a debt is logged without a note. */
-const defaultDebtDescription = (
-    partnerName: string,
-    direction: PartnerDebtDirection = "gf_fronted",
-): string => partnerDebtLabel(direction, partnerName);
+type JournalIntl = {
+    t: SettlementTranslator;
+    tm: MovementsTranslator;
+    locale: Locale;
+};
 
 type PartnerDebtRow = Extract<SettlementJournalItem, { kind: "partner_debt" }>;
 type TransferRow = Extract<SettlementJournalItem, { kind: "transfer" }>;
@@ -56,48 +60,61 @@ type DeletableRow = PartnerDebtRow | TransferRow;
 function transferTitle(
     direction: TransferRow["direction"],
     partnerName: string,
+    t: SettlementTranslator,
 ): string {
     return direction === "gf_received"
-        ? `Transfer — ${partnerName} paid you`
-        : `Transfer — you paid ${partnerName}`;
+        ? t("journal.transferPartnerPaid", { partner: partnerName })
+        : t("journal.transferYouPaid", { partner: partnerName });
 }
 
 /**
  * Why a locked row has no controls. It says "in a closed settlement", not "closed a
  * settlement": a cycle freezes every row it counted, not just the marker.
  */
-const LOCKED_REASON = "in a closed settlement · locked";
+const lockedReason = (t: SettlementTranslator): string => t("journal.locked");
 
 /**
  * A debt's second line. The generic "I owe {partner}" drops here when the note is
  * the title, matching `movementRowText`. Only `locked` explains a missing control:
  * a locked row has no delete either, so "delete to change" names a way out that is not there.
  */
-function debtSubtitle(row: PartnerDebtRow, partnerName: string): string {
-    const label = defaultDebtDescription(partnerName, row.direction);
+function debtSubtitle(
+    row: PartnerDebtRow,
+    partnerName: string,
+    { t, tm, locale }: JournalIntl,
+): string {
+    const isAutoLabel =
+        row.description === partnerDebtLabel(row.direction, partnerName);
     return [
-        formatExpenseDate(row.date),
-        row.description === label ? null : label,
-        row.locked ? LOCKED_REASON : null,
+        formatExpenseDate(row.date, locale),
+        isAutoLabel ? null : debtLabel(row.direction, partnerName, tm),
+        row.locked ? lockedReason(t) : null,
     ]
         .filter(Boolean)
         .join(" · ");
 }
 
-function transferSubtitle(row: TransferRow): string {
+function transferSubtitle(
+    row: TransferRow,
+    { t, locale }: JournalIntl,
+): string {
     return [
-        formatExpenseDate(row.date),
+        formatExpenseDate(row.date, locale),
         row.note,
-        row.locked ? LOCKED_REASON : null,
+        row.locked ? lockedReason(t) : null,
     ]
         .filter(Boolean)
         .join(" · ");
 }
 
-function rowTitle(row: DeletableRow, partnerName: string): string {
+function rowTitle(
+    row: DeletableRow,
+    partnerName: string,
+    { t, tm }: JournalIntl,
+): string {
     return row.kind === "partner_debt"
-        ? row.description
-        : transferTitle(row.direction, partnerName);
+        ? debtTitle(row.description, row.direction, partnerName, tm)
+        : transferTitle(row.direction, partnerName, t);
 }
 
 /**
@@ -111,8 +128,8 @@ function rowTitle(row: DeletableRow, partnerName: string): string {
 export function SettlementJournal({
     journal,
     partnerName,
-    title = "Movement journal",
-    emptyMessage = "Nothing to settle yet.",
+    title,
+    emptyMessage,
     bare = false,
     readOnly = false,
 }: {
@@ -131,6 +148,10 @@ export function SettlementJournal({
     readOnly?: boolean;
 }) {
     const router = useRouter();
+    const t = useTranslations("settlement");
+    const tm = useTranslations("movements");
+    const intl: JournalIntl = { t, tm, locale: useLocale() };
+    const tc = useTranslations("common.actions");
     const [editing, setEditing] = useState<PartnerDebtEditable | null>(null);
     const [editingTransfer, setEditingTransfer] = useState<{
         direction: TransferRow["direction"];
@@ -174,7 +195,7 @@ export function SettlementJournal({
             }
             const direction = res.data.type;
             if (!isPartnerDebt(direction)) {
-                setActionError("Couldn't load that debt. Please refresh.");
+                setActionError(t("journal.loadDebtError"));
                 return;
             }
             setEditing({
@@ -279,12 +300,14 @@ export function SettlementJournal({
     return (
         <div className={shell}>
             {bare ? null : isEmpty ? (
-                <p className="font-semibold">{title}</p>
+                <p className="font-semibold">{title ?? t("journal.title")}</p>
             ) : (
                 <div className="flex items-baseline justify-between">
-                    <p className="font-semibold">{title}</p>
+                    <p className="font-semibold">
+                        {title ?? t("journal.title")}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                        shared expenses · debts · transfers
+                        {t("journal.descriptor")}
                     </p>
                 </div>
             )}
@@ -304,7 +327,7 @@ export function SettlementJournal({
                 <p
                     className={`text-sm text-muted-foreground ${bare ? "" : "mt-3"}`}
                 >
-                    {emptyMessage}
+                    {emptyMessage ?? t("journal.empty")}
                 </p>
             ) : (
                 <ul className="mt-3 max-h-[55vh] divide-y overflow-x-hidden overflow-y-auto">
@@ -312,12 +335,13 @@ export function SettlementJournal({
                         <li key={`${item.kind}-${item.id}`}>
                             {item.id === firstCarriedId && (
                                 <p className="py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                    Earlier months
+                                    {t("journal.earlierMonths")}
                                 </p>
                             )}
                             <JournalRow
                                 item={item}
                                 partnerName={partnerName}
+                                intl={intl}
                                 actions={
                                     // The row carries `locked`, so a view cannot reintroduce
                                     // the buttons by forgetting `readOnly`. Every producer of
@@ -326,7 +350,11 @@ export function SettlementJournal({
                                     item.locked ? null : item.kind ===
                                       "partner_debt" ? (
                                         <RowActions
-                                            label={item.description}
+                                            label={rowTitle(
+                                                item,
+                                                partnerName,
+                                                intl,
+                                            )}
                                             pending={pending}
                                             // A movement-backed debt is the editable
                                             // case — `PartnerDebtForm` writes
@@ -343,6 +371,7 @@ export function SettlementJournal({
                                             label={transferTitle(
                                                 item.direction,
                                                 partnerName,
+                                                t,
                                             )}
                                             pending={pending}
                                             onEdit={() =>
@@ -366,7 +395,15 @@ export function SettlementJournal({
             >
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>{`Edit "${defaultDebtDescription(partnerName, editing?.direction)}"`}</DialogTitle>
+                        <DialogTitle>
+                            {t("journal.editDebtTitle", {
+                                label: debtLabel(
+                                    editing?.direction ?? "gf_fronted",
+                                    partnerName,
+                                    tm,
+                                ),
+                            })}
+                        </DialogTitle>
                     </DialogHeader>
                     {editing && (
                         <PartnerDebtForm
@@ -391,7 +428,9 @@ export function SettlementJournal({
             >
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Edit transfer</DialogTitle>
+                        <DialogTitle>
+                            {t("journal.editTransferTitle")}
+                        </DialogTitle>
                     </DialogHeader>
                     {editingTransfer && (
                         <TransferForm
@@ -420,12 +459,19 @@ export function SettlementJournal({
                     <DialogHeader>
                         <DialogTitle>
                             {deleting?.kind === "transfer"
-                                ? "Delete this transfer?"
-                                : "Delete this debt?"}
+                                ? t("journal.deleteTransferTitle")
+                                : t("journal.deleteDebtTitle")}
                         </DialogTitle>
                         <DialogDescription>
                             {deleting
-                                ? `${rowTitle(deleting, partnerName)} (${formatMxn(deleting.amount)}) will be permanently removed.`
+                                ? t("journal.deleteBody", {
+                                      title: rowTitle(
+                                          deleting,
+                                          partnerName,
+                                          intl,
+                                      ),
+                                      amount: formatMxn(deleting.amount),
+                                  })
                                 : ""}
                         </DialogDescription>
                     </DialogHeader>
@@ -446,7 +492,7 @@ export function SettlementJournal({
                             onClick={closeDeleteDialog}
                             disabled={pending}
                         >
-                            Cancel
+                            {tc("cancel")}
                         </Button>
                         <Button
                             type="button"
@@ -454,7 +500,7 @@ export function SettlementJournal({
                             onClick={confirmDelete}
                             disabled={pending || deleteFrozen}
                         >
-                            {pending ? "Deleting…" : "Delete"}
+                            {pending ? t("journal.deleting") : tc("delete")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -476,6 +522,7 @@ function RowActions({
     onEdit?: () => void;
     onDelete: () => void;
 }) {
+    const t = useTranslations("settlement.journal");
     return (
         <span className="flex shrink-0 gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
             {onEdit && (
@@ -483,7 +530,7 @@ function RowActions({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Edit ${label}`}
+                    aria-label={t("editRow", { label })}
                     onClick={onEdit}
                     disabled={pending}
                 >
@@ -494,7 +541,7 @@ function RowActions({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`Delete ${label}`}
+                aria-label={t("deleteRow", { label })}
                 onClick={onDelete}
                 disabled={pending}
             >
@@ -507,12 +554,15 @@ function RowActions({
 function JournalRow({
     item,
     partnerName,
+    intl,
     actions,
 }: {
     item: SettlementJournalItem;
     partnerName: string;
+    intl: JournalIntl;
     actions: ReactNode;
 }) {
+    const { t, tm, locale } = intl;
     if (item.kind === "your_expense") {
         return (
             <Row
@@ -522,9 +572,14 @@ function JournalRow({
                 // Say why this row has no controls; inert for no stated reason is the
                 // thing to avoid. It must not point at the Expenses screen — the same
                 // close froze it there.
-                subtitle={`${formatExpenseDate(item.date)} · you paid ${formatMxn(item.gross)} · ${partnerName}'s 32% · ${
-                    item.locked ? LOCKED_REASON : "edit on the Expenses screen"
-                }`}
+                subtitle={t("journal.expenseSubtitle", {
+                    date: formatExpenseDate(item.date, locale),
+                    gross: formatMxn(item.gross),
+                    partner: partnerName,
+                    status: item.locked
+                        ? lockedReason(t)
+                        : t("journal.editOnExpenses"),
+                })}
                 amount={`+${formatMxn(item.partnerShare)}`}
                 amountClass="text-positive"
                 actions={actions}
@@ -546,8 +601,13 @@ function JournalRow({
                         ? "border-positive bg-positive-tint"
                         : "border-debt bg-debt-tint"
                 }
-                title={item.description}
-                subtitle={debtSubtitle(item, partnerName)}
+                title={debtTitle(
+                    item.description,
+                    item.direction,
+                    partnerName,
+                    tm,
+                )}
+                subtitle={debtSubtitle(item, partnerName, intl)}
                 amount={`${partnerOwes ? "+" : "−"}${formatMxn(item.amount)}`}
                 amountClass={partnerOwes ? "text-positive" : "text-debt"}
                 actions={actions}
@@ -577,12 +637,8 @@ function JournalRow({
                     ? "border-positive bg-positive-tint"
                     : "border-transfer bg-transfer-tint"
             }
-            title={
-                inbound
-                    ? `Transfer — ${partnerName} paid you`
-                    : `Transfer — you paid ${partnerName}`
-            }
-            subtitle={transferSubtitle(item)}
+            title={transferTitle(item.direction, partnerName, t)}
+            subtitle={transferSubtitle(item, intl)}
             amount={formatMxn(item.amount)}
             amountClass={inbound ? "text-positive" : "text-transfer"}
             actions={actions}

@@ -1,8 +1,10 @@
 import { Check, Circle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
     firstPasswordProblem,
     PASSWORD_MAX_BYTES,
+    PASSWORD_MIN_LENGTH,
     passwordRuleStatuses,
     passwordStrength,
     type PasswordStrength,
@@ -16,26 +18,19 @@ import {
 
 const NEUTRAL_FILL = "bg-white/60 md:bg-muted-foreground";
 
-const STRENGTH: Record<
-    PasswordStrength,
-    { label: string; segments: number; fill: string }
-> = {
-    weak: { label: "Weak", segments: 1, fill: NEUTRAL_FILL },
-    fair: { label: "Fair", segments: 2, fill: NEUTRAL_FILL },
-    strong: {
-        label: "Strong",
-        segments: 3,
-        fill: "bg-green-400 md:bg-positive",
-    },
+const STRENGTH: Record<PasswordStrength, { segments: number; fill: string }> = {
+    weak: { segments: 1, fill: NEUTRAL_FILL },
+    fair: { segments: 2, fill: NEUTRAL_FILL },
+    strong: { segments: 3, fill: "bg-green-400 md:bg-positive" },
 };
 
 const SEGMENTS = [1, 2, 3] as const;
 
-const LENGTH_LIMIT_LABEL = `${PASSWORD_MAX_BYTES} characters or fewer (accents and emoji count extra)`;
-
 /** Live password rules and a weak / fair / strong bar, shown once the user types. */
 export function PasswordChecklist({ password }: { password: string }) {
-    const strength = password ? STRENGTH[passwordStrength(password)] : null;
+    const t = useTranslations("auth.password");
+    const level = password ? passwordStrength(password) : null;
+    const strength = level ? STRENGTH[level] : null;
     const statuses = passwordRuleStatuses(password);
     // The limit only shows once it is the one thing keeping the password from "Strong".
     const overLimit =
@@ -67,28 +62,34 @@ export function PasswordChecklist({ password }: { password: string }) {
                     aria-atomic="true"
                     className={cn("text-xs font-medium", AUTH_MUTED_CLASS)}
                 >
-                    {strength && (
+                    {level && (
                         <>
-                            <span className="sr-only">Password strength: </span>
-                            {strength.label}
+                            <span className="sr-only">
+                                {t("strengthLabel")}{" "}
+                            </span>
+                            {t(`strength.${level}`)}
                         </>
                     )}
                 </p>
             </div>
             {strength && (
-                <ul
-                    aria-label="Password requirements"
-                    className="mt-2 space-y-1"
-                >
+                <ul aria-label={t("requirements")} className="mt-2 space-y-1">
                     {statuses.map(({ rule, met }) => (
                         <ChecklistItem
                             key={rule.id}
-                            label={rule.label}
+                            label={t(`rules.${rule.id}`, {
+                                min: PASSWORD_MIN_LENGTH,
+                            })}
                             met={met}
                         />
                     ))}
                     {overLimit && (
-                        <ChecklistItem label={LENGTH_LIMIT_LABEL} met={false} />
+                        <ChecklistItem
+                            label={t("lengthLimit", {
+                                max: PASSWORD_MAX_BYTES,
+                            })}
+                            met={false}
+                        />
                     )}
                 </ul>
             )}
@@ -97,6 +98,7 @@ export function PasswordChecklist({ password }: { password: string }) {
 }
 
 function ChecklistItem({ label, met }: { label: string; met: boolean }) {
+    const t = useTranslations("auth.password");
     const Icon = met ? Check : Circle;
     return (
         <li
@@ -113,7 +115,7 @@ function ChecklistItem({ label, met }: { label: string; met: boolean }) {
                 aria-hidden="true"
             />
             {label}
-            <span className="sr-only">{met ? " (met)" : " (not met)"}</span>
+            <span className="sr-only"> {met ? t("met") : t("notMet")}</span>
         </li>
     );
 }

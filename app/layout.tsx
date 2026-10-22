@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,11 +15,10 @@ const geistMono = Geist_Mono({
     subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-    title: "fast-expense-tracker",
-    description:
-        "Personal expense tracker — MXN, shared-split aware, weekly review.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+    const t = await getTranslations("common.metadata");
+    return { title: "fast-expense-tracker", description: t("description") };
+}
 
 // Scale pinned to 1 (no zoom in or out). `minimumScale: 1` stops the "mini
 // desktop" zoom-out; `maximumScale: 1` locks zoom-in per the user's request.
@@ -34,20 +35,23 @@ export const viewport: Viewport = {
     viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const locale = await getLocale();
     return (
         <html
-            lang="en"
+            lang={locale}
             className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
         >
             {/* viewport-fit=cover reaches under a landscape notch too, so the
                 side insets pad every page, auth included. */}
             <body className="min-h-full flex flex-col pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
-                {children}
+                <NextIntlClientProvider locale={locale}>
+                    {children}
+                </NextIntlClientProvider>
                 <SpeedInsights />
             </body>
         </html>

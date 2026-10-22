@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
+import { useCategoryName } from "@/i18n/category-name";
 import { formatMxn } from "@/lib/format";
 import type { CategoryBudgetItem } from "@/lib/repositories/dashboard.repository";
 
@@ -19,10 +21,11 @@ export function CategoriesGrid({
     categories: CategoryBudgetItem[];
     month: string;
 }) {
+    const t = useTranslations("dashboard.categories");
     if (categories.length === 0) {
         return (
             <p className="py-8 text-center text-sm text-muted-foreground">
-                No category spend this month yet.
+                {t("empty")}
             </p>
         );
     }
@@ -30,9 +33,9 @@ export function CategoriesGrid({
     return (
         <div>
             <div className="mb-3 flex items-baseline justify-between">
-                <h2 className="text-sm font-medium">Categories</h2>
+                <h2 className="text-sm font-medium">{t("title")}</h2>
                 <span className="text-xs text-muted-foreground">
-                    each has its own limit
+                    {t("subtitle")}
                 </span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -51,6 +54,8 @@ function CategoryCard({
     category: CategoryBudgetItem;
     month: string;
 }) {
+    const t = useTranslations("dashboard.categories");
+    const categoryName = useCategoryName();
     const hasBudget = c.monthlyBudget !== null && c.monthlyBudget > 0;
     const remaining = hasBudget ? c.monthlyBudget! - c.spent : 0;
     const over = hasBudget && remaining < 0;
@@ -70,7 +75,7 @@ function CategoryCard({
                     style={{ backgroundColor: c.color }}
                 />
                 <span className="truncate text-sm font-semibold text-foreground/80">
-                    {c.name}
+                    {categoryName(c.name)}
                 </span>
                 <span className="ml-auto font-semibold whitespace-nowrap">
                     {formatMxn(c.spent)}
@@ -89,18 +94,24 @@ function CategoryCard({
 
             <p className="mt-1.5 text-xs text-muted-foreground">
                 {!hasBudget ? (
-                    "no limit"
+                    t("noLimit")
                 ) : over ? (
                     <span className="text-danger">
-                        over by {formatMxn(-remaining)}
+                        {t("overBy", { amount: formatMxn(-remaining) })}
                     </span>
                 ) : remaining === 0 ? (
-                    `limit ${formatMxn(c.monthlyBudget!)} · maxed`
+                    t("maxed", { limit: formatMxn(c.monthlyBudget!) })
                 ) : (
-                    `limit ${formatMxn(c.monthlyBudget!)} · ${formatMxn(remaining)} left`
+                    t("limitLeft", {
+                        limit: formatMxn(c.monthlyBudget!),
+                        remaining: formatMxn(remaining),
+                    })
                 )}
                 {" · "}
-                {c.subcatWithSpend} of {c.subcatTotal} subcats
+                {t("subcats", {
+                    withSpend: c.subcatWithSpend,
+                    total: c.subcatTotal,
+                })}
             </p>
         </Link>
     );

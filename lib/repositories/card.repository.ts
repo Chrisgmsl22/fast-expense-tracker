@@ -4,7 +4,6 @@ import { getMonthRangeUtc } from "@/lib/dates";
 import {
     NO_BALANCE_CARD_TYPES,
     type CardHistoryEntry,
-    type CardPeriodTotals,
     type CardTotals,
 } from "@/lib/domain/card-balance";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
@@ -44,18 +43,12 @@ export type CardCreate = { name: string; type: string; color: string };
 /** Editable fields on a card edit (rename / recolor / retype). */
 export type CardUpdate = { name: string; type: string; color: string };
 
-/** One active card that can carry a balance, with its sums before and during a month. */
-export type CardBalanceRow = CardPeriodTotals & {
+/** One active card that can carry a balance, with its sums inside a month. */
+export type CardBalanceRow = CardTotals & {
     id: string;
     name: string;
     color: string;
     type: string;
-};
-
-/** One card's sums before a month, and its charges and payments inside it, unordered. */
-export type CardMonthHistory = {
-    before: CardTotals;
-    entries: CardHistoryEntry[];
 };
 
 /**
@@ -101,14 +94,20 @@ export interface CardRepository {
     deleteForUser(userId: string, id: string): Promise<number>;
     /** True when the card is the user's locked `type:"cash"` card. */
     isCash(userId: string, id: string): Promise<boolean>;
-    /** A→Z, split at `month` (CDMX). Redemptions are not tracked yet, so 0. */
+    /**
+     * A→Z, summing only rows dated inside `month` (CDMX). Redemptions are not
+     * tracked yet, so 0.
+     */
     listBalances(userId: string, month: string): Promise<CardBalanceRow[]>;
-    /** One active balance card's month history; null for any other card. */
+    /**
+     * One active balance card's charges and payments dated inside `month`,
+     * unordered; null for any other card.
+     */
     getHistory(
         userId: string,
         cardId: string,
         month: string,
-    ): Promise<CardMonthHistory | null>;
+    ): Promise<CardHistoryEntry[] | null>;
 }
 
 /**
@@ -261,14 +260,13 @@ export class PrismaCardRepository implements CardRepository {
 
         const cardIds = cards.map((c) => c.id);
         const { start, end } = getMonthRangeUtc(month);
-        const [before, during] = await Promise.all([
-            this.sumsByCard(userId, cardIds, { lt: start }),
-            this.sumsByCard(userId, cardIds, { gte: start, lt: end }),
-        ]);
+        const totals = await this.sumsByCard(userId, cardIds, {
+            gte: start,
+            lt: end,
+        });
         return cards.map((card) => ({
             ...card,
-            before: before.get(card.id) ?? NO_TOTALS,
-            during: during.get(card.id) ?? NO_TOTALS,
+            ...(totals.get(card.id) ?? NO_TOTALS),
         }));
     }
 
@@ -276,7 +274,7 @@ export class PrismaCardRepository implements CardRepository {
         userId: string,
         cardId: string,
         month: string,
-    ): Promise<CardMonthHistory | null> {
+    ): Promise<CardHistoryEntry[] | null> {
         const card = await this.db.card.findFirst({
             where: { id: cardId, userId, ...BALANCE_CARD_FILTER },
             select: { id: true },
@@ -285,8 +283,7 @@ export class PrismaCardRepository implements CardRepository {
 
         const { start, end } = getMonthRangeUtc(month);
         const inMonth = { gte: start, lt: end };
-        const [before, expenses, payments] = await Promise.all([
-            this.sumsByCard(userId, [cardId], { lt: start }),
+        const [expenses, payments] = await Promise.all([
             this.db.expense.findMany({
                 where: { userId, cardId, date: inMonth, ...CARD_CHARGE_FILTER },
                 select: {
@@ -311,35 +308,32 @@ export class PrismaCardRepository implements CardRepository {
             }),
         ]);
 
-        return {
-            before: before.get(cardId) ?? NO_TOTALS,
-            entries: [
-                ...expenses.map(
-                    (e): CardHistoryEntry => ({
-                        id: e.id,
-                        kind: "charge",
-                        date: e.date,
-                        createdAt: e.createdAt,
-                        description: e.description,
-                        detail: e.category.name,
-                        isShared: e.isShared,
-                        amount: e.amount,
-                    }),
-                ),
-                ...payments.map(
-                    (m): CardHistoryEntry => ({
-                        id: m.id,
-                        kind: "payment",
-                        date: m.date,
-                        createdAt: m.createdAt,
-                        description: null,
-                        detail: m.note,
-                        isShared: false,
-                        amount: m.amount,
-                    }),
-                ),
-            ],
-        };
+        return [
+            ...expenses.map(
+                (e): CardHistoryEntry => ({
+                    id: e.id,
+                    kind: "charge",
+                    date: e.date,
+                    createdAt: e.createdAt,
+                    description: e.description,
+                    detail: e.category.name,
+                    isShared: e.isShared,
+                    amount: e.amount,
+                }),
+            ),
+            ...payments.map(
+                (m): CardHistoryEntry => ({
+                    id: m.id,
+                    kind: "payment",
+                    date: m.date,
+                    createdAt: m.createdAt,
+                    description: null,
+                    detail: m.note,
+                    isShared: false,
+                    amount: m.amount,
+                }),
+            ),
+        ];
     }
 
     /**
@@ -349,7 +343,7 @@ export class PrismaCardRepository implements CardRepository {
     private async sumsByCard(
         userId: string,
         cardIds: string[],
-        date: { gte?: Date; lt: Date },
+        date: { gte: Date; lt: Date },
     ): Promise<Map<string, CardTotals>> {
         const [charges, payments] = await Promise.all([
             this.db.expense.groupBy({

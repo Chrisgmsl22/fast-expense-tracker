@@ -1,0 +1,69 @@
+{
+    "screen": {
+        "title": "Ingresos",
+        "show": "Mostrar",
+        "hide": "Ocultar",
+        "drivesTargets": "define las metas de tus bolsas",
+        "fixedMonthly": "Ingreso fijo · mensual",
+        "editFixed": "Editar ingreso fijo",
+        "carriesForward": "se mantiene hasta que lo cambies",
+        "variableMonth": "Variable · {month}",
+        "loggedThisMonth": "registrado este mes",
+        "totalMonth": "Total · {month}",
+        "fixedPlusVariable": "fijo + variable",
+        "mobileSplitHidden": "fijo · variable",
+        "mobileSplit": "{fixed} fijo · {variable} variable",
+        "logTitle": "Registro de ingresos variables",
+        "logTitleShort": "Ingresos variables",
+        "addIncome": "+ Agregar ingreso",
+        "addShort": "+ Agregar",
+        "empty": "Aún no hay ingresos variables registrados en {month}.",
+        "columns": {
+            "date": "Fecha",
+            "source": "Origen",
+            "amount": "Monto",
+            "actions": "Acciones"
+        },
+        "deleteRow": "Eliminar {source}",
+        "deleteTitle": "¿Eliminar ingreso?",
+        "deleteBody": "\"{source}\" se eliminará para siempre.",
+        "deleting": "Eliminando…"
+    },
+    "fixed": {
+        "inputLabel": "Ingreso fijo mensual",
+        "save": "Guardar ingreso fijo",
+        "pastMonthHelp": "Solo cambia {month}. Los demás meses conservan el suyo.",
+        "forwardHelp": "Aplica desde {month} en adelante. Los meses anteriores conservan el suyo."
+    },
+    "addForm": {
+        "title": "Agregar ingreso",
+        "source": "Origen",
+        "sourcePlaceholder": "p. ej. Freelance — logo",
+        "amount": "Monto (MXN)",
+        "date": "Fecha",
+        "saving": "Guardando…",
+        "submit": "Agregar ingreso"
+    },
+    "errors": {
+        "invalidIncome": "Ingreso no válido",
+        "invalidMonth": "Mes no válido",
+        "invalidAmount": "Monto no válido",
+        "unauthenticated": "No has iniciado sesión",
+        "missingId": "Falta el id del ingreso",
+        "notFound": "No se encontró el ingreso.",
+        "futureMonth": "El ingreso fijo no se puede definir para un mes futuro",
+        "saveFailed": "No se pudo guardar el ingreso. Inténtalo de nuevo.",
+        "deleteFailed": "No se pudo eliminar el ingreso. Inténtalo de nuevo.",
+        "fixedFailed": "No se pudo actualizar el ingreso fijo. Inténtalo de nuevo."
+    },
+    "fields": {
+        "sourceRequired": "El origen es obligatorio",
+        "amountPositive": "El monto debe ser mayor que 0",
+        "amountNotNegative": "El monto no puede ser negativo",
+        "monthFormat": "El mes debe tener el formato AAAA-MM",
+        "monthTooEarly": "El mes no puede ser anterior a 2000",
+        "monthAfterCurrent": "El mes no puede ser posterior al mes actual",
+        "futureDate": "La fecha no puede ser posterior a hoy",
+        "dateInvalid": "Ingresa una fecha válida"
+    }
+}

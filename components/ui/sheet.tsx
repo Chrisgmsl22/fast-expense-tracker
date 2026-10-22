@@ -5,6 +5,7 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { CloseLabel } from "@/components/ui/close-label";
 import { XIcon } from "lucide-react";
 
 /**
@@ -73,7 +74,9 @@ function SheetContent({
                         }
                     >
                         <XIcon />
-                        <span className="sr-only">Close</span>
+                        <span className="sr-only">
+                            <CloseLabel />
+                        </span>
                     </SheetPrimitive.Close>
                 )}
             </SheetPrimitive.Popup>

@@ -1,13 +1,15 @@
 "use client";
 import { useTransition } from "react";
 import { LogOut } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { logoutAction } from "@/app/_actions/auth/logout";
 import { withSessionLock } from "@/lib/auth/session-lock";
 
 export function LogoutButton({ iconOnly = false }: { iconOnly?: boolean }) {
+    const t = useTranslations("auth.logout");
     const [pending, startTransition] = useTransition();
-    const label = pending ? "Signing out…" : "Sign out";
+    const label = pending ? t("pending") : t("label");
     return (
         <Button
             type="button"

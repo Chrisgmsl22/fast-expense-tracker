@@ -1,5 +1,7 @@
 "use client";
 
+import { useMessages, useTranslations } from "next-intl";
+
 import { CARD_PALETTE } from "@/lib/palette";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +15,15 @@ type Props = {
      */
     layout?: "wrap" | "grid";
     className?: string;
+    describedBy?: string;
 };
+
+/** Palette names are English data in lib/palette.ts; a name with no key shows as written. */
+function useSwatchName(): (name: string) => string {
+    const names: Readonly<Record<string, string>> =
+        useMessages().settings.cards.swatches;
+    return (name) => names[name] ?? name;
+}
 
 /** One toggle button per named card colour in the shared palette. */
 export function CardSwatchGrid({
@@ -21,12 +31,16 @@ export function CardSwatchGrid({
     onColor,
     layout = "wrap",
     className,
+    describedBy,
 }: Props) {
+    const t = useTranslations("settings.cards");
+    const swatchName = useSwatchName();
     const grid = layout === "grid";
     return (
         <div
             role="group"
-            aria-label="Colour swatches"
+            aria-label={t("swatchesAria")}
+            aria-describedby={describedBy}
             className={cn(
                 grid
                     ? "grid grid-cols-5 justify-items-center gap-1"
@@ -40,7 +54,7 @@ export function CardSwatchGrid({
                     <button
                         key={swatch.hex}
                         type="button"
-                        aria-label={swatch.name}
+                        aria-label={swatchName(swatch.name)}
                         aria-pressed={pressed}
                         onClick={() => onColor(swatch.hex)}
                         className={cn(

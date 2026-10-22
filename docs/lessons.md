@@ -27,6 +27,15 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-10-20 — Parallel fan-out parts each ran the full integration suite
+
+- **Symptom:** In the i18n fan-out, 3 of 4 parts reported 12 to 134 integration failures in files they never touched (foreign-key errors right after a user insert). Each part needed reruns to get a clean count.
+- **Root cause:** Every brief said to run `pnpm test:integration` in full. All worktrees share one test database that truncates between tests (see the 2026-09-16 entry on `pnpm test:integration -- <file>`), so the runs wiped each other's rows.
+- **Fix / decision:** Each part ran only its own integration files. The main session ran the full suite once, alone, after the merge: 252 passed.
+- **Lesson for next time:** In a parallel brief, ask for the part's own integration files only, by path. Run the full suite once, after the parts merge, with no other agent running.
+
+---
+
 ### 2026-10-17 — Mutation tests in a scratch copy must not go through pnpm
 
 - **Symptom:** a subagent copied the worktree to a scratch directory, symlinked `node_modules`, and ran `pnpm -C <copy> test`. pnpm tried to purge the modules directory instead of running the tests.

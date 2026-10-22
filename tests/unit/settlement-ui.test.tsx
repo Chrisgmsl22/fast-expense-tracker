@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-    render,
-    screen,
-    fireEvent,
-    waitFor,
-    within,
-} from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const { refreshMock, getMovementForEditMock, getExpenseForEditMock } =
     vi.hoisted(() => ({
@@ -66,7 +61,6 @@ import { SettlementJournal } from "@/components/settlement/SettlementJournal";
 import { SettlementChip } from "@/components/dashboard/SettlementChip";
 import { updatePartnerPayment } from "@/app/_actions/expense/update-partner-payment";
 import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
-import { FUNDING_TOGGLE_LABEL } from "@/lib/domain/funding";
 import { computeCoupleBalance } from "@/lib/domain/settlement";
 import type { MovementEditable } from "@/lib/repositories/movement.repository";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
@@ -92,7 +86,7 @@ const settled = computeCoupleBalance({
 
 describe("SettlementBalanceCard", () => {
     it("shows the she-owes state with the amount", () => {
-        render(
+        renderWithIntl(
             <SettlementBalanceCard
                 balance={sheOwes}
                 carriedOver={{ present: false, amount: 0 }}
@@ -104,7 +98,7 @@ describe("SettlementBalanceCard", () => {
     });
 
     it("shows the you-owe state", () => {
-        render(
+        renderWithIntl(
             <SettlementBalanceCard
                 balance={youOwe}
                 carriedOver={{ present: false, amount: 0 }}
@@ -115,7 +109,7 @@ describe("SettlementBalanceCard", () => {
     });
 
     it("shows the settled state without an amount", () => {
-        render(
+        renderWithIntl(
             <SettlementBalanceCard
                 balance={settled}
                 carriedOver={{ present: false, amount: 0 }}
@@ -126,7 +120,7 @@ describe("SettlementBalanceCard", () => {
     });
 
     it("shows the carried-over note when present", () => {
-        render(
+        renderWithIntl(
             <SettlementBalanceCard
                 balance={sheOwes}
                 carriedOver={{ present: true, amount: 300 }}
@@ -136,11 +130,31 @@ describe("SettlementBalanceCard", () => {
         expect(screen.getByText(/from last month/)).toBeDefined();
         expect(screen.getByText(/\$300\.00 from last month/)).toBeDefined();
     });
+
+    it.each([
+        ["en", "Brenda owes"],
+        ["es", "Brenda debe"],
+    ] as const)(
+        "keeps the partner name as stored on the %s gauge",
+        (locale, label) => {
+            renderWithIntl(
+                <SettlementBalanceCard
+                    balance={sheOwes}
+                    carriedOver={{ present: false, amount: 0 }}
+                    partnerName="Brenda"
+                />,
+                { locale },
+            );
+            expect(screen.getByText(label)).toBeDefined();
+        },
+    );
 });
 
 describe("SettlementChip", () => {
     it("links to /settlement and shows the she-owes label + amount", () => {
-        render(<SettlementChip balance={sheOwes} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementChip balance={sheOwes} partnerName="Brenda" />,
+        );
         const link = screen.getByRole("link");
         expect(link.getAttribute("href")).toBe("/settlement");
         expect(screen.getByText("Brenda owes you")).toBeDefined();
@@ -148,7 +162,9 @@ describe("SettlementChip", () => {
     });
 
     it("hides the amount when settled", () => {
-        render(<SettlementChip balance={settled} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementChip balance={settled} partnerName="Brenda" />,
+        );
         expect(screen.getByText("All settled")).toBeDefined();
         expect(screen.queryByText(/\$/)).toBeNull();
     });
@@ -156,7 +172,7 @@ describe("SettlementChip", () => {
 
 describe("SettlementBreakdown", () => {
     it("renders the five lines and the net", () => {
-        render(
+        renderWithIntl(
             <SettlementBreakdown
                 balance={sheOwes}
                 breakdownItems={{
@@ -227,7 +243,7 @@ describe("SettlementJournal", () => {
         getMovementForEditMock.mockResolvedValue(
             editable({ id: "partner-debt", type: "partner_debt" }),
         );
-        render(
+        renderWithIntl(
             <SettlementJournal
                 partnerName="Alex"
                 journal={[
@@ -319,7 +335,9 @@ describe("SettlementJournal", () => {
     ];
 
     it("renders rows with the Earlier-months divider before carried rows", () => {
-        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={journal} partnerName="Brenda" />,
+        );
         expect(screen.getByText("Groceries")).toBeDefined();
         expect(screen.getByText("+$320.00")).toBeDefined();
         expect(screen.getByText("I owe Brenda")).toBeDefined();
@@ -328,13 +346,15 @@ describe("SettlementJournal", () => {
     });
 
     it("renders a transfer row with its note in the subtitle", () => {
-        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={journal} partnerName="Brenda" />,
+        );
         expect(screen.getByText(/Transfer — Brenda paid you/)).toBeDefined();
         expect(screen.getByText(/rent/)).toBeDefined();
     });
 
     it("shows an empty state when there is nothing to settle", () => {
-        render(<SettlementJournal journal={[]} partnerName="Brenda" />);
+        renderWithIntl(<SettlementJournal journal={[]} partnerName="Brenda" />);
         expect(screen.getByText("Nothing to settle yet.")).toBeDefined();
     });
 
@@ -359,7 +379,7 @@ describe("SettlementJournal", () => {
         ];
 
         it("badges a savings-funded payment, which still counts in the balance", () => {
-            render(
+            renderWithIntl(
                 <SettlementJournal
                     journal={transferRow("savings")}
                     partnerName="Brenda"
@@ -372,7 +392,7 @@ describe("SettlementJournal", () => {
         });
 
         it("leaves an income-funded payment unbadged", () => {
-            render(
+            renderWithIntl(
                 <SettlementJournal
                     journal={transferRow("income")}
                     partnerName="Brenda"
@@ -382,7 +402,7 @@ describe("SettlementJournal", () => {
         });
 
         it("never badges money she sent you — her funding isn't yours", () => {
-            render(
+            renderWithIntl(
                 <SettlementJournal
                     journal={transferRow("savings", "gf_received")}
                     partnerName="Brenda"
@@ -396,7 +416,9 @@ describe("SettlementJournal", () => {
     });
 
     it("shows edit + delete on the debt and transfer rows, not a shared expense", () => {
-        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={journal} partnerName="Brenda" />,
+        );
         expect(screen.getByLabelText("Edit I owe Brenda")).toBeDefined();
         expect(screen.getByLabelText("Delete I owe Brenda")).toBeDefined();
         expect(
@@ -413,7 +435,9 @@ describe("SettlementJournal", () => {
     // movement action. Routing is by the row's own `source`, never by its kind.
     it("opens the delete confirm and deletes the debt as a movement", async () => {
         deleteMock.mockResolvedValue({ ok: true, data: { id: "e2" } });
-        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={journal} partnerName="Brenda" />,
+        );
         fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
 
         const dialog = await screen.findByRole("dialog");
@@ -440,7 +464,9 @@ describe("SettlementJournal", () => {
             amount: 150,
             source: "movement",
         };
-        render(<SettlementJournal journal={[debtRow]} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={[debtRow]} partnerName="Brenda" />,
+        );
         fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
 
         const dialog = await screen.findByRole("dialog");
@@ -465,7 +491,9 @@ describe("SettlementJournal", () => {
             amount: 150,
             source: "movement",
         };
-        render(<SettlementJournal journal={[debtRow]} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={[debtRow]} partnerName="Brenda" />,
+        );
 
         // A debt is a movement by design now (spec 0007 §6b) and `PartnerDebtForm` writes
         // `updatePartnerDebt`, so it is editable.
@@ -478,7 +506,9 @@ describe("SettlementJournal", () => {
         getMovementForEditMock.mockResolvedValue(
             editable({ id: "e2", type: "gf_fronted", amount: 300 }),
         );
-        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={journal} partnerName="Brenda" />,
+        );
         fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
 
         const dialog = await screen.findByRole("dialog");
@@ -515,7 +545,7 @@ describe("SettlementJournal", () => {
             "shows the refusal for %s, refreshes, and opens no dialog",
             async (_label, editName, id, refusal) => {
                 getMovementForEditMock.mockResolvedValue(refusal);
-                render(
+                renderWithIntl(
                     <SettlementJournal
                         journal={journal}
                         partnerName="Brenda"
@@ -543,7 +573,7 @@ describe("SettlementJournal", () => {
                 code: "not_found",
                 message: "Couldn't load that movement. Please refresh.",
             });
-            render(
+            renderWithIntl(
                 <SettlementJournal journal={journal} partnerName="Brenda" />,
             );
 
@@ -563,7 +593,7 @@ describe("SettlementJournal", () => {
                 message:
                     "This row counts in a settlement you already closed, so it can't be deleted.",
             });
-            render(
+            renderWithIntl(
                 <SettlementJournal journal={journal} partnerName="Brenda" />,
             );
             fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
@@ -610,7 +640,7 @@ describe("SettlementJournal", () => {
 
         it("opens the delete dialog clean after an edit refusal", async () => {
             getMovementForEditMock.mockResolvedValue(debtRefused);
-            render(
+            renderWithIntl(
                 <SettlementJournal journal={journal} partnerName="Brenda" />,
             );
             fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
@@ -641,7 +671,7 @@ describe("SettlementJournal", () => {
 
             it("keeps the edit refusal on screen and focused", async () => {
                 getMovementForEditMock.mockResolvedValue(debtRefused);
-                const { rerender } = render(openJournal(journal));
+                const { rerender } = renderWithIntl(openJournal(journal));
                 fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
                 const alert = await screen.findByRole("alert");
                 await waitFor(() => expect(document.activeElement).toBe(alert));
@@ -661,7 +691,7 @@ describe("SettlementJournal", () => {
                     message:
                         "This row counts in a settlement you already closed, so it can't be deleted.",
                 });
-                const { rerender } = render(openJournal(journal));
+                const { rerender } = renderWithIntl(openJournal(journal));
                 fireEvent.click(screen.getByLabelText("Delete I owe Brenda"));
                 const dialog = await screen.findByRole("dialog");
                 fireEvent.click(
@@ -698,7 +728,7 @@ describe("SettlementJournal", () => {
             getMovementForEditMock.mockResolvedValue(
                 editable({ id: "e2", type: "gf_paid", amount: 300 }),
             );
-            render(
+            renderWithIntl(
                 <SettlementJournal journal={journal} partnerName="Brenda" />,
             );
             fireEvent.click(screen.getByLabelText("Edit I owe Brenda"));
@@ -720,7 +750,9 @@ describe("SettlementJournal", () => {
                 note: "rent",
             }),
         );
-        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={journal} partnerName="Brenda" />,
+        );
         fireEvent.click(
             screen.getByLabelText("Edit Transfer — Brenda paid you"),
         );
@@ -751,7 +783,9 @@ describe("SettlementJournal", () => {
 
     it("deletes a transfer via deleteMovement", async () => {
         deleteMock.mockResolvedValue({ ok: true, data: { id: "m1" } });
-        render(<SettlementJournal journal={journal} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={journal} partnerName="Brenda" />,
+        );
         fireEvent.click(
             screen.getByLabelText("Delete Transfer — Brenda paid you"),
         );
@@ -788,7 +822,9 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
         // The reported defect: the dialog closed, no error appeared, and the $150 row
         // survived — `deleteMovement` answered as though it worked.
         deleteExpenseMock.mockResolvedValue({ ok: true, data: { id: "ePay" } });
-        render(<SettlementJournal journal={[payment]} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={[payment]} partnerName="Brenda" />,
+        );
         fireEvent.click(
             screen.getByLabelText("Delete Transfer — you paid Brenda"),
         );
@@ -808,7 +844,9 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
             code: "not_found",
             message: "Expense not found.",
         });
-        render(<SettlementJournal journal={[payment]} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={[payment]} partnerName="Brenda" />,
+        );
         fireEvent.click(
             screen.getByLabelText("Delete Transfer — you paid Brenda"),
         );
@@ -823,7 +861,7 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
 
     describe("editing a payment opens through the expense read", () => {
         const openPaymentEdit = () => {
-            render(
+            renderWithIntl(
                 <SettlementJournal journal={[payment]} partnerName="Brenda" />,
             );
             fireEvent.click(
@@ -877,7 +915,7 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
             expect(
                 within(dialog)
                     .getByRole("checkbox", {
-                        name: FUNDING_TOGGLE_LABEL.savings,
+                        name: "Paid with money I already had",
                     })
                     .getAttribute("aria-checked"),
             ).toBe("true");
@@ -951,7 +989,9 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
             direction: "gf_received",
             source: "movement",
         };
-        render(<SettlementJournal journal={[received]} partnerName="Brenda" />);
+        renderWithIntl(
+            <SettlementJournal journal={[received]} partnerName="Brenda" />,
+        );
         fireEvent.click(
             screen.getByLabelText("Delete Transfer — Brenda paid you"),
         );
@@ -962,5 +1002,137 @@ describe("SettlementJournal — a payment is an expense (spec 0007 §6b)", () =>
             expect(deleteMock).toHaveBeenCalledWith({ id: "mIn" }),
         );
         expect(deleteExpenseMock).not.toHaveBeenCalled();
+    });
+});
+
+describe("Settlement in Spanish", () => {
+    const july = new Date("2026-07-10T06:00:00Z");
+    const june = new Date("2026-06-10T06:00:00Z");
+    const journal: SettlementJournalItem[] = [
+        {
+            kind: "your_expense",
+            id: "e1",
+            date: july,
+            carriedOver: false,
+            locked: false,
+            description: "Súper",
+            gross: 1000,
+            partnerShare: 320,
+        },
+        {
+            kind: "transfer",
+            id: "m1",
+            date: july,
+            carriedOver: false,
+            locked: false,
+            direction: "gf_received",
+            amount: 320,
+            fundedFrom: "income",
+            note: "renta",
+            source: "movement",
+        },
+        {
+            kind: "partner_debt",
+            direction: "gf_fronted",
+            id: "d1",
+            date: june,
+            carriedOver: true,
+            locked: true,
+            description: "I owe Brenda",
+            amount: 300,
+            source: "movement",
+        },
+    ];
+
+    it("labels the hero and the breakdown in Spanish", () => {
+        renderWithIntl(
+            <>
+                <SettlementBalanceCard
+                    balance={sheOwes}
+                    carriedOver={{ present: true, amount: 300 }}
+                    partnerName="Brenda"
+                />
+                <SettlementBreakdown
+                    balance={sheOwes}
+                    breakdownItems={{
+                        partner_debt: [],
+                        partner_share: [
+                            {
+                                id: "e1",
+                                date: july,
+                                description: "Súper",
+                                amount: 700,
+                                gross: 2187.5,
+                            },
+                        ],
+                        your_debt: [],
+                        partner_paid: [],
+                        you_paid: [],
+                    }}
+                    partnerName="Brenda"
+                />
+            </>,
+            { locale: "es" },
+        );
+        expect(screen.getByText("BRENDA TE DEBE")).toBeDefined();
+        expect(
+            screen.getByText("incluye $300.00 del mes pasado"),
+        ).toBeDefined();
+        expect(screen.getByText("Cómo se forma este saldo")).toBeDefined();
+        expect(
+            screen.getByText(
+                "10 jul 2026 · parte de Brenda de $2,187.50 que pagaste",
+            ),
+        ).toBeDefined();
+        expect(screen.getByText("Brenda te debe $700.00")).toBeDefined();
+    });
+
+    it("shows the journal in Spanish, the stored auto-label included", () => {
+        renderWithIntl(
+            <SettlementJournal journal={journal} partnerName="Brenda" />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("Historial de movimientos")).toBeDefined();
+        expect(screen.getByText("Le debo a Brenda")).toBeDefined();
+        expect(screen.queryByText("I owe Brenda")).toBeNull();
+        expect(
+            screen.getByText("10 jun 2026 · en una cuenta cerrada · bloqueado"),
+        ).toBeDefined();
+        expect(
+            screen.getByText("Transferencia — Brenda te pagó"),
+        ).toBeDefined();
+        expect(screen.getByText("10 jul 2026 · renta")).toBeDefined();
+        expect(
+            screen.getByText(
+                "10 jul 2026 · pagaste $1,000.00 · 32% de Brenda · edítalo en la pantalla de Gastos",
+            ),
+        ).toBeDefined();
+        expect(screen.getByText("Meses anteriores")).toBeDefined();
+        expect(
+            screen.getByRole("button", {
+                name: "Eliminar Transferencia — Brenda te pagó",
+            }),
+        ).toBeDefined();
+    });
+
+    it("keeps a debt's own note as typed and names its kind beneath it", () => {
+        renderWithIntl(
+            <SettlementJournal
+                journal={[
+                    {
+                        ...journal[2]!,
+                        locked: false,
+                        carriedOver: false,
+                        description: "Boletos del concierto",
+                    } as SettlementJournalItem,
+                ]}
+                partnerName="Brenda"
+            />,
+            { locale: "es" },
+        );
+        expect(screen.getByText("Boletos del concierto")).toBeDefined();
+        expect(
+            screen.getByText("10 jun 2026 · Le debo a Brenda"),
+        ).toBeDefined();
     });
 });

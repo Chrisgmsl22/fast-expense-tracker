@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { AddExpenseButton } from "@/components/expense/AddExpenseButton";
 import { MonthPicker } from "@/components/expense/MonthPicker";
 import type {
@@ -38,6 +40,7 @@ export function DashboardTopbar({
     /** Shared-expense mode — Solo hides the "My view · NN%" share pill. */
     sharesExpenses: boolean;
 }) {
+    const t = useTranslations("dashboard.topbar");
     return (
         <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
@@ -52,7 +55,9 @@ export function DashboardTopbar({
             </div>
             <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-full border px-3 py-1 text-sm">
-                    <span className="text-muted-foreground">Total income </span>
+                    <span className="text-muted-foreground">
+                        {t("totalIncome")}{" "}
+                    </span>
                     <span className="font-semibold">
                         {formatMxn(incomeTotal)}
                     </span>
@@ -61,7 +66,9 @@ export function DashboardTopbar({
                     Solo mode has no split, so it's hidden. */}
                 {sharesExpenses ? (
                     <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
-                        My view · {Math.round(sharePercentage * 100)}%
+                        {t("myView", {
+                            percent: Math.round(sharePercentage * 100),
+                        })}
                     </span>
                 ) : null}
                 <AddExpenseButton

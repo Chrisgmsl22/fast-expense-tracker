@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const { pushMock, pathname } = vi.hoisted(() => ({
     pushMock: vi.fn(),
@@ -28,7 +29,7 @@ const nextButton = () =>
 
 describe("MonthPicker", () => {
     it("navigates to the previous and next month", () => {
-        render(<MonthPicker month="2026-05" currentMonth="2026-09" />);
+        renderWithIntl(<MonthPicker month="2026-05" currentMonth="2026-09" />);
 
         fireEvent.click(
             screen.getByRole("button", { name: /previous month/i }),
@@ -40,7 +41,7 @@ describe("MonthPicker", () => {
     });
 
     it("navigates to a month chosen in the picker", () => {
-        render(<MonthPicker month="2026-05" currentMonth="2026-09" />);
+        renderWithIntl(<MonthPicker month="2026-05" currentMonth="2026-09" />);
         fireEvent.change(screen.getByLabelText(/filter by month/i), {
             target: { value: "2026-09" },
         });
@@ -49,7 +50,7 @@ describe("MonthPicker", () => {
 
     it("stays on the current route when used outside /expenses", () => {
         pathname.current = "/income";
-        render(<MonthPicker month="2026-05" currentMonth="2026-09" />);
+        renderWithIntl(<MonthPicker month="2026-05" currentMonth="2026-09" />);
         fireEvent.click(nextButton());
         expect(pushMock).toHaveBeenCalledWith("/income?month=2026-06");
     });
@@ -57,7 +58,9 @@ describe("MonthPicker", () => {
     it("remembers the month in a cookie when asked, alongside the URL", () => {
         // Both are written by the same click, so the store and the URL cannot
         // drift apart.
-        render(<MonthPicker month="2026-09" remember currentMonth="2026-09" />);
+        renderWithIntl(
+            <MonthPicker month="2026-09" remember currentMonth="2026-09" />,
+        );
         fireEvent.click(
             screen.getByRole("button", { name: /previous month/i }),
         );
@@ -66,7 +69,7 @@ describe("MonthPicker", () => {
     });
 
     it("writes no cookie unless the screen opted in", () => {
-        render(<MonthPicker month="2026-09" currentMonth="2026-09" />);
+        renderWithIntl(<MonthPicker month="2026-09" currentMonth="2026-09" />);
         fireEvent.click(
             screen.getByRole("button", { name: /previous month/i }),
         );
@@ -74,7 +77,7 @@ describe("MonthPicker", () => {
     });
 
     it("offers the back-to-current button only while looking at another month", () => {
-        const { rerender } = render(
+        const { rerender } = renderWithIntl(
             <MonthPicker month="2026-08" currentMonth="2026-09" />,
         );
         const back = screen.getByRole("button", {
@@ -93,13 +96,15 @@ describe("MonthPicker", () => {
 
     it("gives the back-to-current button a filled background, not text styling", () => {
         // The owner reported it read as a label; ghost has no background.
-        render(<MonthPicker month="2026-08" currentMonth="2026-09" />);
+        renderWithIntl(<MonthPicker month="2026-08" currentMonth="2026-09" />);
         const back = screen.getByRole("button", { name: /take me back/i });
         expect(back.className).toContain("bg-secondary");
     });
 
     it("remembers the month when the back-to-current button is used", () => {
-        render(<MonthPicker month="2026-08" remember currentMonth="2026-09" />);
+        renderWithIntl(
+            <MonthPicker month="2026-08" remember currentMonth="2026-09" />,
+        );
         fireEvent.click(screen.getByRole("button", { name: /take me back/i }));
         expect(document.cookie).toContain("fet_scoped_month=2026-09");
     });
@@ -107,7 +112,9 @@ describe("MonthPicker", () => {
 
 describe("MonthPicker stops at the current month", () => {
     it("disables Next on the current month", () => {
-        render(<MonthPicker month="2026-09" remember currentMonth="2026-09" />);
+        renderWithIntl(
+            <MonthPicker month="2026-09" remember currentMonth="2026-09" />,
+        );
 
         expect(nextButton().disabled).toBe(true);
         fireEvent.click(nextButton());
@@ -116,7 +123,7 @@ describe("MonthPicker stops at the current month", () => {
     });
 
     it("keeps Next enabled on every past month, up to the current one", () => {
-        render(<MonthPicker month="2026-08" currentMonth="2026-09" />);
+        renderWithIntl(<MonthPicker month="2026-08" currentMonth="2026-09" />);
 
         expect(nextButton().disabled).toBe(false);
         fireEvent.click(nextButton());
@@ -124,7 +131,7 @@ describe("MonthPicker stops at the current month", () => {
     });
 
     it("caps the native month input at the current month", () => {
-        render(<MonthPicker month="2026-05" currentMonth="2026-09" />);
+        renderWithIntl(<MonthPicker month="2026-05" currentMonth="2026-09" />);
 
         expect(
             screen.getByLabelText(/filter by month/i).getAttribute("max"),
@@ -133,12 +140,33 @@ describe("MonthPicker stops at the current month", () => {
 
     it("refuses a future month typed past the cap, writing neither URL nor cookie", () => {
         // Some browsers render `type="month"` as a plain text box and ignore `max`.
-        render(<MonthPicker month="2026-09" remember currentMonth="2026-09" />);
+        renderWithIntl(
+            <MonthPicker month="2026-09" remember currentMonth="2026-09" />,
+        );
         fireEvent.change(screen.getByLabelText(/filter by month/i), {
             target: { value: "2026-11" },
         });
 
         expect(pushMock).not.toHaveBeenCalled();
         expect(document.cookie).not.toContain("fet_scoped_month=2026-11");
+    });
+});
+
+describe("MonthPicker in Spanish", () => {
+    it("Should label its controls in Spanish", () => {
+        renderWithIntl(<MonthPicker month="2026-05" currentMonth="2026-09" />, {
+            locale: "es",
+        });
+
+        expect(
+            screen.getByRole("button", { name: "Mes anterior" }),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Mes siguiente" }),
+        ).toBeDefined();
+        expect(screen.getByLabelText("Filtrar por mes")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Volver al mes actual" }),
+        ).toBeDefined();
     });
 });

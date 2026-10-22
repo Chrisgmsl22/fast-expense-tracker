@@ -1,0 +1,142 @@
+{
+    "title": "Configuración",
+    "saveButton": {
+        "save": "Guardar cambios",
+        "saving": "Guardando…",
+        "saved": "Guardado"
+    },
+    "errors": {
+        "fixFields": "Corrige los campos marcados.",
+        "unauthenticated": "No has iniciado sesión"
+    },
+    "comingSoon": {
+        "ariaLabel": "Próximamente",
+        "title": "Más opciones",
+        "description": "Ya vienen en camino. Pronto podrás configurarlos aquí.",
+        "badge": "· próximamente",
+        "items": {
+            "categoryLimits": "Límites por categoría",
+            "preferences": "Preferencias",
+            "privacy": "Privacidad",
+            "exportData": "Exportar datos",
+            "account": "Cuenta"
+        }
+    },
+    "split": {
+        "title": "Regla para dividir gastos",
+        "appliesTo": "aplica a gastos compartidos",
+        "description": "Actívala si divides gastos con tu pareja. Muestra los controles para dividir en toda la app; déjala apagada si solo quieres llevar tus gastos.",
+        "sharesToggle": "Comparto gastos",
+        "partnerName": "Nombre de tu pareja",
+        "partnerPlaceholder": "p. ej. Alex",
+        "yourShare": "Tu parte",
+        "previewYou": "Tú {percent}%",
+        "previewPartner": "Pareja {percent}%",
+        "unexpectedError": "Algo salió mal al guardar tu configuración.",
+        "errors": {
+            "dbError": "No se pudo guardar tu configuración. Inténtalo de nuevo.",
+            "nameTooLong": "El nombre es demasiado largo",
+            "wholeNumber": "Escribe un número entero",
+            "min": "Debe ser al menos 1%",
+            "max": "No puede pasar de 100%",
+            "partnerRequired": "Agrega el nombre de tu pareja para compartir gastos",
+            "shareRequired": "Escribe tu parte (1–100%)"
+        }
+    },
+    "budget": {
+        "title": "Regla de presupuesto",
+        "inForce": "Vigente en {month}: {essentials} / {discretionary} / {savings}",
+        "description": "Cómo se reparten tus ingresos entre las tres bolsas. Las tres deben sumar 100%. Un cambio aplica de {month} en adelante; los meses pasados conservan su reparto.",
+        "savingsField": "Ahorro/Inv",
+        "fieldLabel": "{label} (%)",
+        "totalExact": "Total 100%",
+        "totalUnder": "Total {total}% · falta asignar {left}%",
+        "totalOver": "Total {total}% · {over}% por encima de 100%",
+        "reset": "Restablecer a {essentials}/{discretionary}/{savings}",
+        "unexpectedError": "Algo salió mal al guardar tu regla de presupuesto.",
+        "errors": {
+            "dbError": "No se pudo guardar tu regla de presupuesto. Inténtalo de nuevo.",
+            "wholeNumber": "Escribe un número entero",
+            "min": "Debe ser al menos 0%",
+            "max": "No puede pasar de 100%",
+            "sumTo100": "Las tres bolsas deben sumar 100%"
+        }
+    },
+    "cards": {
+        "title": "Tarjetas",
+        "add": "Agregar tarjeta",
+        "adding": "Agregando…",
+        "limitHint": "Hasta {max} tarjetas.",
+        "atCap": "Llegaste al límite de {max} tarjetas. Archiva una para agregar otra.",
+        "empty": "Aún no tienes tarjetas. Agrega la primera.",
+        "archivedHeading": "Archivadas",
+        "name": "Nombre de la tarjeta",
+        "namePlaceholder": "p. ej. Amex Gold",
+        "type": "Tipo",
+        "typeAria": "Tipo de tarjeta",
+        "types": {
+            "credit": "Crédito",
+            "debit": "Débito",
+            "cash": "Efectivo"
+        },
+        "color": "Color",
+        "swatchesAria": "Muestras de color",
+        "customToggle": "Escribir un color personalizado (HEX)",
+        "hexAria": "Color HEX",
+        "swatches": {
+            "Slate": "Pizarra",
+            "Gold": "Dorado",
+            "Purple": "Morado",
+            "Blue": "Azul",
+            "Green": "Verde",
+            "Red": "Rojo",
+            "Teal": "Verde azulado",
+            "Pink": "Rosa",
+            "Amber": "Ámbar",
+            "Indigo": "Índigo"
+        },
+        "editAria": "Editar {name}",
+        "locked": "bloqueada",
+        "archive": "Archivar",
+        "restore": "Restaurar",
+        "restoring": "Restaurando…",
+        "restoreAria": "Restaurar {name}",
+        "deleteTitle": "¿Eliminar {name}?",
+        "deleteDescription": "Esto no se puede deshacer.",
+        "deleting": "Eliminando…",
+        "unexpected": {
+            "add": "Algo salió mal al agregar la tarjeta.",
+            "save": "Algo salió mal al guardar la tarjeta.",
+            "archive": "Algo salió mal al archivar la tarjeta.",
+            "delete": "Algo salió mal al eliminar la tarjeta.",
+            "restore": "Algo salió mal al restaurar la tarjeta."
+        },
+        "errors": {
+            "nameRequired": "El nombre de la tarjeta es obligatorio",
+            "nameTooLong": "El nombre de la tarjeta es demasiado largo",
+            "invalidColor": "Escribe un color #RRGGBB válido",
+            "cardRequired": "Elige una tarjeta",
+            "pickToArchive": "Elige una tarjeta para archivar.",
+            "pickToDelete": "Elige una tarjeta para eliminar.",
+            "pickToRestore": "Elige una tarjeta para restaurar.",
+            "pickForHistory": "Elige una tarjeta y un mes.",
+            "limitReached": "Puedes tener como máximo {max} tarjetas activas. Archiva una para agregar otra.",
+            "restoreLimit": "Estás en el límite de {max} tarjetas. Archiva o elimina una tarjeta activa primero.",
+            "duplicateName": "Ya tienes una tarjeta activa con ese nombre.",
+            "duplicateNameField": "Ya existe una tarjeta con ese nombre",
+            "nameConflict": "Ya tienes una tarjeta activa llamada \"{name}\". Cámbiale el nombre o archívala primero.",
+            "notFound": "Esa tarjeta ya no existe.",
+            "archivedNotFound": "Esa tarjeta archivada ya no existe.",
+            "cashArchive": "La tarjeta de efectivo no se puede archivar.",
+            "cashDelete": "La tarjeta de efectivo no se puede eliminar.",
+            "cashEdit": "La tarjeta de efectivo no se puede editar.",
+            "hasReferences": "Esta tarjeta tiene registros anteriores. Mejor archívala.",
+            "addFailed": "No se pudo agregar la tarjeta. Inténtalo de nuevo.",
+            "saveFailed": "No se pudo guardar la tarjeta. Inténtalo de nuevo.",
+            "archiveFailed": "No se pudo archivar la tarjeta. Inténtalo de nuevo.",
+            "deleteFailed": "No se pudo eliminar la tarjeta. Inténtalo de nuevo.",
+            "restoreFailed": "No se pudo restaurar la tarjeta. Inténtalo de nuevo.",
+            "historyFailed": "No se pudo cargar el historial de la tarjeta. Inténtalo de nuevo."
+        }
+    }
+}

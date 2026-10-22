@@ -1,24 +1,31 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 import { SpendByCard } from "@/components/dashboard/SpendByCard";
 
 const cards = [
     { id: "c1", name: "Platinum", color: "#6b7280", spent: 14400 },
-    { id: "cash", name: "Cash", color: "#16a34a", spent: 4200 },
+    { id: "cash", name: null, color: "#16a34a", spent: 4200 },
 ];
 
 describe("SpendByCard", () => {
     it("renders a legend of per-card totals", () => {
-        render(<SpendByCard cards={cards} />);
+        renderWithIntl(<SpendByCard cards={cards} />);
         expect(screen.getByText("Platinum")).toBeDefined();
         expect(screen.getByText("$14,400.00")).toBeDefined();
         expect(screen.getByText("Cash")).toBeDefined();
         expect(screen.getByText("$4,200.00")).toBeDefined();
     });
 
+    it("labels the null-card rollup in Spanish", () => {
+        renderWithIntl(<SpendByCard cards={cards} />, { locale: "es" });
+        expect(screen.getByText("Efectivo")).toBeDefined();
+        expect(screen.queryByText("Cash")).toBeNull();
+    });
+
     it("renders a bar segment per card sized to its share", () => {
-        render(<SpendByCard cards={cards} />);
+        renderWithIntl(<SpendByCard cards={cards} />);
         const segments = Array.from(
             screen.getByTestId("card-bar").children,
         ) as HTMLElement[];
@@ -28,7 +35,17 @@ describe("SpendByCard", () => {
     });
 
     it("shows an empty state with no card spend", () => {
-        render(<SpendByCard cards={[]} />);
+        renderWithIntl(<SpendByCard cards={[]} />);
         expect(screen.getByText(/no card spend this month/i)).toBeDefined();
+    });
+});
+
+describe("SpendByCard in Spanish", () => {
+    it("titles the card and its empty state in Spanish", () => {
+        renderWithIntl(<SpendByCard cards={[]} />, { locale: "es" });
+        expect(screen.getByText("Gasto por tarjeta")).toBeDefined();
+        expect(
+            screen.getByText("No hay gastos con tarjeta este mes."),
+        ).toBeDefined();
     });
 });

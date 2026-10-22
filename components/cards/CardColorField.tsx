@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -20,20 +21,26 @@ export function CardColorField({
     color,
     onColor,
     idPrefix,
+    error,
 }: {
     color: string;
     onColor: (value: string) => void;
     idPrefix: string;
+    error?: string;
 }) {
+    const t = useTranslations("settings.cards");
     const normalized = color.trim().toLowerCase();
     const previewValid = isValidHex(normalized);
     const [showCustom, setShowCustom] = useState(() => !isPaletteColor(color));
+    const errorId = `${idPrefix}-color-error`;
+    const describedBy = error ? errorId : undefined;
     return (
         <div>
-            <span className="text-sm font-medium">Colour</span>
+            <span className="text-sm font-medium">{t("color")}</span>
             <CardSwatchGrid
                 selected={normalized}
                 onColor={onColor}
+                describedBy={describedBy}
                 className="mt-1.5"
             />
 
@@ -53,7 +60,7 @@ export function CardColorField({
                     htmlFor={`${idPrefix}-custom-toggle`}
                     className="text-sm"
                 >
-                    Enter a custom color (HEX)
+                    {t("customToggle")}
                 </Label>
             </div>
 
@@ -70,13 +77,24 @@ export function CardColorField({
                     />
                     <Input
                         id={`${idPrefix}-color`}
-                        aria-label="HEX color"
+                        aria-label={t("hexAria")}
                         value={color}
                         onChange={(e) => onColor(e.target.value)}
                         placeholder="#RRGGBB"
+                        aria-invalid={Boolean(error)}
+                        aria-describedby={describedBy}
                         className="w-32 font-mono"
                     />
                 </div>
+            )}
+            {error && (
+                <p
+                    id={errorId}
+                    role="alert"
+                    className="mt-1 text-sm text-destructive"
+                >
+                    {error}
+                </p>
             )}
         </div>
     );

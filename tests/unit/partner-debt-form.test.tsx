@@ -7,7 +7,8 @@ import {
     beforeEach,
     type Mock,
 } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 vi.mock("@/app/_actions/movement/add-partner-debt", () => ({
     addPartnerDebt: vi.fn(),
@@ -42,7 +43,9 @@ beforeEach(() => {
 
 describe("PartnerDebtForm", () => {
     it("submits the full amount that the partner owes", async () => {
-        render(<PartnerDebtForm partnerName="Alex" direction="partner_debt" />);
+        renderWithIntl(
+            <PartnerDebtForm partnerName="Alex" direction="partner_debt" />,
+        );
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-09-10" },
         });
@@ -62,7 +65,9 @@ describe("PartnerDebtForm", () => {
     });
     it("submits the debt (amount + date, no category)", async () => {
         const onSuccess = vi.fn();
-        render(<PartnerDebtForm partnerName="Brenda" onSuccess={onSuccess} />);
+        renderWithIntl(
+            <PartnerDebtForm partnerName="Brenda" onSuccess={onSuccess} />,
+        );
 
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
@@ -91,7 +96,9 @@ describe("PartnerDebtForm", () => {
             fieldErrors: { amount: ["Amount must be greater than 0"] },
         });
         const onSuccess = vi.fn();
-        render(<PartnerDebtForm partnerName="Brenda" onSuccess={onSuccess} />);
+        renderWithIntl(
+            <PartnerDebtForm partnerName="Brenda" onSuccess={onSuccess} />,
+        );
 
         fireEvent.change(screen.getByLabelText("Date"), {
             target: { value: "2026-07-10" },
@@ -111,7 +118,7 @@ describe("PartnerDebtForm", () => {
 
     it("edit mode prefills the debt and saves via updatePartnerDebt", async () => {
         const onSuccess = vi.fn();
-        render(
+        renderWithIntl(
             <PartnerDebtForm
                 debt={{
                     id: "mv9",
@@ -157,9 +164,59 @@ describe("PartnerDebtForm date cap", () => {
     });
 
     it("caps the date input at today in CDMX", () => {
-        render(<PartnerDebtForm partnerName="Brenda" />);
+        renderWithIntl(<PartnerDebtForm partnerName="Brenda" />);
         expect(screen.getByLabelText("Date").getAttribute("max")).toBe(
             "2026-10-14",
         );
+    });
+});
+
+describe("PartnerDebtForm in Spanish", () => {
+    it("asks for your share in Spanish", () => {
+        renderWithIntl(<PartnerDebtForm partnerName="Alex" />, {
+            locale: "es",
+        });
+        expect(
+            screen.getByRole("form", {
+                name: "Registrar una deuda que le debes a Alex",
+            }),
+        ).toBeDefined();
+        expect(
+            screen.getByLabelText("Lo que le debes a Alex (MXN)"),
+        ).toBeDefined();
+        expect(
+            screen.getByText("Solo tu parte, no lo que pagó Alex."),
+        ).toBeDefined();
+        expect(screen.getByPlaceholderText("Le debo a Alex")).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Registrar deuda" }),
+        ).toBeDefined();
+    });
+
+    it("edits a debt the partner owes in Spanish", () => {
+        renderWithIntl(
+            <PartnerDebtForm
+                partnerName="Alex"
+                debt={{
+                    id: "mv1",
+                    direction: "partner_debt",
+                    date: "2026-09-10",
+                    amount: "100",
+                    note: "",
+                }}
+                onCancel={() => {}}
+            />,
+            { locale: "es" },
+        );
+        expect(
+            screen.getByRole("form", {
+                name: "Editar una deuda que Alex te debe",
+            }),
+        ).toBeDefined();
+        expect(screen.getByPlaceholderText("Alex me debe")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Cancelar" })).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Guardar cambios" }),
+        ).toBeDefined();
     });
 });

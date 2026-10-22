@@ -1,5 +1,7 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
@@ -43,13 +45,25 @@ export async function setCategoryBudget(
     budgetRepo: CategoryBudgetRepository = categoryBudgetRepository,
     categoryRepo: CategoryRepository = categoryRepository,
 ): Promise<SetCategoryBudgetResult> {
+    const t = await getTranslations("category.actions");
     const parsed = categoryBudgetInputSchema.safeParse(input);
     if (!parsed.success) {
+        // The schema's messages are English constants, so each field gets its
+        // one translated message instead. The editor shows only the first.
+        const fieldMessages: Record<keyof CategoryBudgetInput, string> = {
+            slug: t("categoryRequired"),
+            month: t("invalidMonth"),
+            thisMonthAmount: t("amountPositive"),
+            defaultAmount: t("amountPositive"),
+        };
         return {
             ok: false,
             code: "validation",
-            message: "Invalid budget",
-            fieldErrors: toFieldErrors<CategoryBudgetInput>(parsed.error),
+            message: t("invalid"),
+            fieldErrors: toFieldErrors<CategoryBudgetInput>(
+                parsed.error,
+                (_issue, field) => fieldMessages[field],
+            ),
         };
     }
 
@@ -58,7 +72,7 @@ export async function setCategoryBudget(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("unauthenticated"),
         };
     }
 
@@ -70,7 +84,7 @@ export async function setCategoryBudget(
         return {
             ok: false,
             code: "not_found",
-            message: "Category not found",
+            message: t("notFound"),
         };
     }
 
@@ -88,7 +102,7 @@ export async function setCategoryBudget(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the limit. Please try again.",
+            message: t("dbError"),
         };
     }
 }

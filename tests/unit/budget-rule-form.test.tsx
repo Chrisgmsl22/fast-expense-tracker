@@ -7,6 +7,7 @@ import {
     vi,
     type Mock,
 } from "vitest";
+import type { ReactNode } from "react";
 import {
     act,
     fireEvent,
@@ -14,6 +15,10 @@ import {
     screen,
     waitFor,
 } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { renderWithIntl } from "@/tests/support/intl";
+import { TIME_ZONE, type Locale } from "@/i18n/config";
+import { MESSAGES } from "@/i18n/messages";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/app/_actions/settings/save-budget-rule", () => ({
@@ -22,13 +27,14 @@ vi.mock("@/app/_actions/settings/save-budget-rule", () => ({
 
 import { BudgetRuleForm } from "@/components/settings/BudgetRuleForm";
 import { saveBudgetRule } from "@/app/_actions/settings/save-budget-rule";
+import { formatMonthLabel } from "@/lib/format";
 
 const saveMock = saveBudgetRule as unknown as Mock;
 
 const rule = { essentials: 60, discretionary: 30, savings: 10 };
 
 function renderForm() {
-    render(<BudgetRuleForm rule={rule} monthLabel="September 2026" />);
+    renderWithIntl(<BudgetRuleForm rule={rule} month="2026-09" />);
 }
 
 function field(label: string): HTMLInputElement {
@@ -251,5 +257,88 @@ describe("BudgetRuleForm", () => {
                 "Something went wrong saving your budget rule.",
             ),
         ).toBeDefined();
+    });
+});
+
+describe("BudgetRuleForm in Spanish", () => {
+    it("Should render the bucket labels, total and reset in Spanish", () => {
+        renderWithIntl(<BudgetRuleForm rule={rule} month="2026-09" />, {
+            locale: "es",
+        });
+        expect(
+            screen.getByText("Vigente en septiembre de 2026: 60 / 30 / 10"),
+        ).toBeDefined();
+        expect(screen.getByLabelText("Esenciales (%)")).toBeDefined();
+        expect(screen.getByLabelText("Gustos (%)")).toBeDefined();
+        expect(screen.getByLabelText("Ahorro/Inv (%)")).toBeDefined();
+        expect(screen.getByText("Total 100%")).toBeDefined();
+        fireEvent.change(screen.getByLabelText("Ahorro/Inv (%)"), {
+            target: { value: "5" },
+        });
+        expect(screen.getByText("Total 95% · falta asignar 5%")).toBeDefined();
+        fireEvent.change(screen.getByLabelText("Ahorro/Inv (%)"), {
+            target: { value: "20" },
+        });
+        expect(
+            screen.getByText("Total 110% · 10% por encima de 100%"),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("button", { name: "Restablecer a 50/25/25" }),
+        ).toBeDefined();
+    });
+
+    it("Should label the saved month in the active locale", async () => {
+        saveMock.mockResolvedValue({
+            ok: true,
+            data: { effectiveMonth: "2026-10", rule },
+        });
+        renderWithIntl(<BudgetRuleForm rule={rule} month="2026-09" />, {
+            locale: "es",
+        });
+        fireEvent.click(
+            screen.getByRole("button", { name: "Guardar cambios" }),
+        );
+        expect(
+            await screen.findByText(
+                `Vigente en ${formatMonthLabel("2026-10", "es")}: 60 / 30 / 10`,
+            ),
+        ).toBeDefined();
+    });
+
+    // Guard: an in-place language switch keeps the form mounted; the month label follows it.
+    it("Should relabel the month when the locale changes without a remount", () => {
+        function Intl({
+            locale,
+            children,
+        }: {
+            locale: Locale;
+            children: ReactNode;
+        }) {
+            return (
+                <NextIntlClientProvider
+                    locale={locale}
+                    messages={MESSAGES[locale]}
+                    timeZone={TIME_ZONE}
+                >
+                    {children}
+                </NextIntlClientProvider>
+            );
+        }
+        const { rerender } = render(
+            <Intl locale="en">
+                <BudgetRuleForm rule={rule} month="2026-09" />
+            </Intl>,
+        );
+        expect(screen.getByText(/In force for September 2026/)).toBeDefined();
+
+        rerender(
+            <Intl locale="es">
+                <BudgetRuleForm rule={rule} month="2026-09" />
+            </Intl>,
+        );
+        expect(
+            screen.getByText("Vigente en septiembre de 2026: 60 / 30 / 10"),
+        ).toBeDefined();
+        expect(screen.queryByText(/September/)).toBeNull();
     });
 });

@@ -7,7 +7,9 @@ import {
     RadarChart,
     ResponsiveContainer,
 } from "recharts";
+import { useTranslations } from "next-intl";
 
+import { useCategoryName } from "@/i18n/category-name";
 import { formatMxn } from "@/lib/format";
 import type { TopCategory } from "@/lib/domain/dashboard";
 
@@ -20,26 +22,28 @@ const RADAR_COLOR = "#6366f1";
  * list with mini-bars. Data comes pre-sorted + capped from the dashboard service.
  */
 export function SpendRadar({ categories }: { categories: TopCategory[] }) {
-    const max = categories.reduce((m, c) => Math.max(m, c.spent), 0);
-    const showRadar = categories.length >= 3;
+    const t = useTranslations("dashboard.radar");
+    const categoryName = useCategoryName();
+    // The radar labels its spokes from `name`, so the rows carry the shown name.
+    const rows = categories.map((c) => ({ ...c, name: categoryName(c.name) }));
+    const max = rows.reduce((m, c) => Math.max(m, c.spent), 0);
+    const showRadar = rows.length >= 3;
 
     return (
         <div className="rounded-lg border p-4">
-            <p className="text-sm font-medium">Where the money went</p>
-            <p className="text-xs text-muted-foreground">
-                Bigger shape = more spent in that area
-            </p>
+            <p className="text-sm font-medium">{t("title")}</p>
+            <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
 
-            {categories.length === 0 ? (
+            {rows.length === 0 ? (
                 <p className="mt-6 text-sm text-muted-foreground">
-                    No spending to chart this month.
+                    {t("empty")}
                 </p>
             ) : (
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     {showRadar && (
                         <div className="h-56">
                             <ResponsiveContainer width="100%" height="100%">
-                                <RadarChart data={categories}>
+                                <RadarChart data={rows}>
                                     <PolarGrid />
                                     <PolarAngleAxis
                                         dataKey="name"
@@ -59,7 +63,7 @@ export function SpendRadar({ categories }: { categories: TopCategory[] }) {
                     <ul
                         className={`flex flex-col justify-center gap-2 ${showRadar ? "" : "sm:col-span-2"}`}
                     >
-                        {categories.map((c) => (
+                        {rows.map((c) => (
                             <li key={c.name}>
                                 <div className="flex items-baseline justify-between text-sm">
                                     <span className="truncate">{c.name}</span>

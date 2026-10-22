@@ -81,6 +81,20 @@ repo. Reference implementations: `components/expense/ExpenseForm.tsx`,
 - Keep column headers / totals **outside** the scrolling element so they stay
   pinned; on desktop watch scrollbar-gutter shift if columns must align.
 
+## Text and locale (i18n)
+
+- **All user-visible text comes from `messages/<locale>/<namespace>.json`**, read
+  with `useTranslations` (client, sync server) or `getTranslations` (async server,
+  server actions). This covers labels, `aria-label`, `title`, placeholders, toasts
+  and action `message`/`fieldErrors`. Add every key to both `es` and `en`.
+- **Logs stay English.** `console.*`, thrown `Error` messages and error `code`
+  values are not translated.
+- **Category and subcategory names go through `useCategoryName` /
+  `getCategoryName`**, never a direct key lookup.
+- **Dates take the active locale** (`useLocale()` / `getLocale()`) through the
+  `lib/format.ts` helpers. Money stays `es-MX`.
+- Spec: [`0010-i18n-spanish.md`](../specs/0010-i18n-spanish.md).
+
 ## Accessibility (baseline, not optional)
 
 - Every input has a `<label htmlFor>`. Icon-only buttons get `aria-label`. Use a
@@ -96,3 +110,7 @@ repo. Reference implementations: `components/expense/ExpenseForm.tsx`,
 - Cover create **and** edit **and** error paths; assert pending states and
   rendered errors. Mock server actions + `useRouter`; never mock the component
   under test.
+- Render translated components with `renderWithIntl` from
+  `tests/support/intl.tsx` (English by default; pass `{ locale: "es" }` for a
+  Spanish case). Server code uses `setServerLocale` against the shared
+  `next-intl/server` mock.

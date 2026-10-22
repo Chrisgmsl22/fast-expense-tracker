@@ -1,7 +1,9 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+
 import { auth } from "@/auth";
-import { toFieldErrors } from "@/lib/actions/field-errors";
+import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { cardRepository } from "@/lib/repositories";
 import type { CardRepository } from "@/lib/repositories/card.repository";
@@ -9,6 +11,7 @@ import {
     updateCardInputSchema,
     type UpdateCardInput,
 } from "@/lib/schemas/card";
+import { cardSchemaMessages } from "./schema-messages";
 
 /** Failure modes the caller can branch on. */
 export type UpdateCardCode =
@@ -35,13 +38,17 @@ export async function updateCard(
     input: unknown,
     repo: CardRepository = cardRepository,
 ): Promise<UpdateCardResult> {
+    const t = await getTranslations("settings");
     const parsed = updateCardInputSchema.safeParse(input);
     if (!parsed.success) {
         return {
             ok: false,
             code: "validation",
-            message: "Please fix the highlighted fields.",
-            fieldErrors: toFieldErrors<UpdateCardInput>(parsed.error),
+            message: t("errors.fixFields"),
+            fieldErrors: localizeFieldErrors(
+                toFieldErrors<UpdateCardInput>(parsed.error),
+                await cardSchemaMessages(),
+            ),
         };
     }
 
@@ -51,7 +58,7 @@ export async function updateCard(
         return {
             ok: false,
             code: "unauthenticated",
-            message: "Not authenticated",
+            message: t("errors.unauthenticated"),
         };
     }
 
@@ -62,7 +69,7 @@ export async function updateCard(
             return {
                 ok: false,
                 code: "cash_locked",
-                message: "The Cash card can't be edited.",
+                message: t("cards.errors.cashEdit"),
             };
         }
 
@@ -71,8 +78,8 @@ export async function updateCard(
             return {
                 ok: false,
                 code: "duplicate_name",
-                message: "You already have an active card with that name.",
-                fieldErrors: { name: ["A card with that name already exists"] },
+                message: t("cards.errors.duplicateName"),
+                fieldErrors: { name: [t("cards.errors.duplicateNameField")] },
             };
         }
 
@@ -85,7 +92,7 @@ export async function updateCard(
             return {
                 ok: false,
                 code: "not_found",
-                message: "That card no longer exists.",
+                message: t("cards.errors.notFound"),
             };
         }
         return { ok: true, data: { id } };
@@ -94,7 +101,7 @@ export async function updateCard(
         return {
             ok: false,
             code: "db_error",
-            message: "Could not save the card. Please try again.",
+            message: t("cards.errors.saveFailed"),
         };
     }
 }

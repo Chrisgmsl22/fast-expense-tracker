@@ -7,13 +7,8 @@ import {
     vi,
     type Mock,
 } from "vitest";
-import {
-    fireEvent,
-    render,
-    screen,
-    waitFor,
-    within,
-} from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { renderWithIntl } from "@/tests/support/intl";
 
 const refresh = vi.fn();
 const push = vi.fn();
@@ -49,20 +44,19 @@ const card = ({
     name,
     charged,
     paid,
-    before = { charged: 0, paid: 0, redeemed: 0 },
 }: {
     id: string;
     name: string;
     charged: number;
     paid: number;
-    before?: CardBalanceInput["before"];
 }): CardBalanceInput => ({
     id,
     name,
     color: "#0b5cab",
     type: "credit",
-    before,
-    during: { charged, paid, redeemed: 0 },
+    charged,
+    paid,
+    redeemed: 0,
 });
 
 const CARDS = [
@@ -96,11 +90,11 @@ function renderScreen(
     currentMonth = "2026-09",
     month = "2026-09",
 ) {
-    return render(
+    return renderWithIntl(
         <CardBalancesScreen
             summary={summarizeCardBalances(cards)}
             month={month}
-            monthName={formatMonthName(month)}
+            monthName={formatMonthName(month, "en")}
             currentMonth={currentMonth}
         />,
     );
@@ -113,7 +107,6 @@ beforeEach(() => {
     historyMock.mockResolvedValue({
         ok: true,
         data: {
-            opening: 6290,
             lines: [
                 line({
                     id: "m1",
@@ -137,49 +130,71 @@ describe("CardBalancesScreen", () => {
         renderScreen();
 
         expect(
-            within(tile("BBVA")).getByText("Owed at end of September"),
+            within(tile("BBVA")).getByText("Owed for September"),
         ).toBeDefined();
         expect(within(tile("BBVA")).getByText("$6,130.00")).toBeDefined();
         expect(within(tile("NU")).getByText("Paid in full")).toBeDefined();
         expect(
-            within(tile("NU")).getByText("Nothing owed at end of September"),
+            within(tile("NU")).getByText("Nothing owed for September"),
         ).toBeDefined();
         const plat = tile("Amex Platinum");
-        expect(within(plat).getByText("Card owes you")).toBeDefined();
-        expect(within(plat).getByText("+$1,889.25")).toBeDefined();
+        const label = within(plat).getByText(
+            "Paid more than charged in September",
+        );
+        expect(label.className).toContain("text-muted-foreground");
+        expect(label.className).not.toContain("text-positive");
+        const amount = within(plat).getByText("+$1,889.25");
+        expect(amount.className).not.toContain("text-positive");
         expect(
-            within(plat).getByText("You paid $1,889.25 more than you owed"),
-        ).toBeDefined();
-    });
-
-    it("totals what is owed without subtracting a credit", () => {
-        renderScreen();
-        const totals = screen.getByRole("region", { name: "Totals" });
-
-        expect(within(totals).getByText("$7,345.60")).toBeDefined();
-        expect(
-            within(totals).getByText("BBVA $6,130.00 + Amex Gold $1,215.60"),
-        ).toBeDefined();
-        expect(within(totals).getByText("$1,889.25")).toBeDefined();
-        expect(
-            within(totals).getByText(
-                "Amex Platinum, overpaid · not subtracted above",
+            within(plat).getByText(
+                "You paid $1,889.25 more than you charged in September.",
             ),
         ).toBeDefined();
     });
 
-    it("hides the credit panel when no card owes you", () => {
+    it("never says a card owes you or was overpaid", () => {
+        renderScreen();
+
+        expect(document.body.textContent).not.toMatch(/owes you|overpaid/i);
+    });
+
+    it("totals what is owed without subtracting what was paid over", () => {
+        renderScreen();
+        const totals = screen.getByRole("region", { name: "Totals" });
+
+        expect(within(totals).getByText("Owed for September")).toBeDefined();
+        expect(within(totals).getByText("$7,345.60")).toBeDefined();
+        expect(
+            within(totals).getByText("BBVA $6,130.00 + Amex Gold $1,215.60"),
+        ).toBeDefined();
+        expect(
+            within(totals).getByText("Paid more than charged in September"),
+        ).toBeDefined();
+        const paidOver = within(totals).getByText("$1,889.25");
+        expect(paidOver.className).not.toContain("text-positive");
+        expect(
+            within(totals).getByText(
+                "Amex Platinum $1,889.25 · not subtracted above",
+            ),
+        ).toBeDefined();
+    });
+
+    it("hides the paid-over panel when no card paid more than it charged", () => {
         renderScreen([CARDS[0]!, CARDS[1]!]);
         const totals = screen.getByRole("region", { name: "Totals" });
 
-        expect(within(totals).queryByText("A card owes you")).toBeNull();
+        expect(within(totals).queryByText(/Paid more than charged/)).toBeNull();
         expect(within(totals).getByText("$6,130.00")).toBeDefined();
     });
 
-    it("says nothing is owed when every card is at zero", () => {
+    it("says nothing is owed for the month when every card is at zero", () => {
         renderScreen([CARDS[1]!]);
 
-        expect(screen.getByText("Nothing owed on any card")).toBeDefined();
+        expect(
+            within(screen.getByRole("region", { name: "Totals" })).getByText(
+                "Nothing owed for September",
+            ),
+        ).toBeDefined();
     });
 
     it("shows the work-in-progress banner and the balance rules", async () => {
@@ -189,7 +204,7 @@ describe("CardBalancesScreen", () => {
         });
 
         expect(notice.textContent).toContain(
-            "Work in progress: balances may not match your bank yet. They count only the card payments you logged.",
+            "Work in progress: balances may not match your bank yet. Each month shows only the charges and card payments you logged in that month. An unpaid amount stays in its own month.",
         );
         fireEvent.click(
             within(notice).getByRole("button", {
@@ -291,7 +306,18 @@ describe("CardBalancesScreen drawer", () => {
         expect(rows[1]?.textContent).toContain("Costco");
         expect(rows[1]?.textContent).toContain("shared, full amount");
         expect(rows[1]?.textContent).toContain("bal $9,130.00");
-        expect(rows[2]?.textContent).toBe("Opening balance$6,290.00");
+        expect(rows).toHaveLength(2);
+        expect(within(drawer).queryByText(/Opening balance/)).toBeNull();
+    });
+
+    it("explains the per-month rule once in the drawer footer", async () => {
+        const drawer = await openBbva();
+
+        expect(
+            within(drawer).getAllByText(
+                "Each month shows only that month's charges and card payments. An unpaid amount stays in its own month, so your bank's balance can differ.",
+            ),
+        ).toHaveLength(1);
     });
 
     it("closes with Escape", async () => {
@@ -346,7 +372,7 @@ describe("CardBalancesScreen drawer", () => {
     it("says so when a card has no history", async () => {
         historyMock.mockResolvedValue({
             ok: true,
-            data: { opening: 0, lines: [] },
+            data: { lines: [] },
         });
         const drawer = await openBbva();
 
@@ -363,7 +389,7 @@ describe("CardBalancesScreen drawer", () => {
         );
         historyMock.mockResolvedValue({
             ok: true,
-            data: { opening: 0, lines },
+            data: { lines },
         });
         const drawer = await openBbva();
 
@@ -380,7 +406,7 @@ describe("CardBalancesScreen drawer", () => {
         );
         historyMock.mockResolvedValue({
             ok: true,
-            data: { opening: 0, lines },
+            data: { lines },
         });
         const drawer = await openBbva();
         const list = await within(drawer).findByRole("list", {
@@ -393,8 +419,7 @@ describe("CardBalancesScreen drawer", () => {
                 name: "Show 1 earlier entry",
             }),
         );
-        expect(within(list).getAllByRole("listitem")).toHaveLength(22);
-        expect(within(list).getByText("Opening balance")).toBeDefined();
+        expect(within(list).getAllByRole("listitem")).toHaveLength(21);
     });
 
     it("keeps only the latest card's history when tiles are clicked quickly", async () => {
@@ -405,7 +430,7 @@ describe("CardBalancesScreen drawer", () => {
             )
             .mockResolvedValueOnce({
                 ok: true,
-                data: { opening: 0, lines: [] },
+                data: { lines: [] },
             });
         renderScreen();
         fireEvent.click(screen.getByRole("button", { name: "BBVA details" }));
@@ -422,7 +447,6 @@ describe("CardBalancesScreen drawer", () => {
         resolveFirst({
             ok: true,
             data: {
-                opening: 0,
                 lines: [line({ id: "stale", description: "Stale" })],
             },
         });
@@ -511,7 +535,7 @@ describe("CardBalancesScreen log a payment", () => {
         await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     });
 
-    it("offers no Pay full on a card that owes you, and Cancel closes the form", async () => {
+    it("offers no Pay full on a card paid over, and Cancel closes the form", async () => {
         renderScreen();
         fireEvent.click(
             screen.getByRole("button", {
@@ -529,7 +553,7 @@ describe("CardBalancesScreen log a payment", () => {
         await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     });
 
-    it("shows a credit balance in green with a + sign in the drawer", async () => {
+    it("shows a paid-over balance neutral, with a + sign and its line, in the drawer", async () => {
         renderScreen();
         fireEvent.click(
             screen.getByRole("button", { name: "Amex Platinum details" }),
@@ -539,20 +563,31 @@ describe("CardBalancesScreen log a payment", () => {
         });
 
         const balance = within(drawer).getByText("+$1,889.25");
-        expect(balance.className).toContain("text-positive");
-        expect(within(drawer).getByText("Card owes you")).toBeDefined();
+        expect(balance.className).not.toContain("text-positive");
+        expect(
+            within(drawer).getByText("Paid more than charged in September"),
+        ).toBeDefined();
+        expect(
+            within(drawer).getByText(
+                "You paid $1,889.25 more than you charged in September.",
+            ),
+        ).toBeDefined();
     });
 });
 
 describe("CardBalancesScreen on a phone", () => {
-    it("shows one compact totals block with each card that owes you", () => {
+    it("shows one compact totals block with each card paid over", () => {
         renderScreen();
-        const block = screen.getByRole("region", { name: "Total owed" });
+        const block = screen.getByRole("region", {
+            name: "Owed for September",
+        });
 
         expect(within(block).getByText("$7,345.60")).toBeDefined();
-        expect(block.textContent).toContain("Amex Platinum owes you$1,889.25");
         expect(block.textContent).toContain(
-            "Opening balance + charged (full amount, even when split) − payments − points redeemed",
+            "Paid more than charged in September: Amex Platinum$1,889.25",
+        );
+        expect(block.textContent).toContain(
+            "Charged (full amount, even when split) − payments − points redeemed",
         );
     });
 
@@ -562,9 +597,7 @@ describe("CardBalancesScreen on a phone", () => {
             name: "BBVA, $6,130.00, Owed",
         });
 
-        expect(row.textContent).toContain(
-            "Credit·$0.00 + $18.4k − $12.3k − $0.00",
-        );
+        expect(row.textContent).toContain("Credit·$18.4k − $12.3k − $0.00");
         fireEvent.click(row);
         expect(
             await screen.findByRole("dialog", { name: "BBVA" }),
@@ -573,21 +606,13 @@ describe("CardBalancesScreen on a phone", () => {
 
     it("prints a sub-1,000 breakdown that adds up to the balance beside it", () => {
         renderScreen([
-            card({
-                id: "bbva",
-                name: "BBVA",
-                charged: 250.5,
-                paid: 100,
-                before: { charged: 1000, paid: 400, redeemed: 0 },
-            }),
+            card({ id: "bbva", name: "BBVA", charged: 250.5, paid: 100 }),
         ]);
         const row = screen.getByRole("button", {
-            name: "BBVA, $750.50, Owed",
+            name: "BBVA, $150.50, Owed",
         });
 
-        expect(row.textContent).toContain(
-            "$600.00 + $250.50 − $100.00 − $0.00",
-        );
+        expect(row.textContent).toContain("$250.50 − $100.00 − $0.00");
     });
 
     it("hands the breakdown beneath the label to assistive tech", () => {
@@ -602,15 +627,15 @@ describe("CardBalancesScreen on a phone", () => {
             .split(" ")
             .map((id) => document.getElementById(id)?.textContent)
             .join(" ");
-        expect(description).toBe("Credit $0.00 + $18.4k − $12.3k − $0.00");
+        expect(description).toBe("Credit $18.4k − $12.3k − $0.00");
     });
 
-    it("describes an untouched row by its card type alone", () => {
+    it("describes a quiet row by its card type alone", () => {
         renderScreen([
             card({ id: "gold", name: "Amex Gold", charged: 0, paid: 0 }),
         ]);
         const row = screen.getByRole("button", {
-            name: "Amex Gold, $0.00, No activity",
+            name: "Amex Gold, No activity",
         });
 
         const ids = (row.getAttribute("aria-describedby") ?? "").split(" ");
@@ -632,16 +657,16 @@ describe("CardBalancesScreen on a phone", () => {
     });
 });
 
-describe("CardBalancesScreen with a card no month touched", () => {
-    const UNTOUCHED = card({
+describe("CardBalancesScreen with a quiet card", () => {
+    const QUIET = card({
         id: "gold",
         name: "Amex Gold",
         charged: 0,
         paid: 0,
     });
 
-    it("reads as no activity rather than paid in full, with no statement lines", () => {
-        renderScreen([UNTOUCHED]);
+    it("reads as no activity rather than paid in full, with no amount or statement lines", () => {
+        renderScreen([QUIET]);
         const gold = tile("Amex Gold");
 
         expect(
@@ -649,41 +674,101 @@ describe("CardBalancesScreen with a card no month touched", () => {
         ).toBeDefined();
         expect(within(gold).queryByText("Paid in full")).toBeNull();
         expect(
-            within(gold).queryByText("Nothing owed at end of September"),
+            within(gold).queryByText("Nothing owed for September"),
         ).toBeNull();
-        expect(within(gold).queryByText("Opening balance")).toBeNull();
         expect(within(gold).queryByText("Charged in September")).toBeNull();
-        expect(within(gold).getByText("$0.00")).toBeDefined();
+        expect(within(gold).queryByText("$0.00")).toBeNull();
     });
 
-    it("keeps the headline grey, where a settled card is green", () => {
-        renderScreen([UNTOUCHED, CARDS[1]!]);
+    it("mutes the name and keeps the headline grey, where a settled card is green", () => {
+        renderScreen([QUIET, CARDS[1]!]);
 
         expect(
             within(tile("Amex Gold")).getByText("No activity in September")
                 .className,
         ).toContain("text-muted-foreground");
         expect(
+            within(tile("Amex Gold")).getByText("Amex Gold").className,
+        ).toContain("text-muted-foreground");
+        expect(within(tile("NU")).getByText("NU").className).not.toContain(
+            "text-muted-foreground",
+        );
+        expect(
             within(tile("NU")).getByText("Paid in full").className,
         ).toContain("text-positive");
     });
 
-    it("drops the zero breakdown from the compact row", () => {
-        renderScreen([UNTOUCHED]);
+    it("shows a small muted label instead of $0.00 on the compact row", () => {
+        renderScreen([QUIET]);
         const row = screen.getByRole("button", {
-            name: "Amex Gold, $0.00, No activity",
+            name: "Amex Gold, No activity",
         });
 
-        expect(row.textContent).toContain("Credit");
-        expect(row.textContent).not.toContain("$0.00 + $0.00");
+        expect(row.textContent).toBe("Amex GoldNo activityCredit");
+        expect(within(row).getByText("No activity").className).toContain(
+            "text-muted-foreground",
+        );
+        expect(within(row).getByText("Amex Gold").className).toContain(
+            "text-muted-foreground",
+        );
+    });
+
+    it("sorts quiet cards after the rest, A→Z in each group, on tiles and rows", () => {
+        renderScreen([
+            card({ id: "a", name: "Amex", charged: 0, paid: 0 }),
+            card({ id: "b", name: "BBVA", charged: 830, paid: 0 }),
+            card({ id: "c", name: "Costco", charged: 0, paid: 0 }),
+            card({ id: "n", name: "NU", charged: 500, paid: 500 }),
+            card({ id: "p", name: "Plat", charged: 0, paid: 100 }),
+        ]);
+
+        expect(
+            screen
+                .getAllByRole("article")
+                .map((a) => a.getAttribute("aria-label")),
+        ).toEqual(["BBVA", "NU", "Plat", "Amex", "Costco"]);
+        expect(
+            screen
+                .getAllByRole("button", { name: /^\w+, / })
+                .map((b) => b.getAttribute("aria-label")),
+        ).toEqual([
+            "BBVA, $830.00, Owed",
+            "NU, $0.00, Paid in full",
+            "Plat, +$100.00, Paid more than charged",
+            "Amex, No activity",
+            "Costco, No activity",
+        ]);
+        const totals = screen.getByRole("region", { name: "Totals" });
+        expect(within(totals).getByText("$830.00")).toBeDefined();
+        expect(within(totals).getByText("$100.00")).toBeDefined();
+    });
+
+    it("still opens the drawer and the payment form", async () => {
+        renderScreen([QUIET]);
+        fireEvent.click(
+            screen.getByRole("button", { name: "Amex Gold, No activity" }),
+        );
+        expect(
+            await screen.findByRole("dialog", { name: "Amex Gold" }),
+        ).toBeDefined();
+        fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "Log a payment on Amex Gold" }),
+        );
+
+        expect(
+            await screen.findByRole("dialog", { name: "Log a payment" }),
+        ).toBeDefined();
     });
 
     it("says no activity in the drawer too", async () => {
         historyMock.mockResolvedValue({
             ok: true,
-            data: { opening: 0, lines: [] },
+            data: { lines: [] },
         });
-        renderScreen([UNTOUCHED]);
+        renderScreen([QUIET]);
         fireEvent.click(
             screen.getByRole("button", { name: "Amex Gold details" }),
         );
@@ -693,6 +778,11 @@ describe("CardBalancesScreen with a card no month touched", () => {
             within(drawer).getByText("No activity in September"),
         ).toBeDefined();
         expect(within(drawer).queryByText("Charged in September")).toBeNull();
+        // Like the tile: a quiet card's $0.00 would read as paid off.
+        expect(within(drawer).queryByText("$0.00")).toBeNull();
+        expect(
+            within(drawer).getByRole("button", { name: "Log a payment" }),
+        ).toBeDefined();
     });
 
     it("still counts a card that was charged and paid off as paid in full", () => {
@@ -725,13 +815,7 @@ describe("CardBalancesScreen statement lines", () => {
     it("mutes a zero Charged line like a zero Paid line, and keeps a real charge dark", () => {
         renderScreen([
             card({ id: "bbva", name: "BBVA", charged: 400, paid: 100 }),
-            card({
-                id: "plat",
-                name: "Amex Platinum",
-                charged: 0,
-                paid: 500,
-                before: { charged: 1000, paid: 0, redeemed: 0 },
-            }),
+            card({ id: "plat", name: "Amex Platinum", charged: 0, paid: 500 }),
         ]);
 
         const charged = (name: string) =>
@@ -866,26 +950,28 @@ describe("CardBalancesScreen month statement", () => {
 
     it("names the month on each statement line and on the total", () => {
         renderScreen([
-            card({
-                id: "bbva",
-                name: "BBVA",
-                charged: 250.5,
-                paid: 100,
-                before: { charged: 1000, paid: 400, redeemed: 0 },
-            }),
+            card({ id: "bbva", name: "BBVA", charged: 250.5, paid: 100 }),
         ]);
         const bbva = tile("BBVA");
 
+        expect(within(bbva).queryByText(/Opening balance/)).toBeNull();
         expect(
-            within(bbva).getByText("Opening balance").nextSibling?.textContent,
-        ).toBe("$600.00");
-        expect(within(bbva).getByText("Charged in September")).toBeDefined();
+            within(bbva).getByText("Charged in September").nextSibling
+                ?.textContent,
+        ).toBe("+ $250.50");
         expect(within(bbva).getByText("Paid in September")).toBeDefined();
         expect(within(bbva).getByText("Redeemed in September")).toBeDefined();
-        expect(within(bbva).getByText("$750.50")).toBeDefined();
+        expect(within(bbva).getByText("$150.50")).toBeDefined();
         expect(
-            screen.getAllByText("Total owed at end of September"),
-        ).toHaveLength(2);
+            within(screen.getByRole("region", { name: "Totals" })).getByText(
+                "Owed for September",
+            ),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("region", { name: "Owed for September" })
+                .textContent,
+        ).toContain("Owed for September$150.50");
+        expect(within(bbva).getByText("Owed for September")).toBeDefined();
     });
 
     it("offers no Pay full or before → after line on a past month", async () => {
@@ -903,7 +989,7 @@ describe("CardBalancesScreen month statement", () => {
         expect(within(dialog).queryByText("BBVA balance")).toBeNull();
     });
 
-    it("says where a payment lands only when its date falls after the month on screen", async () => {
+    it("says where a payment lands when its date falls outside the month on screen", async () => {
         renderScreen(CARDS, "2026-10");
         fireEvent.click(
             screen.getByRole("button", { name: "Log a payment on BBVA" }),
@@ -925,14 +1011,17 @@ describe("CardBalancesScreen month statement", () => {
         fireEvent.change(date, { target: { value: "2026-09-30" } });
         expect(within(dialog).queryByText(/Lands in/)).toBeNull();
 
-        // An earlier month reaches September's balance, so it gets no note.
+        // An earlier month keeps its own statement, so September's balance
+        // does not move either.
         fireEvent.change(date, { target: { value: "2026-08-12" } });
-        expect(within(dialog).queryByText(/Lands in/)).toBeNull();
+        expect(
+            within(dialog).getByText(
+                "Lands in August 2026. You are viewing September 2026, so this balance will not change.",
+            ),
+        ).toBeDefined();
     });
 
-    it("keeps the before → after line when the date is in an earlier month", async () => {
-        // The closing balance on screen opens with every earlier row, so an
-        // August payment lowers September's balance too.
+    it("withholds the before → after line when the date is in an earlier month", async () => {
         renderScreen();
         fireEvent.click(
             screen.getByRole("button", { name: "Log a payment on BBVA" }),
@@ -946,7 +1035,74 @@ describe("CardBalancesScreen month statement", () => {
             target: { value: "2026-08-15" },
         });
 
-        expect(within(dialog).getByText("BBVA balance")).toBeDefined();
-        expect(within(dialog).queryByText(/Lands in/)).toBeNull();
+        expect(within(dialog).queryByText("BBVA balance")).toBeNull();
+        expect(within(dialog).getByText(/Lands in August 2026/)).toBeDefined();
+    });
+});
+
+describe("CardBalancesScreen in Spanish", () => {
+    function renderEs() {
+        return renderWithIntl(
+            <CardBalancesScreen
+                summary={summarizeCardBalances(CARDS)}
+                month="2026-09"
+                monthName={formatMonthName("2026-09", "es")}
+                currentMonth="2026-09"
+            />,
+            { locale: "es" },
+        );
+    }
+
+    it("labels the totals, the tiles and the notice in Spanish", () => {
+        renderEs();
+        expect(
+            within(screen.getByRole("region", { name: "Totales" })).getByText(
+                "Por pagar de septiembre",
+            ),
+        ).toBeDefined();
+        const bbva = tile("BBVA");
+        expect(within(bbva).getByText("Crédito")).toBeDefined();
+        expect(within(bbva).getByText("Cargado en septiembre")).toBeDefined();
+        expect(
+            within(bbva).getByRole("button", {
+                name: "Registrar un pago en BBVA",
+            }),
+        ).toBeDefined();
+        expect(
+            within(tile("NU")).getByText("Pagada por completo"),
+        ).toBeDefined();
+        expect(
+            screen.getByRole("complementary", { name: "En construcción" }),
+        ).toBeDefined();
+    });
+
+    it("shows the drawer history in Spanish, the category name translated", async () => {
+        renderEs();
+        fireEvent.click(
+            screen.getByRole("button", { name: "Detalles de BBVA" }),
+        );
+        const drawer = await screen.findByRole("dialog", { name: "BBVA" });
+        const rows = within(
+            await within(drawer).findByRole("list", { name: "Historial" }),
+        ).getAllByRole("listitem");
+        expect(rows[0]?.textContent).toContain("Pago");
+        expect(rows[0]?.textContent).toContain("28 sep 2026 · from checking");
+        expect(rows[0]?.textContent).toContain("saldo $6,130.00");
+        expect(rows[1]?.textContent).toContain(
+            "26 sep 2026 · Despensa · compartido, monto completo",
+        );
+    });
+
+    it("says the history failed in Spanish when the request throws", async () => {
+        historyMock.mockRejectedValueOnce(new Error("network"));
+        renderEs();
+        fireEvent.click(
+            screen.getByRole("button", { name: "Detalles de BBVA" }),
+        );
+        expect(
+            await screen.findByText(
+                "No se pudo cargar el historial de la tarjeta. Inténtalo de nuevo.",
+            ),
+        ).toBeDefined();
     });
 });

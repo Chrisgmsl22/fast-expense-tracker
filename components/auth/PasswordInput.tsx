@@ -9,6 +9,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import { Eye, EyeOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -20,11 +21,9 @@ type Props = Omit<ComponentProps<"input">, "type" | "ref"> & {
 };
 
 /** A password field with a button inside it that shows or hides the value. */
-export function PasswordInput({
-    className,
-    toggleSubject = "password",
-    ...props
-}: Props) {
+export function PasswordInput({ className, toggleSubject, ...props }: Props) {
+    const t = useTranslations("auth.passwordToggle");
+    const subject = toggleSubject ?? t("subjects.password");
     const [visible, setVisible] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const savedSelection = useRef<[number | null, number | null] | null>(null);
@@ -74,7 +73,7 @@ export function PasswordInput({
                 onClick={toggle}
                 // Keeps focus, and so the caret, in the field on a pointer click.
                 onMouseDown={(e) => e.preventDefault()}
-                aria-label={`${visible ? "Hide" : "Show"} ${toggleSubject}`}
+                aria-label={t(visible ? "hide" : "show", { subject })}
                 aria-controls={props.id}
                 className={cn(
                     "absolute right-1 bottom-1 flex size-8 items-center justify-center rounded-md outline-none",
