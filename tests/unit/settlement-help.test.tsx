@@ -53,7 +53,7 @@ describe("SettlementHelp", () => {
             locale: "es",
         });
         fireEvent.click(
-            screen.getByRole("button", { name: "Cómo usar Cuentas" }),
+            screen.getByRole("button", { name: "Cómo usar Cuentas por pagar" }),
         );
 
         const dialog = await screen.findByRole("dialog");

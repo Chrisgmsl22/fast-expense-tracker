@@ -135,12 +135,15 @@ describe("SettlementPage in Spanish", () => {
         renderWithIntl(page, { locale: "es" });
 
         expect(
-            screen.getByRole("heading", { level: 1, name: "Cuentas" }),
+            screen.getByRole("heading", {
+                level: 1,
+                name: "Cuentas por pagar",
+            }),
         ).toBeDefined();
         expect(screen.getByText("con Brenda")).toBeDefined();
         expect(
             screen.getByText(
-                "Estás viendo julio de 2026. Lo que registres queda con fecha de hoy y entra en la liquidación abierta.",
+                "Estás viendo julio de 2026. Lo que registres queda con fecha de hoy y entra en la cuenta abierta.",
             ),
         ).toBeDefined();
     });

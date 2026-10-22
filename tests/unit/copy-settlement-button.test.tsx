@@ -221,7 +221,7 @@ describe("CopySettlementButton", () => {
         );
         await clickCopy(
             screen.getByRole("button", {
-                name: "Copiar el resumen de la liquidación",
+                name: "Copiar el resumen de la cuenta",
             }),
         );
         const text = buildSettlementSummaryText(
@@ -230,7 +230,7 @@ describe("CopySettlementButton", () => {
             "open",
             intlFor("es"),
         );
-        expect(text.split("\n")[0]).toBe("🧾 *Liquidación 10 jul 2026 – hoy*");
+        expect(text.split("\n")[0]).toBe("🧾 *Cuenta 10 jul 2026 – hoy*");
         expect(writeText).toHaveBeenCalledWith(text);
         expect(await screen.findByText("Copiado")).toBeDefined();
     });

@@ -1096,9 +1096,7 @@ describe("Settlement in Spanish", () => {
         expect(screen.getByText("Le debo a Brenda")).toBeDefined();
         expect(screen.queryByText("I owe Brenda")).toBeNull();
         expect(
-            screen.getByText(
-                "10 jun 2026 · en una liquidación cerrada · bloqueado",
-            ),
+            screen.getByText("10 jun 2026 · en una cuenta cerrada · bloqueado"),
         ).toBeDefined();
         expect(
             screen.getByText("Transferencia — Brenda te pagó"),

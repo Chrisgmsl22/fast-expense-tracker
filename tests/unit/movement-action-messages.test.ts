@@ -141,7 +141,7 @@ describe("frozenMovementMessage", () => {
                 "edit",
             ),
         ).toBe(
-            "Esta deuda cuenta en una liquidación que ya cerraste, así que no se puede editar.",
+            "Esta deuda forma parte de una cuenta que ya cerraste, así que no se puede editar.",
         );
     });
 });

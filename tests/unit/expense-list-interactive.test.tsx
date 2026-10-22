@@ -1496,7 +1496,7 @@ describe("ExpenseListInteractive in Spanish", () => {
 
         expect(
             screen.getByLabelText(
-                "Transferencia — le pagaste a Brenda está bloqueado: cuenta en una liquidación que ya cerraste",
+                "Transferencia — le pagaste a Brenda está bloqueado: forma parte de una cuenta que ya cerraste",
             ),
         ).toBeDefined();
     });

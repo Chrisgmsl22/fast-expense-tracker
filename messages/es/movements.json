@@ -22,8 +22,8 @@
         "formEditYouOwe": "Editar una deuda que le debes a {partner}",
         "formLogPartnerOwes": "Registrar una deuda que {partner} te debe",
         "formLogYouOwe": "Registrar una deuda que le debes a {partner}",
-        "blurbPartnerOwes": "Registra dinero que {partner} te debe. Escribe el monto completo de la deuda. Esto solo cuenta para Cuentas. No agrega gasto, ingreso ni pago.",
-        "blurbYouOwe": "Algo que {partner} pagó por ti y que le tienes que devolver. Escribe lo que TÚ debes, no lo que ella pagó. Esto solo cuenta para Cuentas: no toca tu presupuesto. El pago que hagas después es el gasto.",
+        "blurbPartnerOwes": "Registra dinero que {partner} te debe. Escribe el monto completo de la deuda. Esto solo cuenta para Cuentas por pagar. No agrega gasto, ingreso ni pago.",
+        "blurbYouOwe": "Algo que {partner} pagó por ti y que le tienes que devolver. Escribe lo que TÚ debes, no lo que ella pagó. Esto solo cuenta para Cuentas por pagar: no toca tu presupuesto. El pago que hagas después es el gasto.",
         "amountPartnerOwes": "Lo que {partner} te debe (MXN)",
         "amountYouOwe": "Lo que le debes a {partner} (MXN)",
         "helpPartnerOwes": "El monto completo de la deuda, sin dividir.",
@@ -84,10 +84,10 @@
         "invalid": "Valor no válido"
     },
     "frozen": {
-        "transferClosedEdit": "Esta transferencia cerró una liquidación y no se puede editar.",
-        "transferClosedDelete": "Esta transferencia cerró una liquidación y no se puede eliminar.",
-        "rowDelete": "Este registro cuenta en una liquidación que ya cerraste, así que no se puede eliminar.",
-        "debtEdit": "Esta deuda cuenta en una liquidación que ya cerraste, así que no se puede editar.",
-        "transferEdit": "Esta transferencia cuenta en una liquidación que ya cerraste, así que no se puede editar."
+        "transferClosedEdit": "Esta transferencia cerró una cuenta y no se puede editar.",
+        "transferClosedDelete": "Esta transferencia cerró una cuenta y no se puede eliminar.",
+        "rowDelete": "Este registro forma parte de una cuenta que ya cerraste, así que no se puede eliminar.",
+        "debtEdit": "Esta deuda forma parte de una cuenta que ya cerraste, así que no se puede editar.",
+        "transferEdit": "Esta transferencia forma parte de una cuenta que ya cerraste, así que no se puede editar."
     }
 }

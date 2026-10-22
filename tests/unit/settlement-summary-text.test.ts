@@ -497,7 +497,7 @@ describe("buildSettlementSummaryText", () => {
 
         expect(build(journal, PARTNER, "open", intlFor("es"))).toBe(
             [
-                "🧾 *Liquidación 1 oct 2026 – hoy*",
+                "🧾 *Cuenta 1 oct 2026 – hoy*",
                 "",
                 "*Gastos compartidos*",
                 "    • Súper: $500.00",
@@ -540,6 +540,6 @@ describe("buildSettlementSummaryText", () => {
         expect(text).toContain(
             "    • Parte de Brenda en gastos compartidos: $570.00",
         );
-        expect(lines(text)[0]).toBe("🧾 *Liquidación 1 sep 2026 – 2 sep 2026*");
+        expect(lines(text)[0]).toBe("🧾 *Cuenta 1 sep 2026 – 2 sep 2026*");
     });
 });

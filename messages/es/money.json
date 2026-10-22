@@ -5,8 +5,8 @@
         "description": "Lo que se gastó en el mes, agrupado según de qué fondo salió"
     },
     "reminder": {
-        "openCycle": "Liquidación abierta · no depende de los filtros",
-        "notThisMonth": "La liquidación abierta, no {month}."
+        "openCycle": "Cuenta abierta · no depende de los filtros",
+        "notThisMonth": "La cuenta abierta, no {month}."
     },
     "funding": {
         "fromSavings": "Del ahorro",
@@ -77,7 +77,7 @@
         "whatIReallySpent": "Gastado real",
         "cashSent": "{partner}: dinero que te mandó este mes",
         "partnerPaidYou": "{partner} te pagó",
-        "owedBelongs": "Lo que cualquiera de los dos todavía deba pertenece a Cuentas, no a un mes.",
+        "owedBelongs": "Lo que cualquiera de los dos todavía deba pertenece a Cuentas por pagar, no a un mes.",
         "whatIPaid": "{partner}: lo que le pagué",
         "fromIncome": "Del ingreso de este mes",
         "iPaidHer": "le pagué",

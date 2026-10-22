@@ -314,7 +314,7 @@ describe("AppNav", () => {
             expect(screen.getByText("Gastado real")).toBeDefined();
             expect(
                 screen.getByRole("link", {
-                    name: "Cuentas, ciclo abierto: Taylor te debe, $75.00",
+                    name: "Cuentas por pagar, ciclo abierto: Taylor te debe, $75.00",
                 }),
             ).toBeDefined();
             expect(
@@ -383,7 +383,9 @@ describe("AppNav", () => {
                     { locale: "es" },
                 );
                 const link = screen.getByRole("link", {
-                    name: new RegExp(`^Cuentas, ciclo abierto: ${status}, `),
+                    name: new RegExp(
+                        `^Cuentas por pagar, ciclo abierto: ${status}, `,
+                    ),
                 });
                 expect(within(link).getByText(badge)).toBeDefined();
             },

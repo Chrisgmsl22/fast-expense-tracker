@@ -424,7 +424,7 @@ describe("summary layout in Spanish", () => {
         expect(footer.getByText("Parte de Avery")).toBeDefined();
         expect(footer.getByText("Avery te debe")).toBeDefined();
         expect(
-            footer.getByText("La liquidación abierta, no junio de 2026."),
+            footer.getByText("La cuenta abierta, no junio de 2026."),
         ).toBeDefined();
     });
 });

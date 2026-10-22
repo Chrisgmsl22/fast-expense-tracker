@@ -493,7 +493,7 @@ describe("SettlementViews in Spanish", () => {
     it("names the tabs, the count and the past month in Spanish", () => {
         renderEs();
         expect(
-            screen.getByRole("tab", { name: "Liquidación abierta" }),
+            screen.getByRole("tab", { name: "Cuenta abierta" }),
         ).toBeDefined();
         const month = screen.getByRole("tab", { name: "septiembre de 2026" });
         expect(month.getAttribute("aria-selected")).toBe("true");
@@ -501,7 +501,7 @@ describe("SettlementViews in Spanish", () => {
         expect(screen.getByText("1 registro")).toBeDefined();
         expect(
             screen.getByText(
-                "septiembre de 2026 ya terminó. Esto es lo que tuvo; la liquidación abierta está en su propia pestaña.",
+                "septiembre de 2026 ya terminó. Esto es lo que tuvo; la cuenta abierta está en su propia pestaña.",
             ),
         ).toBeDefined();
     });
@@ -509,7 +509,7 @@ describe("SettlementViews in Spanish", () => {
     it("dates and sums a closed cycle in Spanish", () => {
         renderEs();
         fireEvent.click(screen.getByRole("tab", { name: "Historial" }));
-        expect(screen.getByText("1 liquidación")).toBeDefined();
+        expect(screen.getByText("1 cuenta")).toBeDefined();
         const trigger = screen.getByRole("button", {
             name: /Saldado el 30 jun 2026/,
         });
@@ -526,7 +526,7 @@ describe("SettlementViews in Spanish", () => {
         fireEvent.click(screen.getByRole("tab", { name: "Historial" }));
         expect(
             screen.getByText(
-                /No se cerró ninguna liquidación en septiembre de 2026/,
+                /No se cerró ninguna cuenta en septiembre de 2026/,
             ),
         ).toBeDefined();
     });

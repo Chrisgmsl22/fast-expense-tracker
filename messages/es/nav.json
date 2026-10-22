@@ -13,7 +13,7 @@
         "dashboard": "Resumen",
         "expenses": "Gastos",
         "income": "Ingresos",
-        "settlement": "Cuentas",
+        "settlement": "Cuentas por pagar",
         "cards": "Saldos de tarjetas",
         "savings": "Ahorro",
         "settings": "Configuración"
@@ -22,7 +22,7 @@
         "sheOwes": "{partner} te debe",
         "youOwe": "Le debes a {partner}",
         "settled": "Saldado",
-        "linkLabel": "Cuentas, ciclo abierto: {status}, {amount}"
+        "linkLabel": "Cuentas por pagar, ciclo abierto: {status}, {amount}"
     },
     "thisMonth": "Este mes",
     "dayProgress": "día {day} / {days}",

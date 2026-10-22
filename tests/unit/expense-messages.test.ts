@@ -158,7 +158,7 @@ describe("expense action messages in Spanish", () => {
         if (res.ok) return;
         expect(res.code).toBe("cycle_closed");
         expect(res.message).toBe(
-            "La parte de tu pareja en este gasto cuenta en una liquidación que ya cerraste, así que no se puede eliminar.",
+            "La parte de tu pareja en este gasto forma parte de una cuenta que ya cerraste, así que no se puede eliminar.",
         );
     });
 
@@ -187,11 +187,9 @@ describe("expense action messages in Spanish", () => {
         expect(res.ok).toBe(false);
         if (res.ok) return;
         expect(res.code).toBe("cycle_closed");
-        expect(res.message).toMatch(
-            /^Este gasto cae dentro de una liquidación/,
-        );
+        expect(res.message).toMatch(/^Este gasto cae dentro de una cuenta/);
         expect(res.fieldErrors?.isShared).toEqual([
-            "La liquidación que cubre esta fecha ya está cerrada",
+            "La cuenta que cubre esta fecha ya está cerrada",
         ]);
     });
 

@@ -57,7 +57,7 @@ function CategoryLabel({ name }: { name: string }) {
 
 describe("useCategoryName", () => {
     it.each([
-        ["es", "Disposable Income", "Dinero libre"],
+        ["es", "Disposable Income", "Gasto libre"],
         ["en", "Disposable Income", "Disposable Income"],
         ["es", "Pets", "Pets"],
     ] as const)("Should render in %s: %s → %s", (locale, stored, expected) => {

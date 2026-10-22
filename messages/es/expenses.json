@@ -101,8 +101,8 @@
         "notShared": "no compartido",
         "editRow": "Editar {name}",
         "deleteRow": "Eliminar {name}",
-        "locked": "{name} está bloqueado: cuenta en una liquidación que ya cerraste",
-        "lockedClosedTransfer": "{name} está bloqueado: cerró una liquidación que ya registraste"
+        "locked": "{name} está bloqueado: forma parte de una cuenta que ya cerraste",
+        "lockedClosedTransfer": "{name} está bloqueado: cerró una cuenta que ya registraste"
     },
     "errors": {
         "invalidExpense": "Gasto no válido",
@@ -120,12 +120,12 @@
         "noPaymentCategory": "No hay una categoría para registrarlo. Primero agrega una categoría de Gastos en pareja.",
         "paymentNoSplitOrCard": "Un pago que le mandaste a tu pareja no se puede dividir ni cargar a una tarjeta; el monto que escribes es la transferencia completa.",
         "paymentKeepsCategory": "Un pago que le mandaste a tu pareja conserva su categoría y nunca se puede marcar como reembolsado.",
-        "splitIntoClosedCycle": "Este gasto cae dentro de una liquidación que ya cerraste, así que ya no se puede dividir con tu pareja; eso cambiaría lo que la liquidación saldó.",
+        "splitIntoClosedCycle": "Este gasto cae dentro de una cuenta que ya cerraste, así que ya no se puede dividir con tu pareja; eso cambiaría lo que la cuenta saldó.",
         "frozen": {
-            "paymentEdit": "Este pago cuenta en una liquidación que ya cerraste, así que no se puede editar.",
-            "paymentDelete": "Este pago cuenta en una liquidación que ya cerraste, así que no se puede eliminar.",
-            "expenseEdit": "La parte de tu pareja en este gasto cuenta en una liquidación que ya cerraste, así que no se puede editar.",
-            "expenseDelete": "La parte de tu pareja en este gasto cuenta en una liquidación que ya cerraste, así que no se puede eliminar."
+            "paymentEdit": "Este pago forma parte de una cuenta que ya cerraste, así que no se puede editar.",
+            "paymentDelete": "Este pago forma parte de una cuenta que ya cerraste, así que no se puede eliminar.",
+            "expenseEdit": "La parte de tu pareja en este gasto forma parte de una cuenta que ya cerraste, así que no se puede editar.",
+            "expenseDelete": "La parte de tu pareja en este gasto forma parte de una cuenta que ya cerraste, así que no se puede eliminar."
         }
     },
     "fields": {
@@ -143,6 +143,6 @@
         "paymentNoCard": "Una transferencia sale de una cuenta bancaria, así que no hay tarjeta",
         "paymentCategoryFixed": "La categoría de un pago no se puede cambiar",
         "paymentNeverReimbursed": "Un pago que le mandaste a tu pareja nunca se puede reembolsar",
-        "splitClosedCycle": "La liquidación que cubre esta fecha ya está cerrada"
+        "splitClosedCycle": "La cuenta que cubre esta fecha ya está cerrada"
     }
 }

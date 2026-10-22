@@ -418,7 +418,7 @@ describe("closeSettlementCycle in Spanish", () => {
             ok: false,
             code: "not_settled",
             message:
-                "Esta liquidación todavía no está a mano, así que no se puede cerrar.",
+                "Esta cuenta todavía no está a mano, así que no se puede cerrar.",
         });
     });
 });
