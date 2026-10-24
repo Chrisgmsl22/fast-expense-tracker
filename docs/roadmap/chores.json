@@ -362,11 +362,10 @@
         {
             "id": "CHORE-32",
             "name": "auth-rate-limit",
-            "priority": 6,
             "title": "Rate-limit login and signup attempts",
-            "description": "Friend launch (2026-10-09). There is no throttle on login, and signup (8.d) adds a second public form. ADR-0009 deferred rate limiting and named 'move to multi-user' as the trigger to revisit; that trigger is now met. Login runs through the Auth.js credentials callback (/api/auth/callback/credentials) as well as the login action, and the proxy matcher skips /api, so a limit placed only in the action is bypassable. Must merge before the signup switch is turned on.",
+            "description": "CANCELLED (2026-10-17): superseded by CHORE-41 (Better Auth rate limiter). Owner decision; the Auth.js login code it would change is replaced by spec 0009. Original intent: Friend launch (2026-10-09). There is no throttle on login, and signup (8.d) adds a second public form. ADR-0009 deferred rate limiting and named 'move to multi-user' as the trigger to revisit; that trigger is now met. Login runs through the Auth.js credentials callback (/api/auth/callback/credentials) as well as the login action, and the proxy matcher skips /api, so a limit placed only in the action is bypassable. Must merge before the signup switch is turned on.",
             "plan": "Kicks off with an ADR that revisits ADR-0009 (docs/decisions is protected, sign-off first) and picks the store: a Postgres table (no new service, $0) or Upstash Redis through the Vercel Marketplace. (1) Limit failed logins per email and per IP inside the credentials authorize() path, so both entry points are covered. (2) Limit signup attempts per IP in the signup action. (3) A refused attempt returns the same generic message as a wrong password, so the limit does not reveal which emails exist. (4) Behind a port injected like the repositories, with a fake for tests. Tests: the Nth failure inside the window is refused, a success resets or does not count (decide at pickup), the window expires, the limiter fails open or closed as the ADR decides, and the callback route is covered, not only the action.",
-            "status": "open",
+            "status": "cancelled",
             "spec": null,
             "pr": null,
             "issue": null
@@ -377,7 +376,7 @@
             "priority": 7,
             "title": "Change password from Settings",
             "description": "Friend launch (2026-10-09). There is no password change and no email provider, so password reset by email is not possible yet (Resend is in locked Phase 7). The Settings 'Account' section is a 'coming soon' placeholder (app/(dashboard)/settings/page.tsx). Without this, a friend who wants a new password, or whose password leaked, needs a manual database edit.",
-            "plan": "(1) Settings Account section: current password, new password, confirm. An IDOR-safe server action mirroring save-split-rule: Zod (same strength rule as signup) -> auth() -> verify the current password with bcrypt -> hash and store the new one. (2) Sessions issued before the change stop working: store passwordChangedAt on User and refuse a JWT issued before it in the jwt callback (auth.config.ts). (3) docs/operations: a short runbook for a forgotten password (the owner sets a temporary password by hand until email reset exists). Tests: wrong current password refused; weak new password refused; success changes the hash; an older session is refused after a change; userId scope. Out of scope: reset by email.",
+            "plan": "Owner decision (2026-10-17): no email reset; manual reset runbook. Built on Auth.js and kept small, because spec 0009 (Better Auth) replaces this login code. (1) Settings Account section: current password, new password (signup rules, live checklist), confirm, then a confirmation dialog. An IDOR-safe one-parameter server action: Zod -> auth() -> bcrypt check of the current password -> refuse the same password -> hash (cost 10) and store it with passwordChangedAt. (2) Sessions signed in before passwordChangedAt are refused in the jwt callback (auth.config.ts, one primary-key read); the session that made the change refreshes its sign-in time first and stays signed in. (3) docs/operations/reset-a-password.md: the owner sets a temporary password by hand in production, with a hash from pnpm password:hash (hidden prompt, never argv). Tests: wrong current, same, weak and mismatched passwords refused; success writes the hash and timestamp for that user only; older sessions refused and the changing one kept; the dialog flow; the migration; the hash script. Out of scope: reset by email, rate limiting (CHORE-32, cancelled).",
             "status": "open",
             "spec": null,
             "pr": null,
@@ -500,6 +499,18 @@
             "plan": "Full Plan required (migration). (1) Migration drops User.password, guarded: abort if any user lacks a credential row. (2) Remove the transition code (any dual-write hook) and the User.password writes in seed.ts and user-provisioning. (3) Integration test on invented users. (4) Owner takes a Neon restore point before merge and runs the surveys after.",
             "status": "open",
             "spec": "docs/specs/0009-auth-module-better-auth.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-30",
+            "name": "category-full-amounts",
+            "priority": 29,
+            "title": "Show full amounts on the category page",
+            "description": "Owner request (2026-10-04): on the category detail page, a 'Show full amounts' toggle swaps my share (actualExpenditure) for the full charged amount (amount), so the owner can see what the couple spends in a category. Owner decisions: the category page only, not the dashboard; the full view counts the same rows as today (BUDGET_FUNDING_FILTER), so savings-funded spend stays out; the totals cover only the expenses the owner logged. Narrower than the cancelled CHORE-7, which was dashboard-wide and inert for a solo user.",
+            "plan": "(1) State: a `?view=full` URL param next to `?month=`; the page stays a server component. (2) Repository: the getSubcategorySpends groupBy also sums `amount` (same query, same filter). (3) Domain: reuse subcategoryBreakdown for the full rows. (4) Service: getCategoryDetail also returns spentFull and breakdownFull; the page picks a set by the param. (5) UI: a checkbox or switch near the header. Full view: the first card reads 'Spent (full)' with 'my share $X' under it; the subcategory bars and percents use full amounts; Limit and Remaining stay my-share with a note 'Limit applies to your share'; the expense list does not change. (6) Hide the toggle when sharesExpenses is off (a solo user's share is the total). Tests: full sums per subcategory, a shared and a solo row in one category, savings-funded rows stay out of both views, an unknown view param falls back to my share, the toggle is hidden in solo mode, userId scope. Out: dashboard radar and category cards, Essentials/Discretionary/Savings cards. Coordinate with CHORE-8.c, which also edits lib/domain/category.ts and lib/repositories/category.repository.ts.",
+            "status": "open",
+            "spec": null,
             "pr": null,
             "issue": null
         }

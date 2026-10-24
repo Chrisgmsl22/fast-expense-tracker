@@ -28,8 +28,8 @@ the quick wins and the chin all merged.
 | 3   | **CHORE-8.b** | A new user has no categories, so cannot log an expense               |
 | 4   | **CHORE-8.d** | The signup page, the on/off switch and the user cap                  |
 | 5   | **CHORE-8.e** | The 8-step onboarding wizard, from `designs-screens/onboarding.html` |
-| 6   | **CHORE-32**  | No throttle on login or signup (ADR-0009's multi-user trigger)       |
-| 7   | **CHORE-33**  | No password change and no email reset, so a lost password needs SQL  |
+| 6   | ~~CHORE-32~~  | Cancelled 2026-10-17: the CHORE-41 rate limiter covers it            |
+| 7   | **CHORE-33**  | Change password in Settings; a lost password uses the reset runbook  |
 
 **Owner steps, not PRs:** close PR #67 once the CHORE-8.b rebuild opens;
 create and connect the Global Config store (CHORE-8.d documents it); protect
@@ -67,10 +67,13 @@ at a time, because every step edits the same auth files:
 | F   | **CHORE-42**  | OAuth provider and the iOS client entry                 |
 | G   | **CHORE-43**  | Drop `User.password` after 2 clean weeks; restore point |
 
-CHORE-41 turns on the Better Auth rate limiter, which covers **CHORE-32**.
-Build **CHORE-33** (change password) on Better Auth after CHORE-41, not on
-Auth.js. Owner decision pending: whether this block runs before the launch
-switch or right after it.
+CHORE-41 turns on the Better Auth rate limiter, which covers **CHORE-32**
+(cancelled). **CHORE-33** ships on Auth.js and stays small, because spec 0009
+replaces this login code; the move to Better Auth must keep its rule that a
+password change signs out every other session. There is no email
+reset: a forgotten password goes through a manual runbook that CHORE-33 adds
+(`docs/operations/reset-a-password.md`). Owner decision
+pending: whether this block runs before the launch switch or right after it.
 
 ## Capacity
 
