@@ -2,18 +2,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithIntl, setServerLocale } from "@/tests/support/intl";
 
-const { authMock, getSettingsMock, getSettlementMock, redirectMock } =
-    vi.hoisted(() => ({
-        authMock: vi.fn(),
-        getSettingsMock: vi.fn(),
-        getSettlementMock: vi.fn(),
-        redirectMock: vi.fn((path: string) => {
-            // Mirror Next's redirect(), which throws to halt rendering.
-            throw new Error(`REDIRECT:${path}`);
-        }),
-    }));
+const {
+    getSessionUserIdMock,
+    getSettingsMock,
+    getSettlementMock,
+    redirectMock,
+} = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+    getSettingsMock: vi.fn(),
+    getSettlementMock: vi.fn(),
+    redirectMock: vi.fn((path: string) => {
+        // Mirror Next's redirect(), which throws to halt rendering.
+        throw new Error(`REDIRECT:${path}`);
+    }),
+}));
 
-vi.mock("@/auth", () => ({ auth: authMock }));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 vi.mock("next/navigation", () => ({
     redirect: redirectMock,
     useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
@@ -63,12 +69,12 @@ const unsettledStub = {
 };
 
 beforeEach(() => {
-    authMock.mockReset();
+    getSessionUserIdMock.mockReset();
     getSettingsMock.mockReset();
     getSettlementMock.mockReset();
     redirectMock.mockClear();
 
-    authMock.mockResolvedValue({ user: { id: "u1" } });
+    getSessionUserIdMock.mockResolvedValue("u1");
     getSettlementMock.mockResolvedValue(settledStub);
 });
 

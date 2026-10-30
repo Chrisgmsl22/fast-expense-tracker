@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { addCard } from "@/app/_actions/card/add";
 import { archiveCard } from "@/app/_actions/card/archive";
@@ -18,8 +22,8 @@ import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository
 import { setServerLocale } from "@/tests/support/intl";
 
 beforeEach(() => {
-    authMock.mockReset();
-    authMock.mockResolvedValue({ user: { id: "u1" } });
+    getSessionUserIdMock.mockReset();
+    getSessionUserIdMock.mockResolvedValue("u1");
     setServerLocale("es");
 });
 
@@ -44,7 +48,7 @@ describe("settings actions in Spanish", () => {
     });
 
     it("Should return the unauthenticated message in Spanish with the same code", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const res = await saveSplitRule(
             { sharesExpenses: false },
             new FakeSettingsRepository(),

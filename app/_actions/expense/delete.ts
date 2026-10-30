@@ -3,7 +3,7 @@
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { expenseRepository } from "@/lib/repositories";
 import type { ExpenseRepository } from "@/lib/repositories/expense.repository";
@@ -53,8 +53,7 @@ export async function deleteExpense(
     }
     const { id } = parsed.data;
 
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     if (!userId) {
         return {
             ok: false,

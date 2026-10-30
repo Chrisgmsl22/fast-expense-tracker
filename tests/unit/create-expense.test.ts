@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// `createExpense` calls `auth()`; mock it so these stay pure unit tests. The
+// `createExpense` calls `getSessionUserId()`; mock it so these stay pure unit tests. The
 // repository is injected (the fake), so there's no database in play at all.
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { createExpense } from "@/app/_actions/expense/create";
 import { FakeCardRepository } from "@/tests/support/fake-card-repository";
@@ -24,8 +28,8 @@ function validInput(over: Record<string, unknown> = {}) {
 
 describe("createExpense (unit, injected fake repo)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("rejects invalid input with a validation code + field errors", async () => {
@@ -36,11 +40,12 @@ describe("createExpense (unit, injected fake repo)", () => {
         if (res.ok) return;
         expect(res.code).toBe("validation");
         expect(res.fieldErrors).toBeDefined();
+        expect(getSessionUserIdMock).not.toHaveBeenCalled();
         expect(repo.inserts).toHaveLength(0);
     });
 
     it("returns unauthenticated when there is no session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const repo = new FakeExpenseRepository();
 
         const res = await createExpense(validInput(), repo);

@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { updateCardPayment } from "@/app/_actions/movement/update-card-payment";
 import { FakeCardRepository } from "@/tests/support/fake-card-repository";
@@ -28,8 +32,8 @@ function seededRepo() {
 
 describe("updateCardPayment (unit, injected fake repo)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("writes the edited card payment, keeping the type", async () => {
@@ -70,7 +74,7 @@ describe("updateCardPayment (unit, injected fake repo)", () => {
 
     it("returns not_found when the row isn't the user's (IDOR guard)", async () => {
         const repo = seededRepo();
-        authMock.mockResolvedValue({ user: { id: "someone_else" } });
+        getSessionUserIdMock.mockResolvedValue("someone_else");
         const res = await updateCardPayment(
             { id: "mv1", date: "2026-07-10", amount: "950", cardId: "card_1" },
             repo,
@@ -95,7 +99,7 @@ describe("updateCardPayment (unit, injected fake repo)", () => {
     });
 
     it("returns unauthenticated with no session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const repo = seededRepo();
         const res = await updateCardPayment(
             { id: "mv1", date: "2026-07-10", amount: "950", cardId: "card_1" },
@@ -169,7 +173,7 @@ describe("updateCardPayment (unit, injected fake repo)", () => {
 
     it("answers not_found for another user's row even when the card is foreign too", async () => {
         const repo = seededRepo();
-        authMock.mockResolvedValue({ user: { id: "u2" } });
+        getSessionUserIdMock.mockResolvedValue("u2");
         const cards = new FakeCardRepository();
         cards.seed({ id: "card-other", userId: "u1" });
 

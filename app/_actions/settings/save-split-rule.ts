@@ -2,7 +2,7 @@
 
 import { getTranslations } from "next-intl/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import { resolveSplitRule } from "@/lib/domain/settings";
@@ -47,8 +47,7 @@ export async function saveSplitRule(
         };
     }
 
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     if (!userId) {
         return {
             ok: false,

@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { saveBudgetRule } from "@/app/_actions/settings/save-budget-rule";
 import { resolveBudgetRule } from "@/lib/domain/budget-rule";
@@ -12,8 +16,8 @@ const valid = { essentials: 60, discretionary: 30, savings: 10 };
 // Guards: the action is new, so every case fails pre-fix (no module).
 describe("saveBudgetRule (unit, injected fake repo)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "user-a" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("user-a");
         vi.useFakeTimers({ toFake: ["Date"] });
         vi.setSystemTime(new Date("2026-09-20T18:00:00Z"));
     });
@@ -97,7 +101,7 @@ describe("saveBudgetRule (unit, injected fake repo)", () => {
         const repo = new FakeBudgetRuleRepository();
         await saveBudgetRule(valid, repo);
 
-        authMock.mockResolvedValue({ user: { id: "user-b" } });
+        getSessionUserIdMock.mockResolvedValue("user-b");
         await saveBudgetRule(
             { essentials: 34, discretionary: 33, savings: 33 },
             repo,
@@ -145,7 +149,7 @@ describe("saveBudgetRule (unit, injected fake repo)", () => {
     });
 
     it("Should refuse without a session and never write", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const repo = new FakeBudgetRuleRepository();
         const res = await saveBudgetRule(valid, repo);
 

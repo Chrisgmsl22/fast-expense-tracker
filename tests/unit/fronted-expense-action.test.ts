@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Both actions call `auth()`; mock it so these stay pure unit tests. Every
+// Both actions call `getSessionUserId()`; mock it so these stay pure unit tests. Every
 // repository is injected, so no database is in play.
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { addPartnerPayment } from "@/app/_actions/expense/add-partner-payment";
 import { updatePartnerPayment } from "@/app/_actions/expense/update-partner-payment";
@@ -52,8 +56,8 @@ const input = (over: Record<string, unknown> = {}) => ({
 
 describe("addPartnerPayment (unit, injected fakes)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("stores the payment as an expense carrying the payment marker", async () => {
@@ -207,7 +211,7 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
         expect(invalid.ok).toBe(false);
         if (!invalid.ok) expect(invalid.code).toBe("validation");
 
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const anon = await addPartnerPayment(
             input(),
             deps({ expenseRepo: repo }),
@@ -253,8 +257,8 @@ describe("addPartnerPayment (unit, injected fakes)", () => {
 
 describe("updatePartnerPayment (unit, injected fakes)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     function seeded() {

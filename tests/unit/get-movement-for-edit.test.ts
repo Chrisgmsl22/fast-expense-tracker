@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { deleteMovement } from "@/app/_actions/movement/delete";
 import { getMovementForEdit } from "@/app/_actions/movement/get-for-edit";
@@ -31,8 +35,8 @@ function repoWith(
 
 describe("getMovementForEdit (unit, injected fake repo)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("prefills a transfer whose cycle is still open, card and note included", async () => {
@@ -103,7 +107,7 @@ describe("getMovementForEdit (unit, injected fake repo)", () => {
     });
 
     it("returns not_found when the row isn't the user's (IDOR guard)", async () => {
-        authMock.mockResolvedValue({ user: { id: "someone_else" } });
+        getSessionUserIdMock.mockResolvedValue("someone_else");
         const res = await getMovementForEdit("mv1", repoWith("gf_paid"));
 
         expect(res.ok).toBe(false);
@@ -124,7 +128,7 @@ describe("getMovementForEdit (unit, injected fake repo)", () => {
     });
 
     it("returns unauthenticated with no session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const res = await getMovementForEdit("mv1", repoWith("gf_paid"));
 
         expect(res.ok).toBe(false);
@@ -146,8 +150,8 @@ describe("getMovementForEdit (unit, injected fake repo)", () => {
 
 describe("the edit read refuses exactly the movements the write refuses", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     const TYPES = [

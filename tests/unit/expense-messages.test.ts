@@ -1,8 +1,12 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { addPartnerPayment } from "@/app/_actions/expense/add-partner-payment";
 import { createExpense } from "@/app/_actions/expense/create";
@@ -58,8 +62,8 @@ describe("frozenRefusalKey", () => {
 
 describe("expense action messages in Spanish", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
         setServerLocale("es");
     });
 
@@ -132,7 +136,7 @@ describe("expense action messages in Spanish", () => {
     });
 
     it("Should translate the unauthenticated message and keep its code", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
 
         const res = await getExpenseForEdit("e1", new FakeExpenseRepository());
 

@@ -2,7 +2,7 @@
 
 import { getTranslations } from "next-intl/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
 import { movementRepository } from "@/lib/repositories";
@@ -44,8 +44,7 @@ export async function addPartnerDebt(
         };
     }
 
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     if (!userId) {
         return {
             ok: false,

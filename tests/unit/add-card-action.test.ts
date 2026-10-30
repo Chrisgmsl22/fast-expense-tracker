@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { addCard } from "@/app/_actions/card/add";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
@@ -11,8 +15,8 @@ const validInput = { name: "NU", type: "credit", color: "#9333ea" };
 
 describe("addCard (unit, injected fake repo)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("creates the card, scoped to the session user", async () => {
@@ -56,7 +60,7 @@ describe("addCard (unit, injected fake repo)", () => {
     });
 
     it("returns unauthenticated with no session (never writes)", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const repo = new FakeCardRepository();
         const res = await addCard(validInput, repo);
 

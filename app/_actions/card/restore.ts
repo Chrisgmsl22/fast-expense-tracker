@@ -2,7 +2,7 @@
 
 import { getTranslations } from "next-intl/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
 import { cardRepository } from "@/lib/repositories";
@@ -45,8 +45,7 @@ export async function restoreCard(
         };
     }
 
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     if (!userId) {
         return {
             ok: false,

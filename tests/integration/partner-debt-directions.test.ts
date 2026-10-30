@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { db } from "@/lib/db";
 import { addPartnerDebt } from "@/app/_actions/movement/add-partner-debt";
@@ -31,12 +35,12 @@ async function user(email = "debt@example.com") {
     const row = await db.user.create({
         data: { email, name: "Test", password: "x" },
     });
-    authMock.mockResolvedValue({ user: { id: row.id } });
+    getSessionUserIdMock.mockResolvedValue(row.id);
     return row;
 }
 
 describe("partner debt directions against real repositories", () => {
-    beforeEach(() => authMock.mockReset());
+    beforeEach(() => getSessionUserIdMock.mockReset());
 
     it("adds 100 to settlement without expenses, income, budget, card spend, or feed rows", async () => {
         const owner = await user();
@@ -113,7 +117,7 @@ describe("partner debt directions against real repositories", () => {
         expect(
             await deleteMovement({ id: debt.id }, movementRepo),
         ).toMatchObject({ ok: false, code: "not_found" });
-        authMock.mockResolvedValue({ user: { id: owner.id } });
+        getSessionUserIdMock.mockResolvedValue(owner.id);
         expect(
             await updatePartnerDebt(
                 { id: debt.id, date: payload.date, amount: 120 },

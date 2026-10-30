@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { resolveBudgetRule } from "@/lib/domain/budget-rule";
 import {
@@ -26,8 +26,7 @@ const COMING_SOON = [
 ] as const;
 
 export default async function SettingsPage() {
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     // The proxy route gate guarantees a session; this satisfies the nullable
     // type and fails safe if it's ever reached without one.
     if (!userId) {

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { getTranslations } from "next-intl/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { movementRepository } from "@/lib/repositories";
 import type { MovementRepository } from "@/lib/repositories/movement.repository";
@@ -49,8 +49,7 @@ export async function deleteMovement(
     }
     const { id } = parsed.data;
 
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     if (!userId) {
         return {
             ok: false,

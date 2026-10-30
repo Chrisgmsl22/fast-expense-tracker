@@ -1,8 +1,12 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { closeSettlementCycle } from "@/app/_actions/settlement/close-cycle";
@@ -65,8 +69,8 @@ function setup(
 
 describe("closeSettlementCycle", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("marks the settling transfer when the balance is square", async () => {
@@ -125,7 +129,7 @@ describe("closeSettlementCycle", () => {
     });
 
     it("rejects an unauthenticated caller without touching the repo", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const { settlementRepo, deps } = setup([expense()], [movement()]);
 
         const res = await closeSettlementCycle(deps);
@@ -211,8 +215,8 @@ const payment = (
 
 describe("closeSettlementCycle — a cycle squared by PAYING the partner", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("marks the payment-expense, because no movement is there to carry it", async () => {
@@ -311,8 +315,8 @@ describe("closeSettlementCycle — a cycle squared by PAYING the partner", () =>
 
 describe("closeSettlementCycle — the direction the tests never covered", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("refuses, loudly, when the squared cycle holds neither a payment nor a transfer", async () => {
@@ -352,8 +356,8 @@ describe("closeSettlementCycle — the direction the tests never covered", () =>
  */
 describe("closeSettlementCycle — a zero-count write", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     /** The real deps, with the marking write forced to match nothing. */
@@ -406,8 +410,8 @@ describe("closeSettlementCycle — a zero-count write", () => {
 
 describe("closeSettlementCycle in Spanish", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
         setServerLocale("es");
     });
 

@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { updateTransfer } from "@/app/_actions/movement/update-transfer";
 import { FakeMovementRepository } from "@/tests/support/fake-movement-repository";
@@ -20,8 +24,8 @@ function seededRepo() {
 
 describe("updateTransfer (unit, injected fake repo)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("flips the direction + amount and clears the card", async () => {
@@ -161,7 +165,7 @@ describe("updateTransfer (unit, injected fake repo)", () => {
 
     it("returns not_found when the row isn't the user's (IDOR guard)", async () => {
         const repo = seededRepo();
-        authMock.mockResolvedValue({ user: { id: "someone_else" } });
+        getSessionUserIdMock.mockResolvedValue("someone_else");
         const res = await updateTransfer(
             {
                 id: "mv1",
@@ -196,7 +200,7 @@ describe("updateTransfer (unit, injected fake repo)", () => {
     });
 
     it("returns unauthenticated with no session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const repo = seededRepo();
         const res = await updateTransfer(
             {

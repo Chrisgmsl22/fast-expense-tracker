@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock only the session; the real repositories and database are exercised.
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { db } from "@/lib/db";
 import { addPartnerPayment } from "@/app/_actions/expense/add-partner-payment";
 import { PARTNER_PAYMENT_CATEGORY_SLUG } from "@/lib/domain/expense";
 
 beforeEach(() => {
-    authMock.mockReset();
+    getSessionUserIdMock.mockReset();
 });
 
 async function seed() {
@@ -26,7 +30,7 @@ async function seed() {
             name: "Combined Expenses",
         },
     });
-    authMock.mockResolvedValue({ user: { id: me.id } });
+    getSessionUserIdMock.mockResolvedValue(me.id);
     return { me, other, combined };
 }
 

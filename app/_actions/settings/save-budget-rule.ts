@@ -2,7 +2,7 @@
 
 import { getTranslations } from "next-intl/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import {
     localizeFieldErrors,
     localizeMessage,
@@ -52,8 +52,7 @@ export async function saveBudgetRule(
         };
     }
 
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     if (!userId) {
         return {
             ok: false,

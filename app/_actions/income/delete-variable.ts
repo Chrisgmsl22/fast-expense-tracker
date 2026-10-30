@@ -3,7 +3,7 @@
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { incomeRepository } from "@/lib/repositories";
 import type { IncomeRepository } from "@/lib/repositories/income.repository";
@@ -44,8 +44,7 @@ export async function deleteVariableIncome(
     }
     const { id } = parsed.data;
 
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     if (!userId) {
         return {
             ok: false,

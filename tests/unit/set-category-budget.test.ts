@@ -1,9 +1,13 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// `setCategoryBudget` calls `auth()`; mock it so these stay pure unit tests.
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+// `setCategoryBudget` calls `getSessionUserId()`; mock it so these stay pure unit tests.
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { setCategoryBudget } from "@/app/_actions/category/set-budget";
 import { setServerLocale } from "@/tests/support/intl-server";
@@ -50,8 +54,8 @@ const valid = {
 
 describe("setCategoryBudget (unit, injected fakes)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("rejects invalid input before touching auth or repos", async () => {
@@ -70,7 +74,7 @@ describe("setCategoryBudget (unit, injected fakes)", () => {
     });
 
     it("returns unauthenticated when there is no session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const res = await setCategoryBudget(valid, budgetRepo(), catRepo());
         expect(res.ok).toBe(false);
         if (!res.ok) expect(res.code).toBe("unauthenticated");
@@ -157,8 +161,8 @@ describe("setCategoryBudget messages", () => {
     };
 
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("gives one English message per invalid field", async () => {
@@ -189,7 +193,7 @@ describe("setCategoryBudget messages", () => {
 
     it("translates the unauthenticated message to Spanish", async () => {
         setServerLocale("es");
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const res = await setCategoryBudget(valid, budgetRepo(), catRepo());
         expect(res).toEqual({
             ok: false,

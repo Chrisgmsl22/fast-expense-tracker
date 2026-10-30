@@ -1,8 +1,12 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { deleteExpense } from "@/app/_actions/expense/delete";
 import { updateExpense } from "@/app/_actions/expense/update";
@@ -60,8 +64,8 @@ function paymentDeps(cycleClosedAt: Date | null) {
 }
 
 beforeEach(() => {
-    authMock.mockReset();
-    authMock.mockResolvedValue({ user: { id: "u1" } });
+    getSessionUserIdMock.mockReset();
+    getSessionUserIdMock.mockResolvedValue("u1");
 });
 
 describe("a row the closed cycle COUNTED is frozen", () => {

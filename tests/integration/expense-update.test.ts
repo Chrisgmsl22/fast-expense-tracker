@@ -1,15 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // Mock only the session — the real DB is exercised (mirrors expense-create.test.ts).
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { db } from "@/lib/db";
 import { updateExpense } from "@/app/_actions/expense/update";
 
 beforeEach(() => {
-    authMock.mockReset();
-    authMock.mockResolvedValue({ user: { id: "" } });
+    getSessionUserIdMock.mockReset();
+    getSessionUserIdMock.mockResolvedValue(null);
 });
 
 async function seed() {
@@ -25,7 +29,7 @@ async function seed() {
     const category2 = await db.category.create({
         data: { userId: user.id, slug: "transport", name: "Transport" },
     });
-    authMock.mockResolvedValue({ user: { id: user.id } });
+    getSessionUserIdMock.mockResolvedValue(user.id);
     return { user, other, category, category2 };
 }
 
@@ -88,7 +92,7 @@ describe("updateExpense (integration)", () => {
     it("returns unauthenticated when there is no session", async () => {
         const { user, category } = await seed();
         const { id } = await makeExpense(user.id, category.id);
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
 
         const res = await updateExpense(editInput(id, category.id));
 
