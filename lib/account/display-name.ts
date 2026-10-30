@@ -1,4 +1,5 @@
-import { auth, unstable_update } from "@/auth";
+import { unstable_update } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import type { UserRepository } from "@/lib/repositories/user.repository";
@@ -36,8 +37,7 @@ export async function changeDisplayName(
     }
     const { name } = parsed.data;
 
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     if (!userId) {
         return {
             ok: false,

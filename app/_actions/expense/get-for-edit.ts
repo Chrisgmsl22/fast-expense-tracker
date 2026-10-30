@@ -2,7 +2,7 @@
 
 import { getTranslations } from "next-intl/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { expenseRepository } from "@/lib/repositories";
 import type {
@@ -36,8 +36,7 @@ export async function getExpenseForEdit(
     repo: ExpenseRepository = expenseRepository,
 ): Promise<GetExpenseForEditResult> {
     const t = await getTranslations("expenses");
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     if (!userId) {
         return {
             ok: false,

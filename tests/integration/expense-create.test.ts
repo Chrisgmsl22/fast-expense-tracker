@@ -1,16 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// Mock only the session — the real DB is exercised. auth() is hoisted above the
-// import rewrite; @/auth is mocked so next-auth/next-server never loads.
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+// Mock the session boundary; the database is real.
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { db } from "@/lib/db";
 import { createExpense } from "@/app/_actions/expense/create";
 
 beforeEach(() => {
-    authMock.mockReset();
-    authMock.mockResolvedValue({ user: { id: "" } }); // overridden per test
+    getSessionUserIdMock.mockReset();
+    getSessionUserIdMock.mockResolvedValue(null); // overridden per test
 });
 
 async function seedUserAndCategory() {
@@ -20,7 +23,7 @@ async function seedUserAndCategory() {
     const category = await db.category.create({
         data: { userId: user.id, slug: "groceries", name: "Groceries" },
     });
-    authMock.mockResolvedValue({ user: { id: user.id } });
+    getSessionUserIdMock.mockResolvedValue(user.id);
     return { user, category };
 }
 
@@ -55,7 +58,7 @@ describe("createExpense (integration)", () => {
 
     it("returns unauthenticated when there is no session", async () => {
         const { category } = await seedUserAndCategory();
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
 
         const res = await createExpense(validInput(category.id));
 

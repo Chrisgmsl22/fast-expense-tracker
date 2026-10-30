@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { updateExpense } from "@/app/_actions/expense/update";
 import { FakeCardRepository } from "@/tests/support/fake-card-repository";
@@ -23,8 +27,8 @@ function validInput(over: Record<string, unknown> = {}) {
 
 describe("updateExpense (unit, injected fake repo)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("rejects invalid expense fields with a validation code", async () => {
@@ -46,7 +50,7 @@ describe("updateExpense (unit, injected fake repo)", () => {
     });
 
     it("returns unauthenticated when there is no session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const repo = new FakeExpenseRepository();
 
         const res = await updateExpense(validInput(), repo);

@@ -1,6 +1,6 @@
 import { getLocale } from "next-intl/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { formatMonthName } from "@/lib/format";
 import { getScopedMonth } from "@/lib/month-scope.server";
@@ -20,8 +20,7 @@ export default async function IncomePage({
     const month = await getScopedMonth(monthParam);
     const currentMonth = getCurrentMonthCdmx();
 
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     // The proxy route gate guarantees a session; this satisfies the nullable
     // type and fails safe if it's ever reached without one.
     if (!userId) {

@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { saveSplitRule } from "@/app/_actions/settings/save-split-rule";
 import { FakeSettingsRepository } from "@/tests/support/fake-settings-repository";
 
 describe("saveSplitRule (unit, injected fake repo)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("saves shared mode: name + share fraction, scoped to the session user", async () => {
@@ -102,7 +106,7 @@ describe("saveSplitRule (unit, injected fake repo)", () => {
     });
 
     it("returns unauthenticated with no session (IDOR guard — never writes)", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const repo = new FakeSettingsRepository();
         const res = await saveSplitRule(
             {
@@ -120,7 +124,7 @@ describe("saveSplitRule (unit, injected fake repo)", () => {
     });
 
     it("scopes the write to the session user, ignoring any client-supplied id", async () => {
-        authMock.mockResolvedValue({ user: { id: "owner" } });
+        getSessionUserIdMock.mockResolvedValue("owner");
         const repo = new FakeSettingsRepository();
         await saveSplitRule(
             {

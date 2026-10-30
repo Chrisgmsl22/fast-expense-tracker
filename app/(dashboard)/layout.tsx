@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { auth } from "@/auth";
+import { getSessionContext } from "@/lib/auth/session";
 import {
     budgetRuleRepository,
     cardRepository,
@@ -24,9 +24,9 @@ export default async function DashboardLayout({
 }: {
     children: ReactNode;
 }) {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) return null;
+    const session = await getSessionContext();
+    if (!session) return null;
+    const { userId } = session;
     // One clock controls both the current-month query and its calendar progress.
     const now = new Date();
     const month = getCurrentMonthCdmx(now);
@@ -59,8 +59,8 @@ export default async function DashboardLayout({
             <SidebarDateGuard dayKey={model.period.dayKey} />
             <div className="min-h-screen lg:pl-[252px]">
                 <AppNav
-                    email={session.user?.email ?? undefined}
-                    name={session.user?.name ?? undefined}
+                    email={session.email ?? undefined}
+                    name={session.name ?? undefined}
                     model={model}
                 />
                 <div className="min-w-0">{children}</div>

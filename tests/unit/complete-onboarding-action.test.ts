@@ -1,11 +1,13 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock, rootUsers } = vi.hoisted(() => ({
-    authMock: vi.fn(),
+const { getSessionUserIdMock, rootUsers } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
     rootUsers: { markOnboarded: vi.fn() },
 }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 vi.mock("@/lib/repositories", () => ({ userRepository: rootUsers }));
 
 import { completeOnboarding } from "@/app/_actions/account/complete-onboarding";
@@ -18,8 +20,8 @@ const LATER = new Date("2026-10-17T09:30:00Z");
 let users: FakeUserRepository;
 
 beforeEach(() => {
-    authMock.mockReset();
-    authMock.mockResolvedValue({ user: { id: "u1" } });
+    getSessionUserIdMock.mockReset();
+    getSessionUserIdMock.mockResolvedValue("u1");
     rootUsers.markOnboarded.mockReset();
     users = new FakeUserRepository();
     users.seed("u1");
@@ -50,7 +52,7 @@ describe("finishOnboarding", () => {
     });
 
     it("Should refuse without a session and write nothing", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
 
         const result = await finishOnboarding(users, () => FIRST);
 

@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 vi.mock("@/lib/repositories", () => ({
     settingsRepository: {
         getSettings: async () => ({
@@ -35,13 +39,13 @@ async function renderPage(locale: Locale = "en") {
 }
 
 beforeEach(() => {
-    authMock.mockReset();
-    authMock.mockResolvedValue({ user: { id: "u1" } });
+    getSessionUserIdMock.mockReset();
+    getSessionUserIdMock.mockResolvedValue("u1");
 });
 
 describe("SettingsPage", () => {
     it("Should render nothing without a session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         expect(await SettingsPage()).toBeNull();
     });
 

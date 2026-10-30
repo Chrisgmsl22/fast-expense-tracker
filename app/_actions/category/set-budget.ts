@@ -2,7 +2,7 @@
 
 import { getTranslations } from "next-intl/server";
 
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
 import {
@@ -67,8 +67,8 @@ export async function setCategoryBudget(
         };
     }
 
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getSessionUserId();
+    if (!userId) {
         return {
             ok: false,
             code: "unauthenticated",
@@ -76,7 +76,6 @@ export async function setCategoryBudget(
         };
     }
 
-    const userId = session.user.id;
     const { slug, month, thisMonthAmount, defaultAmount } = parsed.data;
 
     const category = await categoryRepo.getBySlug(userId, slug);

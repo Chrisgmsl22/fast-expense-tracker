@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// `addVariableIncome` calls `auth()`; mock it so these stay pure unit tests. The
+// `addVariableIncome` calls `getSessionUserId()`; mock it so these stay pure unit tests. The
 // repository is injected (the fake), so there's no database in play.
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { addVariableIncome } from "@/app/_actions/income/add-variable";
 import { FakeIncomeRepository } from "@/tests/support/fake-income-repository";
@@ -19,8 +23,8 @@ function validInput(over: Record<string, unknown> = {}) {
 
 describe("addVariableIncome (unit, injected fake repo)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
     });
 
     it("rejects invalid input with a validation code + field errors", async () => {
@@ -35,7 +39,7 @@ describe("addVariableIncome (unit, injected fake repo)", () => {
     });
 
     it("returns unauthenticated when there is no session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const repo = new FakeIncomeRepository();
 
         const res = await addVariableIncome(validInput(), repo);

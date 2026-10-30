@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import type { UserRepository } from "@/lib/repositories/user.repository";
 import { safeErrorSummary } from "@/lib/safe-error";
@@ -16,8 +16,7 @@ export async function finishOnboarding(
     users: Pick<UserRepository, "markOnboarded">,
     now: () => Date = () => new Date(),
 ): Promise<CompleteOnboardingResult> {
-    const session = await auth();
-    const userId = session?.user?.id;
+    const userId = await getSessionUserId();
     if (!userId) {
         return {
             ok: false,

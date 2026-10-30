@@ -1,13 +1,17 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock, updateSessionMock, rootUsers } = vi.hoisted(() => ({
-    authMock: vi.fn(),
-    updateSessionMock: vi.fn(),
-    rootUsers: { updateName: vi.fn(), markOnboarded: vi.fn() },
+const { getSessionUserIdMock, updateSessionMock, rootUsers } = vi.hoisted(
+    () => ({
+        getSessionUserIdMock: vi.fn(),
+        updateSessionMock: vi.fn(),
+        rootUsers: { updateName: vi.fn(), markOnboarded: vi.fn() },
+    }),
+);
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
 }));
 vi.mock("@/auth", () => ({
-    auth: authMock,
     unstable_update: updateSessionMock,
 }));
 vi.mock("@/lib/repositories", () => ({ userRepository: rootUsers }));
@@ -17,8 +21,8 @@ import { updateDisplayName } from "@/app/_actions/account/update-display-name";
 import { setServerLocale } from "@/tests/support/intl";
 
 beforeEach(() => {
-    authMock.mockReset();
-    authMock.mockResolvedValue({ user: { id: "u1" } });
+    getSessionUserIdMock.mockReset();
+    getSessionUserIdMock.mockResolvedValue("u1");
     updateSessionMock.mockReset();
     rootUsers.updateName.mockReset();
     rootUsers.markOnboarded.mockReset();
@@ -47,7 +51,7 @@ describe("updateDisplayName in Spanish", () => {
     });
 
     it("Should return the sign-in message in Spanish without a session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
 
         expect(await updateDisplayName({ name: "Lupe" })).toEqual({
             ok: false,
@@ -89,7 +93,7 @@ describe("completeOnboarding in Spanish", () => {
     });
 
     it("Should return the sign-in message in Spanish without a session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
 
         expect(await completeOnboarding()).toEqual({
             ok: false,

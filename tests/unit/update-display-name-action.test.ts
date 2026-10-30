@@ -1,13 +1,17 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock, updateSessionMock, rootUsers } = vi.hoisted(() => ({
-    authMock: vi.fn(),
-    updateSessionMock: vi.fn(),
-    rootUsers: { updateName: vi.fn() },
+const { getSessionUserIdMock, updateSessionMock, rootUsers } = vi.hoisted(
+    () => ({
+        getSessionUserIdMock: vi.fn(),
+        updateSessionMock: vi.fn(),
+        rootUsers: { updateName: vi.fn() },
+    }),
+);
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
 }));
 vi.mock("@/auth", () => ({
-    auth: authMock,
     unstable_update: updateSessionMock,
 }));
 vi.mock("@/lib/repositories", () => ({ userRepository: rootUsers }));
@@ -26,8 +30,8 @@ function loggedText(): string {
 }
 
 beforeEach(() => {
-    authMock.mockReset();
-    authMock.mockResolvedValue({ user: { id: "u1", name: "Old Name" } });
+    getSessionUserIdMock.mockReset();
+    getSessionUserIdMock.mockResolvedValue("u1");
     updateSessionMock.mockReset();
     updateSessionMock.mockResolvedValue({});
     rootUsers.updateName.mockReset();
@@ -78,6 +82,7 @@ describe("changeDisplayName", () => {
             if (result.ok) return;
             expect(result.code).toBe("validation");
             expect(result.fieldErrors?.name?.length).toBeGreaterThan(0);
+            expect(getSessionUserIdMock).not.toHaveBeenCalled();
             expect(users.stateOf("u1")?.name).toBe("Old Name");
             expect(updateSessionMock).not.toHaveBeenCalled();
         },
@@ -92,7 +97,7 @@ describe("changeDisplayName", () => {
     });
 
     it("Should refuse without a session and write nothing", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
 
         const result = await changeDisplayName({ name: INVENTED_NAME }, users);
 
@@ -102,7 +107,7 @@ describe("changeDisplayName", () => {
     });
 
     it("Should refuse when the session user no longer exists", async () => {
-        authMock.mockResolvedValue({ user: { id: "gone" } });
+        getSessionUserIdMock.mockResolvedValue("gone");
 
         const result = await changeDisplayName({ name: INVENTED_NAME }, users);
 

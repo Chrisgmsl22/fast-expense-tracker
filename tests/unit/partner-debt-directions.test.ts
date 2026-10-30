@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { addPartnerDebt } from "@/app/_actions/movement/add-partner-debt";
 import { updatePartnerDebt } from "@/app/_actions/movement/update-partner-debt";
@@ -14,7 +18,7 @@ import { buildFeed } from "@/lib/feed";
 const input = { date: "2026-09-10", amount: "100", direction: "partner_debt" };
 
 describe("debts in both directions", () => {
-    beforeEach(() => authMock.mockResolvedValue({ user: { id: "u1" } }));
+    beforeEach(() => getSessionUserIdMock.mockResolvedValue("u1"));
 
     it.each(["income", "savings"] as const)(
         "excludes both %s-funded debts from ordinary feeds, charged totals, and budget totals",
@@ -115,7 +119,7 @@ describe("debts in both directions", () => {
     );
 
     it("requires a session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         expect(
             await addPartnerDebt(input, new FakeMovementRepository()),
         ).toMatchObject({ ok: false, code: "unauthenticated" });

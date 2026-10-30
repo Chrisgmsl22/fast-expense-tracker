@@ -1,15 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
-vi.mock("@/auth", () => ({ auth: authMock }));
+const { getSessionUserIdMock } = vi.hoisted(() => ({
+    getSessionUserIdMock: vi.fn(),
+}));
+vi.mock("@/lib/auth/session", () => ({
+    getSessionUserId: getSessionUserIdMock,
+}));
 
 import { setFixedIncome } from "@/app/_actions/income/set-fixed";
 import { FakeIncomeRepository } from "@/tests/support/fake-income-repository";
 
 describe("setFixedIncome (unit, injected fake repo)", () => {
     beforeEach(() => {
-        authMock.mockReset();
-        authMock.mockResolvedValue({ user: { id: "u1" } });
+        getSessionUserIdMock.mockReset();
+        getSessionUserIdMock.mockResolvedValue("u1");
         vi.useFakeTimers({ toFake: ["Date"] });
         vi.setSystemTime(new Date("2026-09-20T18:00:00Z"));
     });
@@ -30,7 +34,7 @@ describe("setFixedIncome (unit, injected fake repo)", () => {
     });
 
     it("returns unauthenticated when there is no session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const repo = new FakeIncomeRepository();
 
         const res = await setFixedIncome({ amount: 44000 }, repo);
@@ -43,7 +47,7 @@ describe("setFixedIncome (unit, injected fake repo)", () => {
 
     // Guard: pre-fix, the future-month check ran before auth.
     it("Should return unauthenticated for a future month with no session", async () => {
-        authMock.mockResolvedValue(null);
+        getSessionUserIdMock.mockResolvedValue(null);
         const repo = new FakeIncomeRepository();
 
         const res = await setFixedIncome(
