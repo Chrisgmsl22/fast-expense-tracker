@@ -2,6 +2,13 @@
 
 **Date**: 2026-10-16
 **Status**: Accepted (owner sign-off 2026-10-16); implementation pending
+
+Christian reconfirmed the human-readable design on 2026-10-29. Follow the
+[delivery plan](../plans/2026-10-29-auth-delivery-plan.md) for gradual execution
+and the [visual design](../plans/2026-10-24-auth-design-review.html) for review.
+This phase delivers the auth service and its tested mobile contract. The Swift
+app and business API scope follow in mobile planning. Technical questions in
+this spec are not resolved merely by design approval.
 **Type**: Platform / auth migration
 **Chores**: CHORE-39 (PR 1) → CHORE-40 (PR 2) → CHORE-41 (PR 3) → CHORE-42 (PR 4); CHORE-43 (PR 6) after the waiting period. PR 5 (`/api/v1`) is registered when the iOS work starts. See [`chores.json`](../roadmap/chores.json).
 **Relates**: [ADR-0009](../decisions/0009-login-credential-security.md), [ADR-0026](../decisions/0026-gate-public-signup-behind-global-config.md), BUG-3 (idle session), CHORE-8.e, CHORE-32, CHORE-33, CHORE-34, CHORE-36

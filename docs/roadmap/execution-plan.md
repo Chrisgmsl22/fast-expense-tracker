@@ -51,6 +51,16 @@ Then **CHORE-27** (P30) resumes the owner's own backlog. **CHORE-36**
 
 ## Auth module migration
 
+**Current auth plan, 2026-10-29:** Christian approved the visual design and
+requested gradual delivery of this repo's auth service before the Swift app.
+Use the [auth delivery plan](../plans/2026-10-29-auth-delivery-plan.md) for the
+current sequence and gates. CHORE-39 merged in PR #102 after independent review.
+Compatibility proof and CHORE-34 must finish before CHORE-40. Native auth
+readiness includes a protected identity endpoint and a client contract; expense
+APIs wait for mobile planning. The older sequence below is historical context
+where it conflicts with that plan. CHORE-33's order still requires reconciliation
+before the web switch; no existing password-change decision is silently replaced.
+
 Spec [0009](../specs/0009-auth-module-better-auth.md), decided in
 [ADR-0027](../decisions/0027-replace-authjs-with-better-auth.md) and
 [ADR-0028](../decisions/0028-native-clients-use-oauth-with-pkce.md). It moves
