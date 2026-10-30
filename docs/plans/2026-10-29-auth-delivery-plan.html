@@ -1,0 +1,310 @@
+<!doctype html>
+<!-- Visual edition of 2026-10-29-auth-delivery-plan.md. Refresh this edition when planning decisions change. Diagrams rendered from its Mermaid sources. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="description" content="Draft auth design for the expense tracker web app and a future native Swift iOS client."><title>Auth delivery plan | Fast Expense Tracker</title><style>
+:root{--paper:#fff;--bg:#f3f4ef;--ink:#20322e;--muted:#66766e;--line:#dfe5de;--accent:#21664f;--wash:#eaf2eb;--gold:#866016;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--bg);font-size:16px;line-height:1.65;scroll-behavior:smooth}
+*{box-sizing:border-box}body{margin:0}a{color:var(--accent);text-underline-offset:3px}button{font:inherit;cursor:pointer}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #c79838;outline-offset:4px}.skip{position:absolute;left:16px;top:-70px;background:white;padding:12px;z-index:10}.skip:focus{top:12px}.shell{max-width:1400px;margin:auto;display:grid;grid-template-columns:240px minmax(0,1fr);gap:40px;padding:36px 42px 80px}aside{align-self:start;position:sticky;top:36px}.brand{font-size:11px;font-weight:750;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:9px 0 28px}.brand strong{display:block;font-size:15px;letter-spacing:-.02em;color:var(--ink);text-transform:none;margin-top:4px}nav a{display:flex;align-items:baseline;gap:12px;color:#53675b;text-decoration:none;font-size:13px;line-height:1.5;padding:10px 7px;border-bottom:1px solid #e2e6dd}nav a:hover{color:var(--accent);background:#e8eee5}nav span{font-size:10px;font-variant-numeric:tabular-nums;color:#7b8a7d}.source-link{display:block;font-size:12px;margin-top:25px}.aside-note{font-size:12px;color:var(--muted);margin:22px 7px}main{min-width:0;background:var(--paper);padding:58px 62px 45px;border:1px solid #e0e5dc;border-radius:16px;box-shadow:0 8px 35px #263b2805}.eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 18px}.badge{display:inline-flex;border:1px solid #e4d7b8;background:#fcf5e5;color:#785b24;border-radius:99px;padding:4px 11px;font-size:11px;letter-spacing:.03em;margin-bottom:20px}h1{font-family:Georgia,"Times New Roman",serif;font-size:52px;font-weight:500;line-height:1.08;letter-spacing:-.045em;max-width:640px;margin:0 0 22px;color:#172f26}.deck{font-size:18px;line-height:1.6;color:#53675b;max-width:650px;margin:0 0 24px}.meta{font-size:11px;letter-spacing:.05em;color:var(--muted);padding-bottom:30px;border-bottom:1px solid var(--line);margin-bottom:30px}.summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 30px}.summary div{padding:15px 17px;border-radius:8px;background:var(--wash);font-size:13px;line-height:1.5}.summary small{display:block;text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--accent);font-weight:750;margin-bottom:6px}article>p:first-child{display:none}p{margin:0 0 18px}article>p{max-width:72ch}h2{font-size:25px;font-weight:650;line-height:1.3;letter-spacing:-.025em;margin:42px 0 18px;padding-top:28px;border-top:1px solid var(--line);scroll-margin-top:25px}h3{font-size:18px;margin:28px 0 12px}strong{font-weight:650}li{padding-left:3px;margin:10px 0}ol,ul{padding-left:25px}.table-wrap{max-width:100%;overflow:auto;margin:24px 0 28px;border:1px solid var(--line);border-radius:9px}table{border-collapse:collapse;width:100%;font-size:13px;line-height:1.55}th{text-align:left;background:#eef3ed;font-size:11px;font-weight:700;padding:13px 15px;vertical-align:top;color:#395145}td{padding:15px;border-top:1px solid var(--line);vertical-align:top}td:first-child{font-weight:550;min-width:140px}details{border:1px solid var(--line);border-radius:9px;margin:22px 0;background:#fafbf8;padding:0 20px;font-size:14px}summary{font-size:13px;font-weight:600;cursor:pointer;padding:16px 0;color:#425c4d}details[open]{padding-bottom:6px}details li{line-height:1.65}details p{max-width:72ch}.diagram{margin:25px 0 30px;padding:22px 12px 0;border:1px solid #dbe5dd;border-radius:12px;background:#fcfdfb;overflow:auto}.diagram svg{display:block;width:100%;height:auto;min-width:460px;max-height:770px;margin:auto}.diagram figcaption{font-size:11px;display:flex;align-items:center;justify-content:space-between;padding:14px 8px;border-top:1px solid var(--line);margin-top:18px;color:var(--muted)}.expand-diagram{border:0;background:#e9f0e9;color:#345d46;border-radius:5px;padding:5px 9px;font-size:11px}code{font-family:ui-monospace,Menlo,monospace;font-size:.87em;background:#eef2ed;padding:2px 4px;border-radius:3px}pre{overflow:auto}hr{border:0;border-top:1px solid var(--line);margin:35px 0}footer{font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:20px;margin-top:30px}.lightbox{border:1px solid #dbe5dd;border-radius:12px;width:94vw;max-width:1450px;max-height:94vh;padding:22px;background:#fff}.lightbox::backdrop{background:#14291fc9}.lightbox header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.lightbox button{padding:7px 14px;border:1px solid #cad9ce;border-radius:6px;background:#f3f7f2}.lightbox .content{overflow:auto}.lightbox svg{min-width:700px;width:100%;height:auto;max-height:75vh}.close-label{font-size:13px;color:var(--muted)}
+@media(max-width:1050px){.shell{grid-template-columns:190px minmax(0,1fr);gap:25px;padding:25px}main{padding:40px 30px}h1{font-size:45px}}
+@media(max-width:720px){.shell{display:block;padding:14px 12px 35px}aside{position:static}.brand{margin:7px 5px 15px}.brand strong{display:inline;margin-left:8px}nav{display:flex;overflow:auto;gap:6px;margin-bottom:17px;padding-bottom:8px}nav a{white-space:nowrap;padding:7px 10px;border:1px solid #dce4d9;border-radius:5px;font-size:11px}nav span,.source-link,.aside-note{display:none}main{padding:30px 22px;border-radius:11px}h1{font-size:39px}.deck{font-size:16px}.summary{grid-template-columns:1fr}h2{font-size:22px;margin-top:30px}p,li{font-size:15px}.diagram{padding:15px 7px 0}.diagram svg{min-width:440px}.meta{font-size:10px}details{padding:0 13px}td,th{padding:12px;font-size:12px}}
+@media print{body{background:white}.shell{display:block;padding:0}aside,.expand-diagram{display:none}main{border:0;box-shadow:none;padding:0}h2{break-after:avoid}figure,table{break-inside:avoid}.diagram svg{min-width:0}details{display:block}details>*{display:block}.badge{color:black}a{color:inherit}}
+</style></head><body><a class="skip" href="#main">Skip to the document</a><div class="shell"><aside><div class="brand">Design review<strong>Fast Expense Tracker</strong></div><nav aria-label="Document sections"><a href="#what-finished-means"><span>01</span>What finished means</a><a href="#delivery-order"><span>02</span>Delivery order</a><a href="#completed-first-slice"><span>03</span>Completed first slice</a><a href="#preparation-before-a-database-change"><span>04</span>Preparation before a database change</a><a href="#web-migration"><span>05</span>Web migration</a><a href="#native-authorization-and-handoff"><span>06</span>Native authorization and handoff</a><a href="#cleanup-after-observation"><span>07</span>Cleanup after observation</a><a href="#how-each-slice-runs"><span>08</span>How each slice runs</a><a href="#size-and-the-next-checkpoint"><span>09</span>Size and the next checkpoint</a></nav><a class="source-link" href="2026-10-29-auth-delivery-plan.md">Markdown source ↗</a><p class="aside-note">An offline document.<br>No account data or tracking.</p></aside><main id="main"><header><p class="eyebrow">Auth migration · Updated October 29 2026</p><span class="badge">CHORE-39 merged · Compatibility next</span><h1>Auth delivery<br>one slice at a time</h1><p class="deck">Finish the auth service here, verify each change, then move to the Swift app.</p><div class="meta">OWNER CHRISTIAN &nbsp; / &nbsp; DESIGN APPROVED &nbsp; / &nbsp; DELIVERY PLANNING</div><div class="summary"><div><small>Next up</small>Verify library compatibility before any schema change.</div><div><small>Handoff</small>Tested native authorization and a protected identity endpoint.</div></div></header><article><p>Status: CHORE-39 merged. Compatibility investigation is next.</p>
+<p>We will finish the auth service in this repo before we start the Swift app.
+We will deliver one reviewed change at a time, beginning with the session
+boundary. The web must remain usable after every merge. The first database
+change waits for compatibility evidence and a usable recovery procedure.</p>
+<p>The <a href="2026-10-24-auth-design-review.html">approved design</a> explains the intended
+behavior. The native app owns Face ID unlocks and their fallback behavior.
+This plan covers the server work needed to support that app&#39;s later login.</p>
+<h2 id="what-finished-means">What finished means</h2>
+<p>The web signs existing users in through Better Auth without changing their
+identity, password or financial records. It keeps its current idle behavior,
+signup controls and onboarding. A test native client can complete login,
+renew access, and call a protected endpoint that identifies its own user.</p>
+<p>We hand the mobile repo a tested auth contract and recovery instructions.
+Expense APIs, mobile screens and Face ID implementation belong to the mobile
+phase. We will define those APIs when we know the first mobile journey.</p>
+<p>Removing the old password storage is a separate, delayed step. It does not
+block mobile development while the compatibility storage remains safe.</p>
+<h2 id="delivery-order">Delivery order</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Change</th>
+<th>Size</th>
+<th>Gate before we continue</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Isolate session reads</td>
+<td>Merged in PR #102</td>
+<td>Tests and independent review passed</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Prove library compatibility</td>
+<td>Medium research and local proof</td>
+<td>Every migration-critical question has evidence or a recorded decision</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Prepare database recovery</td>
+<td>Medium operational work</td>
+<td>Recovery instructions and an invented-data restore rehearsal pass</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Add auth storage</td>
+<td>Medium migration</td>
+<td>Data preservation tests pass; owner prepares recovery and merges</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Switch the web login</td>
+<td>Large integration</td>
+<td>Browser flows, rollback and account surveys pass</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Add native authorization</td>
+<td>Large protocol integration</td>
+<td>Test client completes login, refresh and revocation cases</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Prove mobile auth readiness</td>
+<td>Medium integration and handoff</td>
+<td>Protected identity endpoint and documented client contract pass end to end</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Remove old password storage</td>
+<td>Small change with irreversible consequences</td>
+<td>At least two clean weeks after the switch, clean surveys and owner restore point</td>
+</tr>
+</tbody></table></div>
+<p>Steps 1 to 7 run serially. Step 8 runs on a separate observation schedule.
+The web switch stays one complete integration because the credential copy and
+new login must deploy together. If the compatibility proof reveals a safer
+split, we revise the plan before implementation.</p>
+<details>
+<summary>Agent notes: work items and PR boundaries</summary>
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Existing item or planned work</th>
+<th>Planned PR title</th>
+<th>Depends on</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>CHORE-39</td>
+<td><code>fet-chore-session-seam</code></td>
+<td>Onboarding merged, PR #97</td>
+</tr>
+<tr>
+<td>2</td>
+<td>CHORE-44, compatibility evidence</td>
+<td><code>fet-docs-auth-compatibility</code></td>
+<td>Step 1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>CHORE-34</td>
+<td><code>fet-docs-recovery-runbook</code></td>
+<td>None technically; scheduled after step 2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>CHORE-40</td>
+<td><code>fet-chore-auth-expand-schema</code></td>
+<td>Steps 1, 2 and 3 merged</td>
+</tr>
+<tr>
+<td>5</td>
+<td>CHORE-41</td>
+<td><code>fet-chore-better-auth-switch</code></td>
+<td>Step 4 merged; restore point</td>
+</tr>
+<tr>
+<td>6</td>
+<td>CHORE-42</td>
+<td><code>fet-feat-oauth-provider</code></td>
+<td>Step 5 merged; reviewed provider migration</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Auth readiness, planning follow-up</td>
+<td><code>fet-feat-mobile-auth-contract</code></td>
+<td>Step 6 merged</td>
+</tr>
+<tr>
+<td>8</td>
+<td>CHORE-43</td>
+<td><code>fet-chore-auth-contract</code></td>
+<td>Step 5 observation period and clean surveys</td>
+</tr>
+</tbody></table></div>
+<p>The auth readiness follow-up is not a claimed work item yet. Register it in
+the chore manifest with a unique name and priority when it becomes next up.
+Do not reuse a live branch or claim an item owned by another worktree.</p>
+<p>Each implementation gets its own branch off the then-current main and its own PR.
+Do not build a chain of unmerged branches. Only the current slice gets a Full Plan;
+later slices retain acceptance checklists until their dependencies land.</p>
+<p>CHORE-39 merged in PR #102. The PR description preserves its full scope and
+verification. CHORE-44 is the next compatibility investigation.</p>
+</details>
+
+<h2 id="completed-first-slice">Completed first slice</h2>
+<p>The session boundary changes how our code reads the signed-in user. Auth.js
+continues to handle login throughout this slice. There is no schema change,
+password copy, new login dependency or mobile feature.</p>
+<p>Christian merged PR #102 after the implementer and independent reviewer checked
+the changes. Unit, integration, lint and type checks passed.</p>
+<ul>
+<li>A missing session still refuses the action or renders nothing, as it does today.</li>
+<li>Every data read and write receives the session user&#39;s identity unchanged.</li>
+<li>The layout retains its display name, email and idle-session values.</li>
+<li>Session reads do not renew or cache the session, or hide provider failures.</li>
+</ul>
+<p>The <a href="https://github.com/Chrisgmsl22/fast-expense-tracker/pull/102">PR description</a>
+preserves the file boundary and verification commands.</p>
+<h2 id="preparation-before-a-database-change">Preparation before a database change</h2>
+<p>The compatibility work resolves technical questions with primary documentation
+and isolated local proof. It chooses an exact compatible library version and
+records which behavior we tested. We do not add production tables based on an
+unverified schema or a library-version assumption.</p>
+<p>The recovery work documents what Christian can restore, how long the recovery
+window lasts, and how to put the app back into service. It includes a rehearsal
+with invented data. An agent never restores or queries the production database.</p>
+<details>
+<summary>Acceptance checklist for preparation</summary>
+
+<ul>
+<li><input disabled="" type="checkbox"> Verify the selected Better Auth core and OAuth provider versions against
+current official documentation, release dates and the repo&#39;s Prisma version.
+ADR-0027 currently requires a 1.7.x release at least two weeks old. If evidence
+conflicts with that constraint, stop for an authorized ADR amendment.</li>
+<li><input disabled="" type="checkbox"> Prove legacy bcrypt hashes and short existing passwords work without
+weakening signup&#39;s strength rules. Verify mapping to the existing User model
+and UUID identity format.</li>
+<li><input disabled="" type="checkbox"> Prove gated signup, the cap and starter-account provisioning remain safe
+through every public provider endpoint. Resolve transaction or retry behavior.</li>
+<li><input disabled="" type="checkbox"> Prove explicit idle renewal, passive reads and late renewal races against
+the selected version. Decide how session caching affects revocation.</li>
+<li><input disabled="" type="checkbox"> Choose a rollback-safe policy for every password writer, including signup,
+provisioning, seed, change password and manual reset. Prefer proving atomic
+credential mirroring; do not assume a post-write hook gives atomicity.</li>
+<li><input disabled="" type="checkbox"> Resolve the conflict between CHORE-33&#39;s existing Auth.js brief and spec 0009.
+This plan does not implement CHORE-33. If it lands first, preserve its contract;
+otherwise propose a separate Better Auth brief for it. Do not discard the
+owner&#39;s earlier password-change decisions as a side effect of this migration.</li>
+<li><input disabled="" type="checkbox"> Document the actual Neon recovery window with an account-specific check
+performed or supplied by Christian. Do not infer it from an advertised plan name.</li>
+<li><input disabled="" type="checkbox"> Restore an invented-data backup locally, verify its records, and document
+how deployment configuration and database recovery differ.</li>
+</ul>
+</details>
+
+<h2 id="web-migration">Web migration</h2>
+<p>The storage expansion adds auth tables and compatible user fields without
+switching login. Its tests compare existing users and financial rows before
+and after the migration. The owner can keep the old app running on that schema.</p>
+<p>The next slice copies credentials and switches the web. It preserves closed
+signup, onboarding, translated errors, idle expiry and logout. We test rollback
+after creating an account and changing a password during the transition.</p>
+<details>
+<summary>Acceptance checklist for the web migration</summary>
+
+<ul>
+<li><input disabled="" type="checkbox"> Expansion changes no financial table, user identity or financial foreign key.
+Existing password hashes stay intact; the old login continues to work.</li>
+<li><input disabled="" type="checkbox"> The credential copy runs once per eligible user, inside a transaction,
+and safely repeats. Per-user guards reject missing, duplicate or mismatched
+credentials. Aggregate counts are only supporting evidence.</li>
+<li><input disabled="" type="checkbox"> Every password-writing route follows the compatibility policy proven in
+preparation. Rolling back does not lose new accounts or changed passwords.</li>
+<li><input disabled="" type="checkbox"> Existing login, logout, signup gate and cap, onboarding, name refresh,
+expiry notices and cross-tab behavior pass automated and real-browser checks.</li>
+<li><input disabled="" type="checkbox"> Database-backed rate limiting works across separate server instances.
+State the database-unavailable behavior; do not silently allow requests.</li>
+<li><input disabled="" type="checkbox"> The migration runbook includes preflight and post-deploy surveys, rollback
+targets and stop conditions. Production checks belong to Christian.</li>
+<li><input disabled="" type="checkbox"> Record the actual production switch date. Start the observation clock
+from that deployment, not a local test or PR creation date.</li>
+</ul>
+</details>
+
+<h2 id="native-authorization-and-handoff">Native authorization and handoff</h2>
+<p>We first enable the standard native login protocol and verify it with an
+invented test client. We then add the smallest protected identity endpoint
+needed to prove the server accepts the resulting access credentials.</p>
+<p>This establishes the auth contract before the Swift app exists. It does not
+require a dashboard or an expense API. Final app identifiers and callbacks
+must come from the mobile repo; production registration cannot use placeholders.</p>
+<details>
+<summary>Acceptance checklist for native authorization</summary>
+
+<ul>
+<li><input disabled="" type="checkbox"> Verify authorization code with S256 PKCE for a public client without a secret.
+Enforce exact redirects, consent policy, supported scopes and discovery metadata.</li>
+<li><input disabled="" type="checkbox"> Test wrong verifier, wrong redirect, code reuse and invalid client requests.
+Use a disposable local client and invented users; register production identifiers
+only when the mobile repo supplies them.</li>
+<li><input disabled="" type="checkbox"> Settle explicit access and refresh lifetimes and renewal limits. Prove that
+web idle expiry does not unintentionally prevent persistent mobile sign-in.</li>
+<li><input disabled="" type="checkbox"> Test refresh rotation, reuse policy, concurrent requests, lost responses,
+explicit logout and password-revocation behavior for the selected version.</li>
+<li><input disabled="" type="checkbox"> Choose the token-validation and revocation strategy together. If JWT access
+tokens remain usable until expiry, document and agree on that window before
+claiming all-device revocation. Include signing-key rotation and verification failures.</li>
+<li><input disabled="" type="checkbox"> A bounded identity route, tentatively <code>GET /api/v1/me</code>, returns only the
+authenticated user&#39;s allowed identity fields. It checks signature, issuer,
+audience, expiry and required scopes, and refuses ID tokens or caller-supplied identity.</li>
+<li><input disabled="" type="checkbox"> The client contract documents endpoints, error responses, scopes, PKCE,
+callbacks, secure token storage expectations, refresh and revocation behavior.
+Verify an end-to-end token exchange and protected request against that contract.</li>
+</ul>
+</details>
+
+<h2 id="cleanup-after-observation">Cleanup after observation</h2>
+<p>Keep the compatibility storage for at least two weeks of normal production use.
+Remove it only when account surveys are clean and recovery is ready. The cleanup
+must not remove data that the active app or a supported recovery path still needs.</p>
+<p>The mobile repo can begin after the auth handoff while cleanup waits. Christian
+chooses when to merge the destructive migration.</p>
+<h2 id="how-each-slice-runs">How each slice runs</h2>
+<p>The main session owns the plan, acceptance criteria and handoffs. An implementer
+subagent owns code changes and checks. A fresh reviewer subagent inspects the
+actual diff without receiving the implementer&#39;s conclusions. Confirmed findings
+go back to the implementer, with at most two repair rounds.</p>
+<p>After the checks and review pass, we report the result before moving to the next
+slice. Commits and pushes require Christian&#39;s explicit instruction. Christian
+merges; we do not approve or merge PRs or push to main.</p>
+<h2 id="size-and-the-next-checkpoint">Size and the next checkpoint</h2>
+<p>The earlier allowance of 6 to 12 focused engineering days remains a rough,
+unmeasured estimate for auth and native authorization. It assumes we keep the
+proposed provider and find no blocking compatibility issue. It excludes Swift
+work, business APIs, owner merge waits and the two-week observation period.</p>
+<p>Step 1 is merged. After step 2, we will replace the broad
+estimate with slice-level estimates based on the actual compatibility results.
+We will not promise a duration for the web switch before that evidence exists.</p>
+<details>
+<summary>For agents: current state and sources</summary>
+
+<p>Reader: Christian, who will review the sequence and the next compatibility work.</p>
+<p>Christian approved the visual design and merged CHORE-39. Start the next slice
+from current main after this documentation work lands. The compatibility proof
+must not touch production or run alongside a schema migration.</p>
+<p>Sources: <a href="../specs/0009-auth-module-better-auth.md">spec 0009</a>,
+<a href="../roadmap/execution-plan.md">execution plan</a>,
+<a href="../roadmap/chores.json">chore registry</a>,
+<a href="https://github.com/Chrisgmsl22/fast-expense-tracker/pull/102">CHORE-39 PR</a>.</p>
+<p>This plan refines the auth sequence, not the friend-launch order. The old
+execution-plan reference to friend launch is a separate goal. Enabling public
+signup is outside this auth migration&#39;s scope.</p>
+</details>
+</article><footer>Design approved October 29 2026. Delivery remains subject to slice checks and owner merge gates.</footer></main></div><dialog class="lightbox" aria-label="Enlarged diagram"><header><span class="close-label">Architecture and flow detail</span><button type="button" autofocus>Close diagram</button></header><div class="content"></div></dialog><script>const box=document.querySelector('dialog');let opener;for(const b of document.querySelectorAll('.expand-diagram'))b.addEventListener('click',()=>{opener=b;box.querySelector('.content').replaceChildren(b.closest('figure').querySelector('svg').cloneNode(true));box.showModal()});box.querySelector('button').addEventListener('click',()=>box.close());box.addEventListener('close',()=>opener?.focus());</script></body></html>
