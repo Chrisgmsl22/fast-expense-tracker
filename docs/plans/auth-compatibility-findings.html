@@ -1,0 +1,122 @@
+<!doctype html>
+<!-- Visual edition of 2026-10-29-auth-delivery-plan.md. Refresh this edition when planning decisions change. Diagrams rendered from its Mermaid sources. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="description" content="Draft auth design for the expense tracker web app and a future native Swift iOS client."><title>Auth compatibility findings</title><style>
+:root{--paper:#fff;--bg:#f3f4ef;--ink:#20322e;--muted:#66766e;--line:#dfe5de;--accent:#21664f;--wash:#eaf2eb;--gold:#866016;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--bg);font-size:16px;line-height:1.65;scroll-behavior:smooth}
+*{box-sizing:border-box}body{margin:0}a{color:var(--accent);text-underline-offset:3px}button{font:inherit;cursor:pointer}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #c79838;outline-offset:4px}.skip{position:absolute;left:16px;top:-70px;background:white;padding:12px;z-index:10}.skip:focus{top:12px}.shell{max-width:1400px;margin:auto;display:grid;grid-template-columns:240px minmax(0,1fr);gap:40px;padding:36px 42px 80px}aside{align-self:start;position:sticky;top:36px}.brand{font-size:11px;font-weight:750;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:9px 0 28px}.brand strong{display:block;font-size:15px;letter-spacing:-.02em;color:var(--ink);text-transform:none;margin-top:4px}nav a{display:flex;align-items:baseline;gap:12px;color:#53675b;text-decoration:none;font-size:13px;line-height:1.5;padding:10px 7px;border-bottom:1px solid #e2e6dd}nav a:hover{color:var(--accent);background:#e8eee5}nav span{font-size:10px;font-variant-numeric:tabular-nums;color:#7b8a7d}.source-link{display:block;font-size:12px;margin-top:25px}.aside-note{font-size:12px;color:var(--muted);margin:22px 7px}main{min-width:0;background:var(--paper);padding:58px 62px 45px;border:1px solid #e0e5dc;border-radius:16px;box-shadow:0 8px 35px #263b2805}.eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 18px}.badge{display:inline-flex;border:1px solid #e4d7b8;background:#fcf5e5;color:#785b24;border-radius:99px;padding:4px 11px;font-size:11px;letter-spacing:.03em;margin-bottom:20px}h1{font-family:Georgia,"Times New Roman",serif;font-size:52px;font-weight:500;line-height:1.08;letter-spacing:-.045em;max-width:640px;margin:0 0 22px;color:#172f26}.deck{font-size:18px;line-height:1.6;color:#53675b;max-width:650px;margin:0 0 24px}.meta{font-size:11px;letter-spacing:.05em;color:var(--muted);padding-bottom:30px;border-bottom:1px solid var(--line);margin-bottom:30px}.summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 30px}.summary div{padding:15px 17px;border-radius:8px;background:var(--wash);font-size:13px;line-height:1.5}.summary small{display:block;text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--accent);font-weight:750;margin-bottom:6px}article>p:first-child{display:none}p{margin:0 0 18px}article>p{max-width:72ch}h2{font-size:25px;font-weight:650;line-height:1.3;letter-spacing:-.025em;margin:42px 0 18px;padding-top:28px;border-top:1px solid var(--line);scroll-margin-top:25px}h3{font-size:18px;margin:28px 0 12px}strong{font-weight:650}li{padding-left:3px;margin:10px 0}ol,ul{padding-left:25px}.table-wrap{max-width:100%;overflow:auto;margin:24px 0 28px;border:1px solid var(--line);border-radius:9px}table{border-collapse:collapse;width:100%;font-size:13px;line-height:1.55}th{text-align:left;background:#eef3ed;font-size:11px;font-weight:700;padding:13px 15px;vertical-align:top;color:#395145}td{padding:15px;border-top:1px solid var(--line);vertical-align:top}td:first-child{font-weight:550;min-width:140px}details{border:1px solid var(--line);border-radius:9px;margin:22px 0;background:#fafbf8;padding:0 20px;font-size:14px}summary{font-size:13px;font-weight:600;cursor:pointer;padding:16px 0;color:#425c4d}details[open]{padding-bottom:6px}details li{line-height:1.65}details p{max-width:72ch}.diagram{margin:25px 0 30px;padding:22px 12px 0;border:1px solid #dbe5dd;border-radius:12px;background:#fcfdfb;overflow:auto}.diagram svg{display:block;width:100%;height:auto;min-width:460px;max-height:770px;margin:auto}.diagram figcaption{font-size:11px;display:flex;align-items:center;justify-content:space-between;padding:14px 8px;border-top:1px solid var(--line);margin-top:18px;color:var(--muted)}.expand-diagram{border:0;background:#e9f0e9;color:#345d46;border-radius:5px;padding:5px 9px;font-size:11px}code{font-family:ui-monospace,Menlo,monospace;font-size:.87em;background:#eef2ed;padding:2px 4px;border-radius:3px}pre{overflow:auto}hr{border:0;border-top:1px solid var(--line);margin:35px 0}footer{font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:20px;margin-top:30px}.lightbox{border:1px solid #dbe5dd;border-radius:12px;width:94vw;max-width:1450px;max-height:94vh;padding:22px;background:#fff}.lightbox::backdrop{background:#14291fc9}.lightbox header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.lightbox button{padding:7px 14px;border:1px solid #cad9ce;border-radius:6px;background:#f3f7f2}.lightbox .content{overflow:auto}.lightbox svg{min-width:700px;width:100%;height:auto;max-height:75vh}.close-label{font-size:13px;color:var(--muted)}
+@media(max-width:1050px){.shell{grid-template-columns:190px minmax(0,1fr);gap:25px;padding:25px}main{padding:40px 30px}h1{font-size:45px}}
+@media(max-width:720px){.shell{display:block;padding:14px 12px 35px}aside{position:static}.brand{margin:7px 5px 15px}.brand strong{display:inline;margin-left:8px}nav{display:flex;overflow:auto;gap:6px;margin-bottom:17px;padding-bottom:8px}nav a{white-space:nowrap;padding:7px 10px;border:1px solid #dce4d9;border-radius:5px;font-size:11px}nav span,.source-link,.aside-note{display:none}main{padding:30px 22px;border-radius:11px}h1{font-size:39px}.deck{font-size:16px}.summary{grid-template-columns:1fr}h2{font-size:22px;margin-top:30px}p,li{font-size:15px}.diagram{padding:15px 7px 0}.diagram svg{min-width:440px}.meta{font-size:10px}details{padding:0 13px}td,th{padding:12px;font-size:12px}}
+@media print{body{background:white}.shell{display:block;padding:0}aside,.expand-diagram{display:none}main{border:0;box-shadow:none;padding:0}h2{break-after:avoid}figure,table{break-inside:avoid}.diagram svg{min-width:0}details{display:block}details>*{display:block}.badge{color:black}a{color:inherit}}
+</style></head><body><a class="skip" href="#main">Skip to the document</a><div class="shell"><aside><div class="brand">Design review<strong>Fast Expense Tracker</strong></div><nav aria-label="Document sections"><a href="#evidence-and-remaining-checks"><span>1</span>Evidence and remaining checks</a><a href="#parallel-work"><span>2</span>Parallel work</a><a href="#what-the-first-proof-established"><span>3</span>What the first proof established</a><a href="#follow-up-candidates"><span>4</span>Follow-up candidates</a><a href="#review-limits"><span>5</span>Review limits</a></nav><a class="source-link" href="auth-compatibility-findings.md">Markdown source ↗</a><p class="aside-note">An offline document.<br>No account data or tracking.</p></aside><main id="main"><header><p class="eyebrow">Auth migration · Updated October 30 2026</p><span class="badge">Local proof · No app migration</span><h1>Auth compatibility<br>what the tests show</h1><p class="deck">We tested credential rollback and session renewal before choosing the migration implementation.</p><div class="meta">OWNER CHRISTIAN &nbsp; / &nbsp; LOCAL PROOF REVIEWED &nbsp; / &nbsp; INTEGRATION PENDING</div></header><article><p>Status: local candidate designs tested and independently reviewed.</p>
+<p>We are checking Better Auth 1.7.9 as a candidate. Its official release is dated
+October 15, so it meets the existing two-week age rule as of October 29.
+Release age alone does not establish safety. Before selecting it for production,
+we must check applicable advisories and fixes in newer releases.</p>
+<p>The next migration must preserve signup provisioning and password rollback.
+The current documentation says after hooks run after a transaction commits.
+We therefore cannot assume an after hook makes starter data or a mirrored
+password write atomic. The local experiment confirmed that behavior on the pinned version.</p>
+<h2 id="evidence-and-remaining-checks">Evidence and remaining checks</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Documentation evidence</th>
+<th>Runtime status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Prisma 6 compatibility</td>
+<td>Official adapter guide permits retaining an existing Prisma 6 client setup</td>
+<td>Reduced auth schema passed; full app migration untested</td>
+</tr>
+<tr>
+<td>Credential identity</td>
+<td>Current upgrade guide says 1.7.3 removed the short-lived required account issuer field</td>
+<td>Generate and inspect the pinned schema before CHORE-40</td>
+</tr>
+<tr>
+<td>Account hooks</td>
+<td>Database guide documents hooks for user, session and account</td>
+<td>Successful mirrors work; injected after-hook failures leave commits</td>
+</tr>
+<tr>
+<td>Starter data provisioning</td>
+<td>After hooks execute after commit according to current docs</td>
+<td>Outer-transaction alternative passed with fake starter data</td>
+</tr>
+<tr>
+<td>Legacy password login</td>
+<td>Custom bcrypt verification is required by the design</td>
+<td>Three-character legacy sign-in passed; short signup refused</td>
+</tr>
+<tr>
+<td>Idle behavior</td>
+<td>Existing design requires passive reads without renewal</td>
+<td>Guarded live-session renewal passed with global disable retained</td>
+</tr>
+<tr>
+<td>Mobile revocation</td>
+<td>Current provider guide distinguishes local JWT validation from server introspection</td>
+<td>Select and test the agreed revocation strategy before native delivery</td>
+</tr>
+</tbody></table></div>
+<p>Current documentation may describe a newer patch. Findings from docs are not
+substitutes for running the selected package. This investigation does not change
+an accepted ADR or authorize an application dependency or migration.</p>
+<h2 id="parallel-work">Parallel work</h2>
+<p>Compatibility evidence and the recovery runbook can proceed independently.
+They need different branches/worktrees and separate disposable databases for
+any tests. Neither may change the other&#39;s plan, files or data.</p>
+<p>Schema expansion waits for both. The web switch waits for schema expansion.
+Native authorization waits for the working web provider. Independent code
+review starts after the reviewed diff stops changing.</p>
+<h2 id="what-the-first-proof-established">What the first proof established</h2>
+<p>The local proof shows that a three-character legacy bcrypt password
+signs in with the original UUID, while short-password signup is refused. Passive
+reads preserve expiry when global session refresh is disabled, but the normal
+explicit refresh endpoint is also blocked by that setting.</p>
+<p>The local proof also shows that after-hook failures leave signup or credential
+updates committed. In particular, a failed password mirror can leave the old
+and new hashes different. We must not use that approach as proof of rollback safety.</p>
+<h2 id="follow-up-candidates">Follow-up candidates</h2>
+<p>An outer application transaction passed the reduced-schema tests. It covered
+the library&#39;s signup or password change, starter data and legacy password copy.
+Injected failures rolled back the whole operation. Public password-writing
+routes could be disabled while the controlled server API still worked.</p>
+<p>A separate guarded renewal extended only live sessions, bound to the authenticated
+user, token and session id. Concurrent and stale requests did not shorten expiry.
+This preserves the accepted global automatic-refresh disable setting.</p>
+<p>The candidate to carry into implementation design is an application-owned
+transaction around credential writes, plus a guarded activity-renewal action.
+The full app must prove starter-kit behavior, transaction bounds, route controls
+and cookie publication after commit. The SDK accepts the transaction client in
+the tested version, but its published types do not establish a supported contract.
+App-owned provisioning followed by normal library sign-in is a tested signup
+fallback if that integration proves too fragile.</p>
+<p>These results narrow the design choices; they do not authorize a production
+migration. Before native delivery, refresh/session linkage and replay handling
+still need version-specific verification.</p>
+<details>
+<summary>Sources and experiment evidence</summary>
+
+<ul>
+<li><a href="https://github.com/better-auth/better-auth/releases/tag/v1.7.9">Release 1.7.9</a></li>
+<li><a href="https://better-auth.com/docs/adapters/prisma">Prisma adapter</a></li>
+<li><a href="https://better-auth.com/docs/guides/1-7-upgrade-guide">1.7 upgrade guide</a></li>
+<li><a href="https://better-auth.com/docs/concepts/database">Database hooks</a></li>
+<li><a href="https://better-auth.com/docs/plugins/oauth-provider">OAuth provider</a></li>
+<li><a href="auth-compatibility-experiments.md">Experiment results and reproduction</a>.</li>
+<li><a href="auth-compatibility-followup.md">Follow-up transaction and renewal evidence</a>.</li>
+</ul>
+</details>
+
+<h2 id="review-limits">Review limits</h2>
+<p>The independent reviewer found no material issue in the reduced-schema evidence.
+It inspected pinned source, scripts and saved outputs but did not rerun the database
+proof or independently verify database cleanup. Some injected HTTP statuses are
+logged rather than asserted; inspect the JSONL as well as the exit code. Preserve
+the scratch lockfile when reproducing exact transitive versions.</p>
+<p>The follow-up reviewer found no material findings, verified archived artifacts
+against the tested originals, and checked script syntax. It inspected assertions,
+results and pinned source; it did not rerun the database or browser integration.</p>
+</article><footer>Design approved October 29 2026. Delivery remains subject to slice checks and owner merge gates.</footer></main></div><dialog class="lightbox" aria-label="Enlarged diagram"><header><span class="close-label">Architecture and flow detail</span><button type="button" autofocus>Close diagram</button></header><div class="content"></div></dialog><script>const box=document.querySelector('dialog');let opener;for(const b of document.querySelectorAll('.expand-diagram'))b.addEventListener('click',()=>{opener=b;box.querySelector('.content').replaceChildren(b.closest('figure').querySelector('svg').cloneNode(true));box.showModal()});box.querySelector('button').addEventListener('click',()=>box.close());box.addEventListener('close',()=>opener?.focus());</script></body></html>

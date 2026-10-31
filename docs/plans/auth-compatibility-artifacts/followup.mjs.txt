@@ -1,0 +1,437 @@
+import assert from "node:assert/strict";
+import { PrismaClient, Prisma } from "@prisma/client";
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import bcrypt from "bcryptjs";
+const url = new URL(process.env.DATABASE_URL);
+assert.equal(url.hostname, "localhost");
+assert.equal(url.port, "5433");
+assert.equal(url.pathname, "/fet_auth_followup_179_20261030");
+const db = new PrismaClient();
+const report = (test, detail) =>
+  console.log(JSON.stringify({ test, ...detail }));
+const blocked = [
+  "/sign-up/email",
+  "/change-password",
+  "/set-password",
+  "/reset-password",
+  "/request-password-reset",
+];
+const options = (client) => ({
+  baseURL: "http://localhost:3998",
+  secret: "invented-disposable-secret-abcdefghijklmnopqrstuvwxyz",
+  database: prismaAdapter(client, {
+    provider: "postgresql",
+    transaction: false,
+  }),
+  user: { modelName: "User" },
+  account: { modelName: "Account" },
+  session: {
+    modelName: "Session",
+    expiresIn: 1800,
+    disableSessionRefresh: true,
+    cookieCache: { enabled: false },
+  },
+  verification: { modelName: "Verification" },
+  advanced: { database: { generateId: "uuid" } },
+  emailAndPassword: {
+    enabled: true,
+    password: {
+      hash: (p) => bcrypt.hash(p, 10),
+      verify: ({ hash, password }) => bcrypt.compare(password, hash),
+    },
+  },
+  disabledPaths: blocked,
+  logger: { disabled: true },
+});
+const plain = betterAuth(options(db));
+const request = async (instance, path, body, cookie) =>
+  instance.handler(
+    new Request("http://localhost:3998/api/auth/" + path, {
+      method: body ? "POST" : "GET",
+      headers: {
+        origin: "http://localhost:3998",
+        ...(body ? { "content-type": "application/json" } : {}),
+        ...(cookie ? { cookie } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    }),
+  );
+const clear = async () => {
+  await db.starter.deleteMany();
+  await db.session.deleteMany();
+  await db.account.deleteMany();
+  await db.user.deleteMany();
+};
+const cookieOf = (r) =>
+  r.headers
+    .getSetCookie()
+    .map((c) => c.split(";")[0])
+    .join("; ");
+const hooks = (tx, mode) => ({
+  user: {
+    create: {
+      after: async (u) => {
+        await tx.starter.create({
+          data: { userId: u.id, label: "Invented starter" },
+        });
+        if (mode === "provision-fail")
+          throw Error("INVENTED_PROVISION_FAILURE");
+      },
+    },
+  },
+  account: {
+    create: {
+      after: async (a) => {
+        if (a.password)
+          await tx.user.update({
+            where: { id: a.userId },
+            data: { password: a.password },
+          });
+        if (mode === "mirror-fail") throw Error("INVENTED_MIRROR_FAILURE");
+      },
+    },
+    update: {
+      after: async (a) => {
+        if (mode === "before-mirror-fail")
+          throw Error("INVENTED_BEFORE_MIRROR_FAILURE");
+        if (a.password)
+          await tx.user.update({
+            where: { id: a.userId },
+            data: { password: a.password },
+          });
+        if (mode === "mirror-fail") throw Error("INVENTED_MIRROR_FAILURE");
+      },
+    },
+  },
+});
+// The wrapper buffers the response until the outer transaction commits.
+// It never exposes a transaction-bound auth instance to a public handler.
+const outer = async (kind, body, cookie, mode = "normal") => {
+  try {
+    const response = await db.$transaction(
+      async (tx) => {
+        assert.equal(typeof tx.$transaction, "undefined");
+        const auth = betterAuth({
+          ...options(tx),
+          databaseHooks: hooks(tx, mode),
+        });
+        const response = await auth.api[kind]({
+          body,
+          headers: new Headers(cookie ? { cookie } : {}),
+          asResponse: true,
+        });
+        if (response.status >= 400)
+          throw Object.assign(Error("ENDPOINT_FAILURE"), {
+            statusCode: response.status,
+          });
+        if (mode === "after-endpoint-fail")
+          throw Error("INVENTED_AFTER_ENDPOINT_FAILURE");
+        return response;
+      },
+      { timeout: 15000 },
+    );
+    return { status: response.status, response };
+  } catch (error) {
+    return {
+      status: Number.isInteger(error.statusCode) ? error.statusCode : 500,
+      errorName: error.name,
+      errorMessage: error.message,
+    };
+  }
+};
+const rows = async (email) => {
+  const u = await db.user.findUnique({ where: { email } });
+  return {
+    user: u,
+    accounts: u ? await db.account.findMany({ where: { userId: u.id } }) : [],
+    sessions: u ? await db.session.findMany({ where: { userId: u.id } }) : [],
+    starters: u ? await db.starter.count({ where: { userId: u.id } }) : 0,
+  };
+};
+const noRows = async (email) => {
+  const r = await rows(email);
+  assert.equal(r.user, null);
+  assert.equal(r.accounts.length, 0);
+  assert.equal(r.sessions.length, 0);
+  assert.equal(r.starters, 0);
+};
+// A single guarded SQL statement prevents resurrection and expiry shortening.
+const guardedUpdate = async (identity, target) => {
+  const changed = await db.$queryRaw(
+    Prisma.sql`UPDATE "Session" SET "expiresAt"=GREATEST("expiresAt",${target}),"updatedAt"=GREATEST("updatedAt",clock_timestamp()) WHERE "id"=${identity.id} AND "token"=${identity.token} AND "userId"=${identity.userId} AND "expiresAt">clock_timestamp() RETURNING "expiresAt"`,
+  );
+  return {
+    status: changed.length ? 200 : 401,
+    expiresAt: changed[0]?.expiresAt,
+  };
+};
+const renew = async (cookie, target, interleave) => {
+  const response = await request(plain, "get-session", undefined, cookie);
+  assert.equal(response.status, 200);
+  const auth = await response.json();
+  if (!auth?.session) return { status: 401 };
+  if (interleave) await interleave(auth.session);
+  return guardedUpdate(auth.session, target);
+};
+try {
+  await clear();
+  for (const path of blocked) {
+    const r = await request(plain, path.slice(1), {
+      email: "blocked@example.test",
+      password: "invented-password-1",
+      name: "Invented",
+    });
+    assert.equal(r.status, 404);
+  }
+  report("http-disabled-paths", { paths: blocked, status: 404 });
+  let r = await outer("signUpEmail", {
+    email: "outer@example.test",
+    password: "invented-password-1",
+    name: "Invented outer",
+  });
+  assert.equal(r.status, 200);
+  let data = await rows("outer@example.test");
+  assert.ok(data.user);
+  assert.match(data.user.id, /^[0-9a-f]{8}-[0-9a-f-]{27}$/);
+  assert.equal(data.accounts.length, 1);
+  assert.equal(data.sessions.length, 1);
+  assert.equal(data.starters, 1);
+  assert.equal(data.user.password, data.accounts[0].password);
+  assert.ok(await bcrypt.compare("invented-password-1", data.user.password));
+  const id = data.user.id;
+  const cookie = cookieOf(r.response);
+  assert.ok(cookie);
+  report("outer-signup-success", {
+    status: r.status,
+    uuid: true,
+    hashesEqual: true,
+    starterCount: 1,
+    sessionCount: 1,
+    internalApiIgnoresDisabledPath: true,
+  });
+  for (const mode of ["provision-fail", "mirror-fail", "after-endpoint-fail"]) {
+    const email = mode + "@example.test";
+    r = await outer(
+      "signUpEmail",
+      { email, password: "invented-password-2", name: "Invented failure" },
+      undefined,
+      mode,
+    );
+    assert.equal(r.status, 500);
+    assert.equal(
+      r.errorMessage,
+      mode === "provision-fail"
+        ? "INVENTED_PROVISION_FAILURE"
+        : mode === "mirror-fail"
+          ? "INVENTED_MIRROR_FAILURE"
+          : "INVENTED_AFTER_ENDPOINT_FAILURE",
+    );
+    await noRows(email);
+    report("outer-signup-" + mode, {
+      status: r.status,
+      allRowsRolledBack: true,
+    });
+  }
+  r = await outer(
+    "changePassword",
+    {
+      currentPassword: "invented-password-1",
+      newPassword: "invented-password-2",
+    },
+    cookie,
+  );
+  assert.equal(r.status, 200);
+  data = await rows("outer@example.test");
+  assert.equal(data.user.id, id);
+  assert.equal(data.user.password, data.accounts[0].password);
+  assert.ok(await bcrypt.compare("invented-password-2", data.user.password));
+  assert.equal(data.starters, 1);
+  report("outer-password-success", {
+    status: r.status,
+    sameUuid: true,
+    hashesEqual: true,
+    starterCount: 1,
+  });
+  for (const mode of [
+    "before-mirror-fail",
+    "mirror-fail",
+    "after-endpoint-fail",
+  ]) {
+    const previous = data.user.password;
+    r = await outer(
+      "changePassword",
+      {
+        currentPassword: "invented-password-2",
+        newPassword: "invented-password-3",
+      },
+      cookie,
+      mode,
+    );
+    assert.equal(r.status, 500);
+    assert.equal(
+      r.errorMessage,
+      mode === "before-mirror-fail"
+        ? "INVENTED_BEFORE_MIRROR_FAILURE"
+        : mode === "mirror-fail"
+          ? "INVENTED_MIRROR_FAILURE"
+          : "INVENTED_AFTER_ENDPOINT_FAILURE",
+    );
+    data = await rows("outer@example.test");
+    assert.equal(data.user.password, previous);
+    assert.equal(data.accounts[0].password, previous);
+    report("outer-password-" + mode, {
+      status: r.status,
+      bothHashesRolledBack: true,
+    });
+  }
+  // This fallback owns all credential writes, then signs in only after commit.
+  const ownedSignup = async (email, fail) => {
+    try {
+      const password = await bcrypt.hash("invented-owned-password", 10);
+      await db.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: { email, name: "Invented owned", password },
+        });
+        await tx.account.create({
+          data: {
+            accountId: user.id,
+            providerId: "credential",
+            userId: user.id,
+            password,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+        await tx.starter.create({
+          data: { userId: user.id, label: "Invented owned starter" },
+        });
+        if (fail) throw Error("INVENTED_OWNED_FAILURE");
+      });
+      return request(plain, "sign-in/email", {
+        email,
+        password: "invented-owned-password",
+      });
+    } catch {
+      return new Response(null, { status: 500 });
+    }
+  };
+  r = await ownedSignup("owned@example.test", false);
+  assert.equal(r.status, 200);
+  data = await rows("owned@example.test");
+  assert.equal(data.accounts.length, 1);
+  assert.equal(data.starters, 1);
+  assert.equal(data.user.password, data.accounts[0].password);
+  assert.ok(data.sessions.length === 1);
+  report("owned-signup-then-signin", {
+    status: r.status,
+    starterCount: 1,
+    hashesEqual: true,
+    sessionAfterCommit: true,
+  });
+  r = await ownedSignup("owned-fail@example.test", true);
+  assert.equal(r.status, 500);
+  await noRows("owned-fail@example.test");
+  report("owned-signup-failure", { status: r.status, allRowsRolledBack: true });
+  // Start from a live session with two minutes left, forcing a meaningful extension.
+  let s = await db.session.findFirstOrThrow({ where: { userId: id } });
+  const twoMinutes = new Date(Date.now() + 120000);
+  await db.session.update({
+    where: { id: s.id },
+    data: { expiresAt: twoMinutes },
+  });
+  const initial = await db.session.findUniqueOrThrow({ where: { id: s.id } });
+  for (let i = 0; i < 3; i++) {
+    r = await request(plain, "get-session", undefined, cookie);
+    assert.equal(r.status, 200);
+    assert.ok((await r.json()).session);
+    assert.equal(r.headers.getSetCookie().length, 0);
+  }
+  s = await db.session.findUniqueOrThrow({ where: { id: s.id } });
+  assert.equal(s.expiresAt.getTime(), initial.expiresAt.getTime());
+  assert.equal(s.updatedAt.getTime(), initial.updatedAt.getTime());
+  report("global-disable-passive", {
+    reads: 3,
+    expiryUnchanged: true,
+    updatedAtUnchanged: true,
+    noSetCookie: true,
+  });
+  const next = new Date(Date.now() + 1800000);
+  r = await renew(cookie, next);
+  assert.equal(r.status, 200);
+  assert.equal(r.expiresAt.getTime(), next.getTime());
+  report("guarded-active-renewal", { status: r.status, expiryExtended: true });
+  r = await guardedUpdate(
+    { ...s, token: "invented-wrong-token" },
+    new Date(Date.now() + 1900000),
+  );
+  assert.equal(r.status, 401);
+  r = await guardedUpdate(
+    { ...s, id: crypto.randomUUID() },
+    new Date(Date.now() + 1900000),
+  );
+  assert.equal(r.status, 401);
+  r = await guardedUpdate(
+    { ...s, userId: crypto.randomUUID() },
+    new Date(Date.now() + 1900000),
+  );
+  assert.equal(r.status, 401);
+  report("guarded-identity-binding", {
+    tokenMismatch: 401,
+    idMismatch: 401,
+    userMismatch: 401,
+  });
+  const targets = Array.from(
+    { length: 12 },
+    (_, i) => new Date(Date.now() + 1800000 + i * 1000),
+  ).reverse();
+  const outcomes = await Promise.all(
+    targets.map((target) => guardedUpdate(s, target)),
+  );
+  for (const outcome of outcomes) assert.equal(outcome.status, 200);
+  const max = Math.max(...targets.map((d) => d.getTime()));
+  s = await db.session.findUniqueOrThrow({ where: { id: s.id } });
+  assert.equal(s.expiresAt.getTime(), max);
+  r = await guardedUpdate(s, twoMinutes);
+  assert.equal(r.status, 200);
+  assert.equal(r.expiresAt.getTime(), max);
+  report("guarded-concurrent-and-stale", {
+    concurrentCalls: 12,
+    status: 200,
+    expiryIsMaximum: true,
+    staleCallDidNotShorten: true,
+  });
+  r = await renew(cookie, new Date(Date.now() + 1800000), async (current) =>
+    db.session.delete({ where: { id: current.id } }),
+  );
+  assert.equal(r.status, 401);
+  assert.equal(await db.session.count({ where: { userId: id } }), 0);
+  report("guarded-revoke-race", { status: r.status, noResurrection: true });
+  r = await renew(cookie, new Date(Date.now() + 1800000));
+  assert.equal(r.status, 401);
+  report("guarded-already-revoked", { status: r.status });
+  r = await request(plain, "sign-in/email", {
+    email: "outer@example.test",
+    password: "invented-password-2",
+  });
+  assert.equal(r.status, 200);
+  const expiredCookie = cookieOf(r);
+  s = await db.session.findFirstOrThrow({ where: { userId: id } });
+  await db.session.update({
+    where: { id: s.id },
+    data: { expiresAt: new Date(Date.now() - 1000) },
+  });
+  r = await guardedUpdate(s, new Date(Date.now() + 1800000));
+  assert.equal(r.status, 401);
+  r = await renew(expiredCookie, new Date(Date.now() + 1800000));
+  assert.equal(r.status, 401);
+  report("guarded-expired", {
+    directUpdateStatus: 401,
+    authenticatedRenewalStatus: r.status,
+    noResurrection: true,
+  });
+  report("complete", { pass: true });
+} finally {
+  await clear();
+  await db.$disconnect();
+}
