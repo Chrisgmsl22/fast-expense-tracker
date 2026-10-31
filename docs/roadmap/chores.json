@@ -389,7 +389,7 @@
             "title": "Backup and restore runbook for the production database",
             "description": "Friend launch (2026-10-09). With other people's financial data in Neon there is no documented backup or restore path. The only restore guidance is a one-off 'take a Neon restore point' step inside one migration doc (docs/operations/partner-payment-conversion-migration.md), and the restore window of the current Neon plan is not written down anywhere. Production migrations run on every deploy (vercel.json), and a Vercel rollback does not reverse the schema.",
             "plan": "Docs only, no app code. (1) docs/operations/recovery.md: the Neon plan's restore window, how to restore to a point in time or a branch, and how to point the app at it. (2) A periodic logical backup the owner runs (pg_dump to a private location outside the repo, never committed). (3) A rule for migrations: additive only by default; take a restore point before any destructive change. (4) Link it from docs/operations/README.md.",
-            "status": "open",
+            "status": "in-progress",
             "spec": null,
             "pr": null,
             "issue": null
