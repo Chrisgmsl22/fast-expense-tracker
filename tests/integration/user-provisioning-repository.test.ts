@@ -326,10 +326,11 @@ describe("PrismaUserProvisioningRepository.createUserWithStarterKit", () => {
         const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
         expect(user.email).toBe("ana@example.com");
         expect(user.name).toBe("Ana Example");
+        expect(user.password).toBeTypeOf("string");
         expect(user.password).not.toContain(account.password);
-        expect(bcrypt.getRounds(user.password)).toBe(10);
+        expect(bcrypt.getRounds(user.password!)).toBe(10);
         await expect(
-            bcrypt.compare(account.password, user.password),
+            bcrypt.compare(account.password, user.password!),
         ).resolves.toBe(true);
     });
 
