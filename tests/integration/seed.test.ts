@@ -117,8 +117,9 @@ describe("runSeed against a real database", () => {
         await runSeed(db, { ...OPTIONS, adminPassword: "another-secret" });
 
         const after = await owner();
+        expect(after.password).toBeTypeOf("string");
         expect(
-            await bcrypt.compare(OPTIONS.adminPassword, after.password),
+            await bcrypt.compare(OPTIONS.adminPassword, after.password!),
         ).toBe(true);
         const nu = await db.card.findFirstOrThrow({
             where: { userId: user.id, name: "NU" },
