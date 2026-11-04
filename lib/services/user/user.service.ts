@@ -34,7 +34,7 @@ export async function verifyCredentials(
     password: string,
 ): Promise<AuthUser | null> {
     const user = await getUserByEmail(email);
-    if (!user) {
+    if (!user || user.password === null) {
         return null;
     }
 

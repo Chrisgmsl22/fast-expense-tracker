@@ -385,13 +385,12 @@
         {
             "id": "CHORE-34",
             "name": "recovery-runbook",
-            "priority": 8,
             "title": "Backup and restore runbook for the production database",
             "description": "Friend launch (2026-10-09). With other people's financial data in Neon there is no documented backup or restore path. The only restore guidance is a one-off 'take a Neon restore point' step inside one migration doc (docs/operations/partner-payment-conversion-migration.md), and the restore window of the current Neon plan is not written down anywhere. Production migrations run on every deploy (vercel.json), and a Vercel rollback does not reverse the schema.",
             "plan": "Docs only, no app code. (1) docs/operations/recovery.md: the Neon plan's restore window, how to restore to a point in time or a branch, and how to point the app at it. (2) A periodic logical backup the owner runs (pg_dump to a private location outside the repo, never committed). (3) A rule for migrations: additive only by default; take a restore point before any destructive change. (4) Link it from docs/operations/README.md.",
-            "status": "in-progress",
+            "status": "merged",
             "spec": null,
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/105",
             "issue": null
         },
         {
@@ -448,7 +447,7 @@
             "title": "Auth PR 1: read the signed-in user through one seam",
             "description": "Spec 0009 §8 PR 1 (ADR-0027). 45 non-test files call auth() from Auth.js directly, and about 40 tests mock it. A single seam makes the library swap (CHORE-41) touch one file instead of 45. No behavior change and no database change.",
             "plan": "Merged in PR #102. Pages and data actions read the signed-in user through an app-owned session boundary. The dashboard layout retains the display and idle-session fields. No login behavior or database changes. The PR description preserves the scope and verification.",
-            "status": "shipped",
+            "status": "merged",
             "spec": "docs/specs/0009-auth-module-better-auth.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/102",
             "issue": null
@@ -456,25 +455,23 @@
         {
             "id": "CHORE-44",
             "name": "auth-compatibility-proof",
-            "priority": 44,
             "title": "Verify Better Auth compatibility before the migration",
             "description": "Auth delivery step 2. Verify the selected Better Auth version and migration assumptions with primary sources and isolated invented-data experiments before CHORE-40 changes the schema.",
             "plan": "Full Plan required. Record an evidence-backed version choice; test legacy bcrypt and short-password sign-in, Prisma 6 and the existing User mapping, signup gate and starter-kit atomicity, idle-session renewal, rollback-safe password writes, and mobile refresh/session linkage. Investigate refresh-token rotation and replay against the selected version. Run experiments only on disposable local data. Record proven behavior, open questions and the tests needed in later PRs. No production access, app migration or financial changes. If a version or architectural choice conflicts with an accepted ADR, report it for owner sign-off before changing the ADR.",
-            "status": "open",
+            "status": "merged",
             "spec": "docs/plans/2026-10-29-auth-delivery-plan.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/104",
             "issue": null
         },
         {
             "id": "CHORE-40",
             "name": "auth-expand-schema",
-            "priority": 40,
             "title": "Auth PR 2: add the Better Auth tables, additive only",
             "description": "Spec 0009 §5 and §8 PR 2 (ADR-0027). Adds account, session, verification and rateLimit, User.emailVerified (default false) and User.image (nullable), and makes User.password nullable. No money table, no User.id, no foreign key changes. Merging deploys and runs prisma migrate deploy, so the owner takes a Neon restore point first.",
-            "plan": "Full Plan required (migration). Needs CHORE-34 (backup runbook) merged first. (1) Prisma models for the Better Auth core tables, mapped to the existing User model. (2) One migration, additive only. (3) Integration test that runs the migration SQL on invented users and checks every existing row is unchanged. (4) docs/operations/better-auth-migration.md: read-only before and after surveys (user count, credential-row count, users without a credential row). (5) Reviewer review is mandatory (migration).",
-            "status": "open",
+            "plan": "PR #106 adds Better Auth 1.7.10 core storage, keeps Auth.js active, preserves existing user and financial data, and includes migration tests and owner-run surveys. The runtime switch remains CHORE-41.",
+            "status": "shipped",
             "spec": "docs/specs/0009-auth-module-better-auth.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/106",
             "issue": null
         },
         {

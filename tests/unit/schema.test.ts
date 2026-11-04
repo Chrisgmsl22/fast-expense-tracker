@@ -17,8 +17,9 @@ const fieldOf = (model: string, name: string) =>
         ?.fields.find((f) => f.name === name);
 
 describe("Prisma schema", () => {
-    it("Should define the ten core models", () => {
+    it("Should define the financial and auth core models", () => {
         expect([...fieldsByModel.keys()].sort()).toEqual([
+            "Account",
             "BudgetRule",
             "Card",
             "Category",
@@ -26,9 +27,12 @@ describe("Prisma schema", () => {
             "Expense",
             "Income",
             "Movement",
+            "RateLimit",
+            "Session",
             "Settings",
             "Subcategory",
             "User",
+            "Verification",
         ]);
     });
 

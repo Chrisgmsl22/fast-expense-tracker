@@ -66,6 +66,20 @@ describe("verifyCredentials (integration)", () => {
         });
     });
 
+    it("returns null when the user has no legacy password", async () => {
+        await db.user.create({
+            data: {
+                email: "without-password@example.com",
+                name: "Invented",
+                password: null,
+            },
+        });
+
+        expect(
+            await verifyCredentials("without-password@example.com", "hunter2"),
+        ).toBeNull();
+    });
+
     it("returns null for an unknown email", async () => {
         expect(
             await verifyCredentials("nobody@example.com", "hunter2"),

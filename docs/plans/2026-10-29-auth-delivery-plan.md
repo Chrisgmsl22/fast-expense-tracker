@@ -1,6 +1,11 @@
 # Auth delivery plan
 
-Status: CHORE-39 merged. Compatibility investigation is next.
+Status: CHORE-40 is ready for its PR.
+
+The schema implementation and local migration proof are complete. Independent
+review passed. The schema uses Better Auth 1.7.10, which meets the 14-day rule.
+The compatibility review found no advisory that applies to this schema-only
+change. The later runtime version remains a CHORE-41 decision.
 
 We will finish the auth service in this repo before we start the Swift app.
 We will deliver one reviewed change at a time, beginning with the session
@@ -65,8 +70,11 @@ Each implementation gets its own branch off the then-current main and its own PR
 Do not build a chain of unmerged branches. Only the current slice gets a Full Plan;
 later slices retain acceptance checklists until their dependencies land.
 
-CHORE-39 merged in PR #102. The PR description preserves its full scope and
-verification. CHORE-44 is the next compatibility investigation.
+CHORE-39 merged in PR #102, CHORE-44 in PR #104, and CHORE-34 in PR #105.
+CHORE-40 adds Better Auth storage while Auth.js keeps handling web login. The
+schema and migration tests pass locally. Once review and the version gate pass,
+the owner can take a Neon restore point and merge the PR. CHORE-41 is next; it
+will switch web login and backfill credential accounts.
 
 </details>
 
@@ -218,23 +226,29 @@ unmeasured estimate for auth and native authorization. It assumes we keep the
 proposed provider and find no blocking compatibility issue. It excludes Swift
 work, business APIs, owner merge waits and the two-week observation period.
 
-Step 1 is merged. After step 2, we will replace the broad
-estimate with slice-level estimates based on the actual compatibility results.
-We will not promise a duration for the web switch before that evidence exists.
+Steps 1 to 3 are merged. CHORE-40 is the active schema slice. After its version
+gate passes and its PR merges, we will estimate CHORE-41 from the compatibility
+results and the migration work. We will not promise a duration for the web
+switch before that evidence exists.
 
 <details>
 <summary>For agents: current state and sources</summary>
 
-Reader: Christian, who will review the sequence and the next compatibility work.
+Reader: Christian, who will review the auth migration order and decide what to
+prepare before CHORE-40 merges.
 
-Christian approved the visual design and merged CHORE-39. Start the next slice
-from current main after this documentation work lands. The compatibility proof
-must not touch production or run alongside a schema migration.
+Christian approved the visual design. CHORE-39, CHORE-44, and CHORE-34 merged in
+PRs #102, #104, and #105. CHORE-40's schema implementation and isolated
+migration tests pass. Independent review found no code issues. Its schema uses
+age-compliant Better Auth 1.7.10. The runtime version remains open for CHORE-41.
+Do not access production or run this work alongside another schema migration.
 
 Sources: [spec 0009](../specs/0009-auth-module-better-auth.md),
 [execution plan](../roadmap/execution-plan.md),
 [chore registry](../roadmap/chores.json),
-[CHORE-39 PR](https://github.com/Chrisgmsl22/fast-expense-tracker/pull/102).
+[CHORE-39 PR](https://github.com/Chrisgmsl22/fast-expense-tracker/pull/102),
+[CHORE-44 PR](https://github.com/Chrisgmsl22/fast-expense-tracker/pull/104),
+[CHORE-34 PR](https://github.com/Chrisgmsl22/fast-expense-tracker/pull/105).
 
 This plan refines the auth sequence, not the friend-launch order. The old
 execution-plan reference to friend launch is a separate goal. Enabling public
