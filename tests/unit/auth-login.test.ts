@@ -16,8 +16,10 @@ const { signInMock, AuthErrorMock } = vi.hoisted(() => {
     }
     return { signInMock: vi.fn(), AuthErrorMock };
 });
-vi.mock("@/auth", () => ({ signIn: signInMock }));
-vi.mock("next-auth", () => ({ AuthError: AuthErrorMock }));
+vi.mock("@/auth", () => ({
+    signIn: signInMock,
+    InvalidCredentialsError: AuthErrorMock,
+}));
 
 import { loginAction } from "@/app/_actions/auth/login";
 
@@ -54,7 +56,7 @@ describe("loginAction", () => {
     });
 
     it("maps a non-credentials AuthError (e.g. DB outage wrapped as CallbackRouteError) to a generic error, NOT invalid_credentials", async () => {
-        signInMock.mockRejectedValue(new AuthErrorMock("CallbackRouteError"));
+        signInMock.mockRejectedValue(new Error("Authentication unavailable"));
 
         const res = await loginAction({
             email: "admin@example.com",
@@ -91,8 +93,11 @@ describe("loginAction", () => {
         const failure = new Error("network down");
         signInMock.mockRejectedValue(failure);
 
-        await expect(
-            loginAction({ email: "admin@example.com", password: "hunter2" }),
-        ).rejects.toBe(failure);
+        expect(
+            await loginAction({
+                email: "admin@example.com",
+                password: "hunter2",
+            }),
+        ).toMatchObject({ ok: false, code: "error" });
     });
 });

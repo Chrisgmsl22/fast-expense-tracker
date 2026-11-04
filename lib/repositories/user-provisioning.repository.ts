@@ -11,6 +11,8 @@ import { normalizeEmail } from "../domain/user.ts";
 
 const BCRYPT_ROUNDS = 10;
 
+export class AccountCapError extends Error {}
+
 /** What one run wrote. All zero / false means the user already had everything. */
 export type ProvisionSummary = {
     categoriesCreated: number;
@@ -51,7 +53,10 @@ export interface UserProvisioningRepository {
      * Creates the user and its starter kit in one transaction, so a failure leaves
      * no account behind. Throws `EmailTakenError` when the email is in use.
      */
-    createUserWithStarterKit(account: NewAccount): Promise<{ userId: string }>;
+    createUserWithStarterKit(
+        account: NewAccount,
+        maxUsers?: number,
+    ): Promise<{ userId: string }>;
 }
 
 type Tx = Prisma.TransactionClient;
@@ -79,18 +84,29 @@ export class PrismaUserProvisioningRepository implements UserProvisioningReposit
         return this.db.user.count();
     }
 
-    async createUserWithStarterKit({
-        name,
-        email,
-        password,
-    }: NewAccount): Promise<{ userId: string }> {
+    async createUserWithStarterKit(
+        { name, email, password }: NewAccount,
+        maxUsers?: number,
+    ): Promise<{ userId: string }> {
         // Hash before the transaction opens, so the slow bcrypt work holds no locks.
         const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
         return this.db.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(410041)`;
+            if (maxUsers !== undefined && (await tx.user.count()) >= maxUsers)
+                throw new AccountCapError();
             const userId = await createUser(tx, {
                 email: normalizeEmail(email),
                 name: name.trim(),
                 password: passwordHash,
+            });
+            await tx.account.create({
+                data: {
+                    id: crypto.randomUUID(),
+                    userId,
+                    accountId: userId,
+                    providerId: "credential",
+                    password: passwordHash,
+                },
             });
             await provisionKit(tx, userId);
             return { userId };
@@ -98,7 +114,10 @@ export class PrismaUserProvisioningRepository implements UserProvisioningReposit
     }
 }
 
-async function provisionKit(tx: Tx, userId: string): Promise<ProvisionSummary> {
+export async function provisionKit(
+    tx: Tx,
+    userId: string,
+): Promise<ProvisionSummary> {
     return {
         categoriesCreated: await createMissingCategories(tx, userId),
         subcategoriesCreated: await createMissingSubcategories(tx, userId),

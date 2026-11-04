@@ -1,4 +1,3 @@
-import { unstable_update } from "@/auth";
 import { getSessionUserId } from "@/lib/auth/session";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
@@ -17,11 +16,6 @@ export type UpdateDisplayNameResult = ActionResult<
     UpdateDisplayNameCode
 >;
 
-/**
- * Rename the session user, then put the new name in the session token so the
- * sidebar shows it without a new login. Kept out of the `"use server"` module
- * so the repository is not a client-supplied parameter.
- */
 export async function changeDisplayName(
     input: unknown,
     users: Pick<UserRepository, "updateName">,
@@ -67,14 +61,5 @@ export async function changeDisplayName(
         };
     }
 
-    try {
-        await unstable_update({ user: { name } });
-    } catch (error) {
-        // The name is saved; only the sidebar waits for the next sign-in.
-        console.warn(
-            "updateDisplayName: session refresh failed",
-            safeErrorSummary(error),
-        );
-    }
     return { ok: true, data: { name } };
 }

@@ -8,7 +8,7 @@ const { getSession, signOut, loginAction, replace } = vi.hoisted(() => ({
     loginAction: vi.fn(),
     replace: vi.fn(),
 }));
-vi.mock("next-auth/react", () => ({ getSession, signOut }));
+vi.mock("@/lib/auth/client", () => ({ getSession, signOut }));
 const router = { replace, refresh: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/app/_actions/auth/renew-idle-session", () => ({

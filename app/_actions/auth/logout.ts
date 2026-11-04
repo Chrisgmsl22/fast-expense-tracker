@@ -2,6 +2,6 @@
 
 import { signOut } from "@/auth";
 
-export async function logoutAction(): Promise<void> {
-    await signOut({ redirectTo: "/login" });
+export async function logoutAction(redirectToLogin = true): Promise<void> {
+    await signOut(redirectToLogin ? { redirectTo: "/login" } : {});
 }
