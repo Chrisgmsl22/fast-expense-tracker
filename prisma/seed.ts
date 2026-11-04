@@ -9,9 +9,8 @@ import type { StarterCard } from "../lib/domain/starter-kit.ts";
 import { normalizeEmail } from "../lib/domain/user.ts";
 import { CARD_PALETTE } from "../lib/palette.ts";
 import {
-    PrismaUserProvisioningRepository,
+    provisionKit,
     type ProvisionSummary,
-    type UserProvisioningRepository,
 } from "../lib/repositories/user-provisioning.repository.ts";
 
 const BCRYPT_ROUNDS = 10;
@@ -47,65 +46,88 @@ export type SeedSummary = {
 export async function runSeed(
     db: PrismaClient,
     { adminEmail, adminPassword }: SeedOptions,
-    provisioning: UserProvisioningRepository = new PrismaUserProvisioningRepository(
-        db,
-    ),
 ): Promise<SeedSummary> {
     const passwordHash = await bcrypt.hash(adminPassword, BCRYPT_ROUNDS);
     const email = normalizeEmail(adminEmail);
-    const admin = await db.user.upsert({
-        where: { email },
-        // Onboarded on create so the seeded login skips the wizard.
-        create: {
-            email,
-            name: "Christian",
-            password: passwordHash,
-            onboardedAt: new Date(),
-        },
-        // Don't reset the password on re-seed; keep any rotated value.
-        update: {},
-    });
+    return db.$transaction(async (tx) => {
+        const admin = await tx.user.upsert({
+            where: { email },
+            // Onboarded on create so the seeded login skips the wizard.
+            create: {
+                email,
+                name: "Christian",
+                password: passwordHash,
+                onboardedAt: new Date(),
+            },
+            // Don't reset the password on re-seed; keep any rotated value.
+            update: {},
+        });
 
-    const provisioned = await provisioning.provisionNewUser(admin.id);
+        if (!admin.password) throw new Error("Seed requires a legacy password");
+        const credentials = await tx.account.findMany({
+            where: { userId: admin.id, providerId: "credential" },
+        });
+        if (
+            credentials.length > 1 ||
+            credentials.some(
+                (account) =>
+                    account.password !== admin.password ||
+                    account.accountId !== admin.id,
+            )
+        ) {
+            throw new Error("Seed credential mismatch");
+        }
+        if (!credentials.length)
+            await tx.account.create({
+                data: {
+                    id: crypto.randomUUID(),
+                    userId: admin.id,
+                    accountId: admin.id,
+                    providerId: "credential",
+                    password: admin.password,
+                },
+            });
+        const provisioned = await provisionKit(tx, admin.id);
 
-    let ownerCardsCreated = 0;
-    for (const card of OWNER_CARDS) {
-        const existing = await db.card.findFirst({
-            where: { userId: admin.id, name: card.name },
+        let ownerCardsCreated = 0;
+        for (const card of OWNER_CARDS) {
+            const existing = await tx.card.findFirst({
+                where: { userId: admin.id, name: card.name },
+                select: { id: true },
+            });
+            if (existing) {
+                // Refresh so a palette change reaches cards seeded before it.
+                await tx.card.update({
+                    where: { id: existing.id },
+                    data: { color: card.color, type: card.type },
+                });
+            } else {
+                await tx.card.create({ data: { userId: admin.id, ...card } });
+                ownerCardsCreated += 1;
+            }
+        }
+
+        // Only when absent, so a re-seed never overwrites a value edited on the Income screen.
+        const existingFixed = await tx.income.findFirst({
+            where: { userId: admin.id, type: "FIXED" },
             select: { id: true },
         });
-        if (existing) {
-            // Refresh so a palette change reaches cards seeded before it.
-            await db.card.update({
-                where: { id: existing.id },
-                data: { color: card.color, type: card.type },
+        if (!existingFixed) {
+            await tx.income.create({
+                data: {
+                    userId: admin.id,
+                    type: "FIXED",
+                    amount: FIXED_INCOME_SEED,
+                },
             });
-        } else {
-            await db.card.create({ data: { userId: admin.id, ...card } });
-            ownerCardsCreated += 1;
         }
-    }
 
-    // Only when absent, so a re-seed never overwrites a value edited on the Income screen.
-    const existingFixed = await db.income.findFirst({
-        where: { userId: admin.id, type: "FIXED" },
-        select: { id: true },
+        return {
+            provisioned,
+            ownerCardsCreated,
+            fixedIncomeCreated: !existingFixed,
+        };
     });
-    if (!existingFixed) {
-        await db.income.create({
-            data: {
-                userId: admin.id,
-                type: "FIXED",
-                amount: FIXED_INCOME_SEED,
-            },
-        });
-    }
-
-    return {
-        provisioned,
-        ownerCardsCreated,
-        fixedIncomeCreated: !existingFixed,
-    };
 }
 
 async function main(): Promise<void> {

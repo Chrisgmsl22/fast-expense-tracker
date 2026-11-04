@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useState, type ReactNode } from "react";
-import { getSession, signOut } from "next-auth/react";
+import { getSession, signOut } from "@/lib/auth/client";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { renewIdleSessionAction } from "@/app/_actions/auth/renew-idle-session";

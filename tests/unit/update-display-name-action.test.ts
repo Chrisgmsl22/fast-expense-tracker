@@ -56,9 +56,7 @@ describe("changeDisplayName", () => {
 
         expect(result).toEqual({ ok: true, data: { name: INVENTED_NAME } });
         expect(users.stateOf("u1")?.name).toBe(INVENTED_NAME);
-        expect(updateSessionMock).toHaveBeenCalledWith({
-            user: { name: INVENTED_NAME },
-        });
+        expect(updateSessionMock).not.toHaveBeenCalled();
     });
 
     it("Should write only the session user when the input names another user", async () => {

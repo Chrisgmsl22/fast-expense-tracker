@@ -226,3 +226,99 @@ describe("Better Auth core expand migration", () => {
         ).toEqual([{ count: 1 }]);
     });
 });
+
+const credentialSql = readFileSync(
+    join(
+        process.cwd(),
+        "prisma/migrations/20261104000000_backfill_better_auth_credentials/migration.sql",
+    ),
+    "utf8",
+);
+const credentialStatements = splitStatements(credentialSql).filter(
+    (s) => !["BEGIN", "COMMIT"].includes(s.trim()),
+);
+async function copyCredentials(tx: Prisma.TransactionClient) {
+    for (const statement of credentialStatements)
+        await tx.$executeRawUnsafe(statement);
+}
+async function runCredentialCopy() {
+    return db.$transaction(copyCredentials);
+}
+
+describe("credential backfill", () => {
+    it("preserves every user, hash, financial row and foreign key on safe reruns", async () => {
+        await seedInventedHistory();
+        const before = await db.$transaction(snapshot);
+        await runCredentialCopy();
+        const accounts = await db.account.findMany({
+            orderBy: { userId: "asc" },
+        });
+        expect(accounts).toHaveLength(2);
+        for (const user of await db.user.findMany()) {
+            expect(accounts.filter((a) => a.userId === user.id)).toEqual([
+                expect.objectContaining({
+                    accountId: user.id,
+                    providerId: "credential",
+                    password: user.password,
+                }),
+            ]);
+        }
+        await runCredentialCopy();
+        expect(
+            await db.account.findMany({ orderBy: { userId: "asc" } }),
+        ).toEqual(accounts);
+        expect(await db.$transaction(snapshot)).toEqual(before);
+    });
+    it("rolls back every copied credential when a legacy hash is missing", async () => {
+        await seedInventedHistory();
+        await db.user.create({
+            data: { name: "Missing", email: "missing@example.com" },
+        });
+        await expect(runCredentialCopy()).rejects.toThrow(
+            /missing legacy passwords/,
+        );
+        expect(await db.account.count()).toBe(0);
+    });
+    it("rolls back new copies when an existing credential mismatches", async () => {
+        await seedInventedHistory();
+        const user = await db.user.findFirstOrThrow();
+        await db.account.create({
+            data: {
+                id: crypto.randomUUID(),
+                userId: user.id,
+                accountId: user.id,
+                providerId: "credential",
+                password: "mismatched",
+            },
+        });
+        const before = await db.account.findMany();
+        await expect(runCredentialCopy()).rejects.toThrow(
+            /invalid credential users/,
+        );
+        expect(await db.account.findMany()).toEqual(before);
+    });
+    it("refuses duplicate credential identities and rolls the transaction back", async () => {
+        await seedInventedHistory();
+        const before = await db.$transaction(snapshot);
+        await expect(
+            db.$transaction(async (tx) => {
+                await tx.$executeRawUnsafe(
+                    'DROP INDEX IF EXISTS "account_credential_user_key"',
+                );
+                const user = await tx.user.findFirstOrThrow();
+                await tx.account.createMany({
+                    data: [1, 2].map(() => ({
+                        id: crypto.randomUUID(),
+                        userId: user.id,
+                        accountId: user.id,
+                        providerId: "credential",
+                        password: user.password,
+                    })),
+                });
+                await copyCredentials(tx);
+            }),
+        ).rejects.toThrow(/invalid credential users/);
+        expect(await db.account.count()).toBe(0);
+        expect(await db.$transaction(snapshot)).toEqual(before);
+    });
+});
