@@ -1,8 +1,8 @@
 # Auth delivery plan
 
-Status: CHORE-41 local verification and independent review passed; PR preparation is in progress.
+Status: CHORE-41 PR #107 is open; local verification and independent review passed.
 
-CHORE-40 is merged. The web switch pins Better Auth and its Prisma adapter to 1.7.12. Local unit, type, lint, integration, coverage and browser checks pass. Independent review found no unresolved findings. The owner takes the production restore point and runs the [migration surveys](../operations/better-auth-migration.md) before merging this switch.
+CHORE-40 is merged. PR #107 switches web login to Better Auth 1.7.12 and backfills existing password hashes. Local checks and independent review passed. Before merge, the owner takes a Neon restore point and runs the [migration surveys](../operations/better-auth-migration.md).
 
 We will finish the auth service in this repo before we start the Swift app.
 We will deliver one reviewed change at a time, beginning with the session
@@ -219,7 +219,7 @@ unmeasured estimate for auth and native authorization. It assumes we keep the
 proposed provider and find no blocking compatibility issue. It excludes Swift
 work, business APIs, owner merge waits and the two-week observation period.
 
-Steps 1 to 4 are merged. CHORE-41 is the active web switch. Local checks and independent review are complete; the remaining step is to open its PR. The owner must take a Neon restore point and run production surveys before merging.
+Steps 1 to 4 are merged. CHORE-41 is open as [PR #107](https://github.com/Chrisgmsl22/fast-expense-tracker/pull/107). The owner must take a Neon restore point and run production surveys before merging.
 
 <details>
 <summary>For agents: current state and sources</summary>
@@ -228,7 +228,7 @@ Reader: Christian, who will review the auth migration order and prepare the
 production restore point and surveys before CHORE-41 merges.
 
 Christian approved the visual design. CHORE-39, CHORE-44, and CHORE-34 merged in
-PRs #102, #104, and #105. CHORE-40 is merged. CHORE-41 pins Better Auth and its Prisma adapter to age-compliant 1.7.12. Local integration and browser checks pass. Independent review passed with no unresolved findings. The owner takes a Neon restore point and runs the production surveys before merging.
+PRs #102, #104, and #105. CHORE-40 is merged. CHORE-41 is open as PR #107. Better Auth and its Prisma adapter use age-compliant 1.7.12. Local checks and independent review passed with no unresolved findings. The owner takes a Neon restore point and runs the production surveys before merging.
 Do not access production or run this work alongside another schema migration.
 
 Sources: [spec 0009](../specs/0009-auth-module-better-auth.md),
