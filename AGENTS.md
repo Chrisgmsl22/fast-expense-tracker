@@ -66,17 +66,21 @@ merged ones each session. Confirm the merge through [GitHub access](#github-acce
 it. Christian reviews; that is the operating model. Save the questions for the
 list below and for genuine ambiguity.
 
+**Commit, push, and open the PR for authorized work.** These steps need no
+separate sign-off. Push only to the task branch, after the required checks and
+review pass.
+
 **Never merge or approve a pull request, and never push to `main`.** Opening the
 PR is yours; merging is Christian's, always. This is not a sign-off you can ask
 for in the moment — "ship it", "let's do it", or "can we do it now" means finish
 the PR and hand over the link. Green checks answer whether it is safe, never
 whether it is your call. A merge here deploys to production and can run a
 migration against real financial data. When work is blocked behind a merge, name
-the PR he needs to merge instead of clearing the block yourself.
+the PR he needs to merge instead of clearing the block yourself. Never enable
+auto-merge.
 
 Ask for sign-off in-conversation before you:
 
-- **Commit or push anything.** Christian asks for commits explicitly.
 - **Edit the rules themselves** — `AGENTS.md`, `.claude/agents/**`,
   `.claude/hooks/**`, `.claude/settings.json`, `.gitignore`,
   `docs/decisions/**`, `docs/conventions/**`.
