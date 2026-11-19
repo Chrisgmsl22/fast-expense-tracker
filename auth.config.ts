@@ -1,127 +1,57 @@
-import type { NextAuthConfig, Session } from "next-auth";
-import type { JWT } from "next-auth/jwt";
-
-import {
-    EXPIRED_LOGIN_PATH,
-    IDLE_TIMEOUT_MS,
-    IDLE_TIMEOUT_SECONDS,
-    isIdleElapsed,
-} from "@/lib/auth/idle-session";
-import { displayNameSchema } from "@/lib/schemas/auth";
-
-/**
- * Shared Auth.js base config.
- *
- * Holds provider-independent settings (`pages`, the route-gate + token/session
- * callbacks) so `auth.ts` and the `proxy.ts` route gate compose from one
- * source. Under Next.js 16 the proxy runs on the Node runtime (ADR-0007), so
- * this no longer needs to be Edge-safe.
- *
- * All callbacks live here in a single object: `auth.ts` spreads this config and
- * adds the Credentials provider, so a second `callbacks` object there would
- * shallow-override and silently drop `authorized`.
- */
-const LOGIN_PATH = "/login";
-const SIGNUP_PATH = "/signup";
-const DEFAULT_AUTHED_PATH = "/dashboard";
+import { randomUUID } from "node:crypto";
+import type { BetterAuthOptions } from "better-auth";
+import bcrypt from "bcryptjs";
+import { IDLE_TIMEOUT_MS, IDLE_TIMEOUT_SECONDS } from "@/lib/auth/idle-session";
 
 export const authConfig = {
-    pages: {
-        signIn: LOGIN_PATH,
+    secret: process.env.AUTH_SECRET,
+    baseURL: process.env.AUTH_URL,
+    user: { modelName: "User" },
+    account: { modelName: "Account" },
+    verification: { modelName: "Verification" },
+    emailAndPassword: {
+        enabled: true,
+        disableSignUp: true,
+        minPasswordLength: 1,
+        password: {
+            hash: (password) => bcrypt.hash(password, 10),
+            verify: ({ hash, password }) => bcrypt.compare(password, hash),
+        },
     },
-    providers: [], // Credentials provider added in auth.ts
-    // The signed idle deadline survives Auth.js token renewal on passive reads.
     session: {
-        strategy: "jwt",
-        maxAge: IDLE_TIMEOUT_SECONDS,
+        modelName: "Session",
+        expiresIn: IDLE_TIMEOUT_SECONDS,
+        disableSessionRefresh: true,
+        cookieCache: { enabled: false },
     },
-    callbacks: {
-        // Route gate, evaluated by the proxy on every matched request.
-        // `/api/auth/*` never reaches here — it's excluded by the proxy matcher.
-        authorized({ auth, request }) {
-            const isLoggedIn = Boolean(auth?.user);
-            const { pathname } = request.nextUrl;
-            const isOnAuthPage =
-                pathname === LOGIN_PATH || pathname === SIGNUP_PATH;
-
-            if (isOnAuthPage) {
-                // Don't strand a signed-in user on the login or signup screen.
-                return isLoggedIn
-                    ? Response.redirect(
-                          new URL(DEFAULT_AUTHED_PATH, request.nextUrl),
-                      )
-                    : true;
-            }
-
-            if (
-                !isLoggedIn &&
-                request.cookies
-                    .getAll()
-                    .some(({ name }) =>
-                        /^(?:__Secure-)?authjs\.session-token(?:\.\d+)?$/.test(
-                            name,
+    databaseHooks: {
+        session: {
+            create: {
+                before: async (session) => ({
+                    data: {
+                        ...session,
+                        // Better Auth gives rememberMe:false a separate 24-hour lifetime.
+                        expiresAt: new Date(
+                            Math.min(
+                                session.expiresAt.getTime(),
+                                Date.now() + IDLE_TIMEOUT_MS,
+                            ),
                         ),
-                    )
-            ) {
-                return Response.redirect(
-                    new URL(EXPIRED_LOGIN_PATH, request.nextUrl),
-                );
-            }
-            if (!isLoggedIn) {
-                const login = new URL(LOGIN_PATH, request.nextUrl);
-                login.searchParams.set("callbackUrl", request.nextUrl.href);
-                return Response.redirect(login);
-            }
-            return true;
-        },
-        jwt({ token, user, trigger, session }) {
-            const now = Date.now();
-            if (user?.id) {
-                token.sub = user.id;
-                token.idleExpiresAt = now + IDLE_TIMEOUT_MS;
-                token.idleSessionId = crypto.randomUUID();
-                return token;
-            }
-            // Prior tokens lack an idle deadline and require a new login.
-            if (
-                !token.sub ||
-                typeof token.idleExpiresAt !== "number" ||
-                !Number.isFinite(token.idleExpiresAt) ||
-                now >= token.idleExpiresAt ||
-                typeof token.idleSessionId !== "string" ||
-                !token.idleSessionId
-            ) {
-                return null;
-            }
-            if (
-                trigger === "update" &&
-                session?.idleActivity === true &&
-                session.idleSessionId === token.idleSessionId &&
-                isIdleElapsed(session.idleForMs)
-            ) {
-                token.idleExpiresAt = Math.max(
-                    token.idleExpiresAt,
-                    now - session.idleForMs + IDLE_TIMEOUT_MS,
-                );
-            }
-            // A client can post an update too, so the name passes the same rule as a saved one.
-            const rename =
-                trigger === "update"
-                    ? displayNameSchema.safeParse({ name: session?.user?.name })
-                    : undefined;
-            if (rename?.success) {
-                token.name = rename.data.name;
-            }
-            return token;
-        },
-        session({ session, token }: { session: Session; token: JWT }) {
-            if (token.sub) {
-                session.user.id = token.sub;
-            }
-            session.idleExpiresAt = token.idleExpiresAt;
-            session.idleSessionId = token.idleSessionId;
-            session.expires = new Date(token.idleExpiresAt ?? 0).toISOString();
-            return session;
+                    },
+                }),
+            },
         },
     },
-} satisfies NextAuthConfig;
+    advanced: { database: { generateId: () => randomUUID() } },
+    rateLimit: { enabled: true, storage: "database", modelName: "RateLimit" },
+    disabledPaths: [
+        "/sign-up/email",
+        "/change-password",
+        "/set-password",
+        "/reset-password",
+        "/request-password-reset",
+        "/change-email",
+        "/delete-user",
+        "/update-user",
+    ],
+} satisfies BetterAuthOptions;

@@ -1,20 +1,33 @@
-# Better Auth expand migration
+# Better Auth web switch
 
-Christian runs these read-only surveys before and after the expand deploy. Keep the results in private notes outside this repository. The agent does not connect to production. Auth.js still handles login, and the new auth tables stay empty.
+Christian takes a Neon restore point and runs these surveys before merging CHORE-41. Keep results in private notes. The agent does not access production. Merging deploys the credential migration automatically through `vercel.json`.
 
-Before merging, follow the [recovery runbook](./recovery.md). Keep production writes blocked between surveys so the counts are comparable. Merging deploys the migration automatically through `vercel.json`. Rolling back the application leaves these additive schema changes in place.
+Keep application writes blocked from the first survey until the post-deploy checks pass. The migration copies each legacy hash to a credential account. It preserves every user ID, financial row and legacy hash. Everyone signs in once after the switch.
 
 ## Before the merge
 
-Confirm the intended production database in Neon's SQL editor. Run this transaction there. It returns counts only and changes nothing.
+1. Follow the [recovery runbook](./recovery.md) and record a restore point.
+2. Confirm the intended production database in Neon's SQL editor.
+3. Run the read-only survey below. Save the counts and the currently deployed pre-switch build.
+4. Stop if any user lacks a legacy hash, any credential conflicts, or the financial foreign-key count differs from 9.
 
 ```sql
 BEGIN TRANSACTION READ ONLY;
 
 SELECT count(*) AS users,
-       count(*) FILTER (WHERE password IS NOT NULL) AS users_with_legacy_password,
-       count(*) FILTER (WHERE password IS NULL) AS users_without_legacy_password
+       count(*) FILTER (WHERE password IS NULL OR password = '') AS missing_legacy_passwords
 FROM "User";
+
+SELECT count(*) AS credential_accounts FROM "account" WHERE "providerId" = 'credential';
+
+SELECT count(*) AS missing_credentials FROM "User" u WHERE NOT EXISTS (
+    SELECT 1 FROM "account" a WHERE a."userId" = u.id AND a."providerId" = 'credential'
+);
+
+SELECT count(*) AS conflicting_users FROM "User" u WHERE
+    (SELECT count(*) FROM "account" a WHERE a."userId" = u.id AND a."providerId" = 'credential') > 1
+    OR EXISTS (SELECT 1 FROM "account" a WHERE a."userId" = u.id AND a."providerId" = 'credential'
+        AND (a."accountId" IS DISTINCT FROM u.id OR a.password IS DISTINCT FROM u.password));
 
 SELECT 'Expense' AS table_name, count(*) AS rows FROM "Expense"
 UNION ALL SELECT 'Movement', count(*) FROM "Movement"
@@ -26,86 +39,45 @@ UNION ALL SELECT 'CategoryBudget', count(*) FROM "CategoryBudget"
 UNION ALL SELECT 'BudgetRule', count(*) FROM "BudgetRule"
 UNION ALL SELECT 'Settings', count(*) FROM "Settings";
 
-SELECT count(*) AS financial_user_foreign_keys
-FROM pg_constraint
+SELECT count(*) AS financial_user_foreign_keys FROM pg_constraint
 WHERE contype = 'f' AND confrelid = '"User"'::regclass
   AND conrelid IN ('"Expense"'::regclass, '"Movement"'::regclass,
       '"Income"'::regclass, '"Card"'::regclass, '"Category"'::regclass,
       '"Subcategory"'::regclass, '"CategoryBudget"'::regclass,
       '"BudgetRule"'::regclass, '"Settings"'::regclass);
 
-SELECT count(*) AS applied_expand_migrations
-FROM "_prisma_migrations"
-WHERE migration_name = '20261031000000_add_better_auth_core'
+SELECT count(*) AS applied_switch_migrations FROM "_prisma_migrations"
+WHERE migration_name = '20261104000000_backfill_better_auth_credentials'
   AND finished_at IS NOT NULL AND rolled_back_at IS NULL;
 
 ROLLBACK;
 ```
 
-Expect 9 financial user foreign keys and 0 applied expand migrations. Every existing user must have a legacy password before this step. If either check differs, stop and investigate before merging.
+Before the first switch, expect 0 applied switch migrations. Missing credentials are expected before the copy. The migration aborts its whole transaction if any legacy hash is absent or any credential is duplicate or mismatched. It reports counts only.
 
 ## After the deploy
 
-Repeat the first survey. User counts, legacy-password counts, financial row counts, and the 9 foreign keys must match. Expect 1 applied expand migration. Then run:
+Repeat the survey before reopening writes. Expect 1 applied switch migration, exactly 1 credential account per user, 0 missing credentials and 0 conflicts. The user count, financial counts and 9 foreign keys must match the saved preflight survey.
 
-```sql
-BEGIN TRANSACTION READ ONLY;
+Sign in with the existing password. Check financial history, logout, closed signup and the session-expired notice. Keep writes blocked if a survey or login fails. Counts support the check; integration tests compare exact invented rows and foreign keys.
 
-SELECT count(*) FILTER (WHERE "emailVerified" = false) AS unverified_users,
-       count(*) FILTER (WHERE "emailVerified" = true) AS verified_users,
-       count(*) FILTER (WHERE image IS NOT NULL) AS users_with_images
-FROM "User";
+Record the actual production switch date privately. CHORE-43's two-week observation starts with that deployment, not the PR date.
 
-SELECT 'account' AS table_name, count(*) AS rows FROM "account"
-UNION ALL SELECT 'session', count(*) FROM "session"
-UNION ALL SELECT 'verification', count(*) FROM "verification"
-UNION ALL SELECT 'rateLimit', count(*) FROM "rateLimit";
+## Rollback
 
-SELECT count(*) AS credential_accounts
-FROM "account" WHERE "providerId" = 'credential';
+Roll the application back to the recorded pre-switch build. Leave the additive auth tables and credential rows in place. The old build authenticates against the preserved `User.password`. Everyone signs in again. A Vercel rollback does not undo migrations.
 
-SELECT count(*) AS users_without_credential_accounts
-FROM "User" u
-WHERE NOT EXISTS (
-    SELECT 1 FROM "account" a
-    WHERE a."userId" = u.id AND a."providerId" = 'credential'
-);
-
-ROLLBACK;
-```
-
-Every user should be unverified, with no image. All 4 new tables and the credential-account count must be 0. The number of users without credential accounts must equal the user count. This step does not copy passwords into accounts.
-
-Keep writes blocked if the results differ. Use the recovery runbook to assess the failure. After the surveys pass, verify legacy login and existing financial history before reopening writes. Counts do not prove row equality; the migration integration tests check exact invented rows and hashes.
+Signup stays closed under the existing gate. If signup is permitted, our repository commits the user, credential and starter kit together before sign-in can return cookies. Seed writes use the same transaction rule and never replace an existing password. Password-change, set-password, reset and raw signup endpoints stay disabled. Any future password writer must update both hashes in one application-owned transaction until CHORE-43 removes the legacy column.
 
 <details>
-<summary>Schema generation and the later auth switch</summary>
+<summary>For agents: runtime and security constraints</summary>
 
-The schema comes from `auth@1.7.10` with `better-auth@1.7.10`, installed only in a temporary directory. The app does not depend on either package in this slice. The release is more than 14 days old, and the compatibility review found no advisory that applies to this schema-only change. CHORE-41 must select and verify its runtime version separately. See [ADR-0027](../decisions/0027-replace-authjs-with-better-auth.md) and the [1.7.10 release](https://github.com/better-auth/better-auth/releases/tag/v1.7.10).
+The app pins `better-auth` and `@better-auth/prisma-adapter` to 1.7.12. Its [October 20 release](https://github.com/better-auth/better-auth/releases/tag/v1.7.12) meets ADR-0027's 14-day rule on November 3. Recheck the [official advisories](https://github.com/better-auth/better-auth/security/advisories) before any provider or plugin change.
 
-Use this generation configuration and the same ID callback when the auth runtime switches:
+The November 3 advisories affect this package range. This configuration uses none of their affected OAuth, organization, admin, phone, email OTP, email-change, Expo or MySQL paths. [GHSA-fvxx-76fc-893x](https://github.com/better-auth/better-auth/security/advisories/GHSA-fvxx-76fc-893x) also covers cached or secondary-storage sessions. Both are disabled here, as its workaround requires. No OAuth provider is enabled. CHORE-42 must select and review its own version again.
 
-```ts
-import { randomUUID } from "node:crypto";
-import { betterAuth } from "better-auth";
+Prisma uses the existing User, Account, Session, Verification and RateLimit models. The UUID callback preserves UUID strings in text columns. Passive session reads never renew. Activity renewal binds the authenticated user, session ID and token in one guarded database update. Database time rejects expired sessions, and GREATEST prevents stale updates from shortening expiry. Cookie publication follows the committed write.
 
-export const auth = betterAuth({
-    user: { modelName: "User" },
-    advanced: { database: { generateId: () => randomUUID() } },
-    rateLimit: { storage: "database" },
-});
-```
-
-The callback produces UUID strings while the columns remain PostgreSQL `TEXT`. The built-in `generateId: "uuid"` option generates native UUID columns in 1.7.10, which cannot reference the existing text `User.id`. The custom callback preserves every existing identity and financial foreign key. See the versioned [option type](https://github.com/better-auth/better-auth/blob/v1.7.10/packages/core/src/types/init-options.ts) and [runtime callback handling](https://github.com/better-auth/better-auth/blob/v1.7.10/packages/better-auth/src/context/create-context.ts).
-
-Better Auth 1.7.11 later fixed a PostgreSQL `int8` warning in Kysely introspection. This repo uses Prisma 6. Two 1.7.10 schema generations matched, and Prisma reported no schema diff between them. The later fix does not change this migration. See [upstream fix #10719](https://github.com/better-auth/better-auth/pull/10719).
-
-Copy the existing Prisma schema into the temporary directory and generate into that copy:
-
-```sh
-pnpm exec auth generate --config ./auth.ts --adapter prisma --dialect postgresql --output ./schema.prisma --yes
-```
-
-Keep the generated core models and new user fields. Make `User.password` optional as approved in the auth spec. Do not replace the existing user ID or financial models. New core IDs have no database default because Better Auth supplies them through the callback.
+The database-backed limiter handles public sign-in requests and server-action sign-in through the same HTTP handler. Database failures must fail authentication. Do not add an in-memory fallback.
 
 </details>
