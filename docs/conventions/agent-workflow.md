@@ -7,6 +7,10 @@ agent-led development reliable.
 
 **Mode 2 default**: agents implement, user reviews.
 
+Agents may commit, push task branches, and open PRs for authorized work without
+separate sign-off after the required checks and review pass. Agents never merge
+or approve PRs, enable auto-merge, or push to `main`. Christian merges.
+
 This inverts MoneyFlow's "user writes, AI mentors" model. Same code-quality bar,
 but the human is reviewer rather than author.
 
@@ -164,7 +168,7 @@ When **only one slice is in flight**, no worktree is needed:
 2. Subagent creates a feature branch off `main` in the current working directory: `git checkout -b feat/N.M-name`.
 3. Subagent edits files in-place; changes are visible to the user in the canonical repo path.
 4. Subagent commits on the feature branch; reports back.
-5. User pushes + opens PR.
+5. Agent pushes the task branch and opens the PR after the required checks and review pass.
 
 This is the default for sequential slices (Foundation and Integration types in `parallel-slicing.md`).
 
