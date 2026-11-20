@@ -72,7 +72,10 @@
         "saveError": "Algo salió mal al guardar el gasto.",
         "saving": "Guardando…",
         "saveChanges": "Guardar cambios",
-        "submit": "Agregar gasto"
+        "submit": "Agregar gasto",
+        "editSplit": "Editar reparto",
+        "yourSharePercentage": "Tu parte (%)",
+        "invalidSplit": "Ingresa un porcentaje desde 0 y menor que 100."
     },
     "list": {
         "filterLabel": "Filtrar por categoría",

@@ -17,6 +17,7 @@ vi.mock("@/app/_actions/expense/update", () => ({ updateExpense: vi.fn() }));
 import { ExpenseForm } from "@/components/expense/ExpenseForm";
 import { createExpense } from "@/app/_actions/expense/create";
 import { updateExpense } from "@/app/_actions/expense/update";
+import { expenseInputSchema } from "@/lib/schemas/expense";
 
 const categories = [
     { id: "c1", slug: "food", name: "Food", color: "#ef4444" },
@@ -219,6 +220,302 @@ describe("ExpenseForm", () => {
     it("labels the split from the configured percentage", () => {
         renderForm({ defaultSharePercentage: 0.5 });
         expect(screen.getByText("Shared expense · 50/50")).toBeDefined();
+    });
+
+    it("uses a fractional default for a new shared expense without rounding it", async () => {
+        vi.mocked(createExpense).mockResolvedValue({
+            ok: true,
+            data: { id: "new1" },
+        });
+        renderForm({ defaultSharePercentage: 0.5555 });
+        fireEvent.click(
+            screen.getByRole("checkbox", { name: /shared expense/i }),
+        );
+        fireEvent.change(screen.getByLabelText(/amount/i), {
+            target: { value: "1000" },
+        });
+        expect(screen.getByText("Shared expense · 55.55/44.45")).toBeDefined();
+        expect(screen.getByText("your share $555.50")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Edit split" }));
+        expect(screen.getByLabelText("Your share (%)")).toHaveProperty(
+            "value",
+            "55.55",
+        );
+        fireEvent.submit(screen.getByRole("form"));
+        await waitFor(() =>
+            expect(createExpense).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    isShared: true,
+                    yourPercentage: "0.5555",
+                }),
+            ),
+        );
+    });
+
+    it.each([false, true])(
+        "saves a custom 50/50 split in edit mode %s",
+        async (isEdit) => {
+            const action = isEdit ? updateExpense : createExpense;
+            vi.mocked(action).mockResolvedValue({
+                ok: true,
+                data: { id: "e1" },
+            });
+            renderForm({ expense: isEdit ? editable : undefined });
+            if (!isEdit)
+                fireEvent.click(
+                    screen.getByRole("checkbox", { name: /shared expense/i }),
+                );
+            fireEvent.change(screen.getByLabelText(/amount/i), {
+                target: { value: "1000" },
+            });
+            fireEvent.click(screen.getByRole("button", { name: "Edit split" }));
+            fireEvent.change(screen.getByLabelText("Your share (%)"), {
+                target: { value: "50" },
+            });
+            expect(screen.getByText("Shared expense · 50/50")).toBeDefined();
+            expect(screen.getByText("your share $500.00")).toBeDefined();
+            fireEvent.submit(screen.getByRole("form"));
+            await waitFor(() =>
+                expect(action).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        isShared: true,
+                        yourPercentage: "0.5",
+                    }),
+                ),
+            );
+        },
+    );
+
+    it("opens the saved fractional split when the Settings default has changed", async () => {
+        vi.mocked(updateExpense).mockResolvedValue({
+            ok: true,
+            data: { id: "e1" },
+        });
+        renderForm({
+            expense: { ...editable, yourPercentage: 0.333333 },
+            defaultSharePercentage: 0.5,
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Edit split" }));
+        expect(screen.getByLabelText("Your share (%)")).toHaveProperty(
+            "value",
+            "33.3333",
+        );
+        expect(
+            screen.getByText("Shared expense · 33.3333/66.6667"),
+        ).toBeDefined();
+        fireEvent.submit(screen.getByRole("form"));
+        await waitFor(() =>
+            expect(updateExpense).toHaveBeenCalledWith(
+                expect.objectContaining({ yourPercentage: "0.333333" }),
+            ),
+        );
+    });
+
+    it("accepts a zero-percent share", async () => {
+        vi.mocked(updateExpense).mockResolvedValue({
+            ok: true,
+            data: { id: "e1" },
+        });
+        renderForm({ expense: editable });
+        fireEvent.click(screen.getByRole("button", { name: "Edit split" }));
+        fireEvent.change(screen.getByLabelText("Your share (%)"), {
+            target: { value: "0" },
+        });
+        expect(screen.getByText("Shared expense · 0/100")).toBeDefined();
+        expect(screen.getByText("your share $0.00")).toBeDefined();
+        fireEvent.submit(screen.getByRole("form"));
+        await waitFor(() =>
+            expect(updateExpense).toHaveBeenCalledWith(
+                expect.objectContaining({ yourPercentage: "0" }),
+            ),
+        );
+    });
+
+    it("shows a clean decimal complement and rounds the preview like a saved expense", () => {
+        renderForm({ expense: editable });
+        fireEvent.click(screen.getByRole("button", { name: "Edit split" }));
+        fireEvent.change(screen.getByLabelText("Your share (%)"), {
+            target: { value: "99.9" },
+        });
+        expect(screen.getByText("Shared expense · 99.9/0.1")).toBeDefined();
+        fireEvent.change(screen.getByLabelText("Your share (%)"), {
+            target: { value: "70" },
+        });
+        fireEvent.change(screen.getByLabelText(/amount/i), {
+            target: { value: "1.45" },
+        });
+        expect(screen.getByText("your share $1.01")).toBeDefined();
+    });
+
+    it.each(["", "-1", "100", "101", "invalid"])(
+        "localizes the server error for invalid share %s and links the error",
+        async (value) => {
+            const onSuccess = vi.fn();
+            vi.mocked(updateExpense).mockImplementation(async (input) => {
+                expect(expenseInputSchema.safeParse(input).success).toBe(false);
+                return {
+                    ok: false,
+                    code: "validation",
+                    message: "Invalid expense",
+                    fieldErrors: {
+                        yourPercentage: [
+                            "Invalid input: expected number, received NaN",
+                        ],
+                    },
+                };
+            });
+            renderForm({ expense: editable, onSuccess });
+            fireEvent.click(screen.getByRole("button", { name: "Edit split" }));
+            const input = screen.getByLabelText("Your share (%)");
+            fireEvent.change(input, { target: { value } });
+            expect(screen.queryByText(/your share \$/i)).toBeNull();
+            fireEvent.submit(screen.getByRole("form"));
+            const error = await screen.findByText(
+                "Enter a percentage from 0 to less than 100.",
+            );
+            expect(input.getAttribute("aria-invalid")).toBe("true");
+            expect(input.getAttribute("aria-describedby")).toBe(error.id);
+            expect(onSuccess).not.toHaveBeenCalled();
+            expect(updateExpense).toHaveBeenCalledOnce();
+            expect(screen.queryByText(/received NaN/)).toBeNull();
+        },
+    );
+
+    it("clears the split error after correction and saves the corrected percentage", async () => {
+        vi.mocked(updateExpense)
+            .mockResolvedValueOnce({
+                ok: false,
+                code: "validation",
+                message: "Invalid expense",
+                fieldErrors: {
+                    yourPercentage: [
+                        "A shared expense needs your share below 100%",
+                    ],
+                },
+            })
+            .mockResolvedValue({
+                ok: true,
+                data: { id: "e1" },
+            });
+        renderForm({ expense: editable });
+        fireEvent.click(screen.getByRole("button", { name: "Edit split" }));
+        const input = screen.getByLabelText("Your share (%)");
+        fireEvent.change(input, { target: { value: "100" } });
+        fireEvent.submit(screen.getByRole("form"));
+        await screen.findByText("Enter a percentage from 0 to less than 100.");
+        expect(screen.queryByText("Invalid expense")).toBeNull();
+        expect(updateExpense).toHaveBeenCalledOnce();
+        fireEvent.change(input, { target: { value: "50" } });
+        expect(
+            screen.queryByText("Enter a percentage from 0 to less than 100."),
+        ).toBeNull();
+        expect(input.getAttribute("aria-invalid")).toBe("false");
+        expect(screen.queryByText("Invalid expense")).toBeNull();
+        fireEvent.submit(screen.getByRole("form"));
+        await waitFor(() =>
+            expect(updateExpense).toHaveBeenCalledWith(
+                expect.objectContaining({ yourPercentage: "0.5" }),
+            ),
+        );
+    });
+
+    it("shows invalid split guidance in Spanish", async () => {
+        vi.mocked(updateExpense).mockResolvedValue({
+            ok: false,
+            code: "validation",
+            message: "Gasto no válido",
+            fieldErrors: {
+                yourPercentage: [
+                    "Invalid input: expected number, received NaN",
+                ],
+            },
+        });
+        renderForm({ expense: editable }, "es");
+        fireEvent.click(screen.getByRole("button", { name: "Editar reparto" }));
+        fireEvent.change(screen.getByLabelText("Tu parte (%)"), {
+            target: { value: "" },
+        });
+        fireEvent.submit(screen.getByRole("form"));
+        await screen.findByText(
+            "Ingresa un porcentaje desde 0 y menor que 100.",
+        );
+        expect(updateExpense).toHaveBeenCalledOnce();
+    });
+
+    it.each([
+        {
+            code: "validation" as const,
+            message: "Invalid expense",
+            fieldErrors: {
+                yourPercentage: [
+                    "A shared expense needs your share below 100%",
+                ],
+                amount: ["Amount must be greater than 0"],
+            },
+        },
+        {
+            code: "db_error" as const,
+            message: "Could not save changes",
+            fieldErrors: undefined,
+        },
+    ])(
+        "retains the form summary for $code failures beyond the split field",
+        async (failure) => {
+            vi.mocked(updateExpense).mockResolvedValue({
+                ok: false,
+                ...failure,
+            });
+            renderForm({ expense: editable });
+            fireEvent.submit(screen.getByRole("form"));
+            await screen.findByText(failure.message);
+        },
+    );
+
+    it("resets a new expense's override to the Settings default after saving", async () => {
+        vi.mocked(createExpense).mockResolvedValue({
+            ok: true,
+            data: { id: "new1" },
+        });
+        renderForm();
+        fireEvent.click(
+            screen.getByRole("checkbox", { name: /shared expense/i }),
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Edit split" }));
+        fireEvent.change(screen.getByLabelText("Your share (%)"), {
+            target: { value: "50" },
+        });
+        fireEvent.submit(screen.getByRole("form"));
+        await waitFor(() =>
+            expect(screen.queryByLabelText("Your share (%)")).toBeNull(),
+        );
+        fireEvent.click(
+            screen.getByRole("checkbox", { name: /shared expense/i }),
+        );
+        expect(screen.getByText("Shared expense · 68/32")).toBeDefined();
+    });
+
+    it("ignores a hidden invalid split when the expense is no longer shared", async () => {
+        vi.mocked(updateExpense).mockResolvedValue({
+            ok: true,
+            data: { id: "e1" },
+        });
+        renderForm({ expense: editable });
+        fireEvent.click(screen.getByRole("button", { name: "Edit split" }));
+        fireEvent.change(screen.getByLabelText("Your share (%)"), {
+            target: { value: "" },
+        });
+        fireEvent.click(
+            screen.getByRole("checkbox", { name: /shared expense/i }),
+        );
+        fireEvent.submit(screen.getByRole("form"));
+        await waitFor(() =>
+            expect(updateExpense).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    isShared: false,
+                    yourPercentage: "1",
+                }),
+            ),
+        );
     });
 
     it("prefills, preserves the stored split, and switches to 'Save changes' in edit mode", () => {
