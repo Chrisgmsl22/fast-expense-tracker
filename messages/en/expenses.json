@@ -72,7 +72,10 @@
         "saveError": "Something went wrong saving the expense.",
         "saving": "Saving…",
         "saveChanges": "Save changes",
-        "submit": "Add expense"
+        "submit": "Add expense",
+        "editSplit": "Edit split",
+        "yourSharePercentage": "Your share (%)",
+        "invalidSplit": "Enter a percentage from 0 to less than 100."
     },
     "list": {
         "filterLabel": "Filter by category",
