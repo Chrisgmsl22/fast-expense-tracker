@@ -183,3 +183,37 @@ Signup stays closed until the store exists and both keys are valid.
 
 Local development has no store. Set `SIGNUP_ENABLED="true"` and `MAX_USERS="10"`
 in `.env.local` to open signup on your machine. A production build ignores both.
+
+### Vacation category release
+
+Keep signup closed from before the production build until the new deployment serves signup requests to avoid a provisioning gap. Vercel runs the Vacation migration during the build, while the old deployment can still create accounts without Vacation.
+
+If signup was open during this rollout, Christian must complete these steps after the new deployment serves signup requests:
+
+1. Confirm the intended production database in Neon's SQL editor.
+2. Open [the Vacation migration](../../prisma/migrations/20261119000000_add_vacation_category/migration.sql), copy its full SQL into that editor, and execute it. This atomic, idempotent block adds only missing Vacation categories and subcategories. Running `prisma migrate deploy` again will not replay an already recorded migration.
+3. Run the check below in the same database. Expect `missing_vacation = 0`; investigate any remaining account before calling the rollout complete.
+
+```sql
+SELECT count(*) AS missing_vacation
+FROM "User" u
+WHERE NOT EXISTS (
+    SELECT 1 FROM "Category" c
+    WHERE c."userId" = u."id" AND c."slug" = 'vacation'
+) OR EXISTS (
+    SELECT 1
+    FROM "Category" c
+    CROSS JOIN (VALUES
+        ('Flights'), ('Lodging'), ('Local transport'), ('Food and snacks'),
+        ('Activities'), ('Souvenirs')
+    ) AS defaults("name")
+    WHERE c."userId" = u."id" AND c."slug" = 'vacation'
+      AND NOT EXISTS (
+          SELECT 1 FROM "Subcategory" s
+          WHERE s."userId" = c."userId" AND s."categoryId" = c."id"
+            AND s."name" = defaults."name"
+      )
+);
+```
+
+Existing categories, monthly budgets, expenses, and funding values stay unchanged. Vacation is discretionary; income-funded expenses count toward the monthly budget, and savings-funded expenses stay outside it. The migration adds Vacation for accounts without categories too; normal provisioning supplies their remaining defaults. Application rollback can retain the added rows. Check expense references before any later manual deletion. Keep query results and database credentials outside the repository.

@@ -16,7 +16,7 @@ and what to deliberately exclude.
 
 ## 1. Categories
 
-13 system categories, seeded immutably on first migration. Each has an
+14 system categories, supplied by the starter kit and additive migrations. Each has an
 `isRelevant` flag (50/25/25 logic: essentials vs. discretionary), a
 URL-friendly `slug` (used to match across systems for migration), and a list
 of subcategories.
@@ -37,7 +37,8 @@ of subcategories.
 | 10  | Personal          | `personal`          | ❌           | Courses · Education · Books · Subscriptions · Cash withdrawals · Technology · Accountant · Other          |
 | 11  | Debt              | `debt`              | ✅           | Car loan · Credit card balance · Personal loans · Monthly installments                                    |
 | 12  | Disposable Income | `disposable-income` | ❌           | Entertainment · Hobbies · Dining out · Social events · Tech gadgets · Ecommerce expenses                  |
-| 13  | Unassigned        | `unassigned`        | ❌           | (no subcategories — sentinel for orphaned expenses)                                                       |
+| 13  | Vacation          | `vacation`          | ❌           | Flights · Lodging · Local transport · Food and snacks · Activities · Souvenirs                            |
+| 14  | Unassigned        | `unassigned`        | ❌           | (no subcategories — sentinel for orphaned expenses)                                                       |
 
 [^1]:
     Renamed from "Purchases made by girlfriend" by CHORE-12 — the row is his
