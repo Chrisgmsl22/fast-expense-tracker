@@ -123,7 +123,7 @@ describe("runSeed", () => {
         const summary = await runSeed(db, ADMIN, makeProvisioning(events));
 
         expect(summary).toMatchObject({
-            provisioned: { categoriesCreated: 13, settingsCreated: true },
+            provisioned: { categoriesCreated: 14, settingsCreated: true },
             ownerCardsCreated: 4,
             fixedIncomeCreated: true,
         });

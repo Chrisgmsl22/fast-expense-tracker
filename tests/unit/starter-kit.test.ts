@@ -17,9 +17,9 @@ const HEX = /^#[0-9a-f]{6}$/i;
 const OWNER_CARD_NAMES = ["Amex Platinum", "Amex Gold", "NU", "BBVA"];
 
 describe("STARTER_CATEGORIES", () => {
-    it("Should hold the 13 reference categories with unique slugs", () => {
-        expect(STARTER_CATEGORIES).toHaveLength(13);
-        expect(new Set(STARTER_CATEGORIES.map((c) => c.slug)).size).toBe(13);
+    it("Should hold the 14 reference categories with unique slugs", () => {
+        expect(STARTER_CATEGORIES).toHaveLength(14);
+        expect(new Set(STARTER_CATEGORIES.map((c) => c.slug)).size).toBe(14);
     });
 
     it("Should encode the 50/25/25 relevance flags from the domain reference", () => {
@@ -30,6 +30,7 @@ describe("STARTER_CATEGORIES", () => {
             "disposable-income",
             "personal",
             "unassigned",
+            "vacation",
         ]);
     });
 

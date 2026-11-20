@@ -20,7 +20,7 @@ export type StarterCard = {
     type: StarterCardType;
 };
 
-/** The 13 categories in reference order (docs/reference/domain-reference.md §1). */
+/** The 14 categories in reference order (docs/reference/domain-reference.md §1). */
 export const STARTER_CATEGORIES: readonly StarterCategory[] = [
     {
         slug: "housing",
@@ -167,7 +167,20 @@ export const STARTER_CATEGORIES: readonly StarterCategory[] = [
             "Social events",
             "Tech gadgets",
             "Ecommerce expenses",
-            "Vacation",
+        ],
+    },
+    {
+        slug: "vacation",
+        name: "Vacation",
+        color: "#ea580c",
+        isRelevant: false,
+        subcategories: [
+            "Flights",
+            "Lodging",
+            "Local transport",
+            "Food and snacks",
+            "Activities",
+            "Souvenirs",
         ],
     },
     {
