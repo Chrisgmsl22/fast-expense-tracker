@@ -183,3 +183,28 @@ Signup stays closed until the store exists and both keys are valid.
 
 Local development has no store. Set `SIGNUP_ENABLED="true"` and `MAX_USERS="10"`
 in `.env.local` to open signup on your machine. A production build ignores both.
+
+### Vacation subcategory release
+
+Keep signup closed from before the production build until the new deployment serves signup requests to avoid a provisioning gap. Vercel runs the Vacation migration during the build, while the old deployment can still create accounts without Vacation.
+
+If signup was open during this rollout, Christian must complete these steps after the new deployment serves signup requests:
+
+1. Confirm the intended production database in Neon's SQL editor.
+2. Open [the Vacation migration](../../prisma/migrations/20261119000000_add_vacation_subcategory/migration.sql), copy its full SQL into that editor, and execute it. This exact migration is idempotent and adds only missing Vacation rows. Running `prisma migrate deploy` again will not replay an already recorded migration.
+3. Run the check below in the same database. Expect `missing_vacation = 0`; investigate any remaining account before calling the rollout complete.
+
+```sql
+SELECT count(*) AS missing_vacation
+FROM "Category" c
+WHERE c."slug" = 'disposable-income'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM "Subcategory" s
+      WHERE s."userId" = c."userId"
+        AND s."categoryId" = c."id"
+        AND s."name" = 'Vacation'
+  );
+```
+
+Keep query results and database credentials outside the repository. Application rollback can retain the added rows; check expense references before any later manual deletion.

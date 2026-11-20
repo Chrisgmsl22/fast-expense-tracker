@@ -36,7 +36,7 @@ of subcategories.
 | 9   | Combined Expenses | `combined-expenses` | ✅           | Covered for me[^1] · Purchases made between the two · Cats                                                |
 | 10  | Personal          | `personal`          | ❌           | Courses · Education · Books · Subscriptions · Cash withdrawals · Technology · Accountant · Other          |
 | 11  | Debt              | `debt`              | ✅           | Car loan · Credit card balance · Personal loans · Monthly installments                                    |
-| 12  | Disposable Income | `disposable-income` | ❌           | Entertainment · Hobbies · Dining out · Social events · Tech gadgets · Ecommerce expenses                  |
+| 12  | Disposable Income | `disposable-income` | ❌           | Entertainment · Hobbies · Dining out · Social events · Tech gadgets · Ecommerce expenses · Vacation       |
 | 13  | Unassigned        | `unassigned`        | ❌           | (no subcategories — sentinel for orphaned expenses)                                                       |
 
 [^1]:

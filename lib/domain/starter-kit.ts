@@ -167,6 +167,7 @@ export const STARTER_CATEGORIES: readonly StarterCategory[] = [
             "Social events",
             "Tech gadgets",
             "Ecommerce expenses",
+            "Vacation",
         ],
     },
     {
