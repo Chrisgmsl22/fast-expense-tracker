@@ -65,6 +65,16 @@ export function formatExpenseDate(date: Date, locale: Locale): string {
     return dateFormatter[locale].format(date);
 }
 
+const expenseDayFormatter = dateFormatters({
+    timeZone: "UTC",
+    day: "numeric",
+    month: "short",
+});
+
+export function formatExpenseDay(date: Date, locale: Locale): string {
+    return expenseDayFormatter[locale].format(date);
+}
+
 const monthFormatter = dateFormatters({
     month: "long",
     year: "numeric",
