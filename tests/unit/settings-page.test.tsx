@@ -84,7 +84,6 @@ describe("SettingsPage", () => {
             "Límites por categoría · próximamente",
             "Preferencias · próximamente",
             "Privacidad · próximamente",
-            "Exportar datos · próximamente",
             "Cuenta · próximamente",
         ]);
     });

@@ -1,3 +1,7 @@
+import {
+    PrismaFinancialExportRepository,
+    type FinancialExportRepository,
+} from "./financial-export.repository";
 import { db } from "@/lib/db";
 import { PrismaAuthSessionRepository } from "./auth-session.repository";
 
@@ -97,3 +101,6 @@ export const signupGate: SignupGate = new GlobalConfigSignupGate(
     process.env,
     readGlobalConfigStore,
 );
+
+export const financialExportRepository: FinancialExportRepository =
+    new PrismaFinancialExportRepository(db);

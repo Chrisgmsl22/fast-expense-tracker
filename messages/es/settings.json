@@ -139,5 +139,17 @@
             "restoreFailed": "No se pudo restaurar la tarjeta. Inténtalo de nuevo.",
             "historyFailed": "No se pudo cargar el historial de la tarjeta. Inténtalo de nuevo."
         }
+    },
+    "export": {
+        "title": "Exportar datos",
+        "description": "Descarga un archivo de Excel para revisar ingresos, gastos y tu presupuesto. Los periodos actuales incluyen movimientos hasta hoy en Ciudad de México.",
+        "periodType": "Periodo",
+        "year": "Año",
+        "month": "Mes",
+        "download": "Descargar Excel",
+        "downloading": "Preparando descarga…",
+        "invalid": "Elige un año o mes válido hasta el periodo actual.",
+        "unauthenticated": "Tu sesión expiró. Inicia sesión para descargar tus datos.",
+        "failed": "No se pudieron exportar tus datos. Inténtalo de nuevo."
     }
 }
