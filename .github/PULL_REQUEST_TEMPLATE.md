@@ -17,6 +17,11 @@
 <!-- List the automated checks you ran and their results. Link CI or logs when available. Call out any relevant scenarios you could not verify and why. -->
 <!-- Attach labeled screenshots for each distinct visible scenario you exercised. Put each image next to its scenario and identify the viewport where relevant. Use test data in screenshots. -->
 
+## Deployment configuration
+
+<!-- If this PR adds or changes an environment variable requirement, list each variable name, its purpose and where the value comes from, the service and environments that need it, and who sets it. Never include secret values. -->
+<!-- Put the rollout steps in order. Mark what must happen before merge, whether a new deployment is needed to apply the change, and which smoke test verifies it. Mark unverified setup as pending. Share the same action plan in the current session. Use n/a if no configuration changes. -->
+
 ## Notes
 
 <!-- Include rollout details, reviewer notes, or follow-ups. Add a fenced mermaid diagram when a flow, state transition, or system interaction is easier to understand visually. Use n/a if this section does not apply. -->
