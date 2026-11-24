@@ -36,30 +36,12 @@ vi.mock("@/app/_actions/movement/update-transfer", () => ({
 
 import { CopySettlementButton } from "@/components/settlement/CopySettlementButton";
 import { SettlementViews } from "@/components/settlement/SettlementViews";
-import { createTranslator } from "next-intl";
-import type { Locale } from "@/i18n/config";
-import { MESSAGES } from "@/i18n/messages";
-import { buildSettlementSummaryText } from "@/components/settlement/settlement-summary-text";
 import type {
     ClosedSettlementCycle,
     SettlementJournalItem,
 } from "@/lib/services/settlement/settlement.service";
 
 const LABEL = "Copy settlement summary to clipboard";
-
-const intlFor = (locale: Locale) => ({
-    t: createTranslator({
-        locale,
-        messages: MESSAGES[locale],
-        namespace: "settlement",
-    }),
-    tm: createTranslator({
-        locale,
-        messages: MESSAGES[locale],
-        namespace: "movements",
-    }),
-    locale,
-});
 
 const openRow: SettlementJournalItem = {
     kind: "your_expense",
@@ -78,6 +60,18 @@ const closedRow: SettlementJournalItem = {
     date: new Date("2026-06-20T06:00:00Z"),
     description: "Closed groceries",
     locked: true,
+};
+
+const ownerDebt: SettlementJournalItem = {
+    kind: "partner_debt",
+    id: "m1",
+    date: new Date("2026-07-11T06:00:00Z"),
+    carriedOver: false,
+    locked: false,
+    direction: "gf_fronted",
+    description: "Concert tickets",
+    amount: 100,
+    source: "movement",
 };
 
 function cycle(
@@ -109,6 +103,7 @@ function renderViews(
             monthPosition="current"
             history={[cycle("c1", [closedRow])]}
             partnerName="Brenda"
+            ownerName="Alex"
             {...over}
         />,
     );
@@ -200,17 +195,17 @@ describe("CopySettlementButton", () => {
             />,
         );
         await clickCopy(screen.getByRole("button", { name: LABEL }));
-        expect(writeText).toHaveBeenCalledWith(
-            buildSettlementSummaryText(
-                [openRow],
-                "Brenda",
-                "closed",
-                intlFor("en"),
-            ),
+        expect(writeText).toHaveBeenCalledExactlyOnceWith(
+            expect.stringContaining("🧾 *Settlement Jul 10, 2026*"),
+        );
+        expect(writeText.mock.calls[0]![0]).toContain(
+            "• Open groceries: *$320.00*",
         );
     });
 
-    it("copies the Spanish summary under a Spanish label", async () => {
+    it("uses the Mexico City date at each click under the Spanish label", async () => {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(new Date("2026-11-23T05:59:59Z"));
         renderWithIntl(
             <CopySettlementButton
                 journal={[openRow]}
@@ -219,20 +214,27 @@ describe("CopySettlementButton", () => {
             />,
             { locale: "es" },
         );
-        await clickCopy(
-            screen.getByRole("button", {
-                name: "Copiar el resumen de la cuenta",
-            }),
+        const button = screen.getByRole("button", {
+            name: "Copiar el resumen de la cuenta",
+        });
+
+        await clickCopy(button);
+        vi.setSystemTime(new Date("2026-11-23T06:00:00Z"));
+        await clickCopy(button);
+
+        expect(writeText).toHaveBeenNthCalledWith(
+            1,
+            expect.stringContaining(
+                "🧾 *Cuenta 10 jul 2026 – hoy (22 nov 2026)*",
+            ),
         );
-        const text = buildSettlementSummaryText(
-            [openRow],
-            "Brenda",
-            "open",
-            intlFor("es"),
+        expect(writeText).toHaveBeenNthCalledWith(
+            2,
+            expect.stringContaining(
+                "🧾 *Cuenta 10 jul 2026 – hoy (23 nov 2026)*",
+            ),
         );
-        expect(text.split("\n")[0]).toBe("🧾 *Cuenta 10 jul 2026 – hoy*");
-        expect(writeText).toHaveBeenCalledWith(text);
-        expect(await screen.findByText("Copiado")).toBeDefined();
+        expect(screen.getByText("Copiado")).toBeDefined();
     });
 
     it("announces Copied, then returns to idle after two seconds", async () => {
@@ -348,16 +350,15 @@ describe("CopySettlementButton", () => {
 
 describe("SettlementViews copy button", () => {
     it("sits on the open settlement tab and copies the open rows", async () => {
-        renderViews();
+        renderViews({ openJournal: [ownerDebt, openRow] });
         await clickCopy(screen.getByRole("button", { name: LABEL }));
-        expect(writeText).toHaveBeenCalledWith(
-            buildSettlementSummaryText(
-                [openRow],
-                "Brenda",
-                "open",
-                intlFor("en"),
-            ),
+        expect(writeText).toHaveBeenCalledExactlyOnceWith(
+            expect.stringContaining("*Subtotal Alex owes Brenda: $100.00*"),
         );
+        expect(writeText.mock.calls[0]![0]).toContain(
+            "• Open groceries: *$320.00*",
+        );
+        expect(writeText.mock.calls[0]![0]).not.toContain("Closed groceries");
     });
 
     it("gives each tab a short phone label and keeps the full accessible name", () => {
@@ -387,7 +388,12 @@ describe("SettlementViews copy button", () => {
     });
 
     it("copies a closed cycle's own rows from inside its panel", async () => {
-        renderViews();
+        const closedDebt = {
+            ...ownerDebt,
+            date: closedRow.date,
+            locked: true,
+        };
+        renderViews({ history: [cycle("c1", [closedRow, closedDebt])] });
         fireEvent.click(screen.getByRole("tab", { name: "History" }));
         const trigger = screen.getByRole("button", { name: /Settled/ });
         fireEvent.click(trigger);
@@ -399,14 +405,13 @@ describe("SettlementViews copy button", () => {
         expect(trigger.contains(button)).toBe(false);
 
         await clickCopy(button);
-        expect(writeText).toHaveBeenCalledWith(
-            buildSettlementSummaryText(
-                [closedRow],
-                "Brenda",
-                "closed",
-                intlFor("en"),
-            ),
+        expect(writeText).toHaveBeenCalledExactlyOnceWith(
+            expect.stringContaining("🧾 *Settlement Jun 20, 2026*"),
         );
+        const [text] = writeText.mock.calls[0]!;
+        expect(text).toContain("• Closed groceries: *$320.00*");
+        expect(text).toContain("*Subtotal Alex owes Brenda: $100.00*");
+        expect(text).not.toMatch(/today|Open groceries/);
     });
 
     it("shows only the expanded cycle's button on History, none in the header", () => {

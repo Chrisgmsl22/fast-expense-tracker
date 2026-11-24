@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getSessionUserId } from "@/lib/auth/session";
+import { getSessionContext } from "@/lib/auth/session";
 import { getCurrentMonthCdmx } from "@/lib/dates";
 import { formatMonthLabel } from "@/lib/format";
 import { getScopedMonth } from "@/lib/month-scope.server";
@@ -33,12 +33,13 @@ export default async function SettlementPage({
     const month = await getScopedMonth(monthParam);
     const currentMonth = getCurrentMonthCdmx();
 
-    const userId = await getSessionUserId();
+    const session = await getSessionContext();
     // The proxy route gate guarantees a session; this satisfies the nullable
     // type and fails safe if it's ever reached without one.
-    if (!userId) {
+    if (!session) {
         return null;
     }
+    const { userId } = session;
 
     const [settlement, settings] = await Promise.all([
         getSettlement(userId, {}, { month }),
@@ -130,6 +131,7 @@ export default async function SettlementPage({
                     monthPosition={toMonthPosition(month, currentMonth)}
                     history={settlement.history}
                     partnerName={partnerName}
+                    ownerName={session.name}
                 />
             </div>
         </main>

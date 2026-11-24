@@ -96,7 +96,9 @@ one of them left gets surfaced, not silently patched.
    into a PR description draft, delete the Plan block from the phase file.
 7. **Commit** in imperative mood — one logical commit unless the item genuinely
    splits.
-8. **Hand back.** Pushing and opening the PR are the user's call.
+8. **Hand back.** The main thread completes the review loop, then pushes the task
+   branch and opens the PR without separate sign-off. Never merge or approve a
+   PR, enable auto-merge, or push to `main`.
 
 ## Report back with
 

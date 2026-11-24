@@ -1,84 +1,70 @@
-# fast-expense-tracker
+# Fast Expense Tracker
 
-A temporary personal expense tracker built while [MoneyFlow](https://github.com/Chrisgmsl22/my-expense-tracker)
-(the long-form learning project) is being built.
+Fast Expense Tracker is a personal expense tracker for MXN spending and shared expenses. It records each expense, applies your saved share to shared spending, and shows monthly budgets, card balances, and partner settlement totals. All data shown in the screenshots below is invented demo data.
 
-**Why this exists:** MoneyFlow takes months. I need a working tool now to track
-shared expenses with a proper 68/32 split, categorize spend, and watch budgets.
-This app is the temporary bridge.
+## Screenshots
 
-**What's different:** this repo is intentionally an _agent-led_ project — agents
-write the code, I review. The opposite of MoneyFlow, which is hand-written for
-learning. Same code-quality bar, but speed > deliberate practice.
+![Monthly dashboard with budget buckets and recent expenses](docs/screenshots/dashboard.png)
+
+| Expenses                                                               | Add an expense                                        |
+| ---------------------------------------------------------------------- | ----------------------------------------------------- |
+| ![Expense list with invented demo data](docs/screenshots/expenses.png) | ![Add expense form](docs/screenshots/add-expense.png) |
+
+See [screenshot provenance and refresh instructions](docs/screenshots/README.md).
+
+## What it does
+
+- Tracks expenses by category, subcategory, card, date, and shared or personal status.
+- Counts your saved percentage of shared expenses in spending totals.
+- Compares spending with monthly category budgets and 50/25/25 budget targets.
+- Tracks income, card balances, card payments, and partner settlement activity.
+- Supports English and Spanish.
 
 ## Stack
 
-- Next.js 16 (App Router) — TypeScript end-to-end, strict mode
-- Postgres on Neon — same shape as MoneyFlow's schema for easy migration later
-- Prisma ORM
-- Tailwind CSS + shadcn/ui
-- Auth.js (Credentials provider) — _lands in Phase 1_
-- Hosted on Vercel
+Next.js 16 with React 19 and TypeScript, PostgreSQL 17, Prisma 6, Auth.js, Tailwind CSS 4, and Recharts.
 
-## Getting started
+## Run locally
 
-### Prerequisites
+You need Node.js 24, pnpm, and Docker with Docker Compose.
 
-- **Node 24.x** — the repo pins it via `.nvmrc` and `package.json` `engines`. With nvm: `nvm use` (or `nvm install 24`).
-- **pnpm** — `npm install -g pnpm`.
-- **A Neon Postgres database** — free tier is enough. See [docs/operations/setup.md §1–2](./docs/operations/setup.md) for the full one-time external setup (Neon project, connection strings).
-
-### Run it locally
-
-```bash
-# 1. Install dependencies
+```sh
 pnpm install
-
-# 2. Create your local env file and fill in the Neon connection strings
+pnpm db:up
 cp .env.example .env.local
-#   DATABASE_URL  — pooled (PgBouncer) endpoint, used at runtime
-#   DIRECT_URL    — direct endpoint, used by Prisma migrations
-#   (both come from your Neon dashboard — see setup.md §2)
+```
 
-# 3. Apply database migrations
+The local database URLs in `.env.example` already point to the Docker database on port `5433`. Keep `DATABASE_URL` and `DATABASE_URL_UNPOOLED` set to those local values. In `.env.local`, set `AUTH_SECRET` to a generated value, set `AUTH_URL` to `http://localhost:3000`, and choose `ADMIN_EMAIL` and `ADMIN_PASSWORD` for your local login. Generate the secret with:
+
+```sh
+openssl rand -base64 32
+```
+
+Apply the schema and create your local user and starter data:
+
+```sh
 pnpm db:migrate
+pnpm db:seed
+```
 
-# 4. Start the dev server
+To load optional invented expenses for the dashboard and lists, run `pnpm db:seed:dev` after the first seed. This resets that local user's expenses and movements before it adds demo data. Use it only with the local database.
+
+Start the app:
+
+```sh
 pnpm dev
 ```
 
-Then open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) and sign in with the admin email and password you configured.
 
-> Secrets live only in `.env.local` (gitignored) — never commit real connection
-> strings. See [ADR-0003](./docs/decisions/0003-env-secrets-handling.md).
+## Useful commands
 
-### Scripts
+| Command          | Purpose                            |
+| ---------------- | ---------------------------------- |
+| `pnpm db:down`   | Stop the local database container. |
+| `pnpm lint`      | Run ESLint.                        |
+| `pnpm typecheck` | Run TypeScript checks.             |
+| `pnpm test`      | Run the Vitest suite.              |
+| `pnpm build`     | Build the app for production.      |
 
-| Command                  | What it does                                           |
-| ------------------------ | ------------------------------------------------------ |
-| `pnpm dev`               | Start the Next.js dev server (hot reload)              |
-| `pnpm build`             | Production build                                       |
-| `pnpm start`             | Serve the production build                             |
-| `pnpm lint`              | Run ESLint                                             |
-| `pnpm typecheck`         | Type-check with `tsc --noEmit` (no emit)               |
-| `pnpm test`              | Run the Vitest suite once                              |
-| `pnpm db:generate`       | Regenerate the Prisma client                           |
-| `pnpm db:migrate`        | Create + apply a migration in dev (reads `.env.local`) |
-| `pnpm db:migrate:deploy` | Apply pending migrations (CI / production)             |
-
-## Where to find things
-
-| You want to know…                            | Look here                                                                          |
-| -------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Project goals + non-goals                    | [docs/specs/0001-initial-design.md](./docs/specs/0001-initial-design.md)           |
-| Current phase + what's next                  | [docs/roadmap/README.md](./docs/roadmap/README.md)                                 |
-| One-time external setup (Neon, Vercel, env)  | [docs/operations/setup.md](./docs/operations/setup.md)                             |
-| Why a design choice was made                 | [docs/decisions/](./docs/decisions/)                                               |
-| Data model + seed data + shared-expense math | [docs/reference/domain-reference.md](./docs/reference/domain-reference.md)         |
-| Coding conventions                           | [docs/conventions/coding-conventions.md](./docs/conventions/coding-conventions.md) |
-| How agents work on this repo                 | [docs/conventions/agent-workflow.md](./docs/conventions/agent-workflow.md)         |
-| AI assistant instructions                    | [AGENTS.md](./AGENTS.md)                                                           |
-
-## License
-
-Personal project. No license intended for reuse.
+For database and deployment details, see [local and external setup](docs/operations/setup.md). The [roadmap](docs/roadmap/README.md) tracks current work, and the [agent workflow](docs/conventions/agent-workflow.md) explains how changes are made and reviewed. This is an agent-led project. Christian reviews agent changes; see [AGENTS.md](AGENTS.md) for contributor instructions. The [initial design](docs/specs/0001-initial-design.md) describes the project goals. The repository has no license for reuse.
