@@ -1,11 +1,8 @@
 # Auth delivery plan
 
-Status: CHORE-40 is ready for its PR.
+Status: CHORE-41 PR #107 is open; local verification and independent review passed.
 
-The schema implementation and local migration proof are complete. Independent
-review passed. The schema uses Better Auth 1.7.10, which meets the 14-day rule.
-The compatibility review found no advisory that applies to this schema-only
-change. The later runtime version remains a CHORE-41 decision.
+CHORE-40 is merged. PR #107 switches web login to Better Auth 1.7.12 and backfills existing password hashes. Local checks and independent review passed. Before merge, the owner takes a Neon restore point and runs the [migration surveys](../operations/better-auth-migration.md).
 
 We will finish the auth service in this repo before we start the Swift app.
 We will deliver one reviewed change at a time, beginning with the session
@@ -71,10 +68,7 @@ Do not build a chain of unmerged branches. Only the current slice gets a Full Pl
 later slices retain acceptance checklists until their dependencies land.
 
 CHORE-39 merged in PR #102, CHORE-44 in PR #104, and CHORE-34 in PR #105.
-CHORE-40 adds Better Auth storage while Auth.js keeps handling web login. The
-schema and migration tests pass locally. Once review and the version gate pass,
-the owner can take a Neon restore point and merge the PR. CHORE-41 is next; it
-will switch web login and backfill credential accounts.
+CHORE-40 is merged. CHORE-41 switches web login and backfills credential accounts. Its local migration and browser checks pass. The owner takes a Neon restore point and runs the production surveys before merging.
 
 </details>
 
@@ -141,8 +135,7 @@ switching login. Its tests compare existing users and financial rows before
 and after the migration. The owner can keep the old app running on that schema.
 
 The next slice copies credentials and switches the web. It preserves closed
-signup, onboarding, translated errors, idle expiry and logout. We test rollback
-after creating an account and changing a password during the transition.
+signup, onboarding, translated errors, idle expiry and logout. We test rollback compatibility after atomic account creation. Password-change work stays deferred, and raw password-writing routes remain closed.
 
 <details>
 <summary>Acceptance checklist for the web migration</summary>
@@ -226,21 +219,16 @@ unmeasured estimate for auth and native authorization. It assumes we keep the
 proposed provider and find no blocking compatibility issue. It excludes Swift
 work, business APIs, owner merge waits and the two-week observation period.
 
-Steps 1 to 3 are merged. CHORE-40 is the active schema slice. After its version
-gate passes and its PR merges, we will estimate CHORE-41 from the compatibility
-results and the migration work. We will not promise a duration for the web
-switch before that evidence exists.
+Steps 1 to 4 are merged. CHORE-41 is open as [PR #107](https://github.com/Chrisgmsl22/fast-expense-tracker/pull/107). The owner must take a Neon restore point and run production surveys before merging.
 
 <details>
 <summary>For agents: current state and sources</summary>
 
-Reader: Christian, who will review the auth migration order and decide what to
-prepare before CHORE-40 merges.
+Reader: Christian, who will review the auth migration order and prepare the
+production restore point and surveys before CHORE-41 merges.
 
 Christian approved the visual design. CHORE-39, CHORE-44, and CHORE-34 merged in
-PRs #102, #104, and #105. CHORE-40's schema implementation and isolated
-migration tests pass. Independent review found no code issues. Its schema uses
-age-compliant Better Auth 1.7.10. The runtime version remains open for CHORE-41.
+PRs #102, #104, and #105. CHORE-40 is merged. CHORE-41 is open as PR #107. Better Auth and its Prisma adapter use age-compliant 1.7.12. Local checks and independent review passed with no unresolved findings. The owner takes a Neon restore point and runs the production surveys before merging.
 Do not access production or run this work alongside another schema migration.
 
 Sources: [spec 0009](../specs/0009-auth-module-better-auth.md),

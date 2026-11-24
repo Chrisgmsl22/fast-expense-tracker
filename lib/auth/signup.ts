@@ -5,6 +5,7 @@ import { isAtAccountCap } from "@/lib/domain/signup";
 import type { SignupGate } from "@/lib/repositories/signup-gate";
 import {
     EmailTakenError,
+    AccountCapError,
     type UserProvisioningRepository,
 } from "@/lib/repositories/user-provisioning.repository";
 import { safeErrorSummary } from "@/lib/safe-error";
@@ -84,13 +85,19 @@ export async function signup(
     }
 
     try {
-        const { userId } = await accounts.createUserWithStarterKit({
-            name,
-            email,
-            password,
-        });
+        const { userId } = await accounts.createUserWithStarterKit(
+            {
+                name,
+                email,
+                password,
+            },
+            maxUsers,
+        );
         console.info("signupAction: account created", { userId });
     } catch (error) {
+        if (error instanceof AccountCapError) {
+            return { ok: false, code: "full", message: SIGNUP_MESSAGES.full };
+        }
         if (error instanceof EmailTakenError) {
             return {
                 ok: false,

@@ -9,7 +9,10 @@ import {
 
 /** A db whose `user.create` rejects with `error`, inside a pass-through transaction. */
 function failingDb(error: unknown): PrismaClient {
-    const tx = { user: { create: () => Promise.reject(error) } };
+    const tx = {
+        $executeRaw: async () => 1,
+        user: { create: () => Promise.reject(error) },
+    };
     return {
         $transaction: (run: (client: typeof tx) => Promise<unknown>) => run(tx),
     } as unknown as PrismaClient;

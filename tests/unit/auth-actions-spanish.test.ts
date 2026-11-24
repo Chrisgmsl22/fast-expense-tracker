@@ -19,8 +19,11 @@ const { signInMock, AuthErrorMock, rootGate, rootAccounts } = vi.hoisted(() => {
         },
     };
 });
-vi.mock("@/auth", () => ({ signIn: signInMock }));
-vi.mock("next-auth", () => ({ AuthError: AuthErrorMock }));
+vi.mock("@/auth", () => ({
+    signIn: signInMock,
+    InvalidCredentialsError: AuthErrorMock,
+}));
+
 vi.mock("@/lib/repositories", () => ({
     signupGate: rootGate,
     userProvisioningRepository: rootAccounts,
@@ -68,7 +71,7 @@ describe("loginAction in Spanish", () => {
 
     it("Should return the generic failure in Spanish for any other auth error", async () => {
         vi.spyOn(console, "error").mockImplementation(() => {});
-        signInMock.mockRejectedValue(new AuthErrorMock("CallbackRouteError"));
+        signInMock.mockRejectedValue(new Error("Authentication unavailable"));
 
         expect(
             await loginAction({ email: "a@example.com", password: "x" }),
