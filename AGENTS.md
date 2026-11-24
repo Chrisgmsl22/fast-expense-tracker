@@ -92,6 +92,7 @@ Always:
 - **Land through a PR off `main`.** Every change, docs included.
 - **Use [GitHub access](#github-access)** for PRs, reviews, and merge checks.
   GitHub MCP is optional. The local `.mcp.json` token supports direct GitHub REST API access.
+- **Before calling a PR merge-ready, refresh `origin/main` and inspect GitHub's live PR state.** Confirm the branch includes current `main`, GitHub reports it mergeable, required checks pass, and the independent review plus any required GitHub reviews are complete. If `main` advanced, update the task branch, rerun affected checks, and review the updated diff before pushing. If a status is pending or unavailable, name that remaining gate instead of asking Christian to discover it in the PR UI. Never merge.
 - **Read secrets from `process.env`**, reference them by name only, and use
   `.env.example` when you need to know what exists. Mask any value that has to
   appear in output as `<redacted>`.
