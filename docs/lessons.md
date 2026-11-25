@@ -27,6 +27,15 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-11-23 — Missing production environment variable broke login
+
+- **Symptom:** Web login failed for about 30 minutes after the Better Auth switch deployed. Vercel Runtime Logs warned that Better Auth had no base URL. [PR #107](https://github.com/Chrisgmsl22/fast-expense-tracker/pull/107)
+- **Root cause:** The new login flow required `AUTH_URL` in Vercel Production. Local testing supplied it, and the pre-merge handoff missed the production setting.
+- **Fix / decision:** Set `AUTH_URL` to the live app's HTTPS origin and redeploy production so the new build picks up the setting.
+- **Lesson for next time:** Put the environment variable rollout in the PR and the current session. Confirm required production settings before merge, then verify the affected flow on the new deployment.
+
+---
+
 ### 2026-10-20 — Parallel fan-out parts each ran the full integration suite
 
 - **Symptom:** In the i18n fan-out, 3 of 4 parts reported 12 to 134 integration failures in files they never touched (foreign-key errors right after a user insert). Each part needed reruns to get a clean count.
