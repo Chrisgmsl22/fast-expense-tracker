@@ -520,6 +520,30 @@
             "spec": null,
             "pr": null,
             "issue": null
+        },
+        {
+            "id": "CHORE-45",
+            "name": "glitchtip-logs",
+            "priority": 44,
+            "title": "Send structured application logs to GlitchTip",
+            "description": "See successful expense saves and unexpected expense or login failures in GlitchTip Logs.",
+            "plan": "Enable server-side SDK logging with the existing DSN. Emit allowlisted events at the action boundaries defined in spec 0012. Keep sensitive data out, preserve action results, and verify info and error delivery through MCP.",
+            "status": "open",
+            "spec": "docs/specs/0012-observability-and-product-metrics.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-46",
+            "name": "product-metrics",
+            "priority": 45,
+            "title": "Set up a signup-to-first-expense funnel",
+            "description": "Measure whether new users save their first regular expense, with owner and test activity excluded.",
+            "plan": "Use the no-card PostHog free plan. Add two explicit server events and one funnel as defined in spec 0012. Verify event delivery and the internal-traffic exclusion with invented data.",
+            "status": "open",
+            "spec": "docs/specs/0012-observability-and-product-metrics.md",
+            "pr": null,
+            "issue": null
         }
     ]
 }
