@@ -64,7 +64,7 @@ export function ExportDataSection({ currentMonth }: { currentMonth: string }) {
                 className="mt-4 flex flex-wrap items-end gap-3"
                 aria-busy={pending}
             >
-                <div className="space-y-1">
+                <div className="flex w-28 flex-col gap-1">
                     <label htmlFor={id + "-type"} className="block text-sm">
                         {t("periodType")}
                     </label>
@@ -76,13 +76,19 @@ export function ExportDataSection({ currentMonth }: { currentMonth: string }) {
                             setType(event.target.value);
                             setError(null);
                         }}
-                        className="h-9 rounded-md border bg-background px-3 text-sm"
+                        className="block h-10 w-full min-w-0 rounded-lg border border-input bg-background px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                     >
                         <option value="year">{t("year")}</option>
                         <option value="month">{t("month")}</option>
                     </select>
                 </div>
-                <div className="min-w-0 space-y-1">
+                <div
+                    className={
+                        type === "year"
+                            ? "flex w-28 min-w-0 flex-col gap-1"
+                            : "flex w-48 min-w-0 max-w-full flex-col gap-1"
+                    }
+                >
                     <label htmlFor={id + "-period"} className="block text-sm">
                         {t(type === "year" ? "year" : "month")}
                     </label>
@@ -107,7 +113,7 @@ export function ExportDataSection({ currentMonth }: { currentMonth: string }) {
                         aria-describedby={error ? id + "-error" : undefined}
                     />
                 </div>
-                <Button type="submit" disabled={pending}>
+                <Button type="submit" disabled={pending} className="h-10">
                     {t(pending ? "downloading" : "download")}
                 </Button>
             </form>
