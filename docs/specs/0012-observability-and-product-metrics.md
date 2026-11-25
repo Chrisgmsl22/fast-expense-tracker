@@ -20,22 +20,28 @@ Keep event names and any allowlisted reason codes static. Review attributes the 
 
 GlitchTip's free allowance is 1,000 billable events per month. Ten log entries count as one event, and each exception counts as one event. Send selected events and keep the organization on its free plan. [GlitchTip pricing](https://glitchtip.com/pricing/)
 
-### Coverage to add as needed
+### Follow-on logging slices
 
-| Area                  | Candidate events                                                                                  |
-| --------------------- | ------------------------------------------------------------------------------------------------- |
-| Expense management    | Expense updated or deleted; unexpected write failure.                                             |
-| Signup and onboarding | Account created, onboarding completed; unexpected provisioning failure.                           |
-| Cards and transfers   | Card added or archived, payment or transfer saved; unexpected write failure.                      |
-| Shared expenses       | Partner payment saved, settlement closed; a named rule blocked settlement.                        |
-| Reports and exports   | Summary copied once the copy succeeds; export generated or failed when that feature is available. |
-| App health            | Database timeout, missing configuration, or background job failure when relevant.                 |
+Pick these up after CHORE-45 establishes delivery and payload filtering. Use the same event rules and verify each slice separately. Emit success events once per completed action, after any transaction commits. Give each failure one log owner, so an action and a lower-level service do not both report it.
+
+| Slice                                      | Info events                                                                                                                                         | Warning and error events                                                                                                                                                                                                    |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CHORE-47 · Expense management              | `expense.updated`, `expense.deleted` for regular expenses.                                                                                          | `expense.update_failed`, `expense.delete_failed` for unexpected failures.                                                                                                                                                   |
+| CHORE-48 · Account lifecycle               | `auth.signup_completed` after provisioning commits and `onboarding.completed` when the completion state is first saved.                             | `auth.signup_failed`, `onboarding.complete_failed` for unexpected failures.                                                                                                                                                 |
+| CHORE-49 · Cards and transfers             | `card.created`, `card.archived`, `card_payment.recorded`, `transfer.recorded`.                                                                      | `card.write_failed`, `card_payment.write_failed`, `transfer.write_failed` for unexpected failures. Use a fixed operation code where needed.                                                                                 |
+| CHORE-50 · Shared expenses and settlements | `partner_payment.recorded`, `settlement.closed`.                                                                                                    | `settlement.close_blocked` at warning level for the explicit `not_settled` result. `partner_payment.write_failed` and `settlement.close_failed` at error level for unexpected failures.                                     |
+| CHORE-51 · Reports and exports             | `settlement.summary_copied` after the clipboard write succeeds. `export.generated` after the server builds the export, once financial export ships. | `settlement.summary_copy_failed` for an unexpected clipboard failure. `export.generate_failed` for an unexpected generation failure once the feature ships.                                                                 |
+| CHORE-52 · App health                      | No routine health logs.                                                                                                                             | `app.dependency_failed` for a known infrastructure failure such as a database timeout, and `app.configuration_invalid` for a missing required setting. Add `app.job_failed` as part of the first background job that ships. |
+
+Expected validation failures and invalid credentials stay in the app. The settlement warning records an explicit attempt that a business rule blocked. It carries only a fixed reason code. For failures already logged by an action, attach an allowlisted infrastructure reason code there and emit one record. Rate-limit repetitive health failures so a dependency outage does not consume the quota with duplicate records.
+
+The summary copy is a browser action. Enable the browser log sender only for the named copy events in CHORE-51. Apply the same payload allowlist and discard clipboard contents, report data, and route or request details that could identify a user. An export generation event means the server produced the file.
 
 ### Verify log delivery
 
 - Use invented data to test that a successful save emits one info event and that unexpected failures emit the expected error events. Exercise invalid credentials and expense validation. Verify the original action results when the log sender fails.
 - Verify one labeled info entry and one labeled error entry in GlitchTip Logs through MCP. Use a controlled server smoke test. Standard Vercel Preview has no database, so a Preview transport check must avoid database-backed actions. After rollout, use the production test profile to verify a regular expense save. Reproduce failures in an isolated environment.
-- Keep the smoke trigger out of the production app. No new environment variables are expected for this slice. [Deployment conventions](../conventions/deployment.md)
+- Keep the smoke trigger out of the production app. For each follow-on slice, verify the success and failure paths, payload filtering, and the absence of duplicate records. Use the production test profile for safe success checks and an isolated environment for failure checks. No new environment variables are expected for the logging slices. [Deployment conventions](../conventions/deployment.md)
 
 ## Product metrics
 
