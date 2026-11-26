@@ -61,6 +61,88 @@ describe("Settings export controls", () => {
             "Elige un año o mes válido",
         );
     });
+    it.each([
+        {
+            locale: "en",
+            type: "year",
+            typeLabel: "Period",
+            fieldLabel: "Year",
+            period: "2099",
+            button: "Download Excel",
+            warning:
+                "There is no data to export for this year. Choose another year.",
+        },
+        {
+            locale: "en",
+            type: "month",
+            typeLabel: "Period",
+            fieldLabel: "Month",
+            period: "2099-12",
+            button: "Download Excel",
+            warning:
+                "There is no data to export for this month. Choose another month.",
+        },
+        {
+            locale: "es",
+            type: "year",
+            typeLabel: "Periodo",
+            fieldLabel: "Año",
+            period: "2099",
+            button: "Descargar Excel",
+            warning: "No hay datos para exportar de este año. Elige otro año.",
+        },
+        {
+            locale: "es",
+            type: "month",
+            typeLabel: "Periodo",
+            fieldLabel: "Mes",
+            period: "2099-12",
+            button: "Descargar Excel",
+            warning: "No hay datos para exportar de este mes. Elige otro mes.",
+        },
+    ] as const)(
+        "shows a localized $type warning in $locale for future selections and clears stale warnings",
+        async ({
+            locale,
+            type,
+            typeLabel,
+            fieldLabel,
+            period,
+            button,
+            warning,
+        }) => {
+            const request = vi.fn(async () =>
+                Response.json({ code: "no_data" }, { status: 404 }),
+            );
+            vi.stubGlobal("fetch", request);
+            renderWithIntl(<ExportDataSection currentMonth="2026-11" />, {
+                locale,
+            });
+            fireEvent.change(screen.getByLabelText(typeLabel), {
+                target: { value: type },
+            });
+            const input = screen.getByLabelText(fieldLabel) as HTMLInputElement;
+            expect(input.max).toBe("");
+            fireEvent.change(input, { target: { value: period } });
+            fireEvent.click(screen.getByRole("button", { name: button }));
+            expect((await screen.findByRole("alert")).textContent).toBe(
+                warning,
+            );
+            expect(request).toHaveBeenCalledWith(
+                "/api/financial-export?type=" + type + "&period=" + period,
+            );
+            fireEvent.change(input, {
+                target: { value: type === "year" ? "2025" : "2025-01" },
+            });
+            expect(screen.queryByRole("alert")).toBeNull();
+            fireEvent.click(screen.getByRole("button", { name: button }));
+            await screen.findByRole("alert");
+            fireEvent.change(screen.getByLabelText(typeLabel), {
+                target: { value: type === "year" ? "month" : "year" },
+            });
+            expect(screen.queryByRole("alert")).toBeNull();
+        },
+    );
     it("reports a failed network request and permits retry", async () => {
         vi.stubGlobal(
             "fetch",

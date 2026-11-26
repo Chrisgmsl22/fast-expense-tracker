@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import * as workbookModule from "@/lib/export/workbook";
 import ExcelJS from "exceljs";
 import { financialExportSchema } from "@/lib/schemas/financial-export";
 import { resolveExportPeriod } from "@/lib/export/period";
@@ -56,8 +57,14 @@ describe("financial export periods", () => {
 });
 
 describe("financial workbook", () => {
-    it("keeps six stable sheets and headings in an empty period", async () => {
-        const result = buildFinancialWorkbook(empty, period("2025-01"));
+    it("keeps all six sheet headings when a fixed-income-only export has empty detail tabs", async () => {
+        const result = buildFinancialWorkbook(
+            {
+                ...empty,
+                fixedIncome: [{ effectiveMonth: "2025-01", amount: 1000 }],
+            },
+            period("2025-01"),
+        );
         const bytes = await result.xlsx.writeBuffer();
         const reader = new ExcelJS.Workbook();
         await reader.xlsx.load(bytes);
@@ -70,10 +77,10 @@ describe("financial workbook", () => {
             "Guide",
         ]);
         expect(reader.getWorksheet("Expenses")!.rowCount).toBe(1);
-        expect(reader.getWorksheet("Income")!.rowCount).toBe(1);
+        expect(reader.getWorksheet("Income")!.rowCount).toBe(2);
         expect(
             reader.getWorksheet("Monthly summary")!.getCell("D2").value,
-        ).toBe(0);
+        ).toBe(1000);
     });
     it("reuses historical income and bucket rules, keeps stored shares and safe plain-text labels", async () => {
         const date = new Date("2025-02-01T06:00:00Z");
@@ -242,62 +249,219 @@ describe("financial workbook", () => {
     });
 });
 
+afterEach(() => vi.restoreAllMocks());
+
 describe("financial download response", () => {
-    const repository = { read: vi.fn(async () => empty) };
-    it("rejects signed-out, future, malformed, duplicate, and account-selecting requests without reads", async () => {
-        repository.read.mockClear();
-        for (const [query, user, status] of [
-            ["type=year&period=2025", null, 401],
-            ["type=year&period=2027", "me", 400],
-            ["type=month&period=2025-13", "me", 400],
-            ["type=year&period=2025&period=2026", "me", 400],
-            ["type=year&period=2025&userId=other", "me", 400],
+    const request = (query = "type=year&period=2025") =>
+        new Request("http://localhost/api/financial-export?" + query);
+    it("rejects signed-out and malformed requests before reading or generating", async () => {
+        const repository = { read: vi.fn(async () => empty) };
+        const generate = vi.spyOn(workbookModule, "buildFinancialWorkbook");
+        for (const [query, user, status, code] of [
+            ["type=year&period=2025", null, 401, "unauthenticated"],
+            ["type=year&period=2027", null, 401, "unauthenticated"],
+            ["type=month&period=2025-13", "me", 400, "validation"],
+            ["type=year&period=2025&period=2026", "me", 400, "validation"],
+            ["type=year&period=2025&userId=other", "me", 400, "validation"],
         ] as const) {
             const response = await financialExportResponse(
-                new Request("http://localhost/api/financial-export?" + query),
+                request(query),
                 user,
                 repository,
                 now,
             );
             expect(response.status).toBe(status);
+            expect(await response.json()).toEqual({ code });
             expect(response.headers.get("Cache-Control")).toContain("no-store");
         }
         expect(repository.read).not.toHaveBeenCalled();
+        expect(generate).not.toHaveBeenCalled();
     });
-    it("returns a private attachment scoped to the session and handles failures", async () => {
+    it("returns no_data for valid future years and months without reading or generating", async () => {
+        const repository = { read: vi.fn(async () => empty) };
+        const generate = vi.spyOn(workbookModule, "buildFinancialWorkbook");
+        for (const query of [
+            "type=year&period=2027",
+            "type=month&period=2026-12",
+        ]) {
+            const response = await financialExportResponse(
+                request(query),
+                "me",
+                repository,
+                now,
+            );
+            expect(response.status).toBe(404);
+            expect(await response.json()).toEqual({ code: "no_data" });
+            expect(response.headers.get("Cache-Control")).toContain("no-store");
+            expect(response.headers.get("Content-Disposition")).toBeNull();
+        }
+        expect(repository.read).not.toHaveBeenCalled();
+        expect(generate).not.toHaveBeenCalled();
+    });
+    it("reads an empty past snapshot once and skips workbook generation", async () => {
+        const repository = { read: vi.fn(async () => empty) };
+        const generate = vi.spyOn(workbookModule, "buildFinancialWorkbook");
         const response = await financialExportResponse(
-            new Request(
-                "http://localhost/api/financial-export?type=year&period=2025",
-            ),
+            request(),
             "me",
             repository,
             now,
         );
-        expect(repository.read).toHaveBeenLastCalledWith(
+        expect(response.status).toBe(404);
+        expect(await response.json()).toEqual({ code: "no_data" });
+        expect(repository.read).toHaveBeenCalledExactlyOnceWith(
             "me",
             new Date("2025-01-01T06:00:00Z"),
             new Date("2026-01-01T06:00:00Z"),
         );
-        expect(response.status).toBe(200);
-        expect(response.headers.get("Content-Disposition")).toBe(
-            'attachment; filename="financial-export-2025.xlsx"',
-        );
-        expect((await response.arrayBuffer()).byteLength).toBeGreaterThan(1000);
-        expect(
-            (
-                await financialExportResponse(
-                    new Request(
-                        "http://localhost/api/financial-export?type=year&period=2025",
-                    ),
-                    "me",
-                    {
-                        read: async () => {
-                            throw new Error("offline");
+        expect(generate).not.toHaveBeenCalled();
+    });
+    it("ignores metadata, undated income and fixed income outside the range or cleared to zero", async () => {
+        const generate = vi.spyOn(workbookModule, "buildFinancialWorkbook");
+        for (const fixedIncome of [
+            [],
+            [{ effectiveMonth: "2026-01", amount: 1000 }],
+            [{ effectiveMonth: "2025-01", amount: 0 }],
+            [
+                { effectiveMonth: null, amount: 1000 },
+                { effectiveMonth: "2024-12", amount: 0 },
+            ],
+        ]) {
+            const repository = {
+                read: vi.fn(async () => ({
+                    ...empty,
+                    fixedIncome,
+                    variableIncome: [{ date: null, amount: 200 }],
+                    cards: [
+                        {
+                            id: "unused",
+                            name: "Unused",
+                            type: "credit",
+                            archivedAt: null,
                         },
+                    ],
+                    budgetRules: [
+                        {
+                            effectiveMonth: "2025-01",
+                            essentials: 50,
+                            discretionary: 25,
+                            savings: 25,
+                        },
+                    ],
+                })),
+            };
+            const response = await financialExportResponse(
+                request(),
+                "me",
+                repository,
+                now,
+            );
+            expect(response.status).toBe(404);
+            expect(await response.json()).toEqual({ code: "no_data" });
+            expect(repository.read).toHaveBeenCalledTimes(1);
+        }
+        expect(generate).not.toHaveBeenCalled();
+    });
+    it("permits fixed-only income effective in at least one selected month", async () => {
+        const repository = {
+            read: vi.fn(async () => ({
+                ...empty,
+                fixedIncome: [
+                    { effectiveMonth: "2025-07", amount: 1200 },
+                    { effectiveMonth: "2025-08", amount: 0 },
+                ],
+            })),
+        };
+        const response = await financialExportResponse(
+            request(),
+            "me",
+            repository,
+            now,
+        );
+        expect(repository.read).toHaveBeenCalledTimes(1);
+        expect(response.status).toBe(200);
+        const reader = new ExcelJS.Workbook();
+        await reader.xlsx.load(await response.arrayBuffer());
+        expect(reader.getWorksheet("Income")!.getCell("D2").value).toBe(1200);
+        expect(reader.getWorksheet("Income")!.getCell("D3").value).toBe(0);
+        expect(reader.getWorksheet("Expenses")!.rowCount).toBe(1);
+        const cleared = await financialExportResponse(
+            request("type=month&period=2025-08"),
+            "me",
+            repository,
+            now,
+        );
+        expect(cleared.status).toBe(404);
+        expect(await cleared.json()).toEqual({ code: "no_data" });
+    });
+    it("keeps populated expense, dated variable-income and movement downloads unchanged", async () => {
+        const date = new Date("2025-02-01T06:00:00Z");
+        for (const data of [
+            {
+                ...empty,
+                expenses: [
+                    {
+                        date,
+                        categoryId: "housing",
+                        subcategoryId: null,
+                        cardId: null,
+                        amount: 100,
+                        actualExpenditure: 68,
+                        isShared: true,
+                        yourPercentage: 0.68,
+                        fundedFrom: "income",
+                        isPartnerPayment: false,
                     },
-                    now,
-                )
-            ).status,
-        ).toBe(500);
+                ],
+            },
+            { ...empty, variableIncome: [{ date, amount: 200 }] },
+            {
+                ...empty,
+                movements: [
+                    {
+                        date,
+                        type: "gf_fronted",
+                        amount: 100,
+                        cardId: null,
+                        fundedFrom: "income",
+                    },
+                ],
+            },
+        ]) {
+            const repository = { read: vi.fn(async () => data) };
+            const response = await financialExportResponse(
+                request(),
+                "me",
+                repository,
+                now,
+            );
+            expect(repository.read).toHaveBeenCalledExactlyOnceWith(
+                "me",
+                new Date("2025-01-01T06:00:00Z"),
+                new Date("2026-01-01T06:00:00Z"),
+            );
+            expect(response.status).toBe(200);
+            expect(response.headers.get("Cache-Control")).toContain("no-store");
+            expect(response.headers.get("Content-Disposition")).toBe(
+                'attachment; filename="financial-export-2025.xlsx"',
+            );
+            expect((await response.arrayBuffer()).byteLength).toBeGreaterThan(
+                1000,
+            );
+        }
+    });
+    it("reports a repository failure without a workbook", async () => {
+        const response = await financialExportResponse(
+            request(),
+            "me",
+            {
+                read: async () => {
+                    throw new Error("offline");
+                },
+            },
+            now,
+        );
+        expect(response.status).toBe(500);
+        expect(await response.json()).toEqual({ code: "export_failed" });
     });
 });

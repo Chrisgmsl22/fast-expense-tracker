@@ -1,6 +1,7 @@
 import type { FinancialExportRepository } from "@/lib/repositories/financial-export.repository";
 import { financialExportSchema } from "@/lib/schemas/financial-export";
 import { resolveExportPeriod } from "./period";
+import { hasFinancialExportData } from "./has-data";
 import { buildFinancialWorkbook } from "./workbook";
 
 const PRIVATE_HEADERS = {
@@ -28,14 +29,16 @@ export async function financialExportResponse(
             { code: "validation" },
             { status: 400, headers: PRIVATE_HEADERS },
         );
-    const period = resolveExportPeriod(parsed.data, now);
-    if (!period)
-        return Response.json(
-            { code: "validation" },
-            { status: 400, headers: PRIVATE_HEADERS },
+    const noData = () =>
+        Response.json(
+            { code: "no_data" },
+            { status: 404, headers: PRIVATE_HEADERS },
         );
+    const period = resolveExportPeriod(parsed.data, now);
+    if (!period) return noData();
     try {
         const data = await repository.read(userId, period.start, period.end);
+        if (!hasFinancialExportData(data, period)) return noData();
         const content = await buildFinancialWorkbook(
             data,
             period,

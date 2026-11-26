@@ -16,8 +16,11 @@ compare the numbers without counting the same money twice.
 The current year runs from January 1 through today. Mark the current month as
 partial and show the cutoff in the workbook. Past years cover all 12 months.
 Filter by the date of the transaction, so a backdated transaction appears in the
-period it belongs to. The workbook keeps its headings even when a tab has no rows.
-The Settings controls and errors are available in Spanish and English.
+period it belongs to. If the period has no exportable data, show an inline warning
+instead of downloading an empty workbook. Future years and months show the same
+warning. A populated workbook keeps its headings even when an individual tab has
+no rows. The Settings controls, warnings, and errors are available in Spanish and
+English.
 
 ## Workbook tabs
 
@@ -60,8 +63,18 @@ the browser as a private, non-cacheable download. The app adds no database write
 or schema changes. Reverting the feature removes the download without changing
 stored data.
 
-- For a completed year, the summary matches the 12 corresponding monthly
-  exports, and each dated detail row appears in exactly one of those months.
+Authenticate and validate the period before checking for data. A valid future
+period returns `no_data` without reading the database. For an eligible period,
+read the signed-in account snapshot once. Expenses, dated variable income,
+movements, or a positive fixed income in effect in any selected month make the
+period exportable. A zero fixed income clears it. Unused cards, budget settings,
+and zero-value summary placeholders alone do not make a period exportable.
+Return `no_data` without generating a workbook when none of those records exist.
+The warning clears when the user changes the year, month, or period type.
+
+- For a completed year with data, the summary covers all 12 months. Each month
+  with data matches its own export, and each dated detail row appears in exactly
+  one monthly export. Months without data keep their zero-value summary row.
 - January 1 and the last day of each month belong to the correct period in
   Mexico City. The current year ends today and shows no future months.
 - Income changes and the budget split match the dashboard for historical
@@ -70,8 +83,13 @@ stored data.
 - A signed-out or invalid request gets no workbook. A signed-in account can
   download only its own records. Private text fields stay out of the file.
 - Verify a workbook with invented data in a browser download and open it with a
-  spreadsheet reader. Verify one year and one month, an empty period, and an
-  archived card referenced by a transaction.
+  spreadsheet reader. Verify one year, one month, a fixed-income-only period, and
+  an archived card referenced by a transaction.
+- Verify that empty past periods, valid future periods, and periods with only
+  cleared fixed income show the localized warning without a download. Future
+  periods must not read the database. Malformed values remain validation errors.
+- Keep the Period selector native for keyboard and focus behavior. Inset its
+  decorative chevron and match the 112 by 40 pixel Year and Period controls.
 
 The first release is a manual download. The year and month selectors cover the
 review workflow. All-time and custom ranges, a live connection to an agent, and

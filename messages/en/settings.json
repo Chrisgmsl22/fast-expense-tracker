@@ -148,8 +148,10 @@
         "month": "Month",
         "download": "Download Excel",
         "downloading": "Preparing download…",
-        "invalid": "Choose a valid year or month through the current period.",
+        "invalid": "Choose a valid year or month.",
         "unauthenticated": "Your session expired. Sign in to download your data.",
-        "failed": "Could not export your data. Please try again."
+        "failed": "Could not export your data. Please try again.",
+        "noDataYear": "There is no data to export for this year. Choose another year.",
+        "noDataMonth": "There is no data to export for this month. Choose another month."
     }
 }

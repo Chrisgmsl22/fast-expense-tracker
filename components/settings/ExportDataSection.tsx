@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -25,6 +26,20 @@ export function ExportDataSection({ currentMonth }: { currentMonth: string }) {
                     }),
             );
             if (!response.ok) {
+                if (response.status === 404) {
+                    const result: unknown = await response.json();
+                    if (
+                        typeof result === "object" &&
+                        result !== null &&
+                        "code" in result &&
+                        result.code === "no_data"
+                    ) {
+                        setError(
+                            t(type === "year" ? "noDataYear" : "noDataMonth"),
+                        );
+                        return;
+                    }
+                }
                 setError(
                     t(
                         response.status === 401
@@ -68,19 +83,25 @@ export function ExportDataSection({ currentMonth }: { currentMonth: string }) {
                     <label htmlFor={id + "-type"} className="block text-sm">
                         {t("periodType")}
                     </label>
-                    <select
-                        id={id + "-type"}
-                        value={type}
-                        disabled={pending}
-                        onChange={(event) => {
-                            setType(event.target.value);
-                            setError(null);
-                        }}
-                        className="block h-10 w-full min-w-0 rounded-lg border border-input bg-background px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
-                    >
-                        <option value="year">{t("year")}</option>
-                        <option value="month">{t("month")}</option>
-                    </select>
+                    <div className="relative">
+                        <select
+                            id={id + "-type"}
+                            value={type}
+                            disabled={pending}
+                            onChange={(event) => {
+                                setType(event.target.value);
+                                setError(null);
+                            }}
+                            className="block h-10 w-full min-w-0 appearance-none rounded-lg border border-input bg-background py-1 pl-3 pr-9 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                        >
+                            <option value="year">{t("year")}</option>
+                            <option value="month">{t("month")}</option>
+                        </select>
+                        <ChevronDown
+                            aria-hidden="true"
+                            className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                        />
+                    </div>
                 </div>
                 <div
                     className={
@@ -98,16 +119,12 @@ export function ExportDataSection({ currentMonth }: { currentMonth: string }) {
                         name="period"
                         type={type === "year" ? "number" : "month"}
                         min={type === "year" ? "1900" : "1900-01"}
-                        max={
-                            type === "year"
-                                ? currentMonth.slice(0, 4)
-                                : currentMonth
-                        }
                         defaultValue={
                             type === "year"
                                 ? currentMonth.slice(0, 4)
                                 : currentMonth
                         }
+                        onChange={() => setError(null)}
                         required
                         disabled={pending}
                         aria-describedby={error ? id + "-error" : undefined}

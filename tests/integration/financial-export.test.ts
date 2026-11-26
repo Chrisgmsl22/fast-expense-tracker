@@ -224,6 +224,68 @@ describe("financial export (integration)", () => {
             ).status,
         ).toBe(401);
     });
+    it("returns no_data for empty periods and cleared fixed income but exports effective fixed-only income", async () => {
+        const user = await db.user.create({
+            data: { email: "empty-export@example.com", name: "Empty export" },
+        });
+        session.userId = user.id;
+        const request = (period: string, type = "month") =>
+            new Request(
+                "http://localhost/api/financial-export?type=" +
+                    type +
+                    "&period=" +
+                    period,
+            );
+        await db.card.create({
+            data: {
+                userId: user.id,
+                name: "Unused card",
+                type: "credit",
+                color: "#123456",
+            },
+        });
+        await db.budgetRule.create({
+            data: {
+                userId: user.id,
+                effectiveMonth: "2025-01",
+                essentials: 50,
+                discretionary: 25,
+                savings: 25,
+            },
+        });
+        const emptyResponse = await GET(request("2025", "year"));
+        expect(emptyResponse.status).toBe(404);
+        expect(await emptyResponse.json()).toEqual({ code: "no_data" });
+        expect(emptyResponse.headers.get("Content-Disposition")).toBeNull();
+        await db.income.createMany({
+            data: [
+                {
+                    userId: user.id,
+                    type: "FIXED",
+                    effectiveMonth: "2025-07",
+                    amount: 1200,
+                },
+                {
+                    userId: user.id,
+                    type: "FIXED",
+                    effectiveMonth: "2025-08",
+                    amount: 0,
+                },
+            ],
+        });
+        for (const period of ["2025-06", "2025-08", "2025-09"]) {
+            const response = await GET(request(period));
+            expect(response.status).toBe(404);
+            expect(await response.json()).toEqual({ code: "no_data" });
+        }
+        expect((await GET(request("2025-07"))).status).toBe(200);
+        expect((await GET(request("2025", "year"))).status).toBe(200);
+        const future = await GET(request("2099", "year"));
+        expect(future.status).toBe(404);
+        expect(await future.json()).toEqual({ code: "no_data" });
+        session.userId = null;
+        expect((await GET(request("2099", "year"))).status).toBe(401);
+    });
     it("excludes future-dated rows at today's cutoff and partitions a year across months", async () => {
         const user = await db.user.create({
             data: { email: "dates@example.com", name: "Dates" },
