@@ -524,13 +524,12 @@
         {
             "id": "CHORE-45",
             "name": "glitchtip-logs",
-            "priority": 44,
             "title": "Send structured application logs to GlitchTip",
             "description": "See successful expense saves and unexpected expense or login failures in GlitchTip Logs.",
-            "plan": "Enable server-side SDK logging with the existing DSN. Emit allowlisted events at the action boundaries defined in spec 0012. Keep sensitive data out, preserve action results, and verify info and error delivery through MCP.",
-            "status": "open",
+            "plan": "PR #118 enables Node SDK logging and instruments expense creation and unexpected login failures. Local action and SDK transport tests verify event names, payload filtering, and unchanged results during telemetry failures. Live GlitchTip receipt is pending deployment.",
+            "status": "shipped",
             "spec": "docs/specs/0012-observability-and-product-metrics.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/118",
             "issue": null
         },
         {
