@@ -27,6 +27,14 @@ Bias toward logging. A short entry costs little; an unlogged lesson costs the ne
 
 ---
 
+### 2026-11-25 — Disposable Postgres must use UTC for integration tests
+
+- **Symptom:** Three time-sensitive integration tests failed when a local Postgres cluster replaced the unavailable Docker service.
+- **Cause:** The cluster inherited the host time zone. CI uses UTC.
+- **Fix:** Start the disposable cluster with `timezone=UTC` and run the tests with `TZ=UTC`. All 290 integration tests passed after both clocks matched.
+
+---
+
 ### 2026-11-23 — Missing production environment variable broke login
 
 - **Symptom:** Web login failed for about 30 minutes after the Better Auth switch deployed. Vercel Runtime Logs warned that Better Auth had no base URL. [PR #107](https://github.com/Chrisgmsl22/fast-expense-tracker/pull/107)

@@ -4,6 +4,11 @@ import { z } from "zod";
 
 import { getTranslations } from "next-intl/server";
 
+import { logAppEvent, type AppLogEvent } from "@/lib/observability/log";
+import {
+    failureAttributes,
+    reportDependencyFailure,
+} from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { movementRepository } from "@/lib/repositories";
@@ -58,6 +63,7 @@ export async function deleteMovement(
         };
     }
 
+    let failureEvent: AppLogEvent | undefined;
     try {
         // A missing row short-circuits here rather than after the delete attempt.
         const existing = await repo.getById(userId, id);
@@ -68,6 +74,10 @@ export async function deleteMovement(
                 message: t("movementNotFound"),
             };
         }
+        if (existing.type === "card_payment")
+            failureEvent = "card_payment.write_failed";
+        else if (existing.type === "gf_paid" || existing.type === "gf_received")
+            failureEvent = "transfer.write_failed";
         // Frozen = cycle closed AND that cycle counted the row. The DB CHECK allows
         // `closedAt` only on a transfer, so the marker can never freeze a debt.
         const refusal = await frozenMovementMessage(existing, "delete");
@@ -85,6 +95,12 @@ export async function deleteMovement(
         }
         return { ok: true, data: { id } };
     } catch (e) {
+        if (failureEvent)
+            logAppEvent(failureEvent, {
+                operation: "delete",
+                ...failureAttributes(e),
+            });
+        else reportDependencyFailure(e);
         console.error("deleteMovement: db delete failed", e);
         return {
             ok: false,

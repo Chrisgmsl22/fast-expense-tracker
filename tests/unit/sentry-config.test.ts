@@ -55,4 +55,51 @@ describe("Sentry/GlitchTip config — inert when DSN unset (ADR-0014)", () => {
             }),
         );
     });
+
+    it("Should allow only static CHORE-45 logs and safe attributes", async () => {
+        await import("@/sentry.server.config");
+        const options = init.mock.calls[0]?.[0] as {
+            enableLogs: boolean;
+            beforeSendLog: (log: {
+                level: string;
+                message: string;
+                attributes?: Record<string, unknown>;
+            }) => unknown;
+        };
+        expect(options.enableLogs).toBe(true);
+        expect(
+            options.beforeSendLog({
+                level: "error",
+                message: "auth.login_failed",
+                attributes: {
+                    event: "auth.login_failed",
+                    "sentry.environment": "test",
+                    email: "invented@example.com",
+                    userId: "invented-user",
+                    reason: "raw exception text",
+                },
+            }),
+        ).toEqual({
+            level: "error",
+            message: "auth.login_failed",
+            attributes: {
+                event: "auth.login_failed",
+                "sentry.environment": "test",
+            },
+        });
+        expect(
+            options.beforeSendLog({
+                level: "error",
+                message: "unapproved.event",
+                attributes: { event: "unapproved.event" },
+            }),
+        ).toBeNull();
+        expect(
+            options.beforeSendLog({
+                level: "info",
+                message: "auth.login_failed",
+                attributes: { event: "auth.login_failed" },
+            }),
+        ).toBeNull();
+    });
 });

@@ -2,6 +2,8 @@
 
 import { getTranslations } from "next-intl/server";
 
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
@@ -76,8 +78,13 @@ export async function addCardPayment(
             cardId: v.cardId,
             note: v.note ?? null,
         });
+        logAppEvent("card_payment.recorded");
         return { ok: true, data: { id: created.id } };
     } catch (e) {
+        logAppEvent("card_payment.write_failed", {
+            operation: "create",
+            ...failureAttributes(e),
+        });
         console.error("addCardPayment: db write failed", e);
         return {
             ok: false,

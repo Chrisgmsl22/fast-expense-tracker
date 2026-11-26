@@ -2,6 +2,8 @@
 
 import { getTranslations } from "next-intl/server";
 
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
@@ -148,8 +150,13 @@ export async function addPartnerPayment(
             notes: null,
             isPartnerPayment: true,
         });
+        logAppEvent("partner_payment.recorded");
         return { ok: true, data: { id: created.id } };
     } catch (e) {
+        logAppEvent("partner_payment.write_failed", {
+            operation: "create",
+            ...failureAttributes(e),
+        });
         console.error("addPartnerPayment: db write failed", e);
         return {
             ok: false,

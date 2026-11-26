@@ -5,8 +5,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { getSessionUserIdMock } = vi.hoisted(() => ({
     getSessionUserIdMock: vi.fn(),
 }));
+const { infoMock, errorMock } = vi.hoisted(() => ({
+    infoMock: vi.fn(),
+    errorMock: vi.fn(),
+}));
 vi.mock("@/lib/auth/session", () => ({
     getSessionUserId: getSessionUserIdMock,
+}));
+vi.mock("@sentry/nextjs", () => ({
+    logger: { info: infoMock, error: errorMock },
+    getGlobalScope: () => ({ getScopeData: () => ({ attributes: {} }) }),
+    withIsolationScope: (callback: (scope: { clear: () => void }) => unknown) =>
+        callback({ clear: vi.fn() }),
+    withScope: (callback: (scope: { clear: () => void }) => unknown) =>
+        callback({ clear: vi.fn() }),
 }));
 
 import { createExpense } from "@/app/_actions/expense/create";
@@ -30,6 +42,8 @@ describe("createExpense (unit, injected fake repo)", () => {
     beforeEach(() => {
         getSessionUserIdMock.mockReset();
         getSessionUserIdMock.mockResolvedValue("u1");
+        infoMock.mockReset();
+        errorMock.mockReset();
     });
 
     it("rejects invalid input with a validation code + field errors", async () => {
@@ -58,13 +72,18 @@ describe("createExpense (unit, injected fake repo)", () => {
 
     it("persists and returns the new id on the happy path", async () => {
         const repo = new FakeExpenseRepository();
-
+        infoMock.mockImplementation(() => {
+            throw new Error("telemetry unavailable");
+        });
         const res = await createExpense(validInput(), repo);
 
         expect(res.ok).toBe(true);
         if (!res.ok) return;
         expect(res.data.id).toMatch(/^exp_/);
         expect(repo.inserts[0]?.userId).toBe("u1");
+        expect(infoMock).toHaveBeenCalledExactlyOnceWith("expense.created", {
+            event: "expense.created",
+        });
     });
 
     it("computes the shared split before persisting", async () => {
@@ -93,6 +112,8 @@ describe("createExpense (unit, injected fake repo)", () => {
         expect(res.code).toBe("validation");
         expect(res.fieldErrors?.subcategoryId).toBeDefined();
         expect(repo.inserts).toHaveLength(0);
+        expect(infoMock).not.toHaveBeenCalled();
+        expect(errorMock).not.toHaveBeenCalled();
     });
 
     it.each(["income", "savings"])(
@@ -183,12 +204,21 @@ describe("createExpense (unit, injected fake repo)", () => {
     it("maps a repository write failure to db_error", async () => {
         const repo = new FakeExpenseRepository();
         repo.failOnWrite = true;
+        errorMock.mockImplementation(() => {
+            throw new Error("telemetry unavailable");
+        });
 
         const res = await createExpense(validInput(), repo);
 
         expect(res.ok).toBe(false);
         if (res.ok) return;
         expect(res.code).toBe("db_error");
+        expect(errorMock).toHaveBeenCalledExactlyOnceWith(
+            "expense.create_failed",
+            {
+                event: "expense.create_failed",
+            },
+        );
     });
     describe("funding source (spec 0007 §3.1/§3.3)", () => {
         it("defaults to income, so ignoring the control changes nothing", async () => {

@@ -1,3 +1,5 @@
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import type { UserRepository } from "@/lib/repositories/user.repository";
@@ -26,9 +28,11 @@ export async function finishOnboarding(
     }
 
     try {
-        await users.markOnboarded(userId, now());
+        const count = await users.markOnboarded(userId, now());
+        if (count > 0) logAppEvent("onboarding.completed");
         return { ok: true, data: undefined };
     } catch (error) {
+        logAppEvent("onboarding.complete_failed", failureAttributes(error));
         console.error(
             "completeOnboarding: db write failed",
             safeErrorSummary(error),

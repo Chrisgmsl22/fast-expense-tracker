@@ -16,15 +16,29 @@ const { signInMock, AuthErrorMock } = vi.hoisted(() => {
     }
     return { signInMock: vi.fn(), AuthErrorMock };
 });
+const { infoMock, errorMock } = vi.hoisted(() => ({
+    infoMock: vi.fn(),
+    errorMock: vi.fn(),
+}));
 vi.mock("@/auth", () => ({
     signIn: signInMock,
     InvalidCredentialsError: AuthErrorMock,
+}));
+vi.mock("@sentry/nextjs", () => ({
+    logger: { info: infoMock, error: errorMock },
+    getGlobalScope: () => ({ getScopeData: () => ({ attributes: {} }) }),
+    withIsolationScope: (callback: (scope: { clear: () => void }) => unknown) =>
+        callback({ clear: vi.fn() }),
+    withScope: (callback: (scope: { clear: () => void }) => unknown) =>
+        callback({ clear: vi.fn() }),
 }));
 
 import { loginAction } from "@/app/_actions/auth/login";
 
 beforeEach(() => {
     signInMock.mockReset();
+    infoMock.mockReset();
+    errorMock.mockReset();
 });
 
 describe("loginAction", () => {
@@ -37,6 +51,8 @@ describe("loginAction", () => {
             expect(res.fieldErrors?.password).toBeDefined();
         }
         expect(signInMock).not.toHaveBeenCalled();
+        expect(infoMock).not.toHaveBeenCalled();
+        expect(errorMock).not.toHaveBeenCalled();
     });
 
     it("maps a CredentialsSignin AuthError to a generic invalid_credentials result", async () => {
@@ -53,10 +69,15 @@ describe("loginAction", () => {
             // Doesn't reveal whether the email exists.
             expect(res.message).toMatch(/invalid email or password/i);
         }
+        expect(infoMock).not.toHaveBeenCalled();
+        expect(errorMock).not.toHaveBeenCalled();
     });
 
     it("maps a non-credentials AuthError (e.g. DB outage wrapped as CallbackRouteError) to a generic error, NOT invalid_credentials", async () => {
         signInMock.mockRejectedValue(new Error("Authentication unavailable"));
+        errorMock.mockImplementation(() => {
+            throw new Error("telemetry unavailable");
+        });
 
         const res = await loginAction({
             email: "admin@example.com",
@@ -70,6 +91,9 @@ describe("loginAction", () => {
             expect(res.code).toBe("error");
             expect(res.message).not.toMatch(/invalid email or password/i);
         }
+        expect(errorMock).toHaveBeenCalledExactlyOnceWith("auth.login_failed", {
+            event: "auth.login_failed",
+        });
     });
 
     it("Should return success without a server redirect", async () => {

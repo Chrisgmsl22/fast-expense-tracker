@@ -1,5 +1,7 @@
 "use server";
 
+import { failureAttributes } from "@/lib/observability/health";
+
 import { getTranslations } from "next-intl/server";
 
 import { signIn, InvalidCredentialsError } from "@/auth";
@@ -7,6 +9,7 @@ import { loginSchema, type LoginInput } from "@/lib/schemas/auth";
 import type { ActionResult, FieldErrors } from "@/lib/actions/result";
 import { localizeFieldErrors } from "@/lib/actions/field-errors";
 import { authMessages } from "./schema-messages";
+import { logAppEvent } from "@/lib/observability/log";
 
 /** Failure modes the login form can branch on. */
 export type LoginCode = "validation" | "invalid_credentials" | "error";
@@ -49,6 +52,7 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
                 message: t("invalidCredentials"),
             };
         }
+        logAppEvent("auth.login_failed", failureAttributes(error));
         return { ok: false, code: "error", message: t("unexpected") };
     }
     return { ok: true, data: undefined };

@@ -2,6 +2,8 @@
 
 import { getTranslations } from "next-intl/server";
 
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { MAX_ACTIVE_CARDS } from "@/lib/domain/card";
@@ -97,6 +99,10 @@ export async function restoreCard(
         }
         return { ok: true, data: { id, name: card.name } };
     } catch (e) {
+        logAppEvent("card.write_failed", {
+            operation: "restore",
+            ...failureAttributes(e),
+        });
         console.error("restoreCard: db write failed", e);
         return {
             ok: false,

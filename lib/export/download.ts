@@ -1,3 +1,5 @@
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import type { FinancialExportRepository } from "@/lib/repositories/financial-export.repository";
 import { financialExportSchema } from "@/lib/schemas/financial-export";
 import { resolveExportPeriod } from "./period";
@@ -43,7 +45,7 @@ export async function financialExportResponse(
             data,
             period,
         ).xlsx.writeBuffer();
-        return new Response(new Uint8Array(content), {
+        const response = new Response(new Uint8Array(content), {
             headers: {
                 ...PRIVATE_HEADERS,
                 "Content-Type":
@@ -54,7 +56,10 @@ export async function financialExportResponse(
                     '.xlsx"',
             },
         });
-    } catch {
+        logAppEvent("export.generated");
+        return response;
+    } catch (error) {
+        logAppEvent("export.generate_failed", failureAttributes(error));
         return Response.json(
             { code: "export_failed" },
             { status: 500, headers: PRIVATE_HEADERS },

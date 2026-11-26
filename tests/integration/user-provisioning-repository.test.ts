@@ -90,7 +90,7 @@ describe("PrismaUserProvisioningRepository.provisionNewUser", () => {
         const summary = await repo.provisionNewUser(user.id);
 
         expect(summary).toEqual({
-            categoriesCreated: 13,
+            categoriesCreated: 14,
             subcategoriesCreated: STARTER_SUBCATEGORY_COUNT,
             cardsCreated: 1,
             settingsCreated: true,
@@ -99,7 +99,7 @@ describe("PrismaUserProvisioningRepository.provisionNewUser", () => {
             where: { userId: user.id },
             include: { subcategories: { select: { name: true } } },
         });
-        expect(rows).toHaveLength(13);
+        expect(rows).toHaveLength(14);
         for (const starter of STARTER_CATEGORIES) {
             const row = rows.find((r) => r.slug === starter.slug);
             expect(row).toMatchObject({
@@ -165,7 +165,7 @@ describe("PrismaUserProvisioningRepository.provisionNewUser", () => {
 
         expect(await snapshot(first.id)).toEqual(before);
         const theirs = await snapshot(second.id);
-        expect(theirs.categories).toHaveLength(13);
+        expect(theirs.categories).toHaveLength(14);
         expect(theirs.subcategories).toHaveLength(STARTER_SUBCATEGORY_COUNT);
         // Each user's subcategories hang off their own categories only.
         const secondCategoryIds = new Set(theirs.categories.map((c) => c.id));
@@ -268,7 +268,7 @@ describe("PrismaUserProvisioningRepository.provisionNewUser", () => {
 
         const summary = await repo.provisionNewUser(user.id);
 
-        expect(summary.categoriesCreated).toBe(12);
+        expect(summary.categoriesCreated).toBe(13);
         expect(summary.subcategoriesCreated).toBe(
             STARTER_SUBCATEGORY_COUNT - 1,
         );

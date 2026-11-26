@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const { appLog } = vi.hoisted(() => ({ appLog: vi.fn() }));
+vi.mock("@/lib/observability/log", () => ({ logAppEvent: appLog }));
 const { signInMock, rootGate, rootAccounts } = vi.hoisted(() => ({
     signInMock: vi.fn(),
     rootGate: { read: vi.fn() },
@@ -34,6 +36,7 @@ function loggedText(): string {
 }
 
 beforeEach(() => {
+    appLog.mockClear();
     signInMock.mockReset();
     signInMock.mockResolvedValue("http://localhost/dashboard");
     gate = new FakeSignupGate({ open: true, maxUsers: 10 });
@@ -70,6 +73,9 @@ describe("signup", () => {
     it("Should call signIn only after the account exists", async () => {
         signInMock.mockImplementation(async () => {
             expect(accounts.createdAccounts).toHaveLength(1);
+            expect(appLog).toHaveBeenCalledExactlyOnceWith(
+                "auth.signup_completed",
+            );
             return "http://localhost/dashboard";
         });
 
@@ -272,4 +278,25 @@ describe("signupAction", () => {
         expect(clientGate.reads).toBe(0);
         expect(accounts.createdAccounts).toEqual([]);
     });
+});
+
+it("Should keep validation and an expected closed signup gate out of logs", async () => {
+    await signup({ ...input, email: "invalid" }, gate, accounts);
+    await signup(input, new FakeSignupGate({ open: false }), accounts);
+    expect(appLog).not.toHaveBeenCalled();
+});
+it("Should report unexpected provisioning and sign-in failures with static operations", async () => {
+    accounts.failOnWrite = true;
+    await signup(input, gate, accounts);
+    expect(appLog).toHaveBeenCalledExactlyOnceWith("auth.signup_failed", {
+        operation: "provision",
+    });
+    appLog.mockClear();
+    accounts.failOnWrite = false;
+    signInMock.mockRejectedValue(new Error("invented private auth details"));
+    await signup(input, gate, accounts);
+    expect(appLog.mock.calls).toEqual([
+        ["auth.signup_completed"],
+        ["auth.signup_failed", { operation: "signin" }],
+    ]);
 });

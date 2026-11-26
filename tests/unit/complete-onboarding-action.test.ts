@@ -1,6 +1,11 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const { appLog } = vi.hoisted(() => ({ appLog: vi.fn() }));
+vi.mock("@/lib/observability/log", () => ({
+    logAppEvent: appLog,
+    logSummaryCopyEvent: appLog,
+}));
 const { getSessionUserIdMock, rootUsers } = vi.hoisted(() => ({
     getSessionUserIdMock: vi.fn(),
     rootUsers: { markOnboarded: vi.fn() },
@@ -20,6 +25,7 @@ const LATER = new Date("2026-10-17T09:30:00Z");
 let users: FakeUserRepository;
 
 beforeEach(() => {
+    appLog.mockClear();
     getSessionUserIdMock.mockReset();
     getSessionUserIdMock.mockResolvedValue("u1");
     rootUsers.markOnboarded.mockReset();
@@ -49,6 +55,7 @@ describe("finishOnboarding", () => {
 
         expect(result).toEqual({ ok: true, data: undefined });
         expect(users.stateOf("u1")?.onboardedAt).toEqual(FIRST);
+        expect(appLog).toHaveBeenCalledExactlyOnceWith("onboarding.completed");
     });
 
     it("Should refuse without a session and write nothing", async () => {

@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { filterAppLog } from "@/lib/observability/log";
 
 // Server-side error capture (GlitchTip via the Sentry SDK — ADR-0014).
 // Prefers the server-only SENTRY_DSN, falling back to the public one.
@@ -9,4 +10,6 @@ Sentry.init({
     dsn,
     enabled: Boolean(dsn),
     tracesSampleRate: 0,
+    enableLogs: true,
+    beforeSendLog: filterAppLog,
 });
