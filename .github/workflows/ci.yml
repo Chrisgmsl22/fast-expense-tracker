@@ -44,7 +44,7 @@ jobs:
             DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fast_expense_tracker_test?schema=public
             DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/fast_expense_tracker_test?schema=public
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
             # Harness guards — bash + git + jq only, so they run before the toolchain.
             - name: Agent frontmatter guard
               run: bash scripts/check-agent-frontmatter.sh
@@ -52,8 +52,8 @@ jobs:
               run: bash scripts/test-hooks.sh
             # pnpm version is read from package.json "packageManager" — don't pin it
             # again here, or action-setup errors on a version mismatch.
-            - uses: pnpm/action-setup@v4
-            - uses: actions/setup-node@v4
+            - uses: pnpm/action-setup@v5
+            - uses: actions/setup-node@v5
               with:
                   node-version-file: .nvmrc
                   cache: pnpm
@@ -75,7 +75,7 @@ jobs:
         name: Secret guards
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
               with:
                   # Full history so gitleaks can scan every commit, not just the tip.
                   fetch-depth: 0
@@ -89,7 +89,7 @@ jobs:
                   fi
                   echo "OK — no stray .env files tracked."
             - name: Scan for secret values (gitleaks)
-              uses: gitleaks/gitleaks-action@v2
+              uses: gitleaks/gitleaks-action@v3
               env:
                   # No GITLEAKS_LICENSE needed — gitleaks-action is free for public repos.
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
