@@ -1,3 +1,4 @@
+import { ExportDataSection } from "@/components/settings/ExportDataSection";
 import { getTranslations } from "next-intl/server";
 
 import { getSessionUserId } from "@/lib/auth/session";
@@ -21,7 +22,6 @@ const COMING_SOON = [
     "categoryLimits",
     "preferences",
     "privacy",
-    "exportData",
     "account",
 ] as const;
 
@@ -60,6 +60,8 @@ export default async function SettingsPage() {
                 <CardsForm cards={cards} />
 
                 <LanguageSection />
+
+                <ExportDataSection currentMonth={currentMonth} />
 
                 {/* Deferred sections (spec 0006 §8) — placeholders so the page
                     reads as the full Settings surface without shipping them yet. */}
