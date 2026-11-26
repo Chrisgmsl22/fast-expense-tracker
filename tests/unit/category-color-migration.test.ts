@@ -1,8 +1,8 @@
 // @vitest-environment node
 //
 // BUG-2 guard: the backfill migration repairs production category colors with
-// hard-coded literals. These tests fail if a starter category is added and
-// silently missed by the migration, or if a hex drifts between the two.
+// hard-coded literals. Check the categories that existed at that migration;
+// Vacation receives its color in its own later additive migration.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -13,7 +13,10 @@ import { STARTER_CATEGORIES } from "@/lib/domain/starter-kit";
 const GRAY = "#6b7280";
 
 const CATEGORY_COLORS: Record<string, string> = Object.fromEntries(
-    STARTER_CATEGORIES.map((c) => [c.slug, c.color]),
+    STARTER_CATEGORIES.filter((c) => c.slug !== "vacation").map((c) => [
+        c.slug,
+        c.color,
+    ]),
 );
 
 const MIGRATION_PATH = path.join(

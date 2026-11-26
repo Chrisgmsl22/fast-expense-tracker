@@ -59,6 +59,14 @@ describe("useCategoryName", () => {
     it.each([
         ["es", "Disposable Income", "Gasto libre"],
         ["en", "Disposable Income", "Disposable Income"],
+        ["es", "Vacation", "Vacaciones"],
+        ["en", "Vacation", "Vacation"],
+        ["es", "Flights", "Vuelos"],
+        ["es", "Lodging", "Hospedaje"],
+        ["es", "Local transport", "Transporte local"],
+        ["es", "Food and snacks", "Comida y botanas"],
+        ["es", "Activities", "Actividades"],
+        ["es", "Souvenirs", "Recuerdos"],
         ["es", "Pets", "Pets"],
     ] as const)("Should render in %s: %s → %s", (locale, stored, expected) => {
         renderWithIntl(<CategoryLabel name={stored} />, { locale });
