@@ -17,6 +17,7 @@ import {
 } from "@/lib/schemas/expense";
 
 import { expenseSchemaMessages } from "./field-messages";
+import { logAppEvent } from "@/lib/observability/log";
 
 /** Failure modes the caller can branch on. */
 export type CreateExpenseCode = "validation" | "unauthenticated" | "db_error";
@@ -143,12 +144,14 @@ export async function createExpense(
             // `addPartnerPayment` is the only writer of a payment row.
             isPartnerPayment: false,
         });
+        logAppEvent("expense.created");
         return { ok: true, data: { id: created.id } };
     } catch (e) {
         // Don't leak DB internals to the client; surface a generic failure and
         // keep the typed contract so the form shows an error instead of
         // silently doing nothing.
         console.error("createExpense: db write failed", e);
+        logAppEvent("expense.create_failed");
         return {
             ok: false,
             code: "db_error",
