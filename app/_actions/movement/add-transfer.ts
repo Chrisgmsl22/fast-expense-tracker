@@ -2,6 +2,8 @@
 
 import { getTranslations } from "next-intl/server";
 
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
@@ -67,8 +69,13 @@ export async function addTransfer(
             // inbound transfer (spec 0007 §3.1).
             fundedFrom: v.fundedFrom,
         });
+        logAppEvent("transfer.recorded");
         return { ok: true, data: { id: created.id } };
     } catch (e) {
+        logAppEvent("transfer.write_failed", {
+            operation: "create",
+            ...failureAttributes(e),
+        });
         console.error("addTransfer: db write failed", e);
         return {
             ok: false,

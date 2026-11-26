@@ -1,3 +1,5 @@
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { signIn } from "@/auth";
 import { toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
@@ -5,6 +7,7 @@ import { isAtAccountCap } from "@/lib/domain/signup";
 import type { SignupGate } from "@/lib/repositories/signup-gate";
 import {
     EmailTakenError,
+    AccountCapError,
     type UserProvisioningRepository,
 } from "@/lib/repositories/user-provisioning.repository";
 import { safeErrorSummary } from "@/lib/safe-error";
@@ -68,6 +71,10 @@ export async function signup(
         maxUsers = gateState.maxUsers;
         userCount = await accounts.countUsers();
     } catch (error) {
+        logAppEvent("auth.signup_failed", {
+            operation: "provision",
+            ...failureAttributes(error),
+        });
         console.error(
             "signupAction: signup failed before sign-in",
             safeErrorSummary(error),
@@ -84,13 +91,20 @@ export async function signup(
     }
 
     try {
-        const { userId } = await accounts.createUserWithStarterKit({
-            name,
-            email,
-            password,
-        });
+        const { userId } = await accounts.createUserWithStarterKit(
+            {
+                name,
+                email,
+                password,
+            },
+            maxUsers,
+        );
         console.info("signupAction: account created", { userId });
+        logAppEvent("auth.signup_completed");
     } catch (error) {
+        if (error instanceof AccountCapError) {
+            return { ok: false, code: "full", message: SIGNUP_MESSAGES.full };
+        }
         if (error instanceof EmailTakenError) {
             return {
                 ok: false,
@@ -99,6 +113,10 @@ export async function signup(
                 fieldErrors: { email: [SIGNUP_MESSAGES.emailTaken] },
             };
         }
+        logAppEvent("auth.signup_failed", {
+            operation: "provision",
+            ...failureAttributes(error),
+        });
         console.error(
             "signupAction: account creation failed",
             safeErrorSummary(error),
@@ -114,6 +132,10 @@ export async function signup(
             redirect: false,
         });
     } catch (error) {
+        logAppEvent("auth.signup_failed", {
+            operation: "signin",
+            ...failureAttributes(error),
+        });
         console.error(
             "signupAction: sign-in after signup failed",
             safeErrorSummary(error),

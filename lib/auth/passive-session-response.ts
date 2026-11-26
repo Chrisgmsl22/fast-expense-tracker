@@ -3,7 +3,7 @@ export function passiveSessionResponse(response: Response): Response {
     const cookies = headers.getSetCookie();
     headers.delete("set-cookie");
     for (const cookie of cookies) {
-        if (!/^(?:__Secure-)?authjs\.session-token(?:\.\d+)?=/.test(cookie)) {
+        if (!/^(?:__Secure-)?better-auth\.session_token=/.test(cookie)) {
             headers.append("set-cookie", cookie);
         }
     }

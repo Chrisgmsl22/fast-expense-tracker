@@ -11,7 +11,8 @@ import { computeCoupleBalance } from "@/lib/domain/settlement";
 import { formatMxn } from "@/lib/format";
 import type { SettlementJournalItem } from "@/lib/services/settlement/settlement.service";
 
-const PARTNER = "Brenda";
+const names = { partner: "Brenda", owner: "Alex" };
+const now = new Date("2026-11-23T05:59:59Z");
 const day = (d: string): Date => new Date(`${d}T06:00:00Z`);
 
 const base = { carriedOver: false, locked: false } as const;
@@ -93,16 +94,18 @@ const intlFor = (locale: Locale): SettlementSummaryIntl => ({
     locale,
 });
 
-/** Every fixture goes through here: no "×", and no old ➕ / ➖ group emoji. */
 function build(
     journal: SettlementJournalItem[],
-    partnerName: string,
     scope: "open" | "closed",
-    intl: SettlementSummaryIntl = intlFor("en"),
+    locale: Locale = "en",
 ) {
-    const text = buildSettlementSummaryText(journal, partnerName, scope, intl);
-    expect(text).not.toMatch(/[×➕➖]/u);
-    return text;
+    return buildSettlementSummaryText(
+        journal,
+        names,
+        scope,
+        intlFor(locale),
+        now,
+    );
 }
 
 function balanceOf(rows: SettlementJournalItem[]) {
@@ -133,339 +136,76 @@ function balanceOf(rows: SettlementJournalItem[]) {
     });
 }
 
-const DIVIDER = "———————————";
+const DIVIDER = "\n\n────────────────────\n\n";
 
 describe("buildSettlementSummaryText", () => {
-    it("(a) renders the approved open-settlement example", () => {
+    it("writes the full Spanish summary with both payment directions and the saved shares", () => {
         const journal = newestFirst([
-            expense("e1", "2026-10-01", "Groceries", 500, 160),
-            debt("d1", "2026-10-03", "partner_debt", "Snacks", 90),
-            debt("d2", "2026-10-05", "gf_fronted", "Concert tickets", 600),
-            transfer("t1", "2026-10-07", "gf_paid", 100),
+            expense("e1", "2026-11-01", "Súper", 4, 1.28),
+            expense("e2", "2026-11-08", "Pan", 2, 0.72),
+            debt("d1", "2026-11-03", "partner_debt", "Estacionamiento", 9),
+            debt("d2", "2026-11-04", "gf_fronted", "I owe Brenda", 5),
+            transfer("t1", "2026-11-06", "gf_paid", 3, "cine"),
+            transfer("t2", "2026-11-12", "gf_received", 4, "súper"),
         ]);
 
-        expect(build(journal, PARTNER, "open")).toBe(
+        expect(build(journal, "open", "es")).toBe(
             [
-                "🧾 *Settlement Oct 1, 2026 – present*",
-                "",
-                "*Shared expenses*",
-                "    • Groceries: $500.00",
-                "",
-                "*Subtotal: $500.00*",
-                DIVIDER,
-                "🌸 *Brenda owes you*",
-                "    • Brenda's 32% of shared expenses: $160.00",
-                "    • Snacks: $90.00",
-                "",
-                "*Subtotal: $250.00*",
-                "",
-                "🍔 *You owe Brenda*",
-                "    • Concert tickets: $600.00",
-                "",
-                "*Subtotal: $600.00*",
-                "",
-                "💸 *Payments*",
-                "    • You paid Brenda: $100.00",
-                DIVIDER,
-                "🟰 *$250.00 − $600.00 + $100.00 = −$250.00*",
-                "",
-                "✅ *Final outcome: Brenda receives $250.00 MXN*",
-            ].join("\n"),
+                [
+                    "🧾 *Cuenta 1 nov 2026 – hoy (22 nov 2026)*",
+                    "",
+                    "*Gastos compartidos*",
+                    "    • (1 nov) Súper: $4.00",
+                    "    • (8 nov) Pan: $2.00",
+                    "",
+                    "*Subtotal: $6.00*",
+                ],
+                [
+                    "🌸 *Brenda a pagar*",
+                    "    • Súper: *$1.28*",
+                    "    • Pan: *$0.72*",
+                    "",
+                    "*Parte de Brenda en gastos compartidos: $2.00*",
+                    "",
+                    "*Pendientes adicionales*",
+                    "    • Estacionamiento: $9.00",
+                    "",
+                    "*Subtotal de Brenda a pagar: $2.00 (gastos compartidos) + $9.00 (pendientes adicionales) = $11.00*",
+                ],
+                [
+                    "🍔 *Alex debe a Brenda*",
+                    "    • Le debo a Brenda: $5.00",
+                    "",
+                    "*Subtotal que Alex debe a Brenda: $5.00*",
+                ],
+                [
+                    "💸 *Pagos realizados*",
+                    "    • Alex pagó a Brenda: $3.00 (cine)",
+                    "    • Brenda pagó a Alex: $4.00 (súper)",
+                    "",
+                    "*Total que Brenda pagó a Alex: $4.00*",
+                    "*Total que Alex pagó a Brenda: $3.00*",
+                ],
+                [
+                    "*Resumen*",
+                    "    • Subtotal de Brenda (gastos compartidos + pendientes): $11.00",
+                    "    • Alex debe a Brenda: $5.00",
+                    "    • Brenda pagó a Alex durante este periodo: $4.00",
+                    "    • Alex pagó a Brenda durante este periodo: $3.00",
+                    "",
+                    "*Fórmula*",
+                    "Subtotal de Brenda − deuda de Alex con Brenda − pagos de Brenda a Alex + pagos de Alex a Brenda = saldo final",
+                    "🟰 *$11.00 − $5.00 − $4.00 + $3.00 = $5.00*",
+                    "",
+                    "✅ *Resultado final: Brenda debe $5.00 MXN*",
+                ],
+            ]
+                .map((section) => section.join("\n"))
+                .join(DIVIDER),
         );
     });
 
-    it("(b) nets a partial payment from the partner into what she still owes", () => {
-        const journal = newestFirst([
-            expense("e1", "2026-09-02", "Dinner", 1000, 320),
-            debt("d1", "2026-09-04", "partner_debt", "Concert", 230),
-            debt("d2", "2026-09-05", "gf_fronted", "Taxi", 200),
-            transfer("t1", "2026-09-06", "gf_received", 100, "Part payment"),
-        ]);
-
-        expect(build(journal, PARTNER, "closed")).toBe(
-            [
-                "🧾 *Settlement Sep 2, 2026 – Sep 6, 2026*",
-                "",
-                "*Shared expenses*",
-                "    • Dinner: $1,000.00",
-                "",
-                "*Subtotal: $1,000.00*",
-                DIVIDER,
-                "🌸 *Brenda owes you*",
-                "    • Brenda's 32% of shared expenses: $320.00",
-                "    • Concert: $230.00",
-                "",
-                "*Subtotal: $550.00*",
-                "",
-                "🍔 *You owe Brenda*",
-                "    • Taxi: $200.00",
-                "",
-                "*Subtotal: $200.00*",
-                "",
-                "💸 *Payments*",
-                "    • Brenda paid you: $100.00 (Part payment)",
-                DIVIDER,
-                "🟰 *$550.00 − $200.00 − $100.00 = $250.00*",
-                "",
-                "✅ *Final outcome: Brenda owes $250.00 MXN*",
-            ].join("\n"),
-        );
-    });
-
-    it("(c) skips the calculation when only one group exists", () => {
-        const journal = newestFirst([
-            debt("d1", "2026-09-03", "gf_fronted", "Uber", 85),
-            debt("d2", "2026-09-04", "gf_fronted", "Taxi", 40),
-        ]);
-
-        expect(build(journal, PARTNER, "open")).toBe(
-            [
-                "🧾 *Settlement Sep 3, 2026 – present*",
-                "",
-                "🍔 *You owe Brenda*",
-                "    • Uber: $85.00",
-                "    • Taxi: $40.00",
-                "",
-                "*Subtotal: $125.00*",
-                "",
-                "✅ *Final outcome: Brenda receives $125.00 MXN*",
-            ].join("\n"),
-        );
-    });
-
-    it("(d) leads with a minus when there is nothing owed to you", () => {
-        const text = build(
-            newestFirst([
-                debt("d1", "2026-09-03", "gf_fronted", "Uber", 85),
-                transfer("t1", "2026-09-04", "gf_paid", 50),
-            ]),
-            PARTNER,
-            "open",
-        );
-        expect(lines(text)).toContain("🟰 *−$85.00 + $50.00 = −$35.00*");
-        expect(lines(text).at(-1)).toBe(
-            "✅ *Final outcome: Brenda receives $35.00 MXN*",
-        );
-    });
-
-    it("(e) shows the math per row when the percents differ", () => {
-        const journal = newestFirst([
-            expense("e1", "2026-09-01", "Groceries", 1000, 320),
-            expense("e2", "2026-09-02", "Rent", 500, 250),
-        ]);
-
-        expect(build(journal, PARTNER, "closed")).toBe(
-            [
-                "🧾 *Settlement Sep 1, 2026 – Sep 2, 2026*",
-                "",
-                "*Shared expenses*",
-                "    • Groceries: $1,000.00 (Brenda's 32%: $320.00)",
-                "    • Rent: $500.00 (Brenda's 50%: $250.00)",
-                "",
-                "*Subtotal: $1,500.00*",
-                DIVIDER,
-                "🌸 *Brenda owes you*",
-                "    • Brenda's share of shared expenses: $570.00",
-                "",
-                "*Subtotal: $570.00*",
-                "",
-                "✅ *Final outcome: Brenda owes $570.00 MXN*",
-            ].join("\n"),
-        );
-    });
-
-    it("shows the math per row when one percent does not reproduce the total", () => {
-        // Both round to 33%, but 33% of $200.00 is $66.00, not $66.40.
-        const text = lines(
-            build(
-                newestFirst([
-                    expense("e1", "2026-09-01", "A", 100, 33),
-                    expense("e2", "2026-09-02", "B", 100, 33.4),
-                ]),
-                PARTNER,
-                "closed",
-            ),
-        );
-        expect(text).toContain("    • B: $100.00 (Brenda's 33%: $33.40)");
-        expect(text).toContain("*Subtotal: $200.00*");
-        expect(text).toContain(
-            "    • Brenda's share of shared expenses: $66.40",
-        );
-    });
-
-    it("(f) ends settled at zero once a transfer squares it", () => {
-        const journal = newestFirst([
-            expense("e1", "2026-09-01", "Lunch", 1000, 320),
-            transfer("t1", "2026-09-02", "gf_received", 320),
-        ]);
-
-        expect(build(journal, PARTNER, "closed")).toBe(
-            [
-                "🧾 *Settlement Sep 1, 2026 – Sep 2, 2026*",
-                "",
-                "*Shared expenses*",
-                "    • Lunch: $1,000.00",
-                "",
-                "*Subtotal: $1,000.00*",
-                DIVIDER,
-                "🌸 *Brenda owes you*",
-                "    • Brenda's 32% of shared expenses: $320.00",
-                "",
-                "*Subtotal: $320.00*",
-                "",
-                "💸 *Payments*",
-                "    • Brenda paid you: $320.00",
-                DIVIDER,
-                "🟰 *$320.00 − $320.00 = $0.00*",
-                "",
-                "✅ *Final outcome: settled, $0.00 MXN*",
-            ].join("\n"),
-        );
-    });
-
-    it("draws only the calculation divider when there are no shared expenses", () => {
-        const journal = newestFirst([
-            debt("d1", "2026-09-01", "partner_debt", "Concert", 300),
-            debt("d2", "2026-09-02", "gf_fronted", "Uber", 85),
-            transfer("t1", "2026-09-03", "gf_received", 100),
-        ]);
-
-        expect(build(journal, PARTNER, "open")).toBe(
-            [
-                "🧾 *Settlement Sep 1, 2026 – present*",
-                "",
-                "🌸 *Brenda owes you*",
-                "    • Concert: $300.00",
-                "",
-                "*Subtotal: $300.00*",
-                "",
-                "🍔 *You owe Brenda*",
-                "    • Uber: $85.00",
-                "",
-                "*Subtotal: $85.00*",
-                "",
-                "💸 *Payments*",
-                "    • Brenda paid you: $100.00",
-                DIVIDER,
-                "🟰 *$300.00 − $85.00 − $100.00 = $115.00*",
-                "",
-                "✅ *Final outcome: Brenda owes $115.00 MXN*",
-            ].join("\n"),
-        );
-    });
-
-    it("draws only the expenses divider when there is no calculation", () => {
-        const journal = newestFirst([
-            expense("e1", "2026-09-01", "Lunch", 500, 160),
-            debt("d1", "2026-09-02", "partner_debt", "Snacks", 40),
-        ]);
-
-        expect(build(journal, PARTNER, "open")).toBe(
-            [
-                "🧾 *Settlement Sep 1, 2026 – present*",
-                "",
-                "*Shared expenses*",
-                "    • Lunch: $500.00",
-                "",
-                "*Subtotal: $500.00*",
-                DIVIDER,
-                "🌸 *Brenda owes you*",
-                "    • Brenda's 32% of shared expenses: $160.00",
-                "    • Snacks: $40.00",
-                "",
-                "*Subtotal: $200.00*",
-                "",
-                "✅ *Final outcome: Brenda owes $200.00 MXN*",
-            ].join("\n"),
-        );
-    });
-
-    it("(g) dates a closed cycle to its rows and an open one to the present", () => {
-        const range = newestFirst([
-            expense("e1", "2026-06-02", "A", 100, 32),
-            expense("e2", "2026-06-20", "B", 100, 32),
-        ]);
-        expect(lines(build(range, PARTNER, "closed"))[0]).toBe(
-            "🧾 *Settlement Jun 2, 2026 – Jun 20, 2026*",
-        );
-
-        const oneDay = [expense("e1", "2026-09-03", "Lunch", 100, 32)];
-        expect(lines(build(oneDay, PARTNER, "closed"))[0]).toBe(
-            "🧾 *Settlement Sep 3, 2026*",
-        );
-        expect(lines(build(oneDay, PARTNER, "open"))[0]).toBe(
-            "🧾 *Settlement Sep 3, 2026 – present*",
-        );
-    });
-
-    it("gives a bare header and a settled outcome for no rows", () => {
-        expect(build([], PARTNER, "open")).toBe(
-            "🧾 *Settlement*\n\n✅ *Final outcome: settled, $0.00 MXN*",
-        );
-    });
-
-    it("lists payments oldest first and sums both directions", () => {
-        const text = build(
-            newestFirst([
-                transfer("t1", "2026-09-01", "gf_paid", 100, "Rent share"),
-                transfer("t2", "2026-09-02", "gf_received", 40),
-            ]),
-            PARTNER,
-            "closed",
-        );
-        expect(text).toBe(
-            [
-                "🧾 *Settlement Sep 1, 2026 – Sep 2, 2026*",
-                "",
-                "💸 *Payments*",
-                "    • You paid Brenda: $100.00 (Rent share)",
-                "    • Brenda paid you: $40.00",
-                DIVIDER,
-                "🟰 *$100.00 − $40.00 = $60.00*",
-                "",
-                "✅ *Final outcome: Brenda owes $60.00 MXN*",
-            ].join("\n"),
-        );
-    });
-
-    it("reverses the journal's order for rows that share a date", () => {
-        // The journal lists "Second" before "First" on the same day.
-        const journal = [
-            expense("e2", "2026-09-03", "Second", 100, 32),
-            expense("e1", "2026-09-03", "First", 100, 32),
-        ];
-        const text = lines(build(journal, PARTNER, "open"));
-        expect(text.indexOf("    • First: $100.00")).toBeLessThan(
-            text.indexOf("    • Second: $100.00"),
-        );
-    });
-
-    it("takes the name and the percent from its inputs", () => {
-        const text = build(
-            [expense("e1", "2026-09-01", "Lunch", 200, 50)],
-            "Alex",
-            "open",
-        );
-        expect(text).toContain("*Subtotal: $200.00*");
-        expect(text).toContain("🌸 *Alex owes you*");
-        expect(text).toContain("    • Alex's 25% of shared expenses: $50.00");
-        expect(text).toContain("✅ *Final outcome: Alex owes $50.00 MXN*");
-        expect(text).not.toMatch(/Brenda|\bher\b|\bshe\b|32%/i);
-    });
-
-    it("refuses a row kind it does not know", () => {
-        const unknown = {
-            ...base,
-            kind: "refund",
-            id: "x1",
-            date: day("2026-09-01"),
-        } as unknown as SettlementJournalItem;
-        expect(() => build([unknown], PARTNER, "open")).toThrow(
-            /Unhandled settlement row/,
-        );
-    });
-
-    it("ends on the figure computeCoupleBalance gives for the same rows", () => {
+    it("localizes the full accounting in English and agrees with the domain balance", () => {
         const journal = newestFirst([
             expense("e1", "2026-09-01", "Groceries", 1234.56, 395.06),
             expense("e2", "2026-09-04", "Dinner", 880.1, 281.63),
@@ -475,71 +215,145 @@ describe("buildSettlementSummaryText", () => {
             transfer("t2", "2026-09-08", "gf_received", 300.01),
         ]);
         const balance = balanceOf(journal);
-        // Guard the fixture: it must exercise a non-zero result.
-        expect(balance.direction).toBe("she_owes");
-
-        const text = lines(build(journal, PARTNER, "open"));
+        const text = build(journal, "closed");
         const amount = formatMxn(balance.amount);
-        expect(text.at(-1)).toBe(
+
+        expect(balance.direction).toBe("she_owes");
+        expect(text.split(DIVIDER)).toHaveLength(5);
+        expect(text).toContain("🧾 *Settlement Sep 1, 2026 – Sep 8, 2026*");
+        expect(text).toContain("    • (Sep 1) Groceries: $1,234.56");
+        expect(text).toContain("    • Dinner: *$281.63*");
+        expect(text).toContain("*Brenda's share of shared expenses: $676.69*");
+        expect(text).toContain("*Subtotal Alex owes Brenda: $99.99*");
+        expect(text).toContain("*Total Brenda paid Alex: $300.01*");
+        expect(text).toContain("*Total Alex paid Brenda: $150.25*");
+        expect(text).toContain(
+            "Brenda's subtotal − Alex's debt to Brenda − payments from Brenda to Alex + payments from Alex to Brenda = final balance",
+        );
+        expect(text).toContain(
+            `🟰 *$1,087.02 − $99.99 − $300.01 + $150.25 = ${amount}*`,
+        );
+        expect(lines(text).at(-1)).toBe(
             `✅ *Final outcome: Brenda owes ${amount} MXN*`,
         );
-        expect(text).toContain(
-            `🟰 *$1,087.02 − $99.99 + $150.25 − $300.01 = ${amount}*`,
-        );
     });
 
-    it("writes the whole summary in Spanish, dates and the auto-label included", () => {
-        const journal = newestFirst([
-            expense("e1", "2026-10-01", "Súper", 500, 160),
-            debt("d1", "2026-10-03", "gf_fronted", "I owe Brenda", 600),
-            transfer("t1", "2026-10-07", "gf_received", 100),
-        ]);
-
-        expect(build(journal, PARTNER, "open", intlFor("es"))).toBe(
-            [
-                "🧾 *Cuenta 1 oct 2026 – hoy*",
-                "",
-                "*Gastos compartidos*",
-                "    • Súper: $500.00",
-                "",
-                "*Subtotal: $500.00*",
-                DIVIDER,
-                "🌸 *Brenda te debe*",
-                "    • 32% de Brenda en gastos compartidos: $160.00",
-                "",
-                "*Subtotal: $160.00*",
-                "",
-                "🍔 *Le debes a Brenda*",
-                "    • Le debo a Brenda: $600.00",
-                "",
-                "*Subtotal: $600.00*",
-                "",
-                "💸 *Pagos*",
-                "    • Brenda te pagó: $100.00",
-                DIVIDER,
-                "🟰 *$160.00 − $600.00 − $100.00 = −$540.00*",
-                "",
-                "✅ *Resultado final: Brenda recibe $540.00 MXN*",
-            ].join("\n"),
-        );
-    });
-
-    it("puts each row's split on the row in Spanish when the percents differ", () => {
+    it("keeps the saved shares on each row when the default split rounds per expense", () => {
         const text = build(
             newestFirst([
-                expense("e1", "2026-09-01", "Súper", 1000, 320),
-                expense("e2", "2026-09-02", "Renta", 500, 250),
+                expense("e1", "2026-09-01", "Coffee", 1.05, 0.34),
+                expense("e2", "2026-09-02", "Tea", 1.05, 0.34),
             ]),
-            PARTNER,
+            "closed",
+        );
+        expect(text).toContain("    • Coffee: *$0.34*");
+        expect(text).toContain("    • Tea: *$0.34*");
+        expect(text).toContain("*Brenda's share of shared expenses: $0.68*");
+        expect(text).toContain("*Subtotal Brenda owes: $0.68*");
+        expect(text).toContain("🟰 *$0.68 = $0.68*");
+        expect(text).not.toMatch(/32%|Additional debts|💸|🍔/u);
+    });
+
+    it("omits the shared-expense group when only an additional debt is owed", () => {
+        const text = build(
+            [debt("d1", "2026-11-01", "partner_debt", "Books", 9)],
+            "closed",
+        );
+        expect(text).toContain("*Additional debts*");
+        expect(text).toContain("*Subtotal Brenda owes: $9.00*");
+        expect(text).toContain("Brenda's subtotal (additional debts): $9.00");
+        expect(text).not.toContain("shared expenses");
+    });
+
+    it("keeps the leading minus when a lone owner debt sets the balance", () => {
+        const text = build(
+            [debt("d1", "2026-11-01", "gf_fronted", "Taxi", 5)],
+            "closed",
+        );
+        expect(text.split(DIVIDER)).toHaveLength(2);
+        expect(text).toContain("−Alex's debt to Brenda = final balance");
+        expect(text).toContain("🟰 *−$5.00 = −$5.00*");
+        expect(text).toContain("✅ *Final outcome: Brenda receives $5.00 MXN*");
+    });
+
+    it("totals repeated payments in each direction and renders zero without a sign", () => {
+        const text = build(
+            newestFirst([
+                transfer("t1", "2026-11-01", "gf_paid", 0.1),
+                transfer("t2", "2026-11-02", "gf_paid", 0.2),
+                transfer("t3", "2026-11-03", "gf_received", 0.3),
+            ]),
+            "open",
+        );
+        expect(text).toContain("*Total Brenda paid Alex: $0.30*");
+        expect(text).toContain("*Total Alex paid Brenda: $0.30*");
+        expect(text).toContain("🟰 *−$0.30 + $0.30 = $0.00*");
+        expect(text).toContain("✅ *Final outcome: settled, $0.00 MXN*");
+    });
+
+    it("avoids a signed zero when the only debt rounds to zero cents", () => {
+        const text = build(
+            [debt("d1", "2026-11-01", "gf_fronted", "Taxi", 0.001)],
+            "closed",
+        );
+        expect(text).toContain("−Alex's debt to Brenda = final balance");
+        expect(text).toContain("🟰 *$0.00 = $0.00*");
+    });
+
+    it("uses the closed journal date without referring to today", () => {
+        const journal = [expense("e1", "2026-09-03", "Lunch", 100, 32)];
+        expect(lines(build(journal, "closed", "es"))[0]).toBe(
+            "🧾 *Cuenta 3 sep 2026*",
+        );
+        expect(build(journal, "closed", "es")).not.toContain("hoy");
+    });
+
+    it("uses localized fallback text for a missing or blank owner name", () => {
+        const journal = [transfer("t1", "2026-11-01", "gf_paid", 4)];
+        const es = buildSettlementSummaryText(
+            journal,
+            { partner: "Sam", owner: "  " },
             "closed",
             intlFor("es"),
+            now,
         );
-        expect(text).toContain(
-            "    • Súper: $1,000.00 (32% de Brenda: $320.00)",
+        const en = buildSettlementSummaryText(
+            journal,
+            { partner: "Sam" },
+            "closed",
+            intlFor("en"),
+            now,
         );
-        expect(text).toContain(
-            "    • Parte de Brenda en gastos compartidos: $570.00",
+        expect(es).toContain("Titular de la cuenta pagó a Sam: $4.00");
+        expect(en).toContain("Account holder paid Sam: $4.00");
+    });
+
+    it("gives a bare header and a settled outcome for no rows", () => {
+        expect(build([], "open")).toBe(
+            "🧾 *Settlement*\n\n✅ *Final outcome: settled, $0.00 MXN*",
         );
-        expect(lines(text)[0]).toBe("🧾 *Cuenta 1 sep 2026 – 2 sep 2026*");
+    });
+
+    it("reverses the journal's order for rows that share a date", () => {
+        const journal = [
+            expense("e2", "2026-09-03", "Second", 100, 32),
+            expense("e1", "2026-09-03", "First", 100, 32),
+        ];
+        const text = lines(build(journal, "open"));
+        expect(text.indexOf("    • (Sep 3) First: $100.00")).toBeLessThan(
+            text.indexOf("    • (Sep 3) Second: $100.00"),
+        );
+    });
+
+    it("refuses a row kind it does not know", () => {
+        const unknown = {
+            ...base,
+            kind: "refund",
+            id: "x1",
+            date: day("2026-09-01"),
+        } as unknown as SettlementJournalItem;
+        expect(() => build([unknown], "open")).toThrow(
+            /Unhandled settlement row/,
+        );
     });
 });

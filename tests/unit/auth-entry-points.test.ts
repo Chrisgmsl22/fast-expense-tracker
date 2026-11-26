@@ -1,124 +1,77 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server.js";
-import type { NextFetchEvent } from "next/server";
-const { get, post, middleware } = vi.hoisted(() => ({
-    get: vi.fn(),
-    post: vi.fn(),
-    middleware: vi.fn(),
+const { handler, session } = vi.hoisted(() => ({
+    handler: vi.fn(),
+    session: vi.fn(),
 }));
 vi.mock("@/auth", () => ({
-    handlers: { GET: get, POST: post },
-    auth: () => middleware,
+    authProvider: { handler, api: { getSession: session } },
 }));
-import { GET, POST } from "@/app/api/auth/[...nextauth]/route";
+import { GET, POST } from "@/app/api/auth/[...all]/route";
 import { proxy } from "@/proxy";
-import { authConfig } from "@/auth.config";
-const cookie = "authjs.session-token=invented; Path=/";
-function response() {
-    const headers = new Headers({ "x-test-header": "preserve" });
-    headers.append("set-cookie", cookie);
-    headers.append("set-cookie", "authjs.csrf-token=invented; Path=/");
-    return new Response("payload", { headers });
-}
+const cookie = "better-auth.session_token=invented; Path=/";
 beforeEach(() => {
     vi.resetAllMocks();
-    get.mockImplementation(async () => response());
-    middleware.mockImplementation(async () => response());
+    handler.mockImplementation(
+        async () =>
+            new Response("payload", {
+                headers: { "set-cookie": cookie, "x-test": "preserved" },
+            }),
+    );
 });
-
 it("Should remove session writes from the passive session GET", async () => {
     const result = await GET(
-        new NextRequest("http://localhost/api/auth/session"),
+        new Request("http://localhost/api/auth/get-session"),
     );
-    expect(result.headers.getSetCookie()).toEqual([
-        "authjs.csrf-token=invented; Path=/",
-    ]);
+    expect(result.headers.getSetCookie()).toEqual([]);
     expect(await result.text()).toBe("payload");
 });
 it("Should preserve explicit auth GET responses and all POST writes", async () => {
-    const result = await GET(
-        new NextRequest("http://localhost/api/auth/callback/example"),
-    );
-    expect(result.headers.getSetCookie()).toContain(cookie);
-    expect(POST).toBe(post);
-});
-it("Should remove session writes from proxy responses", async () => {
-    const result = await proxy(
-        new NextRequest("http://localhost/dashboard"),
-        {} as NextFetchEvent,
-    );
-    expect(result?.headers.getSetCookie()).toEqual([
-        "authjs.csrf-token=invented; Path=/",
-    ]);
-    expect(result?.headers.get("x-test-header")).toBe("preserve");
-});
-it("Should return an explicit redirect when a protected request has no session", () => {
-    const result = authConfig.callbacks.authorized({
-        auth: null,
-        request: new NextRequest("http://localhost/dashboard"),
-    });
-    expect(result).toBeInstanceOf(Response);
-    if (result instanceof Response) {
-        const location = new URL(result.headers.get("location")!);
-        expect(location.pathname).toBe("/login");
-        expect(location.searchParams.get("reason")).toBeNull();
-        expect(location.searchParams.get("callbackUrl")).toBe(
-            "http://localhost/dashboard",
-        );
-    }
-});
-it("Should allow the first login page without a session or an expiry notice", () => {
     expect(
-        authConfig.callbacks.authorized({
-            auth: null,
-            request: new NextRequest("http://localhost/login"),
-        }),
-    ).toBe(true);
-});
-
-const signedIn = {
-    user: { id: "user-1" },
-    expires: "2099-01-01T00:00:00.000Z",
-};
-const staleSessionCookie = "authjs.session-token=expired-invented";
-
-it.each(["/login", "/signup"])(
-    "Should let a signed-out visitor reach %s",
-    (path) => {
-        expect(
-            authConfig.callbacks.authorized({
-                auth: null,
-                request: new NextRequest(`http://localhost${path}`),
-            }),
-        ).toBe(true);
-    },
-);
-it.each(["/login", "/signup"])(
-    "Should let a visitor with an expired session cookie reach %s without the expiry redirect",
-    (path) => {
-        expect(
-            authConfig.callbacks.authorized({
-                auth: null,
-                request: new NextRequest(`http://localhost${path}`, {
-                    headers: { cookie: staleSessionCookie },
+        (
+            await GET(new Request("http://localhost/api/auth/ok"))
+        ).headers.getSetCookie(),
+    ).toContain(cookie);
+    expect(
+        (
+            await POST(
+                new Request("http://localhost/api/auth/sign-out", {
+                    method: "POST",
                 }),
-            }),
-        ).toBe(true);
-    },
-);
+            )
+        ).headers.getSetCookie(),
+    ).toContain(cookie);
+});
+it("Should return an explicit redirect when a protected request has no session", async () => {
+    session.mockResolvedValue(null);
+    const result = await proxy(new NextRequest("http://localhost/dashboard"));
+    expect(new URL(result.headers.get("location")!).pathname).toBe("/login");
+});
+it("redirects an expired cookie to the existing session-expired notice", async () => {
+    session.mockResolvedValue(null);
+    const result = await proxy(
+        new NextRequest("http://localhost/dashboard", {
+            headers: { cookie: "better-auth.session_token=invented" },
+        }),
+    );
+    expect(result.headers.get("location")).toBe(
+        "http://localhost/login?reason=session-expired",
+    );
+});
 it.each(["/login", "/signup"])(
-    "Should send a signed-in user on %s to the dashboard",
-    (path) => {
-        const result = authConfig.callbacks.authorized({
-            auth: signedIn,
-            request: new NextRequest(`http://localhost${path}`),
-        });
-        expect(result).toBeInstanceOf(Response);
-        if (result instanceof Response) {
-            expect(new URL(result.headers.get("location")!).pathname).toBe(
-                "/dashboard",
-            );
-        }
+    "redirects signed-in users away from %s",
+    async (path) => {
+        session.mockResolvedValue({ user: { id: "invented" } });
+        expect(
+            (
+                await proxy(new NextRequest("http://localhost" + path))
+            ).headers.get("location"),
+        ).toBe("http://localhost/dashboard");
     },
 );
+it("Should remove session writes from proxy responses", async () => {
+    session.mockResolvedValue({ user: { id: "invented" } });
+    const result = await proxy(new NextRequest("http://localhost/dashboard"));
+    expect(result.headers.getSetCookie()).toEqual([]);
+});

@@ -1,5 +1,6 @@
 "use client";
 
+import { logSummaryCopyEvent } from "@/lib/observability/log";
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -23,10 +24,12 @@ const COPIED_MS = 2000;
 export function CopySettlementButton({
     journal,
     partnerName,
+    ownerName,
     scope,
 }: {
     journal: SettlementJournalItem[];
     partnerName: string;
+    ownerName?: string | null;
     scope: SettlementSummaryScope;
 }) {
     const t = useTranslations("settlement");
@@ -54,15 +57,19 @@ export function CopySettlementButton({
         }
         try {
             await navigator.clipboard.writeText(
-                buildSettlementSummaryText(journal, partnerName, scope, {
-                    t,
-                    tm,
-                    locale,
-                }),
+                buildSettlementSummaryText(
+                    journal,
+                    { partner: partnerName, owner: ownerName },
+                    scope,
+                    { t, tm, locale },
+                    new Date(),
+                ),
             );
+            logSummaryCopyEvent("settlement.summary_copied");
             setStatus("copied");
             setCopies((n) => n + 1);
         } catch {
+            logSummaryCopyEvent("settlement.summary_copy_failed");
             setStatus("failed");
         }
     }

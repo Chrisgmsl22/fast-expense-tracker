@@ -38,6 +38,7 @@ export function SettlementViews({
     monthPosition,
     history,
     partnerName,
+    ownerName,
 }: {
     openJournal: SettlementJournalItem[];
     monthJournal: SettlementJournalItem[];
@@ -46,6 +47,7 @@ export function SettlementViews({
     monthPosition: MonthPosition;
     history: ClosedSettlementCycle[];
     partnerName: string;
+    ownerName?: string | null;
 }) {
     const t = useTranslations("settlement");
     // A phone shows the short labels so the copy button fits on the tablist
@@ -140,6 +142,7 @@ export function SettlementViews({
                         <CopySettlementButton
                             journal={openJournal}
                             partnerName={partnerName}
+                            ownerName={ownerName}
                             scope="open"
                         />
                     )}
@@ -183,6 +186,7 @@ export function SettlementViews({
                         history={history}
                         monthLabel={monthLabel}
                         partnerName={partnerName}
+                        ownerName={ownerName}
                     />
                 )}
             </div>
@@ -253,10 +257,12 @@ function ClosedCycles({
     history,
     monthLabel,
     partnerName,
+    ownerName,
 }: {
     history: ClosedSettlementCycle[];
     monthLabel: string;
     partnerName: string;
+    ownerName?: string | null;
 }) {
     const t = useTranslations("settlement.views");
     const locale = useLocale();
@@ -309,6 +315,7 @@ function ClosedCycles({
                                         <CopySettlementButton
                                             journal={cycle.journal}
                                             partnerName={partnerName}
+                                            ownerName={ownerName}
                                             scope="closed"
                                         />
                                     </div>

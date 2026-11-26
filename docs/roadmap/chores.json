@@ -477,13 +477,12 @@
         {
             "id": "CHORE-41",
             "name": "better-auth-switch",
-            "priority": 41,
             "title": "Auth PR 3: switch login to Better Auth and copy the password hashes",
-            "description": "Spec 0009 §6, §7 and §8 PR 3 (ADR-0027). Better Auth goes live and next-auth is removed. Users log in once after the deploy; passwords do not change. User.password keeps every hash, so a Vercel rollback to the CHORE-40 build still works. Answer the 7 open questions in spec 0009 §10 before starting.",
-            "plan": "Full Plan required (auth, migration). (1) Better Auth config: Prisma adapter, bcrypt cost 10 hash and verify, generateId uuid, database sessions with expiresIn 1800 and disableSessionRefresh, rate limit with database storage. (2) app/api/auth/[...all], login, logout, signup and renew-idle actions, proxy gate with the new cookie name, IdleSessionGuard client calls. (3) Migration: idempotent credential backfill with a count guard (spec 0009 For agents). (4) seed.ts and user-provisioning write the credential row too. (5) Keep the BUG-3 test titles as the idle contract. (6) Reviewer review and a real-browser check of login, idle expiry, logout and signup (gate on locally). Owner takes a Neon restore point before merge and runs the surveys after.",
-            "status": "open",
+            "description": "Spec 0009 §6, §7 and §8 PR 3 (ADR-0027). Better Auth goes live and next-auth is removed. Users log in once after the deploy; passwords do not change. User.password keeps every hash, so a Vercel rollback to the CHORE-40 build still works. The owner takes a Neon restore point and runs the production surveys before merge.",
+            "plan": "Full Plan required (auth, migration). Implement Better Auth with the Prisma adapter and bcrypt cost 10; backfill existing password hashes idempotently; keep user IDs, passwords and financial records intact; make credential and starter-data writes transactional; preserve the 30-minute idle-session and signup-gate behavior. Local migration, unit, integration, type, lint, coverage and browser checks passed. Independent review passed with no unresolved findings. The owner takes a Neon restore point and runs the production surveys before merge.",
+            "status": "shipped",
             "spec": "docs/specs/0009-auth-module-better-auth.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/107",
             "issue": null
         },
         {
@@ -520,6 +519,95 @@
             "status": "open",
             "spec": null,
             "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-45",
+            "name": "glitchtip-logs",
+            "title": "Send structured application logs to GlitchTip",
+            "description": "See successful expense saves and unexpected expense or login failures in GlitchTip Logs.",
+            "plan": "PR #118 enables Node SDK logging and instruments expense creation and unexpected login failures. Local action and SDK transport tests verify event names, payload filtering, and unchanged results during telemetry failures. Live GlitchTip receipt is pending deployment.",
+            "status": "shipped",
+            "spec": "docs/specs/0012-observability-and-product-metrics.md",
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/118",
+            "issue": null
+        },
+        {
+            "id": "CHORE-46",
+            "name": "product-metrics",
+            "priority": 45,
+            "title": "Set up a signup-to-first-expense funnel",
+            "description": "Measure whether new users save their first regular expense, with owner and test activity excluded.",
+            "plan": "Use the no-card PostHog free plan. Add two explicit server events and one funnel as defined in spec 0012. Verify event delivery and the internal-traffic exclusion with invented data.",
+            "status": "open",
+            "spec": "docs/specs/0012-observability-and-product-metrics.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-47",
+            "name": "expense-write-logs",
+            "title": "Log expense edits and deletions",
+            "description": "See when regular expenses are edited or deleted and when those writes fail.",
+            "plan": "PR #119 adds regular expense update and delete outcomes. Shared payment failures use the partner payment event.",
+            "status": "shipped",
+            "spec": "docs/specs/0012-observability-and-product-metrics.md",
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/119",
+            "issue": null
+        },
+        {
+            "id": "CHORE-48",
+            "name": "account-lifecycle-logs",
+            "title": "Log signup and onboarding outcomes",
+            "description": "See successful signup and onboarding and unexpected failures in either flow.",
+            "plan": "PR #119 logs committed signup provisioning, first onboarding completion, and unexpected failures.",
+            "status": "shipped",
+            "spec": "docs/specs/0012-observability-and-product-metrics.md",
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/119",
+            "issue": null
+        },
+        {
+            "id": "CHORE-49",
+            "name": "card-transfer-logs",
+            "title": "Log card, payment, and transfer activity",
+            "description": "See card setup and archive activity, recorded payments and transfers, and unexpected write failures.",
+            "plan": "PR #119 adds card creation and archive, payment and transfer recording, and family-specific write failure logs.",
+            "status": "shipped",
+            "spec": "docs/specs/0012-observability-and-product-metrics.md",
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/119",
+            "issue": null
+        },
+        {
+            "id": "CHORE-50",
+            "name": "settlement-event-logs",
+            "title": "Log shared payments and settlement outcomes",
+            "description": "See recorded partner payments, closed settlements, and why a close attempt was blocked or failed.",
+            "plan": "PR #119 logs partner payments, closed settlements, explicit not-settled blocks, and unexpected failures.",
+            "status": "shipped",
+            "spec": "docs/specs/0012-observability-and-product-metrics.md",
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/119",
+            "issue": null
+        },
+        {
+            "id": "CHORE-51",
+            "name": "report-export-logs",
+            "title": "Log summary copies and export generation",
+            "description": "See when a settlement summary is copied or an export is generated and when those actions fail.",
+            "plan": "PR #119 logs summary copy outcomes and export generation outcomes. Headless Chrome verified the copy path and browser payload filtering.",
+            "status": "shipped",
+            "spec": "docs/specs/0012-observability-and-product-metrics.md",
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/119",
+            "issue": null
+        },
+        {
+            "id": "CHORE-52",
+            "name": "app-health-logs",
+            "title": "Log app configuration and dependency failures",
+            "description": "Surface missing configuration and infrastructure failures without creating duplicate records.",
+            "plan": "PR #119 logs classified dependency and configuration failures with bounded repeats. Add app.job_failed with the first application background job.",
+            "status": "shipped",
+            "spec": "docs/specs/0012-observability-and-product-metrics.md",
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/119",
             "issue": null
         }
     ]

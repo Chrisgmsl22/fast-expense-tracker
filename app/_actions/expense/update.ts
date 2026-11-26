@@ -3,6 +3,8 @@
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
+import { logAppEvent, type AppLogEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
@@ -88,6 +90,8 @@ export async function updateExpense(
 
     const v = parsed.data;
 
+    let failureEvent: AppLogEvent = "expense.update_failed";
+    let operation: "lookup" | "update" = "lookup";
     try {
         // The row's payment flag and its cycle are the server's facts, never the
         // payload's. Read first, so another user's row answers not_found whatever
@@ -101,6 +105,10 @@ export async function updateExpense(
             };
         }
 
+        failureEvent = existing.isPartnerPayment
+            ? "partner_payment.write_failed"
+            : "expense.update_failed";
+        operation = "update";
         // The slug is resolved from the DB, never taken from the client (spec 0007 §3.3).
         const categorySlug = await repo.getCategorySlug(userId, v.categoryId);
         if (categorySlug === null) {
@@ -278,8 +286,10 @@ export async function updateExpense(
                 message: t("errors.notFound"),
             };
         }
+        if (!existing.isPartnerPayment) logAppEvent("expense.updated");
         return { ok: true, data: { id } };
     } catch (e) {
+        logAppEvent(failureEvent, { operation, ...failureAttributes(e) });
         console.error("updateExpense: db write failed", e);
         return {
             ok: false,

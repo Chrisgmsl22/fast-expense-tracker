@@ -3,12 +3,12 @@ import { screen } from "@testing-library/react";
 import { renderWithIntl, setServerLocale } from "@/tests/support/intl";
 
 const {
-    getSessionUserIdMock,
+    getSessionContextMock,
     getSettingsMock,
     getSettlementMock,
     redirectMock,
 } = vi.hoisted(() => ({
-    getSessionUserIdMock: vi.fn(),
+    getSessionContextMock: vi.fn(),
     getSettingsMock: vi.fn(),
     getSettlementMock: vi.fn(),
     redirectMock: vi.fn((path: string) => {
@@ -18,7 +18,7 @@ const {
 }));
 
 vi.mock("@/lib/auth/session", () => ({
-    getSessionUserId: getSessionUserIdMock,
+    getSessionContext: getSessionContextMock,
 }));
 vi.mock("next/navigation", () => ({
     redirect: redirectMock,
@@ -69,12 +69,12 @@ const unsettledStub = {
 };
 
 beforeEach(() => {
-    getSessionUserIdMock.mockReset();
+    getSessionContextMock.mockReset();
     getSettingsMock.mockReset();
     getSettlementMock.mockReset();
     redirectMock.mockClear();
 
-    getSessionUserIdMock.mockResolvedValue("u1");
+    getSessionContextMock.mockResolvedValue({ userId: "u1", name: "Alex" });
     getSettlementMock.mockResolvedValue(settledStub);
 });
 

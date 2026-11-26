@@ -2,6 +2,8 @@
 
 import { getTranslations } from "next-intl/server";
 
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { cardRepository } from "@/lib/repositories";
@@ -69,8 +71,13 @@ export async function archiveCard(
                 message: t("cards.errors.notFound"),
             };
         }
+        logAppEvent("card.archived");
         return { ok: true, data: { id } };
     } catch (e) {
+        logAppEvent("card.write_failed", {
+            operation: "archive",
+            ...failureAttributes(e),
+        });
         console.error("archiveCard: db write failed", e);
         return {
             ok: false,

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const { appLog } = vi.hoisted(() => ({ appLog: vi.fn() }));
+vi.mock("@/lib/observability/log", () => ({ logAppEvent: appLog }));
 const { getSessionUserIdMock } = vi.hoisted(() => ({
     getSessionUserIdMock: vi.fn(),
 }));
@@ -24,6 +26,7 @@ function ownCards() {
 
 describe("movement actions (unit, injected fake repo)", () => {
     beforeEach(() => {
+        appLog.mockClear();
         getSessionUserIdMock.mockReset();
         getSessionUserIdMock.mockResolvedValue("u1");
     });
@@ -48,6 +51,9 @@ describe("movement actions (unit, injected fake repo)", () => {
             expect(row.type).toBe("card_payment");
             expect(row.cardId).toBe("card_1");
             expect(row.amount).toBe(1000);
+            expect(appLog).toHaveBeenCalledExactlyOnceWith(
+                "card_payment.recorded",
+            );
         });
 
         it("rejects an invalid payment with a validation code + no write", async () => {
@@ -93,6 +99,10 @@ describe("movement actions (unit, injected fake repo)", () => {
             expect(res.ok).toBe(false);
             if (res.ok) return;
             expect(res.code).toBe("db_error");
+            expect(appLog).toHaveBeenCalledExactlyOnceWith(
+                "card_payment.write_failed",
+                { operation: "create" },
+            );
         });
 
         it("refuses another user's card, writing nothing", async () => {

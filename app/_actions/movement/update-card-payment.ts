@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { getTranslations } from "next-intl/server";
 
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
@@ -111,6 +113,10 @@ export async function updateCardPayment(
         }
         return { ok: true, data: { id } };
     } catch (e) {
+        logAppEvent("card_payment.write_failed", {
+            operation: "update",
+            ...failureAttributes(e),
+        });
         console.error("updateCardPayment: db write failed", e);
         return {
             ok: false,

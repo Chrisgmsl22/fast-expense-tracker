@@ -46,7 +46,9 @@ async function snapshot(userId: string) {
 }
 
 /** A client whose transaction fails at `model`'s `createMany`, after the earlier writes ran. */
-function failingAt(model: "subcategory" | "settings"): PrismaClient {
+function failingAt(
+    model: "subcategory" | "settings" | "account",
+): PrismaClient {
     return new Proxy(db, {
         get(target, prop) {
             if (prop !== "$transaction") return Reflect.get(target, prop);
@@ -59,7 +61,12 @@ function failingAt(model: "subcategory" | "settings"): PrismaClient {
                                 if (p !== model) return delegate;
                                 return new Proxy(delegate, {
                                     get(d, method) {
-                                        if (method !== "createMany") {
+                                        if (
+                                            method !==
+                                            (model === "account"
+                                                ? "create"
+                                                : "createMany")
+                                        ) {
                                             return Reflect.get(d, method);
                                         }
                                         return () =>
@@ -329,6 +336,11 @@ describe("PrismaUserProvisioningRepository.createUserWithStarterKit", () => {
         expect(user.password).toBeTypeOf("string");
         expect(user.password).not.toContain(account.password);
         expect(bcrypt.getRounds(user.password!)).toBe(10);
+        expect(
+            await db.account.findFirstOrThrow({
+                where: { userId, providerId: "credential" },
+            }),
+        ).toMatchObject({ accountId: userId, password: user.password });
         await expect(
             bcrypt.compare(account.password, user.password!),
         ).resolves.toBe(true);
@@ -417,7 +429,7 @@ describe("PrismaUserProvisioningRepository.createUserWithStarterKit", () => {
         },
     );
 
-    it.each(["subcategory", "settings"] as const)(
+    it.each(["account", "subcategory", "settings"] as const)(
         "Should leave no user and no kit rows when the %s write fails mid-kit",
         async (model) => {
             const failing = new PrismaUserProvisioningRepository(
@@ -429,6 +441,7 @@ describe("PrismaUserProvisioningRepository.createUserWithStarterKit", () => {
             ).rejects.toThrow("injected");
 
             expect(await db.user.count()).toBe(0);
+            expect(await db.account.count()).toBe(0);
             expect(await db.category.count()).toBe(0);
             expect(await db.subcategory.count()).toBe(0);
             expect(await db.card.count()).toBe(0);
