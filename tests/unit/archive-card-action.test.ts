@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const { appLog } = vi.hoisted(() => ({ appLog: vi.fn() }));
+vi.mock("@/lib/observability/log", () => ({ logAppEvent: appLog }));
 const { getSessionUserIdMock } = vi.hoisted(() => ({
     getSessionUserIdMock: vi.fn(),
 }));
@@ -12,6 +14,7 @@ import { FakeCardRepository } from "@/tests/support/fake-card-repository";
 
 describe("archiveCard (unit, injected fake repo)", () => {
     beforeEach(() => {
+        appLog.mockClear();
         getSessionUserIdMock.mockReset();
         getSessionUserIdMock.mockResolvedValue("u1");
     });
@@ -24,6 +27,8 @@ describe("archiveCard (unit, injected fake repo)", () => {
 
         expect(res.ok).toBe(true);
         expect(await repo.countActive("u1")).toBe(0);
+        await archiveCard({ id }, repo);
+        expect(appLog).toHaveBeenCalledExactlyOnceWith("card.archived");
     });
 
     it("rejects a missing id", async () => {
@@ -75,5 +80,8 @@ describe("archiveCard (unit, injected fake repo)", () => {
         expect(res.ok).toBe(false);
         if (res.ok) return;
         expect(res.code).toBe("db_error");
+        expect(appLog).toHaveBeenCalledExactlyOnceWith("card.write_failed", {
+            operation: "archive",
+        });
     });
 });

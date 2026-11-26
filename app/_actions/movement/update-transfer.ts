@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { getTranslations } from "next-intl/server";
 
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { cdmxCalendarDateToUtc } from "@/lib/dates";
@@ -116,6 +118,10 @@ export async function updateTransfer(
         }
         return { ok: true, data: { id } };
     } catch (e) {
+        logAppEvent("transfer.write_failed", {
+            operation: "update",
+            ...failureAttributes(e),
+        });
         console.error("updateTransfer: db write failed", e);
         return {
             ok: false,

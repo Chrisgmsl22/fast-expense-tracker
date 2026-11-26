@@ -3,6 +3,8 @@
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
+import { logAppEvent, type AppLogEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { expenseRepository } from "@/lib/repositories";
@@ -62,6 +64,8 @@ export async function deleteExpense(
         };
     }
 
+    let failureEvent: AppLogEvent = "expense.delete_failed";
+    let operation: "lookup" | "delete" = "lookup";
     try {
         // Read before deleting: whether the row is frozen is the server's fact,
         // and a missing row short-circuits here rather than after the attempt.
@@ -73,6 +77,10 @@ export async function deleteExpense(
                 message: t("errors.notFound"),
             };
         }
+        failureEvent = existing.isPartnerPayment
+            ? "partner_payment.write_failed"
+            : "expense.delete_failed";
+        operation = "delete";
         const refusal = frozenRefusalKey(existing, "delete");
         if (refusal) {
             return {
@@ -90,8 +98,10 @@ export async function deleteExpense(
                 message: t("errors.notFound"),
             };
         }
+        if (!existing.isPartnerPayment) logAppEvent("expense.deleted");
         return { ok: true, data: { id } };
     } catch (e) {
+        logAppEvent(failureEvent, { operation, ...failureAttributes(e) });
         console.error("deleteExpense: db delete failed", e);
         return {
             ok: false,

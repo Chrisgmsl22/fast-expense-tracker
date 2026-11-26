@@ -26,6 +26,7 @@ vi.mock("@/auth", () => ({
 }));
 vi.mock("@sentry/nextjs", () => ({
     logger: { info: infoMock, error: errorMock },
+    getGlobalScope: () => ({ getScopeData: () => ({ attributes: {} }) }),
     withIsolationScope: (callback: (scope: { clear: () => void }) => unknown) =>
         callback({ clear: vi.fn() }),
     withScope: (callback: (scope: { clear: () => void }) => unknown) =>

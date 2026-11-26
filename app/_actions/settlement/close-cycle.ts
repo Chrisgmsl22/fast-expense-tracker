@@ -1,5 +1,7 @@
 "use server";
 
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 
@@ -68,6 +70,7 @@ export async function closeSettlementCycle(
         });
 
         if (!isBalanceSettled(settlement.balance)) {
+            logAppEvent("settlement.close_blocked", { reason: "not_settled" });
             return {
                 ok: false,
                 code: "not_settled",
@@ -126,11 +129,13 @@ export async function closeSettlementCycle(
         }
 
         revalidatePath("/settlement");
+        logAppEvent("settlement.closed");
         return {
             ok: true,
             data: { marked: marker, alreadyClosed: false },
         };
     } catch (e) {
+        logAppEvent("settlement.close_failed", failureAttributes(e));
         console.error("closeSettlementCycle: db write failed", e);
         return {
             ok: false,

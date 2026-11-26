@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const { appLog } = vi.hoisted(() => ({ appLog: vi.fn() }));
+vi.mock("@/lib/observability/log", () => ({
+    logAppEvent: appLog,
+    logSummaryCopyEvent: appLog,
+}));
 const { getSessionUserIdMock } = vi.hoisted(() => ({
     getSessionUserIdMock: vi.fn(),
 }));
@@ -27,6 +32,7 @@ function validInput(over: Record<string, unknown> = {}) {
 
 describe("updateExpense (unit, injected fake repo)", () => {
     beforeEach(() => {
+        appLog.mockClear();
         getSessionUserIdMock.mockReset();
         getSessionUserIdMock.mockResolvedValue("u1");
     });
@@ -90,6 +96,7 @@ describe("updateExpense (unit, injected fake repo)", () => {
         expect(res.ok).toBe(true);
         if (!res.ok) return;
         expect(res.data.id).toBe("e1");
+        expect(appLog).toHaveBeenCalledExactlyOnceWith("expense.updated");
     });
 
     it("rejects a subcategory that doesn't belong to the chosen category", async () => {
@@ -245,6 +252,34 @@ describe("updateExpense (unit, injected fake repo)", () => {
         expect(res.ok).toBe(false);
         if (res.ok) return;
         expect(res.code).toBe("db_error");
+        expect(appLog).toHaveBeenCalledExactlyOnceWith(
+            "expense.update_failed",
+            { operation: "update" },
+        );
+    });
+    it("Should keep a partner payment update out of regular expense success logs", async () => {
+        const repo = new FakeExpenseRepository();
+        repo.seedExpense("e1", "u1", { isPartnerPayment: true });
+        await updateExpense(validInput(), repo);
+        expect(appLog).not.toHaveBeenCalled();
+        repo.failOnWrite = true;
+        await updateExpense(validInput(), repo);
+        expect(appLog).toHaveBeenCalledExactlyOnceWith(
+            "partner_payment.write_failed",
+            { operation: "update" },
+        );
+    });
+    it("Should label a failure before identifying the row as a lookup", async () => {
+        const repo = new FakeExpenseRepository();
+        vi.spyOn(repo, "getById").mockRejectedValue(
+            new Error("invented private failure"),
+        );
+        const result = await updateExpense(validInput(), repo);
+        expect(result).toMatchObject({ ok: false, code: "db_error" });
+        expect(appLog).toHaveBeenCalledExactlyOnceWith(
+            "expense.update_failed",
+            { operation: "lookup" },
+        );
     });
     describe("funding source on edit (spec 0007 §3.3)", () => {
         it("keeps a reimbursed health expense reimbursed", async () => {
@@ -321,5 +356,27 @@ describe("updateExpense (unit, injected fake repo)", () => {
             expect(repo.updates[0]?.data.fundedFrom).toBe("savings");
             expect(repo.updates[0]?.data.amount).toBe(3000);
         });
+    });
+});
+
+it("Should attach recognized infrastructure reasons to the action's only failure record", async () => {
+    const { Prisma } = await import("@prisma/client");
+    const { reportDependencyFailure } =
+        await import("@/lib/observability/health");
+    appLog.mockClear();
+    getSessionUserIdMock.mockResolvedValue("u1");
+    const repo = new FakeExpenseRepository();
+    repo.seedExpense("e1", "u1");
+    const error = new Prisma.PrismaClientKnownRequestError(
+        "invented private query",
+        { code: "P2024", clientVersion: "test" },
+    );
+    vi.spyOn(repo, "updateForUser").mockRejectedValue(error);
+    const result = await updateExpense(validInput(), repo);
+    reportDependencyFailure(error);
+    expect(result).toMatchObject({ ok: false, code: "db_error" });
+    expect(appLog).toHaveBeenCalledExactlyOnceWith("expense.update_failed", {
+        operation: "update",
+        reason: "database_timeout",
     });
 });

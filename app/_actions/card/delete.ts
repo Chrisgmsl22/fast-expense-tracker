@@ -2,6 +2,8 @@
 
 import { getTranslations } from "next-intl/server";
 
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import type { ActionResult } from "@/lib/actions/result";
 import { cardRepository } from "@/lib/repositories";
@@ -84,6 +86,10 @@ export async function deleteCard(
         }
         return { ok: true, data: { id } };
     } catch (e) {
+        logAppEvent("card.write_failed", {
+            operation: "delete",
+            ...failureAttributes(e),
+        });
         console.error("deleteCard: db write failed", e);
         return {
             ok: false,

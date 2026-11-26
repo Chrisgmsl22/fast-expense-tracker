@@ -1,5 +1,7 @@
 "use server";
 
+import { failureAttributes } from "@/lib/observability/health";
+
 import { getTranslations } from "next-intl/server";
 
 import { signIn, InvalidCredentialsError } from "@/auth";
@@ -50,7 +52,7 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
                 message: t("invalidCredentials"),
             };
         }
-        logAppEvent("auth.login_failed");
+        logAppEvent("auth.login_failed", failureAttributes(error));
         return { ok: false, code: "error", message: t("unexpected") };
     }
     return { ok: true, data: undefined };
