@@ -1,5 +1,7 @@
 "use server";
 
+import { failureAttributes } from "@/lib/observability/health";
+
 import { getTranslations } from "next-intl/server";
 
 import { getSessionUserId } from "@/lib/auth/session";
@@ -151,7 +153,7 @@ export async function createExpense(
         // keep the typed contract so the form shows an error instead of
         // silently doing nothing.
         console.error("createExpense: db write failed", e);
-        logAppEvent("expense.create_failed");
+        logAppEvent("expense.create_failed", failureAttributes(e));
         return {
             ok: false,
             code: "db_error",

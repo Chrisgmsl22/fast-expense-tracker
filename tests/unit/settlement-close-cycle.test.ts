@@ -1,6 +1,11 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const { appLog } = vi.hoisted(() => ({ appLog: vi.fn() }));
+vi.mock("@/lib/observability/log", () => ({
+    logAppEvent: appLog,
+    logSummaryCopyEvent: appLog,
+}));
 const { getSessionUserIdMock } = vi.hoisted(() => ({
     getSessionUserIdMock: vi.fn(),
 }));
@@ -69,6 +74,7 @@ function setup(
 
 describe("closeSettlementCycle", () => {
     beforeEach(() => {
+        appLog.mockClear();
         getSessionUserIdMock.mockReset();
         getSessionUserIdMock.mockResolvedValue("u1");
     });
@@ -83,6 +89,7 @@ describe("closeSettlementCycle", () => {
             expect(res.data.marked).toEqual({ id: "m1", kind: "movement" });
         }
         expect(await settlementRepo.getCycleMarkers()).toHaveLength(1);
+        expect(appLog).toHaveBeenCalledExactlyOnceWith("settlement.closed");
     });
 
     it("refuses to close while money is still owed, and writes nothing", async () => {
@@ -96,6 +103,10 @@ describe("closeSettlementCycle", () => {
         expect(res.ok).toBe(false);
         if (!res.ok) expect(res.code).toBe("not_settled");
         expect(await settlementRepo.getCycleMarkers()).toHaveLength(0);
+        expect(appLog).toHaveBeenCalledExactlyOnceWith(
+            "settlement.close_blocked",
+            { reason: "not_settled" },
+        );
     });
 
     it("a double submit never writes a second marker", async () => {

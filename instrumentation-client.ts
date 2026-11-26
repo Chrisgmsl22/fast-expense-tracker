@@ -1,3 +1,4 @@
+import { filterBrowserAppLog } from "@/lib/observability/log";
 import * as Sentry from "@sentry/nextjs";
 
 // Client-side error capture (GlitchTip via the Sentry SDK — ADR-0014).
@@ -8,8 +9,11 @@ const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 Sentry.init({
     dsn,
     enabled: Boolean(dsn),
-    // Errors only. Web Vitals come from Vercel Speed Insights, not SDK tracing.
+    // Capture issues and the two allowlisted clipboard logs. Web Vitals use Speed Insights.
     tracesSampleRate: 0,
+    enableLogs: true,
+    dataCollection: { userInfo: false },
+    beforeSendLog: filterBrowserAppLog,
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

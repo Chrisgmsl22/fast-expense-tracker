@@ -1,5 +1,6 @@
 "use client";
 
+import { logSummaryCopyEvent } from "@/lib/observability/log";
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -64,9 +65,11 @@ export function CopySettlementButton({
                     new Date(),
                 ),
             );
+            logSummaryCopyEvent("settlement.summary_copied");
             setStatus("copied");
             setCopies((n) => n + 1);
         } catch {
+            logSummaryCopyEvent("settlement.summary_copy_failed");
             setStatus("failed");
         }
     }

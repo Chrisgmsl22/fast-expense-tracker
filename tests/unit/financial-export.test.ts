@@ -7,6 +7,11 @@ import { buildFinancialWorkbook } from "@/lib/export/workbook";
 import { financialExportResponse } from "@/lib/export/download";
 import type { FinancialExportData } from "@/lib/repositories/financial-export.repository";
 
+const { appLog } = vi.hoisted(() => ({ appLog: vi.fn() }));
+vi.mock("@/lib/observability/log", () => ({
+    logAppEvent: appLog,
+    logSummaryCopyEvent: appLog,
+}));
 const now = new Date("2026-11-24T02:00:00Z");
 const empty: FinancialExportData = {
     expenses: [],
@@ -249,7 +254,10 @@ describe("financial workbook", () => {
     });
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+    vi.restoreAllMocks();
+    appLog.mockClear();
+});
 
 describe("financial download response", () => {
     const request = (query = "type=year&period=2025") =>
@@ -276,6 +284,7 @@ describe("financial download response", () => {
         }
         expect(repository.read).not.toHaveBeenCalled();
         expect(generate).not.toHaveBeenCalled();
+        expect(appLog).not.toHaveBeenCalled();
     });
     it("returns no_data for valid future years and months without reading or generating", async () => {
         const repository = { read: vi.fn(async () => empty) };
@@ -380,6 +389,7 @@ describe("financial download response", () => {
         );
         expect(repository.read).toHaveBeenCalledTimes(1);
         expect(response.status).toBe(200);
+        expect(appLog).toHaveBeenCalledExactlyOnceWith("export.generated");
         const reader = new ExcelJS.Workbook();
         await reader.xlsx.load(await response.arrayBuffer());
         expect(reader.getWorksheet("Income")!.getCell("D2").value).toBe(1200);
@@ -463,5 +473,9 @@ describe("financial download response", () => {
         );
         expect(response.status).toBe(500);
         expect(await response.json()).toEqual({ code: "export_failed" });
+        expect(appLog).toHaveBeenCalledExactlyOnceWith(
+            "export.generate_failed",
+            {},
+        );
     });
 });

@@ -41,6 +41,12 @@ import type {
     SettlementJournalItem,
 } from "@/lib/services/settlement/settlement.service";
 
+const { appLog } = vi.hoisted(() => ({ appLog: vi.fn() }));
+vi.mock("@/lib/observability/log", () => ({
+    logAppEvent: appLog,
+    logSummaryCopyEvent: appLog,
+}));
+
 const LABEL = "Copy settlement summary to clipboard";
 
 const openRow: SettlementJournalItem = {
@@ -126,6 +132,7 @@ async function clickCopy(button: HTMLElement) {
 let writeText: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
+    appLog.mockClear();
     writeText = vi.fn().mockResolvedValue(undefined);
     setClipboard({ writeText });
 });
@@ -195,6 +202,9 @@ describe("CopySettlementButton", () => {
             />,
         );
         await clickCopy(screen.getByRole("button", { name: LABEL }));
+        expect(appLog).toHaveBeenCalledExactlyOnceWith(
+            "settlement.summary_copied",
+        );
         expect(writeText).toHaveBeenCalledExactlyOnceWith(
             expect.stringContaining("🧾 *Settlement Jul 10, 2026*"),
         );
@@ -308,6 +318,9 @@ describe("CopySettlementButton", () => {
         );
         const button = screen.getByRole("button", { name: LABEL });
         await clickCopy(button);
+        expect(appLog).toHaveBeenCalledExactlyOnceWith(
+            "settlement.summary_copy_failed",
+        );
         const message = screen.getByText("Could not copy");
         expect(screen.queryByText("Copied")).toBeNull();
         // After the icon, so the icon keeps its place.

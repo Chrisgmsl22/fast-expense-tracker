@@ -2,6 +2,8 @@
 
 import { getTranslations } from "next-intl/server";
 
+import { logAppEvent } from "@/lib/observability/log";
+import { failureAttributes } from "@/lib/observability/health";
 import { getSessionUserId } from "@/lib/auth/session";
 import { localizeFieldErrors, toFieldErrors } from "@/lib/actions/field-errors";
 import type { ActionResult } from "@/lib/actions/result";
@@ -84,8 +86,13 @@ export async function addCard(
             type: parsed.data.type,
             color: parsed.data.color,
         });
+        logAppEvent("card.created");
         return { ok: true, data: { name: parsed.data.name } };
     } catch (e) {
+        logAppEvent("card.write_failed", {
+            operation: "create",
+            ...failureAttributes(e),
+        });
         console.error("addCard: db write failed", e);
         return {
             ok: false,
