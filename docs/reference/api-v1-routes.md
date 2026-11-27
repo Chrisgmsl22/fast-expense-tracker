@@ -17,9 +17,9 @@ the chore that ships the route.
 | Method | Path                   | Returns                                                                                                   | Reuses                                             | PR                  |
 | ------ | ---------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------- |
 | GET    | `/me`                  | `id`, `name`, `email`                                                                                     | Built by the auth readiness item, not by this spec | auth readiness item |
-| PATCH  | `/me`                  | The user after the name change                                                                            | `changeDisplayName` (_core_)                       | CHORE-59            |
-| GET    | `/onboarding`          | `onboardedAt` and the wizard data: name, split rule, fixed income, budget rule, cards, starter categories | `loadOnboarding(userId, month, sources)`           | CHORE-59            |
-| POST   | `/onboarding/complete` | `onboardedAt`. A repeat keeps the first timestamp                                                         | `finishOnboarding` (_core_)                        | CHORE-59            |
+| PATCH  | `/me`                  | The user after the name change                                                                            | `changeDisplayName` (_core_)                       | CHORE-61            |
+| GET    | `/onboarding`          | `onboardedAt` and the wizard data: name, split rule, fixed income, budget rule, cards, starter categories | `loadOnboarding(userId, month, sources)`           | CHORE-61            |
+| POST   | `/onboarding/complete` | `onboardedAt`. A repeat keeps the first timestamp                                                         | `finishOnboarding` (_core_)                        | CHORE-61            |
 | GET    | `/openapi.json`        | The OpenAPI document. Public, no token                                                                    | The committed file (spec 0014 §8)                  | CHORE-53            |
 
 ### Dashboard summary
@@ -63,8 +63,8 @@ translates them with the same key list the web uses.
 | GET    | `/cards/{id}/history` | One month of card lines, newest first, each with `signedAmount` and `balanceAfter`                          | `getCardHistory` (_core_), `withRunningBalance`  | CHORE-58 |
 | POST   | `/cards`              | The created card. The action returns only a name today, so the core function returns the row                | `addCard` (_core_)                               | CHORE-59 |
 | PATCH  | `/cards/{id}`         | The updated card                                                                                            | `updateCard` (_core_)                            | CHORE-59 |
-| POST   | `/cards/{id}/archive` | The archived card                                                                                           | `archiveCard` (_core_)                           | CHORE-59 |
-| POST   | `/cards/{id}/restore` | The restored card                                                                                           | `restoreCard` (_core_)                           | CHORE-59 |
+| POST   | `/cards/{id}/archive` | `id`. A repeat returns `not_found` (spec 0014 §7)                                                           | `archiveCard` (_core_)                           | CHORE-59 |
+| POST   | `/cards/{id}/restore` | `id` and `name`. A repeat returns `not_found`                                                               | `restoreCard` (_core_)                           | CHORE-59 |
 | DELETE | `/cards/{id}`         | `id`. Refused with `has_references` when a row uses the card                                                | `deleteCard` (_core_)                            | CHORE-59 |
 
 The expense form reads `GET /cards` and offers the cards with no `archivedAt`.
@@ -86,8 +86,8 @@ The expense form reads `GET /cards` and offers the cards with no `archivedAt`.
 
 | Method | Path                | Returns                                                                                                                                      | Reuses                                 | PR       |
 | ------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | -------- |
-| GET    | `/settlement`       | Balance (amount, direction, breakdown), the open-cycle journal, carried-over amount, the viewed month's journal, closed cycles of that month | `getSettlement(userId, deps, {month})` | CHORE-57 |
-| POST   | `/settlement/close` | The row that closed the cycle, or `alreadyClosed: true` on a repeat                                                                          | `closeSettlementCycle` (_core_)        | CHORE-57 |
+| GET    | `/settlement`       | Balance (amount, direction, breakdown), the open-cycle journal, carried-over amount, the viewed month's journal, closed cycles of that month | `getSettlement(userId, deps, {month})` | CHORE-60 |
+| POST   | `/settlement/close` | The row that closed the cycle, or `alreadyClosed: true` on a repeat                                                                          | `closeSettlementCycle` (_core_)        | CHORE-60 |
 
 ### Income
 
@@ -105,7 +105,7 @@ The expense form reads `GET /cards` and offers the cards with no `archivedAt`.
 | GET    | `/settings`             | Split rule, the budget rule in force this month, `currency` (`MXN`), `timeZone` | `settingsRepo.getSettings`, `budgetRuleRepo.listRules`, `resolveBudgetRule` | CHORE-54 |
 | PUT    | `/settings/split-rule`  | The split rule after the change                                                 | `saveSplitRule` (_core_)                                                    | CHORE-59 |
 | PUT    | `/settings/budget-rule` | The rule and its `effectiveMonth`. The server picks the month                   | `saveBudgetRule` (_core_)                                                   | CHORE-59 |
-| GET    | `/financial-export`     | The Excel file for a year or a month                                            | `financialExportResponse(request, userId, repo)`, already takes `userId`    | CHORE-59 |
+| GET    | `/financial-export`     | The Excel file for a year or a month. Failures use the spec 0014 §4 shape       | `financialExportResponse(request, userId, repo)`, already takes `userId`    | CHORE-61 |
 
 ### Not in v1
 
@@ -134,14 +134,14 @@ makes no API call.
 
 ### 02 Dashboard
 
-| Screen                                    | Routes                                                                |
-| ----------------------------------------- | --------------------------------------------------------------------- |
-| Dashboard top, scrolled 1 and 2           | `GET /dashboard` (CHORE-53 fields)                                    |
-| Month rail, month breakdown sheet         | `GET /dashboard` (CHORE-56 fields), `GET /feed` for the activity rows |
-| All activity                              | `GET /feed`                                                           |
-| Month picker                              | None                                                                  |
-| Category detail, with and without a limit | `GET /categories/{slug}`, `DELETE /expenses/{id}`                     |
-| Monthly limit sheet                       | `PUT /categories/{slug}/budget`                                       |
+| Screen                                                | Routes                                                                |
+| ----------------------------------------------------- | --------------------------------------------------------------------- |
+| Dashboard top, scrolled 1 and 2                       | `GET /dashboard` (CHORE-53 fields)                                    |
+| Month rail, month breakdown sheet, breakdown scrolled | `GET /dashboard` (CHORE-56 fields), `GET /feed` for the activity rows |
+| All activity                                          | `GET /feed`                                                           |
+| Month picker                                          | None                                                                  |
+| Category detail, with and without a limit             | `GET /categories/{slug}`, `DELETE /expenses/{id}`                     |
+| Monthly limit sheet                                   | `PUT /categories/{slug}/budget`                                       |
 
 ### 03 Expenses and add
 
@@ -199,7 +199,7 @@ feature, as an additive change to v1.
 | Recurring: form switch, row badge, rollover sheet, after "Add them", Settings row                                     | A recurring flag, rollover candidates, a bulk clone, a per-month prompt state                      | Slices 3.1 to 3.4                        |
 | Multi-currency: USD expense, validation, list row                                                                     | `currency` and an original amount on the expense                                                   | Slices 5.1 and 5.2                       |
 | Partial reimbursement, form and list                                                                                  | A partial amount and a linked card payment                                                         | CHORE-38                                 |
-| Optimistic rows, offline and failed                                                                                   | Safe retries for writes. v1 has them (spec 0014 §7). The queue is iOS work                         | CHORE-55 and later write PRs             |
+| Optimistic rows, offline and failed                                                                                   | Safe retries for writes. v1 has them (spec 0014 §7). The queue is iOS work                         | CHORE-55 and the later create routes     |
 | Card balances with archived cards, points redemption sheet, card detail after a redemption, tile states, no cards yet | Points redemptions, and archived cards in the balances                                             | CHORE-24, BUG-10                         |
 | Settlement, History tab                                                                                               | A list of every closed cycle. `GET /settlement` returns only the cycles closed in the viewed month | No owner. Needs a decision               |
 | Savings                                                                                                               | The figures exist in `GET /dashboard` and `GET /feed`. The screen is a proposal                    | No owner. Needs a decision               |
