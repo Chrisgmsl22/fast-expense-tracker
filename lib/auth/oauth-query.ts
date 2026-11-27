@@ -1,3 +1,6 @@
+/** The signed OAuth query on `/login` or `/consent` is stale or tampered. */
+export class OAuthRequestExpiredError extends Error {}
+
 /**
  * The provider's signed query on `/login` and `/consent`, rebuilt from search
  * params; `undefined` without a signature, so a plain visit is unchanged.

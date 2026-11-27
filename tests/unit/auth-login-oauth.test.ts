@@ -1,13 +1,20 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { signInMock } = vi.hoisted(() => ({ signInMock: vi.fn() }));
+const { signInMock, errorMock, ExpiredMock } = vi.hoisted(() => ({
+    signInMock: vi.fn(),
+    errorMock: vi.fn(),
+    ExpiredMock: class extends Error {},
+}));
 vi.mock("@/auth", () => ({
     signIn: signInMock,
     InvalidCredentialsError: class extends Error {},
 }));
+vi.mock("@/lib/auth/oauth-query", () => ({
+    OAuthRequestExpiredError: ExpiredMock,
+}));
 vi.mock("@sentry/nextjs", () => ({
-    logger: { info: vi.fn(), error: vi.fn() },
+    logger: { info: vi.fn(), error: errorMock },
     getGlobalScope: () => ({ getScopeData: () => ({ attributes: {} }) }),
     withIsolationScope: (callback: (scope: { clear: () => void }) => unknown) =>
         callback({ clear: vi.fn() }),
@@ -16,10 +23,14 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 import { loginAction } from "@/app/_actions/auth/login";
+import { setServerLocale } from "@/tests/support/intl";
 
 const credentials = { email: "oauth@example.com", password: "Invented-1" };
 
-beforeEach(() => signInMock.mockReset());
+beforeEach(() => {
+    signInMock.mockReset();
+    errorMock.mockReset();
+});
 
 describe("loginAction OAuth continuation", () => {
     it("guard: passes the signed query to signIn and returns the next URL", async () => {
@@ -47,4 +58,23 @@ describe("loginAction OAuth continuation", () => {
         });
         expect(signInMock.mock.calls[0]![1]).not.toHaveProperty("oauthQuery");
     });
+
+    it.each([
+        ["en", "This sign-in request expired. Start again from the app."],
+        [
+            "es",
+            "Esta solicitud de inicio de sesión venció. Vuelve a empezar desde la app.",
+        ],
+    ] as const)(
+        "guard: explains an expired signed query in %s without an error log",
+        async (locale, message) => {
+            setServerLocale(locale);
+            signInMock.mockRejectedValue(new ExpiredMock());
+
+            expect(
+                await loginAction({ ...credentials, oauthQuery: "sig=old" }),
+            ).toEqual({ ok: false, code: "oauth_expired", message });
+            expect(errorMock).not.toHaveBeenCalled();
+        },
+    );
 });

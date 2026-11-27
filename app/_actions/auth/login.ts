@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import { signIn, InvalidCredentialsError } from "@/auth";
+import { OAuthRequestExpiredError } from "@/lib/auth/oauth-query";
 import { loginSchema, type LoginInput } from "@/lib/schemas/auth";
 import type { ActionResult, FieldErrors } from "@/lib/actions/result";
 import { localizeFieldErrors } from "@/lib/actions/field-errors";
@@ -13,7 +14,11 @@ import { authMessages } from "./schema-messages";
 import { logAppEvent } from "@/lib/observability/log";
 
 /** Failure modes the login form can branch on. */
-export type LoginCode = "validation" | "invalid_credentials" | "error";
+export type LoginCode =
+    | "validation"
+    | "invalid_credentials"
+    | "oauth_expired"
+    | "error";
 
 /** `data` is the next OAuth URL when the login continues an authorization. */
 export type LoginResult = ActionResult<
@@ -64,6 +69,13 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
                 ok: false,
                 code: "invalid_credentials",
                 message: t("invalidCredentials"),
+            };
+        }
+        if (error instanceof OAuthRequestExpiredError) {
+            return {
+                ok: false,
+                code: "oauth_expired",
+                message: t("oauthExpired"),
             };
         }
         logAppEvent("auth.login_failed", failureAttributes(error));
