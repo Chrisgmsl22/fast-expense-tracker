@@ -493,7 +493,7 @@
             "plan": "Shipped: jwt() and oauthProvider() with issuer <AUTH_URL>/api/auth, one resource <AUTH_URL>/api/v1 (JWT audience), scopes openid profile email offline_access fet:api, S256 PKCE, refresh rotation, and no client management over HTTP. Eight additive tables, discovery and JWKS endpoints, and a consent page shown once per user and client. registerNativeClient() in lib/auth/oauth-client.ts registers a public native client; the dev seed adds a disposable local client. The production iOS client lands later as a reviewed migration INSERT.",
             "status": "shipped",
             "spec": "docs/specs/0009-auth-module-better-auth.md",
-            "pr": null,
+            "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/122",
             "issue": null
         },
         {
