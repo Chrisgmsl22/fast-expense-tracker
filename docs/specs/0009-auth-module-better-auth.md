@@ -10,7 +10,7 @@ This phase delivers the auth service and its tested mobile contract. The Swift
 app and business API scope follow in mobile planning. Technical questions in
 this spec are not resolved merely by design approval.
 **Type**: Platform / auth migration
-**Chores**: CHORE-39 (PR 1) → CHORE-40 (PR 2) → CHORE-41 (PR 3) → CHORE-42 (PR 4); CHORE-43 (PR 6) after the waiting period. PR 5 (`/api/v1`) is registered when the iOS work starts. See [`chores.json`](../roadmap/chores.json).
+**Chores**: CHORE-39 (PR 1) → CHORE-40 (PR 2) → CHORE-41 (PR 3) → CHORE-42 (PR 4); CHORE-43 (PR 6) after the waiting period. PR 5 (`/api/v1`) is designed in [spec 0014](./0014-api-v1.md) and split into CHORE-53 to CHORE-61. See [`chores.json`](../roadmap/chores.json).
 **Relates**: [ADR-0009](../decisions/0009-login-credential-security.md), [ADR-0026](../decisions/0026-gate-public-signup-behind-global-config.md), BUG-3 (idle session), CHORE-8.e, CHORE-32, CHORE-33, CHORE-34, CHORE-36
 **Decisions**: [ADR-0027](../decisions/0027-replace-authjs-with-better-auth.md) (Better Auth, self-hosted) and [ADR-0028](../decisions/0028-native-clients-use-oauth-with-pkce.md) (native clients use OAuth 2.1 with PKCE, RFC 8252).
 
@@ -200,7 +200,7 @@ signup, CHORE-33) before PR 6. §10 asks which one the library supports.
 | 2   | `fet-chore-auth-expand-schema` | The §5 PR 2 rows. Migration test. Runbook surveys.                                                                                                                                                                                                                      | 1                                |
 | 3   | `fet-chore-better-auth-switch` | Better Auth config, `app/api/auth/[...all]`, login, logout, signup and renew actions, proxy gate, `IdleSessionGuard` client calls, credential backfill with guard, rate limit with `storage: "database"`, remove `next-auth`. Reviewer review and a real-browser check. | 2, restore point                 |
 | 4   | `fet-feat-oauth-provider`      | `jwt()` and `oauthProvider()` plugins, their tables, the consent page, the iOS client registration (public, PKCE, private-use redirect URI)                                                                                                                             | 3                                |
-| 5   | `fet-feat-api-v1`              | Core functions out of the actions. `/api/v1` read and write routes. Access-token check. OpenAPI document for the Swift client.                                                                                                                                          | 4                                |
+| 5   | `fet-feat-api-v1`              | Core functions out of the actions. `/api/v1` read and write routes. Access-token check. OpenAPI document for the Swift client. Split into 9 PRs in [spec 0014](./0014-api-v1.md).                                                                                       | 4                                |
 | 6   | `fet-chore-auth-contract`      | Drop `User.password`. Remove the dual-write hook. Update `seed.ts`.                                                                                                                                                                                                     | 3, waiting period, restore point |
 
 Every PR follows the Full Plan rule (`slice-planning.md`), because each one touches auth or a
