@@ -609,6 +609,90 @@
             "spec": "docs/specs/0012-observability-and-product-metrics.md",
             "pr": "https://github.com/Chrisgmsl22/fast-expense-tracker/pull/119",
             "issue": null
+        },
+        {
+            "id": "CHORE-53",
+            "name": "api-v1-foundation",
+            "priority": 46,
+            "title": "API v1 PR 1: route harness, OpenAPI document and the dashboard summary",
+            "description": "Spec 0014 §10 row 1. The smallest slice that shows real data on the phone: the Dashboard top screen. Reuses getDashboardSummary, which already takes userId first, so no action changes.",
+            "plan": "Full Plan required (auth). (1) lib/api/v1/handler.ts: resolve the user with getApiUserId(request) first, map ActionResult to HTTP per spec 0014 §4, Cache-Control private no-store, locale from Accept-Language. (2) Strict YYYY-MM-DD and YYYY-MM schemas; a future month is a validation error. (3) lib/api/v1/contract.ts and pnpm api:openapi writing docs/api/openapi-v1.json with z.toJSONSchema; a test fails when the committed file is stale. (4) GET /api/v1/dashboard and GET /api/v1/openapi.json. (5) Tests: 401 without or with a bad token, 403 without the fet:api scope, the web cookie is ignored, a test fails when a route under app/api/v1 skips the wrapper, the response parses with its schema, userId scope. Depends on CHORE-42 and the auth readiness item (getApiUserId and GET /api/v1/me).",
+            "status": "open",
+            "spec": "docs/specs/0014-api-v1.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-54",
+            "name": "api-v1-expense-reads",
+            "priority": 47,
+            "title": "API v1 PR 2: expense feed, pickers and settings reads",
+            "description": "Spec 0014 §10 row 2. Serves the Expenses list, its filter and search, and the pickers in the Add form.",
+            "plan": "(1) GET /feed for one month with server totals, optional categoryId and q filters; the settlement balance ignores the filter. (2) GET /expenses/{id} through a core getExpenseForEdit(userId, id). (3) GET /categories with bucket per category, GET /cards with archived cards, GET /settings with currency and timeZone. (4) Sort newest first by date, createdAt, id in the repositories, which also fixes the web order. (5) Tests: totals follow the filter, the balance does not, same-day order is stable, another user's expense id is not_found, response schemas. Depends on CHORE-53.",
+            "status": "open",
+            "spec": "docs/specs/0014-api-v1.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-55",
+            "name": "api-v1-expense-writes",
+            "priority": 48,
+            "title": "API v1 PR 3: expense and partner-payment writes, safe to retry",
+            "description": "Spec 0014 §10 row 3 and §7. Moves the expense writes out of the actions into core functions that take userId first, and makes creates safe to send twice.",
+            "plan": "(1) lib/core/expense: create, update, delete, addPartnerPayment, updatePartnerPayment with the action logic, freeze checks, ownership checks and logs unchanged; the actions call them. (2) POST /expenses, PUT and DELETE /expenses/{id}, POST /partner-payments, PUT /partner-payments/{id}. (3) Optional client UUID on create: same id and user returns the stored row with 200, another user's id returns id_conflict. (4) Tests: a repeat create writes one row, another user's categoryId, subcategoryId and cardId are refused, actualExpenditure is computed on the server, a closed cycle returns 409, the existing action tests still pass. Depends on CHORE-53.",
+            "status": "open",
+            "spec": "docs/specs/0014-api-v1.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-56",
+            "name": "api-v1-category",
+            "priority": 49,
+            "title": "API v1 PR 4: category detail, monthly limit and the dashboard breakdown",
+            "description": "Spec 0014 §10 row 4. Serves the category screens, the monthly limit sheet and the month rail.",
+            "plan": "(1) GET /categories/{slug} through getCategoryDetail. (2) PUT /categories/{slug}/budget through a core setCategoryBudget; move getBySlug inside the try so a database error returns server_error. (3) Add the breakdown fields and the open settlement balance to GET /dashboard as new fields. (4) Tests: unknown slug is not_found, null clears a limit, another user's slug is not_found, the OpenAPI change is additive. Depends on CHORE-53.",
+            "status": "open",
+            "spec": "docs/specs/0014-api-v1.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-57",
+            "name": "api-v1-settlement",
+            "priority": 50,
+            "title": "API v1 PR 5: movements and settlement",
+            "description": "Spec 0014 §10 row 5. Serves the settlement screens and the card payment, transfer and debt sheets.",
+            "plan": "(1) lib/core/movement for the 8 movement actions and lib/core/settlement for closeSettlementCycle, logic unchanged. (2) GET and DELETE /movements/{id}; POST and PUT for /card-payments, /transfers and /partner-debts; GET /settlement; POST /settlement/close. (3) Client UUIDs on create as in CHORE-55. (4) Tests: a repeat close returns alreadyClosed, a closed row returns 409, another user's cardId is refused, the existing action tests still pass. Depends on CHORE-53; reuses the retry helper from CHORE-55 when it has merged.",
+            "status": "open",
+            "spec": "docs/specs/0014-api-v1.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-58",
+            "name": "api-v1-money",
+            "priority": 51,
+            "title": "API v1 PR 6: income, card balances and card history",
+            "description": "Spec 0014 §10 row 6. Serves the Income screen, Card balances and Card detail.",
+            "plan": "(1) GET /income; PUT /income/fixed (future month refused); POST /income/variable; DELETE /income/variable/{id}. (2) GET /cards/balances through listBalances and summarizeCardBalances. (3) GET /cards/{id}/history through a core getCardHistory. (4) Tests: card balances use amount, not actualExpenditure; the running balance matches the web; another user's card id is not_found. Depends on CHORE-53.",
+            "status": "open",
+            "spec": "docs/specs/0014-api-v1.md",
+            "pr": null,
+            "issue": null
+        },
+        {
+            "id": "CHORE-59",
+            "name": "api-v1-settings",
+            "priority": 52,
+            "title": "API v1 PR 7: settings, cards, onboarding and export",
+            "description": "Spec 0014 §10 row 7. Serves Settings, the card sheets, native onboarding and Export data.",
+            "plan": "(1) PATCH /me; GET /onboarding; POST /onboarding/complete. (2) POST /cards, PATCH /cards/{id}, archive, restore and DELETE; CardRepository.create returns the new row. (3) PUT /settings/split-rule and /settings/budget-rule; the server picks the effective month. (4) GET /api/v1/financial-export with a bearer token, reusing financialExportResponse. (5) Tests: the card limit and the duplicate name return 409, a repeat onboarding keeps the first timestamp, the budget rule must total 100, userId scope. Depends on CHORE-53.",
+            "status": "open",
+            "spec": "docs/specs/0014-api-v1.md",
+            "pr": null,
+            "issue": null
         }
     ]
 }
