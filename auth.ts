@@ -37,10 +37,12 @@ export async function signIn(
         password: string;
         redirectTo?: string;
         redirect?: boolean;
+        oauthQuery?: string;
     },
-): Promise<void> {
+): Promise<string | undefined> {
     const requestHeaders = new Headers(await headers());
     requestHeaders.set("content-type", "application/json");
+    if (input.oauthQuery) requestHeaders.set("accept", "application/json");
     const baseURL = (await authProvider.$context).baseURL;
     const response = await authProvider.handler(
         new Request(baseURL + "/sign-in/email", {
@@ -49,12 +51,25 @@ export async function signIn(
             body: JSON.stringify({
                 email: input.email,
                 password: input.password,
+                ...(input.oauthQuery && { oauth_query: input.oauthQuery }),
             }),
         }),
     );
     if (response.status === 401) throw new InvalidCredentialsError();
     if (!response.ok) throw new Error("Authentication failed");
     await publishAuthCookies(response);
+    if (!input.oauthQuery) return undefined;
+    const body: unknown = await response.json();
+    return isRedirectBody(body) ? body.url : undefined;
+}
+
+function isRedirectBody(body: unknown): body is { url: string } {
+    return (
+        typeof body === "object" &&
+        body !== null &&
+        "url" in body &&
+        typeof body.url === "string"
+    );
 }
 
 export async function signOut(

@@ -152,7 +152,9 @@ describe("Better Auth core expand migration", () => {
                 async (tx) => {
                     // PostgreSQL rolls all DDL back so the normal suite keeps its current schema.
                     for (const table of AUTH_TABLES) {
-                        await tx.$executeRawUnsafe(`DROP TABLE "${table}"`);
+                        await tx.$executeRawUnsafe(
+                            `DROP TABLE "${table}" CASCADE`,
+                        );
                     }
                     await tx.$executeRawUnsafe(`ALTER TABLE "User"
                 DROP COLUMN "emailVerified", DROP COLUMN "image",
