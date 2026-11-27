@@ -4,9 +4,9 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { signedOAuthQuery } from "@/lib/auth/oauth-query";
 
-// The route gate in auth.config.ts bounces an already-signed-in visitor to
-// /dashboard, so this only renders when logged out. It never reads the signup
-// switch (ADR-0026): the signup page shows the closed message itself.
+// proxy.ts bounces a signed-in visitor to /dashboard unless the URL continues an
+// OAuth authorization. It never reads the signup switch (ADR-0026): the signup
+// page shows the closed message itself.
 export default async function LoginPage({
     searchParams,
 }: {

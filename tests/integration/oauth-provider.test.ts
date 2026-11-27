@@ -3,7 +3,15 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { oauthProviderAuthServerMetadata } from "@better-auth/oauth-provider";
 import { createLocalJWKSet, jwtVerify } from "jose";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+    afterAll,
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
+} from "vitest";
 
 vi.hoisted(() => vi.stubEnv("AUTH_URL", "http://localhost:3995"));
 
@@ -33,6 +41,7 @@ const account = {
 };
 
 afterAll(() => vi.unstubAllEnvs());
+afterEach(() => vi.useRealTimers());
 
 function call(path: string, init: RequestInit = {}) {
     const headers = new Headers(init.headers);
@@ -269,7 +278,13 @@ describe("OAuth 2.1 provider", () => {
 
     it("guard: keeps an offline_access refresh token on web logout and drops it on revoke", async () => {
         const { tokens, cookie } = await tokensFor();
+        expect(await db.oAuthRefreshToken.count()).toBe(1);
         expect((await postJson("/sign-out", {}, cookie)).status).toBe(200);
+        expect(await db.session.count({ where: { userId } })).toBe(0);
+        expect(await db.oAuthRefreshToken.findFirstOrThrow()).toMatchObject({
+            sessionId: null,
+            revoked: null,
+        });
         const afterLogout = await refresh(tokens.refresh_token);
         expect(afterLogout.status).toBe(200);
         const { refresh_token } = await afterLogout.json();
@@ -363,5 +378,41 @@ describe("OAuth 2.1 provider", () => {
         const again = await authorize(authorizeQuery(challenge), cookie);
         expect(again.href.startsWith(redirectUri)).toBe(true);
         expect(again.searchParams.get("code")).toEqual(expect.any(String));
+    });
+
+    it("guard: prompt=login from a signed-in browser reaches the login form and continues", async () => {
+        const { cookie } = await signIn();
+        const login = await authorize(
+            authorizeQuery(pkce().challenge, { prompt: "login" }),
+            cookie,
+        );
+        expect(login.pathname).toBe("/login");
+        const again = await postJson(
+            "/sign-in/email",
+            {
+                email: account.email,
+                password: account.password,
+                oauth_query: login.search.slice(1),
+            },
+            cookie,
+        );
+        expect(again.status).toBe(200);
+        expect(new URL((await again.json()).url, origin).pathname).toBe(
+            "/consent",
+        );
+        expect(await db.session.count({ where: { userId } })).toBe(2);
+    });
+
+    it("guard: refuses sign-in with an expired signed query as invalid_signature", async () => {
+        const login = await authorize(authorizeQuery(pkce().challenge));
+        vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + 601_000 });
+        const response = await postJson("/sign-in/email", {
+            email: account.email,
+            password: account.password,
+            oauth_query: login.search.slice(1),
+        });
+        expect(response.status).toBe(400);
+        expect((await response.json()).error).toBe("invalid_signature");
+        expect(await db.session.count()).toBe(0);
     });
 });
