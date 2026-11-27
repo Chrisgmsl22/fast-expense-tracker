@@ -1,7 +1,6 @@
 /**
- * The signed authorization query the OAuth provider appends to `/login` and
- * `/consent`, rebuilt from Next's search params. `undefined` when the URL
- * carries no signature, so a plain visit keeps today's behavior.
+ * The provider's signed query on `/login` and `/consent`, rebuilt from search
+ * params; `undefined` without a signature, so a plain visit is unchanged.
  */
 export function signedOAuthQuery(
     params: Record<string, string | string[] | undefined>,

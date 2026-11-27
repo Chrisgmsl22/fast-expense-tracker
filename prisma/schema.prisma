@@ -387,10 +387,9 @@ model RateLimit {
   @@map("rateLimit")
 }
 
-// OAuth 2.1 provider tables (CHORE-42), owned by the Better Auth `jwt()` and
-// `oauthProvider()` plugins. Column names and nullability follow the plugin
-// schema in @better-auth/oauth-provider 1.7.12; the app never writes them
-// outside lib/auth/oauth-client.ts.
+// OAuth 2.1 provider tables (CHORE-42), owned by Better Auth `jwt()` and
+// `oauthProvider()`; columns follow @better-auth/oauth-provider 1.7.12. The app
+// writes them only in lib/auth/oauth-client.ts.
 
 model Jwks {
   id         String    @id
