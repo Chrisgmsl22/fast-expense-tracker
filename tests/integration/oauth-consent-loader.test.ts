@@ -28,7 +28,11 @@ import {
     apiResourceIdentifier,
     registerNativeClient,
 } from "@/lib/auth/oauth-client";
-import { answerConsent, loadConsentRequest } from "@/lib/auth/oauth-consent";
+import {
+    answerConsent,
+    ConsentSessionMissingError,
+    loadConsentRequest,
+} from "@/lib/auth/oauth-consent";
 import { OAuthRequestExpiredError } from "@/lib/auth/oauth-query";
 import { PrismaUserProvisioningRepository } from "@/lib/repositories/user-provisioning.repository";
 
@@ -181,6 +185,15 @@ describe("answerConsent", () => {
         const url = new URL(await answerConsent(false, await consentQuery()));
         expect(url.searchParams.get("error")).toBe("access_denied");
         expect(url.searchParams.get("code")).toBeNull();
+    });
+
+    it("guard: a request without a session cookie throws ConsentSessionMissingError", async () => {
+        const query = await consentQuery();
+        requestHeaders.current = new Headers(browser);
+        await expect(answerConsent(true, query)).rejects.toBeInstanceOf(
+            ConsentSessionMissingError,
+        );
+        expect(await db.oAuthConsent.count()).toBe(0);
     });
 
     it("guard: an expired query throws OAuthRequestExpiredError", async () => {
