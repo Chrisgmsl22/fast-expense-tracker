@@ -12,6 +12,10 @@
 
 import { PrismaClient } from "@prisma/client";
 
+import {
+    apiResourceIdentifier,
+    registerNativeClient,
+} from "../lib/auth/oauth-client.ts";
 import { normalizeEmail } from "../lib/domain/user.ts";
 
 // CDMX is UTC-6 (no DST). Capture stores a calendar day as that day's local
@@ -172,6 +176,16 @@ const CATEGORY_BUDGETS: Record<string, number> = {
 
 const DEMO_MONTHLY_INCOME = 60000;
 
+// Disposable local OAuth client for the iOS flow. Never a production row.
+export const DEV_OAUTH_CLIENT = {
+    clientId: "fet-dev-ios",
+    name: "FET Dev iOS (local)",
+    redirectUris: [
+        "fet-dev://oauth/callback",
+        "http://127.0.0.1:8976/callback",
+    ],
+};
+
 function lastNMonths(n: number): { year: number; monthIndex: number }[] {
     const now = new Date();
     const out: { year: number; monthIndex: number }[] = [];
@@ -189,6 +203,9 @@ async function main(): Promise<void> {
     if (!adminEmail) {
         throw new Error("ADMIN_EMAIL must be set (run `pnpm db:seed` first).");
     }
+    const authUrl = process.env.AUTH_URL;
+    if (!authUrl)
+        throw new Error("AUTH_URL must be set for the dev OAuth client.");
 
     const sharePercent = Number(
         process.env.NEXT_PUBLIC_DEFAULT_SHARE_PERCENT ?? "0.68",
@@ -275,6 +292,15 @@ async function main(): Promise<void> {
             update: { monthlyIncome: DEMO_MONTHLY_INCOME },
         });
 
+        const oauth = await registerNativeClient(db, {
+            ...DEV_OAUTH_CLIENT,
+            resource: apiResourceIdentifier(authUrl),
+        });
+
+        console.log(
+            `Dev OAuth client ${DEV_OAUTH_CLIENT.clientId}: ` +
+                (oauth.created ? "created." : "already present."),
+        );
         console.log(
             `Dev seed complete: ${created} expenses across 3 months, ` +
                 `${Object.keys(CATEGORY_BUDGETS).length} category budgets, ` +
