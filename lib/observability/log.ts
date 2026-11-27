@@ -10,6 +10,7 @@ export const APP_LOG_LEVELS = {
     "expense.delete_failed": "error",
     "auth.signup_completed": "info",
     "auth.signup_failed": "error",
+    "auth.oauth_consent_failed": "error",
     "onboarding.completed": "info",
     "onboarding.complete_failed": "error",
     "card.created": "info",
@@ -72,6 +73,8 @@ export const APP_LOG_REASONS = [
     "database_timeout",
     "database_unavailable",
     "configuration_missing",
+    "oauth_query_invalid",
+    "session_missing",
 ] as const;
 export type AppLogReason = (typeof APP_LOG_REASONS)[number];
 const APP_LOG_OPERATIONS = [

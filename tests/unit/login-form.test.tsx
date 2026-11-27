@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { renderWithIntl } from "@/tests/support/intl";
 
@@ -147,6 +147,49 @@ describe("LoginForm", () => {
             expect(replaceMock).toHaveBeenCalledExactlyOnceWith("/dashboard"),
         );
         expect(screen.queryByRole("alert")).toBeNull();
+    });
+});
+
+describe("LoginForm OAuth continuation", () => {
+    const assignMock = vi.fn();
+    beforeEach(() => {
+        assignMock.mockReset();
+        vi.stubGlobal("location", { ...window.location, assign: assignMock });
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("guard: sends the signed query and opens the provider's next URL", async () => {
+        loginActionMock.mockResolvedValue({
+            ok: true,
+            data: "/consent?client_id=invented&sig=abc",
+        });
+        renderWithIntl(<LoginForm oauthQuery="client_id=invented&sig=abc" />);
+
+        fillAndSubmit("admin@example.com", "secret123");
+
+        await waitFor(() =>
+            expect(assignMock).toHaveBeenCalledExactlyOnceWith(
+                "/consent?client_id=invented&sig=abc",
+            ),
+        );
+        expect(loginActionMock).toHaveBeenCalledWith({
+            email: "admin@example.com",
+            password: "secret123",
+            oauthQuery: "client_id=invented&sig=abc",
+        });
+        expect(replaceMock).not.toHaveBeenCalled();
+    });
+
+    it("pin: a success without a next URL goes to the dashboard", async () => {
+        loginActionMock.mockResolvedValue({ ok: true, data: undefined });
+        renderWithIntl(<LoginForm />);
+
+        fillAndSubmit();
+
+        await waitFor(() =>
+            expect(replaceMock).toHaveBeenCalledExactlyOnceWith("/dashboard"),
+        );
+        expect(assignMock).not.toHaveBeenCalled();
     });
 });
 

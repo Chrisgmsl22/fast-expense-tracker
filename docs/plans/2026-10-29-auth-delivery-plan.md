@@ -69,6 +69,7 @@ later slices retain acceptance checklists until their dependencies land.
 
 CHORE-39 merged in PR #102, CHORE-44 in PR #104, and CHORE-34 in PR #105.
 CHORE-40 is merged. CHORE-41 switches web login and backfills credential accounts. Its local migration and browser checks pass. The owner takes a Neon restore point and runs the production surveys before merging.
+CHORE-42 adds the OAuth 2.1 provider in `fet-feat-oauth-provider`: eight additive tables, a consent page and a disposable dev client. The production iOS client row waits for the iOS bundle ID and redirect URI.
 
 </details>
 

@@ -2,16 +2,17 @@ import { getTranslations } from "next-intl/server";
 
 import { AuthShell } from "@/components/auth/AuthShell";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { signedOAuthQuery } from "@/lib/auth/oauth-query";
 
-// The route gate in auth.config.ts bounces an already-signed-in visitor to
-// /dashboard, so this only renders when logged out. It never reads the signup
-// switch (ADR-0026): the signup page shows the closed message itself.
+// proxy.ts bounces a signed-in visitor to /dashboard unless the URL continues an
+// OAuth authorization. It never reads the signup switch (ADR-0026): the signup
+// page shows the closed message itself.
 export default async function LoginPage({
     searchParams,
 }: {
-    searchParams: Promise<{ reason?: string | string[] }>;
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-    const { reason } = await searchParams;
+    const params = await searchParams;
     const t = await getTranslations("auth.login");
     return (
         <AuthShell
@@ -23,7 +24,10 @@ export default async function LoginPage({
                 label: t("switchLink"),
             }}
         >
-            <LoginForm sessionExpired={reason === "session-expired"} />
+            <LoginForm
+                sessionExpired={params.reason === "session-expired"}
+                oauthQuery={signedOAuthQuery(params)}
+            />
         </AuthShell>
     );
 }

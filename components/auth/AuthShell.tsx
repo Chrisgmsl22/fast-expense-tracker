@@ -10,7 +10,7 @@ type Props = {
     /** Mobile line under the brand name. */
     tagline: string;
     /** The "No account? Sign up" style line under the form. */
-    switchPrompt: { text: string; href: string; label: string };
+    switchPrompt?: { text: string; href: string; label: string };
     children: ReactNode;
 };
 
@@ -64,15 +64,17 @@ export function AuthShell({ heading, tagline, switchPrompt, children }: Props) {
                             {heading}
                         </h1>
                         {children}
-                        <p className="text-center text-sm text-white/60 md:text-muted-foreground">
-                            {switchPrompt.text}{" "}
-                            <Link
-                                href={switchPrompt.href}
-                                className="font-medium text-white underline underline-offset-2 md:text-foreground"
-                            >
-                                {switchPrompt.label}
-                            </Link>
-                        </p>
+                        {switchPrompt && (
+                            <p className="text-center text-sm text-white/60 md:text-muted-foreground">
+                                {switchPrompt.text}{" "}
+                                <Link
+                                    href={switchPrompt.href}
+                                    className="font-medium text-white underline underline-offset-2 md:text-foreground"
+                                >
+                                    {switchPrompt.label}
+                                </Link>
+                            </p>
+                        )}
                     </div>
                 </section>
             </div>

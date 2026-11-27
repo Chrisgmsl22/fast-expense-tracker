@@ -47,7 +47,9 @@
     },
     "dependencies": {
         "@base-ui/react": "^1.5.0",
+        "@better-auth/oauth-provider": "1.7.12",
         "@better-auth/prisma-adapter": "1.7.12",
+        "@better-auth/utils": "0.5.0",
         "@prisma/client": "^6",
         "@sentry/nextjs": "^10.62.0",
         "@vercel/global-config": "1.5.1",
@@ -81,6 +83,7 @@
         "eslint": "^9",
         "eslint-config-next": "16.2.6",
         "husky": "^9.1.7",
+        "jose": "6.2.3",
         "jsdom": "^29.1.1",
         "lint-staged": "^17.0.7",
         "prettier": "^3.8.3",

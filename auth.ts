@@ -6,6 +6,11 @@ import { parseSetCookieHeader, toCookieOptions } from "better-auth/cookies";
 import { authConfig } from "@/auth.config";
 import { db } from "@/lib/db";
 import { toWebSession, type WebSession } from "@/lib/auth/web-session";
+import {
+    OAuthRequestExpiredError,
+    isInvalidOAuthQuery,
+    redirectUrlOf,
+} from "@/lib/auth/oauth-query";
 
 export const authProvider = betterAuth({
     ...authConfig,
@@ -37,10 +42,12 @@ export async function signIn(
         password: string;
         redirectTo?: string;
         redirect?: boolean;
+        oauthQuery?: string;
     },
-): Promise<void> {
+): Promise<string | undefined> {
     const requestHeaders = new Headers(await headers());
     requestHeaders.set("content-type", "application/json");
+    if (input.oauthQuery) requestHeaders.set("accept", "application/json");
     const baseURL = (await authProvider.$context).baseURL;
     const response = await authProvider.handler(
         new Request(baseURL + "/sign-in/email", {
@@ -49,12 +56,17 @@ export async function signIn(
             body: JSON.stringify({
                 email: input.email,
                 password: input.password,
+                ...(input.oauthQuery && { oauth_query: input.oauthQuery }),
             }),
         }),
     );
     if (response.status === 401) throw new InvalidCredentialsError();
+    if (input.oauthQuery && (await isInvalidOAuthQuery(response)))
+        throw new OAuthRequestExpiredError();
     if (!response.ok) throw new Error("Authentication failed");
     await publishAuthCookies(response);
+    if (!input.oauthQuery) return undefined;
+    return redirectUrlOf(await response.json());
 }
 
 export async function signOut(
