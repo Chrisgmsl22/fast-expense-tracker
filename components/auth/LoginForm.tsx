@@ -23,8 +23,10 @@ import { SessionExpiredNotice } from "./SessionExpiredNotice";
 /** Submit credentials and navigate after the server confirms success. */
 export function LoginForm({
     sessionExpired = false,
+    oauthQuery,
 }: {
     sessionExpired?: boolean;
+    oauthQuery?: string;
 }) {
     const t = useTranslations("auth");
     const router = useRouter();
@@ -38,6 +40,7 @@ export function LoginForm({
         const input = {
             email: String(fd.get("email") ?? ""),
             password: String(fd.get("password") ?? ""),
+            ...(oauthQuery && { oauthQuery }),
         };
         // Clear any prior error so it doesn't linger during the pending state.
         setErrors({});
@@ -47,7 +50,9 @@ export function LoginForm({
                 const res: LoginResult = await withSessionLock(() =>
                     loginAction(input),
                 );
-                if (res.ok) {
+                if (res.ok && res.data) {
+                    window.location.assign(res.data);
+                } else if (res.ok) {
                     router.replace("/dashboard");
                 } else {
                     setErrors(res.fieldErrors ?? {});

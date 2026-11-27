@@ -10,6 +10,7 @@ export const APP_LOG_LEVELS = {
     "expense.delete_failed": "error",
     "auth.signup_completed": "info",
     "auth.signup_failed": "error",
+    "auth.oauth_consent_failed": "error",
     "onboarding.completed": "info",
     "onboarding.complete_failed": "error",
     "card.created": "info",
