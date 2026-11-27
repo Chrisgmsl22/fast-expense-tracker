@@ -84,28 +84,28 @@ The expense form reads `GET /cards` and offers the cards with no `archivedAt`.
 
 ### Settlement
 
-| Method | Path                | Returns                                                                                                                                      | Reuses                                 | PR       |
-| ------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | -------- |
-| GET    | `/settlement`       | Balance (amount, direction, breakdown), the open-cycle journal, carried-over amount, the viewed month's journal, closed cycles of that month | `getSettlement(userId, deps, {month})` | CHORE-60 |
-| POST   | `/settlement/close` | The row that closed the cycle, or `alreadyClosed: true` on a repeat                                                                          | `closeSettlementCycle` (_core_)        | CHORE-60 |
+| Method | Path                | Returns                                                                                                                                                                 | Reuses                                 | PR       |
+| ------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | -------- |
+| GET    | `/settlement`       | Balance (amount, direction, breakdown), the open-cycle journal, carried-over amount, the viewed month's journal, closed cycles of that month                            | `getSettlement(userId, deps, {month})` | CHORE-60 |
+| POST   | `/settlement/close` | The row that closed the cycle, or `alreadyClosed: true` on a repeat. The body names the marker the app saw; a different current marker is `stale_marker` (spec 0014 §7) | `closeSettlementCycle` (_core_)        | CHORE-60 |
 
 ### Income
 
-| Method | Path                    | Returns                                                       | Reuses                                                | PR       |
-| ------ | ----------------------- | ------------------------------------------------------------- | ----------------------------------------------------- | -------- |
-| GET    | `/income`               | `fixed`, `variable`, `total` and the month's variable entries | `incomeRepo.getMonthlySummary`, `getVariableForMonth` | CHORE-58 |
-| PUT    | `/income/fixed`         | `amount` and `effectiveMonth`. A future month is refused      | `setFixedIncome` (_core_)                             | CHORE-58 |
-| POST   | `/income/variable`      | The created entry                                             | `addVariableIncome` (_core_)                          | CHORE-58 |
-| DELETE | `/income/variable/{id}` | `id`                                                          | `deleteVariableIncome` (_core_)                       | CHORE-58 |
+| Method | Path                    | Returns                                                                                                           | Reuses                                                | PR       |
+| ------ | ----------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------- |
+| GET    | `/income`               | `fixed`, `variable`, `total` and the month's variable entries                                                     | `incomeRepo.getMonthlySummary`, `getVariableForMonth` | CHORE-58 |
+| PUT    | `/income/fixed`         | `amount` and `effectiveMonth`. The body's `month` is required and must be the current month, else `month_changed` | `setFixedIncome` (_core_)                             | CHORE-58 |
+| POST   | `/income/variable`      | The created entry                                                                                                 | `addVariableIncome` (_core_)                          | CHORE-58 |
+| DELETE | `/income/variable/{id}` | `id`                                                                                                              | `deleteVariableIncome` (_core_)                       | CHORE-58 |
 
 ### Settings and export
 
-| Method | Path                    | Returns                                                                         | Reuses                                                                      | PR       |
-| ------ | ----------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------- |
-| GET    | `/settings`             | Split rule, the budget rule in force this month, `currency` (`MXN`), `timeZone` | `settingsRepo.getSettings`, `budgetRuleRepo.listRules`, `resolveBudgetRule` | CHORE-54 |
-| PUT    | `/settings/split-rule`  | The split rule after the change                                                 | `saveSplitRule` (_core_)                                                    | CHORE-59 |
-| PUT    | `/settings/budget-rule` | The rule and its `effectiveMonth`. The server picks the month                   | `saveBudgetRule` (_core_)                                                   | CHORE-59 |
-| GET    | `/financial-export`     | The Excel file for a year or a month. Failures use the spec 0014 §4 shape       | `financialExportResponse(request, userId, repo)`, already takes `userId`    | CHORE-61 |
+| Method | Path                    | Returns                                                                                                        | Reuses                                                                      | PR       |
+| ------ | ----------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------- |
+| GET    | `/settings`             | Split rule, the budget rule in force this month, `currency` (`MXN`), `timeZone`                                | `settingsRepo.getSettings`, `budgetRuleRepo.listRules`, `resolveBudgetRule` | CHORE-54 |
+| PUT    | `/settings/split-rule`  | The split rule after the change                                                                                | `saveSplitRule` (_core_)                                                    | CHORE-59 |
+| PUT    | `/settings/budget-rule` | The rule and its `effectiveMonth`. The body's `effectiveMonth` must be the current month, else `month_changed` | `saveBudgetRule` (_core_)                                                   | CHORE-59 |
+| GET    | `/financial-export`     | The Excel file for a year or a month. Failures use the spec 0014 §4 shape                                      | `financialExportResponse(request, userId, repo)`, already takes `userId`    | CHORE-61 |
 
 ### Not in v1
 
