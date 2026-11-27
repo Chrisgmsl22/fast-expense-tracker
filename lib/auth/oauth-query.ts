@@ -15,3 +15,28 @@ export function signedOAuthQuery(
     }
     return query.toString();
 }
+
+/** The provider refused the signed query (expired, tampered or missing). */
+export async function isInvalidOAuthQuery(response: Response) {
+    if (response.status !== 400) return false;
+    const body: unknown = await response
+        .clone()
+        .json()
+        .catch(() => null);
+    return (
+        typeof body === "object" &&
+        body !== null &&
+        "error" in body &&
+        body.error === "invalid_signature"
+    );
+}
+
+/** The `url` of a provider `{ redirect, url }` JSON body, if it has one. */
+export function redirectUrlOf(body: unknown): string | undefined {
+    return typeof body === "object" &&
+        body !== null &&
+        "url" in body &&
+        typeof body.url === "string"
+        ? body.url
+        : undefined;
+}

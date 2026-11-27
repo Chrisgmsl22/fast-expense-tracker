@@ -1,7 +1,11 @@
 import { headers } from "next/headers";
 import { verifyOAuthQueryParams } from "@better-auth/oauth-provider";
-import { authProvider } from "@/auth";
-import { OAuthRequestExpiredError } from "@/lib/auth/oauth-query";
+import { authProvider, publishAuthCookies } from "@/auth";
+import {
+    OAuthRequestExpiredError,
+    isInvalidOAuthQuery,
+    redirectUrlOf,
+} from "@/lib/auth/oauth-query";
 import { failureAttributes } from "@/lib/observability/health";
 import { logAppEvent, type AppLogReason } from "@/lib/observability/log";
 
@@ -61,18 +65,26 @@ export async function answerConsent(
     accept: boolean,
     oauthQuery: string,
 ): Promise<string> {
-    try {
-        const { url } = await authProvider.api.oauth2Consent({
-            headers: await headers(),
-            body: { accept, oauth_query: oauthQuery },
-        });
-        return url;
-    } catch (error) {
-        const reason = refusalReason(error);
-        if (reason === "oauth_query_invalid")
-            throw new OAuthRequestExpiredError();
-        if (reason === "session_missing")
-            throw new ConsentSessionMissingError();
-        throw error;
-    }
+    // Through the handler, not `api`: an accepted consent re-runs authorize,
+    // which needs a Request object.
+    const requestHeaders = new Headers(await headers());
+    requestHeaders.set("content-type", "application/json");
+    requestHeaders.set("accept", "application/json");
+    const { baseURL } = await authProvider.$context;
+    const response = await authProvider.handler(
+        new Request(baseURL + "/oauth2/consent", {
+            method: "POST",
+            headers: requestHeaders,
+            body: JSON.stringify({ accept, oauth_query: oauthQuery }),
+        }),
+    );
+    if (await isInvalidOAuthQuery(response))
+        throw new OAuthRequestExpiredError();
+    if (response.status === 401) throw new ConsentSessionMissingError();
+    if (!response.ok)
+        throw new Error(`OAuth consent failed with status ${response.status}`);
+    await publishAuthCookies(response);
+    const url = redirectUrlOf(await response.json());
+    if (!url) throw new Error("OAuth consent returned no redirect URL");
+    return url;
 }

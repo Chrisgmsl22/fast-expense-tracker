@@ -22,13 +22,14 @@ vi.mock("next/headers", () => ({
     cookies: async () => ({ set: vi.fn() }),
 }));
 
-import { authProvider } from "@/auth";
+import { authProvider, signIn } from "@/auth";
 import { db } from "@/lib/db";
 import {
     apiResourceIdentifier,
     registerNativeClient,
 } from "@/lib/auth/oauth-client";
-import { loadConsentRequest } from "@/lib/auth/oauth-consent";
+import { answerConsent, loadConsentRequest } from "@/lib/auth/oauth-consent";
+import { OAuthRequestExpiredError } from "@/lib/auth/oauth-query";
 import { PrismaUserProvisioningRepository } from "@/lib/repositories/user-provisioning.repository";
 
 const origin = "http://localhost:3994";
@@ -73,6 +74,7 @@ async function consentQuery() {
         response_type: "code",
         client_id: clientId,
         redirect_uri: "fet-test://oauth/callback",
+        state: "invented-state",
         scope: "openid offline_access fet:api",
         code_challenge: createHash("sha256")
             .update(verifier)
@@ -85,12 +87,33 @@ async function consentQuery() {
     });
     const location = new URL(response.headers.get("location")!, origin);
     expect(location.pathname).toBe("/consent");
-    requestHeaders.current = new Headers({ cookie });
+    requestHeaders.current = new Headers({ cookie, ...browser });
     return location.search.slice(1);
 }
 
+/** The signed query the provider puts on /login for a signed-out browser. */
+async function loginQuery() {
+    const query = new URLSearchParams({
+        response_type: "code",
+        client_id: clientId,
+        redirect_uri: "fet-test://oauth/callback",
+        scope: "openid offline_access fet:api",
+        code_challenge: createHash("sha256")
+            .update(randomBytes(32).toString("base64url"))
+            .digest("base64url"),
+        code_challenge_method: "S256",
+        resource: apiResourceIdentifier(origin),
+    });
+    const response = await call("/oauth2/authorize?" + query);
+    const location = new URL(response.headers.get("location")!, origin);
+    expect(location.pathname).toBe("/login");
+    return location.search.slice(1);
+}
+
+const browser = { origin, "x-forwarded-for": "192.0.2.43" };
+
 beforeEach(async () => {
-    requestHeaders.current = new Headers();
+    requestHeaders.current = new Headers(browser);
     await new PrismaUserProvisioningRepository(db).createUserWithStarterKit(
         account,
     );
@@ -132,7 +155,7 @@ describe("loadConsentRequest", () => {
 
     it("guard: returns null without a session", async () => {
         const query = await consentQuery();
-        requestHeaders.current = new Headers();
+        requestHeaders.current = new Headers(browser);
         expect(await loadConsentRequest(query)).toBeNull();
     });
 
@@ -143,5 +166,61 @@ describe("loadConsentRequest", () => {
             outage,
         );
         await expect(loadConsentRequest(query)).rejects.toBe(outage);
+    });
+});
+
+describe("answerConsent", () => {
+    it("guard: allow returns the redirect URI with a code and the state", async () => {
+        const url = new URL(await answerConsent(true, await consentQuery()));
+        expect(url.href.startsWith("fet-test://oauth/callback?")).toBe(true);
+        expect(url.searchParams.get("code")).toEqual(expect.any(String));
+        expect(url.searchParams.get("state")).toBe("invented-state");
+    });
+
+    it("guard: deny returns access_denied without a code", async () => {
+        const url = new URL(await answerConsent(false, await consentQuery()));
+        expect(url.searchParams.get("error")).toBe("access_denied");
+        expect(url.searchParams.get("code")).toBeNull();
+    });
+
+    it("guard: an expired query throws OAuthRequestExpiredError", async () => {
+        const query = await consentQuery();
+        vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + 601_000 });
+        await expect(answerConsent(true, query)).rejects.toBeInstanceOf(
+            OAuthRequestExpiredError,
+        );
+    });
+});
+
+describe("signIn with a signed OAuth query", () => {
+    const credentials = { email: account.email, password: account.password };
+
+    it("guard: an expired query throws OAuthRequestExpiredError and creates no session", async () => {
+        const oauthQuery = await loginQuery();
+        vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + 601_000 });
+        await expect(
+            signIn("credentials", { ...credentials, oauthQuery }),
+        ).rejects.toBeInstanceOf(OAuthRequestExpiredError);
+        expect(await db.session.count()).toBe(0);
+    });
+
+    it("guard: a forged signature throws OAuthRequestExpiredError and creates no session", async () => {
+        const query = new URLSearchParams(await loginQuery());
+        query.set("sig", "invented-forged-signature");
+        await expect(
+            signIn("credentials", {
+                ...credentials,
+                oauthQuery: query.toString(),
+            }),
+        ).rejects.toBeInstanceOf(OAuthRequestExpiredError);
+        expect(await db.session.count()).toBe(0);
+    });
+
+    it("returns the consent URL for a valid query", async () => {
+        const next = await signIn("credentials", {
+            ...credentials,
+            oauthQuery: await loginQuery(),
+        });
+        expect(new URL(next!, origin).pathname).toBe("/consent");
     });
 });

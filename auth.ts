@@ -6,7 +6,11 @@ import { parseSetCookieHeader, toCookieOptions } from "better-auth/cookies";
 import { authConfig } from "@/auth.config";
 import { db } from "@/lib/db";
 import { toWebSession, type WebSession } from "@/lib/auth/web-session";
-import { OAuthRequestExpiredError } from "@/lib/auth/oauth-query";
+import {
+    OAuthRequestExpiredError,
+    isInvalidOAuthQuery,
+    redirectUrlOf,
+} from "@/lib/auth/oauth-query";
 
 export const authProvider = betterAuth({
     ...authConfig,
@@ -14,20 +18,6 @@ export const authProvider = betterAuth({
 });
 
 export class InvalidCredentialsError extends Error {}
-
-async function isInvalidOAuthQuery(response: Response) {
-    if (response.status !== 400) return false;
-    const body: unknown = await response
-        .clone()
-        .json()
-        .catch(() => null);
-    return (
-        typeof body === "object" &&
-        body !== null &&
-        "error" in body &&
-        body.error === "invalid_signature"
-    );
-}
 
 export async function publishAuthCookies(response: Response): Promise<void> {
     const store = await cookies();
@@ -76,17 +66,7 @@ export async function signIn(
     if (!response.ok) throw new Error("Authentication failed");
     await publishAuthCookies(response);
     if (!input.oauthQuery) return undefined;
-    const body: unknown = await response.json();
-    return isRedirectBody(body) ? body.url : undefined;
-}
-
-function isRedirectBody(body: unknown): body is { url: string } {
-    return (
-        typeof body === "object" &&
-        body !== null &&
-        "url" in body &&
-        typeof body.url === "string"
-    );
+    return redirectUrlOf(await response.json());
 }
 
 export async function signOut(
