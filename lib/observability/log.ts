@@ -73,6 +73,8 @@ export const APP_LOG_REASONS = [
     "database_timeout",
     "database_unavailable",
     "configuration_missing",
+    "oauth_query_invalid",
+    "session_missing",
 ] as const;
 export type AppLogReason = (typeof APP_LOG_REASONS)[number];
 const APP_LOG_OPERATIONS = [
