@@ -21,6 +21,7 @@ import {
     type UpdateExpenseResult,
 } from "@/app/_actions/expense/update";
 import { SAVINGS_SLUG } from "@/lib/domain/dashboard";
+import { computeActualExpenditure } from "@/lib/domain/expense";
 import {
     allowsReimbursed,
     fundingSourceAfterCategoryChange,
@@ -151,12 +152,30 @@ export function ExpenseForm({
     // mode (no split exists). An unshared row stores yourPercentage = 1, which
     // would fail the "shared needs < 100%" rule if carried over, so it must
     // never be the shared value.
-    const yourPercentage =
+    const initialSharePercentage =
         expense?.isShared && expense.yourPercentage < 1
             ? expense.yourPercentage
             : sharesExpenses
               ? defaultSharePercentage
               : 1;
+
+    const [splitOverride, setSplitOverride] = useState<string | null>(null);
+    const [editingSplit, setEditingSplit] = useState(false);
+    // Preserve the original ratio until the input changes. Blank must stay
+    // invalid rather than coerce to a valid zero-percent share.
+    const yourPercentage =
+        splitOverride === null
+            ? initialSharePercentage
+            : splitOverride.trim() === ""
+              ? Number.NaN
+              : Number(splitOverride) / 100;
+    const splitInputValue =
+        splitOverride ??
+        String(Number((initialSharePercentage * 100).toPrecision(15)));
+    const validSplit =
+        Number.isFinite(yourPercentage) &&
+        yourPercentage >= 0 &&
+        yourPercentage < 1;
 
     const [pending, startTransition] = useTransition();
     const [errors, setErrors] = useState<FieldErrors<ExpenseInput>>({});
@@ -197,10 +216,14 @@ export function ExpenseForm({
 
     const amountNumber = Number.parseFloat(amount);
     const yourShare = Number.isFinite(amountNumber)
-        ? amountNumber * yourPercentage
+        ? computeActualExpenditure({
+              amount: amountNumber,
+              isShared: true,
+              yourPercentage,
+          })
         : 0;
-    const yourPct = Math.round(yourPercentage * 100);
-    const partnerPct = 100 - yourPct;
+    const yourPct = Number((yourPercentage * 100).toPrecision(15));
+    const partnerPct = Number((100 - yourPct).toPrecision(12));
 
     function handleCategoryChange(value: string) {
         setCategoryId(value);
@@ -239,7 +262,8 @@ export function ExpenseForm({
             notes: notes || undefined,
             isShared: isPartnerPayment ? false : isShared,
             // A payment is never split: the figure entered IS what you sent.
-            yourPercentage: isPartnerPayment ? "1" : String(yourPercentage),
+            yourPercentage:
+                isPartnerPayment || !isShared ? "1" : String(yourPercentage),
             fundedFrom,
             // Every expense is the user's (ADR-0018); `paidBy` defaults "you"
             // in the schema, so the form no longer sends it.
@@ -262,12 +286,21 @@ export function ExpenseForm({
                         setDescription("");
                         setNotes("");
                         setIsShared(false);
+                        setSplitOverride(null);
+                        setEditingSplit(false);
                         setFundedFrom("income");
                     }
                     onSuccess?.();
                 } else {
                     setErrors(res.fieldErrors ?? {});
-                    setFormError(res.message);
+                    const splitOnlyValidation =
+                        res.code === "validation" &&
+                        res.fieldErrors?.yourPercentage?.length &&
+                        Object.entries(res.fieldErrors).every(
+                            ([field, messages]) =>
+                                field === "yourPercentage" || !messages?.length,
+                        );
+                    setFormError(splitOnlyValidation ? null : res.message);
                 }
             } catch {
                 setFormError(t("saveError"));
@@ -618,16 +651,18 @@ export function ExpenseForm({
                             <span
                                 className={`block font-medium ${isPartnerPayment ? "text-muted-foreground" : ""}`}
                             >
-                                {t("sharedSplit", {
-                                    mine: yourPct,
-                                    theirs: partnerPct,
-                                })}
+                                {validSplit
+                                    ? t("sharedSplit", {
+                                          mine: yourPct,
+                                          theirs: partnerPct,
+                                      })
+                                    : t("shared")}
                             </span>
                             {isPartnerPayment ? (
                                 <span className="block text-muted-foreground">
                                     {t("paymentNoSplit")}
                                 </span>
-                            ) : isShared ? (
+                            ) : isShared && validSplit ? (
                                 <span className="block text-positive">
                                     {t("yourShare", {
                                         amount: formatMxn(yourShare),
@@ -636,7 +671,63 @@ export function ExpenseForm({
                             ) : null}
                         </span>
                     </label>
-                    {fieldError("yourPercentage")}
+                    {isShared && !isPartnerPayment ? (
+                        <div className="mt-2 pl-[1.625rem]">
+                            {editingSplit ? (
+                                <div className="max-w-48">
+                                    <Label htmlFor="yourPercentage">
+                                        {t("yourSharePercentage")}
+                                    </Label>
+                                    <Input
+                                        id="yourPercentage"
+                                        name="yourPercentage"
+                                        type="number"
+                                        inputMode="decimal"
+                                        step="any"
+                                        value={splitInputValue}
+                                        onChange={(e) => {
+                                            setSplitOverride(e.target.value);
+                                            setErrors((previous) => ({
+                                                ...previous,
+                                                yourPercentage: undefined,
+                                            }));
+                                        }}
+                                        disabled={pending}
+                                        aria-invalid={
+                                            !!errors.yourPercentage?.length
+                                        }
+                                        aria-describedby={
+                                            errors.yourPercentage?.length
+                                                ? "yourPercentage-error"
+                                                : undefined
+                                        }
+                                        className="mt-1.5"
+                                    />
+                                </div>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    variant="link"
+                                    className="h-auto p-0"
+                                    onClick={() => setEditingSplit(true)}
+                                    disabled={pending}
+                                >
+                                    {t("editSplit")}
+                                </Button>
+                            )}
+                            {errors.yourPercentage?.[0] ? (
+                                <p
+                                    id="yourPercentage-error"
+                                    className="mt-1 text-sm text-destructive"
+                                    role="alert"
+                                >
+                                    {splitOverride !== null && !validSplit
+                                        ? t("invalidSplit")
+                                        : errors.yourPercentage[0]}
+                                </p>
+                            ) : null}
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
 
