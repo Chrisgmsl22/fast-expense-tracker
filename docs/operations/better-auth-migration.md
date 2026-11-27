@@ -69,12 +69,59 @@ Roll the application back to the recorded pre-switch build. Leave the additive a
 
 Signup stays closed under the existing gate. If signup is permitted, our repository commits the user, credential and starter kit together before sign-in can return cookies. Seed writes use the same transaction rule and never replace an existing password. Password-change, set-password, reset and raw signup endpoints stay disabled. Any future password writer must update both hashes in one application-owned transaction until CHORE-43 removes the legacy column.
 
+## OAuth provider (CHORE-42)
+
+Merging adds 8 empty tables: `jwks`, `oauthClient`, `oauthResource`, `oauthClientResource`, `oauthRefreshToken`, `oauthAccessToken`, `oauthConsent` and `oauthClientAssertion`. It changes no existing table. On the first auth request the app inserts one `oauthResource` row for `<AUTH_URL>/api/v1`. The first JWKS or token request creates the signing key, encrypted with `AUTH_SECRET`. No client exists until a later migration adds the iOS client.
+
+Run this read-only survey before and after the deploy. User and financial counts must not change. Before the deploy the tables do not exist; after it, expect 0 clients and at most 1 resource.
+
+```sql
+BEGIN TRANSACTION READ ONLY;
+
+SELECT 'User' AS table_name, count(*) AS rows FROM "User"
+UNION ALL SELECT 'account', count(*) FROM "account"
+UNION ALL SELECT 'session', count(*) FROM "session"
+UNION ALL SELECT 'Expense', count(*) FROM "Expense"
+UNION ALL SELECT 'Movement', count(*) FROM "Movement"
+UNION ALL SELECT 'Income', count(*) FROM "Income";
+
+SELECT count(*) AS oauth_clients FROM "oauthClient";
+SELECT identifier, "allowedScopes", disabled FROM "oauthResource";
+
+ROLLBACK;
+```
+
+### Client row for a later migration
+
+`registerNativeClient()` in `lib/auth/oauth-client.ts` writes these rows. A migration INSERT for the production iOS client copies the same values, with the real client ID and redirect URI.
+
+| Table                 | Column                              | Value                                           |
+| --------------------- | ----------------------------------- | ----------------------------------------------- |
+| `oauthResource`       | `identifier`                        | `<AUTH_URL>/api/v1`, insert only when absent    |
+| `oauthResource`       | `name`                              | `Fast Expense Tracker API v1`                   |
+| `oauthResource`       | `allowedScopes`                     | `{openid,profile,email,offline_access,fet:api}` |
+| `oauthClient`         | `clientId`, `name`                  | the client ID and display name                  |
+| `oauthClient`         | `redirectUris`                      | private-use or http loopback URIs only          |
+| `oauthClient`         | `tokenEndpointAuthMethod`           | `none` (public client, `clientSecret` NULL)     |
+| `oauthClient`         | `applicationType`                   | `native`                                        |
+| `oauthClient`         | `grantTypes`                        | `{authorization_code,refresh_token}`            |
+| `oauthClient`         | `responseTypes`                     | `{code}`                                        |
+| `oauthClient`         | `requirePKCE`                       | `true`                                          |
+| `oauthClient`         | `skipConsent`                       | `false`                                         |
+| `oauthClient`         | `scopes`                            | `{openid,profile,email,offline_access,fet:api}` |
+| `oauthClient`         | `disabled`, `dpopBoundAccessTokens` | `false`                                         |
+| `oauthClient`         | `clientCredentialsScopes`           | `{}`                                            |
+| `oauthClient`         | `userId`                            | NULL                                            |
+| `oauthClientResource` | `clientId`, `resourceId`            | the client ID and `<AUTH_URL>/api/v1`           |
+
+Every row also gets a random UUID `id` and `createdAt`/`updatedAt` of the insert time. `allowedScopes` must list the scopes: Prisma reads a NULL list as empty, and the provider then refuses every scope.
+
 <details>
 <summary>For agents: runtime and security constraints</summary>
 
 The app pins `better-auth` and `@better-auth/prisma-adapter` to 1.7.12. Its [October 20 release](https://github.com/better-auth/better-auth/releases/tag/v1.7.12) meets ADR-0027's 14-day rule on November 3. Recheck the [official advisories](https://github.com/better-auth/better-auth/security/advisories) before any provider or plugin change.
 
-The November 3 advisories affect this package range. This configuration uses none of their affected OAuth, organization, admin, phone, email OTP, email-change, Expo or MySQL paths. [GHSA-fvxx-76fc-893x](https://github.com/better-auth/better-auth/security/advisories/GHSA-fvxx-76fc-893x) also covers cached or secondary-storage sessions. Both are disabled here, as its workaround requires. No OAuth provider is enabled. CHORE-42 must select and review its own version again.
+The November 3 advisories affect this package range. This configuration uses none of their affected OAuth, organization, admin, phone, email OTP, email-change, Expo or MySQL paths. [GHSA-fvxx-76fc-893x](https://github.com/better-auth/better-auth/security/advisories/GHSA-fvxx-76fc-893x) also covers cached or secondary-storage sessions. Both are disabled here, as its workaround requires. CHORE-42 enables `@better-auth/oauth-provider` 1.7.12. Recheck these advisories for its OAuth paths before merging it.
 
 Prisma uses the existing User, Account, Session, Verification and RateLimit models. The UUID callback preserves UUID strings in text columns. Passive session reads never renew. Activity renewal binds the authenticated user, session ID and token in one guarded database update. Database time rejects expired sessions, and GREATEST prevents stale updates from shortening expiry. Cookie publication follows the committed write.
 

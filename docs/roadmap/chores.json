@@ -491,8 +491,8 @@
             "priority": 42,
             "title": "Auth PR 4: OAuth 2.1 provider and the iOS client entry",
             "description": "Spec 0009 §4 and §8 PR 4 (ADR-0028). Turns this app into the authorization server a native client logs in to with PKCE. Adds tables only; the web login does not change.",
-            "plan": "Full Plan required (auth, migration). (1) jwt() and oauthProvider() plugins, their migration, the JWKS endpoint. (2) Consent page in the existing auth shell. (3) Register the iOS app as a public client: no secret, PKCE required, a private-use redirect URI. (4) Tests: authorize and token round trip with PKCE, a wrong verifier is refused, a reused refresh token ends its family.",
-            "status": "open",
+            "plan": "Shipped: jwt() and oauthProvider() with issuer <AUTH_URL>/api/auth, one resource <AUTH_URL>/api/v1 (JWT audience), scopes openid profile email offline_access fet:api, S256 PKCE, refresh rotation, and no client management over HTTP. Eight additive tables, discovery and JWKS endpoints, and a consent page shown once per user and client. registerNativeClient() in lib/auth/oauth-client.ts registers a public native client; the dev seed adds a disposable local client. The production iOS client lands later as a reviewed migration INSERT.",
+            "status": "shipped",
             "spec": "docs/specs/0009-auth-module-better-auth.md",
             "pr": null,
             "issue": null
