@@ -83,7 +83,13 @@ UNION ALL SELECT 'account', count(*) FROM "account"
 UNION ALL SELECT 'session', count(*) FROM "session"
 UNION ALL SELECT 'Expense', count(*) FROM "Expense"
 UNION ALL SELECT 'Movement', count(*) FROM "Movement"
-UNION ALL SELECT 'Income', count(*) FROM "Income";
+UNION ALL SELECT 'Income', count(*) FROM "Income"
+UNION ALL SELECT 'Card', count(*) FROM "Card"
+UNION ALL SELECT 'Category', count(*) FROM "Category"
+UNION ALL SELECT 'Subcategory', count(*) FROM "Subcategory"
+UNION ALL SELECT 'CategoryBudget', count(*) FROM "CategoryBudget"
+UNION ALL SELECT 'BudgetRule', count(*) FROM "BudgetRule"
+UNION ALL SELECT 'Settings', count(*) FROM "Settings";
 
 SELECT count(*) AS oauth_clients FROM "oauthClient";
 SELECT identifier, "allowedScopes", disabled FROM "oauthResource";
@@ -121,7 +127,7 @@ Every row also gets a random UUID `id` and `createdAt`/`updatedAt` of the insert
 
 The app pins `better-auth` and `@better-auth/prisma-adapter` to 1.7.12. Its [October 20 release](https://github.com/better-auth/better-auth/releases/tag/v1.7.12) meets ADR-0027's 14-day rule on November 3. Recheck the [official advisories](https://github.com/better-auth/better-auth/security/advisories) before any provider or plugin change.
 
-The November 3 advisories affect this package range. This configuration uses none of their affected OAuth, organization, admin, phone, email OTP, email-change, Expo or MySQL paths. [GHSA-fvxx-76fc-893x](https://github.com/better-auth/better-auth/security/advisories/GHSA-fvxx-76fc-893x) also covers cached or secondary-storage sessions. Both are disabled here, as its workaround requires. CHORE-42 enables `@better-auth/oauth-provider` 1.7.12. Recheck these advisories for its OAuth paths before merging it.
+The November 3 advisories affect this package range. This configuration uses none of their affected OAuth, organization, admin, phone, email OTP, email-change, Expo or MySQL paths. [GHSA-fvxx-76fc-893x](https://github.com/better-auth/better-auth/security/advisories/GHSA-fvxx-76fc-893x) also covers cached or secondary-storage sessions. Both are disabled here, as its workaround requires. CHORE-42 enables `@better-auth/oauth-provider` 1.7.12 and the `jwt` plugin. The advisories page was checked on 2026-11-27. Its 7 advisories of 2026-11-03 name better-auth core (admin phone update, OAuth sign-in email verification, email OTP, email change), `@better-auth/expo`, `@better-auth/electron` and `@better-auth/kysely-adapter`: GHSA-g95c-wqvr-8c3j, GHSA-4wq4-2ppv-q3hg, GHSA-9hm7-xhfp-cx58, GHSA-48c2-w96j-mv3m, GHSA-2f9c-7xj7-gh55, GHSA-hwq2-v29r-p69r and GHSA-9p5w-h4pr-fcrc. None names `@better-auth/oauth-provider` or the `jwt` plugin. GHSA-9hm7-xhfp-cx58 covers OAuth sign-in to this app through a social provider, which this app does not use.
 
 Prisma uses the existing User, Account, Session, Verification and RateLimit models. The UUID callback preserves UUID strings in text columns. Passive session reads never renew. Activity renewal binds the authenticated user, session ID and token in one guarded database update. Database time rejects expired sessions, and GREATEST prevents stale updates from shortening expiry. Cookie publication follows the committed write.
 

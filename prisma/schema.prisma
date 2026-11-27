@@ -182,7 +182,7 @@ model Expense {
   // enum) to match `Movement.type` and `paidBy`; the Zod enum is the guard.
   // The card never reads this: a card payment stays source-agnostic (ADR-0020
   // §6), so spend-by-card still sees the full amount.
-  fundedFrom String @default("income")
+  fundedFrom        String  @default("income")
 
   // Money you SENT the partner (spec 0007 §6b). Paying her is the moment the
   // money is really spent, so this is an expense like any other: it carries a
@@ -196,7 +196,7 @@ model Expense {
   // The settlement layer reads this flag as the "you paid her" side of the
   // balance — the side that draws the balance DOWN, the opposite sign to what
   // you owe her.
-  isPartnerPayment Boolean @default(false)
+  isPartnerPayment  Boolean @default(false)
 
   // Forward-compat fields (UI ships in later phases — spec §3)
   isRecurring      Boolean @default(false) // Phase 3
