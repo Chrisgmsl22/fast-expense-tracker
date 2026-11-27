@@ -63,7 +63,7 @@ export const authConfig = {
         oauthProvider({
             loginPage: "/login",
             consentPage: "/consent",
-            scopes: OAUTH_SCOPES,
+            scopes: [...OAUTH_SCOPES],
             grantTypes: ["authorization_code", "refresh_token"],
             accessTokenExpiresIn: 3600,
             refreshTokenExpiresIn: 2_592_000,
@@ -73,7 +73,7 @@ export const authConfig = {
                       {
                           identifier: apiResource,
                           name: API_RESOURCE_NAME,
-                          allowedScopes: OAUTH_SCOPES,
+                          allowedScopes: [...OAUTH_SCOPES],
                       },
                   ]
                 : [],

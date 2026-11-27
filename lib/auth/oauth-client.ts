@@ -8,7 +8,27 @@ export const OAUTH_SCOPES = [
     "email",
     "offline_access",
     "fet:api",
-];
+] as const;
+export type OAuthScope = (typeof OAUTH_SCOPES)[number];
+
+/** The consent-page line (`auth.consent.scopes.*`) for each scope. */
+export const SCOPE_MESSAGE_KEYS = {
+    openid: "openid",
+    profile: "profile",
+    email: "email",
+    offline_access: "offlineAccess",
+    "fet:api": "api",
+} as const satisfies Record<OAuthScope, string>;
+
+/** Consent-line keys for the requested scopes; unknown scopes have no line. */
+export function consentScopeKeys(scopes: readonly string[]) {
+    return scopes
+        .filter((scope): scope is OAuthScope =>
+            Object.hasOwn(SCOPE_MESSAGE_KEYS, scope),
+        )
+        .map((scope) => SCOPE_MESSAGE_KEYS[scope]);
+}
+
 export const API_RESOURCE_NAME = "Fast Expense Tracker API v1";
 
 /** The RFC 8707 resource (JWT audience) for `/api/v1`, from the app origin. */
@@ -23,9 +43,28 @@ export type NativeClientInput = {
     resource: string;
 };
 
-const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
+// Mirrors the provider's native rule (@better-auth/core isNativePrivateUseRedirectUri).
+const NON_PRIVATE_USE_SCHEMES = new Set([
+    "http:",
+    "https:",
+    "ws:",
+    "wss:",
+    "file:",
+    "ftp:",
+    "mailto:",
+    "javascript:",
+    "data:",
+    "vbscript:",
+    "blob:",
+    "about:",
+    "view-source:",
+]);
+const REVERSE_DOMAIN_SCHEME =
+    /^[a-z](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/i;
+const LOOPBACK_HTTP =
+    /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:[/?]|$)/i;
 
-/** A private-use scheme (`app://…`) or an http loopback, per RFC 8252. */
+/** A private-use scheme or an http exact-loopback URI, per RFC 8252. */
 export function isNativeRedirectUri(uri: string): boolean {
     let url: URL;
     try {
@@ -33,10 +72,16 @@ export function isNativeRedirectUri(uri: string): boolean {
     } catch {
         return false;
     }
-    if (url.hash || url.username || url.password) return false;
-    if (url.protocol === "https:") return false;
-    if (url.protocol === "http:") return LOOPBACK_HOSTS.has(url.hostname);
-    return true;
+    if (uri.includes("#") || url.username || url.password) return false;
+    if (url.protocol === "http:") return LOOPBACK_HTTP.test(uri);
+    if (NON_PRIVATE_USE_SCHEMES.has(url.protocol)) return false;
+    if (url.host) return url.pathname.startsWith("/");
+    const rest = url.href.slice(url.protocol.length);
+    return (
+        rest.startsWith("/") &&
+        !rest.startsWith("//") &&
+        REVERSE_DOMAIN_SCHEME.test(url.protocol.slice(0, -1))
+    );
 }
 
 /**
@@ -55,7 +100,7 @@ export function nativeClientRows(input: NativeClientInput, now: Date) {
             id: crypto.randomUUID(),
             identifier: input.resource,
             name: API_RESOURCE_NAME,
-            allowedScopes: OAUTH_SCOPES,
+            allowedScopes: [...OAUTH_SCOPES],
             dpopBoundAccessTokensRequired: false,
             disabled: false,
             policyVersion: 1,
@@ -75,7 +120,7 @@ export function nativeClientRows(input: NativeClientInput, now: Date) {
             skipConsent: false,
             disabled: false,
             dpopBoundAccessTokens: false,
-            scopes: OAUTH_SCOPES,
+            scopes: [...OAUTH_SCOPES],
             clientCredentialsScopes: [],
             createdAt: now,
             updatedAt: now,

@@ -5,23 +5,12 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { consentAction } from "@/app/_actions/auth/consent";
+import { consentScopeKeys } from "@/lib/auth/oauth-client";
 import {
     AUTH_ERROR_CLASS,
     AUTH_MUTED_CLASS,
     AUTH_SUBMIT_CLASS,
 } from "./auth-form-styles";
-
-const SCOPE_LINES = {
-    openid: "openid",
-    profile: "profile",
-    email: "email",
-    offline_access: "offlineAccess",
-    "fet:api": "api",
-} as const;
-
-function isListedScope(scope: string): scope is keyof typeof SCOPE_LINES {
-    return scope in SCOPE_LINES;
-}
 
 /** Allow or deny an OAuth client, then open the URL the provider returns. */
 export function ConsentForm({
@@ -56,8 +45,8 @@ export function ConsentForm({
                     {t("scopesLabel")}
                 </p>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-white md:text-foreground">
-                    {scopes.filter(isListedScope).map((scope) => (
-                        <li key={scope}>{t(`scopes.${SCOPE_LINES[scope]}`)}</li>
+                    {consentScopeKeys(scopes).map((key) => (
+                        <li key={key}>{t(`scopes.${key}`)}</li>
                     ))}
                 </ul>
             </div>

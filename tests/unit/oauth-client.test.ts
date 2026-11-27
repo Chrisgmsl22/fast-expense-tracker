@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
     OAUTH_SCOPES,
+    SCOPE_MESSAGE_KEYS,
     apiResourceIdentifier,
+    consentScopeKeys,
     isNativeRedirectUri,
     nativeClientRows,
 } from "@/lib/auth/oauth-client";
+import { MESSAGES } from "@/i18n/messages";
 import { signedOAuthQuery } from "@/lib/auth/oauth-query";
 
 const resource = apiResourceIdentifier("https://fet.example.com");
@@ -46,7 +49,14 @@ describe("native client registration rows", () => {
 
     it.each([
         "https://fet.example.com/callback",
+        "https://127.0.0.1/callback",
         "http://fet.example.com/callback",
+        "http://127.1:8976/callback",
+        "javascript://oauth/callback",
+        "javascript:alert(1)",
+        "data:text/html,hi",
+        "file:///etc/callback",
+        "fet-test://oauth",
         "fet-test://oauth/callback#frag",
         "not a uri",
     ])("guard: refuses the web or malformed redirect %s", (uri) => {
@@ -60,6 +70,28 @@ describe("native client registration rows", () => {
         expect(isNativeRedirectUri("http://127.0.0.1:8976/callback")).toBe(
             true,
         );
+    });
+});
+
+describe("consent lines", () => {
+    it.each(["en", "es"] as const)(
+        "guard: every scope has a %s consent line",
+        (locale) => {
+            const lines = MESSAGES[locale].auth.consent.scopes as Record<
+                string,
+                string
+            >;
+            for (const scope of OAUTH_SCOPES)
+                expect(lines[SCOPE_MESSAGE_KEYS[scope]]).toEqual(
+                    expect.any(String),
+                );
+        },
+    );
+
+    it("drops scopes outside the list, including prototype names", () => {
+        expect(
+            consentScopeKeys(["openid", "fet:admin", "toString", "fet:api"]),
+        ).toEqual(["openid", "api"]);
     });
 });
 
