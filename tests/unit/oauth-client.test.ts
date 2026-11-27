@@ -82,16 +82,15 @@ describe("consent lines", () => {
                 string
             >;
             for (const scope of OAUTH_SCOPES)
-                expect(lines[SCOPE_MESSAGE_KEYS[scope]]).toEqual(
-                    expect.any(String),
-                );
+                for (const key of SCOPE_MESSAGE_KEYS[scope])
+                    expect(lines[key]).toEqual(expect.any(String));
         },
     );
 
     it("drops scopes outside the list, including prototype names", () => {
         expect(
             consentScopeKeys(["openid", "fet:admin", "toString", "fet:api"]),
-        ).toEqual(["openid", "api"]);
+        ).toEqual(["openid", "apiMoney", "apiSettlement", "apiSettings"]);
     });
 });
 

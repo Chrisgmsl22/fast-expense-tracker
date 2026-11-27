@@ -11,14 +11,14 @@ export const OAUTH_SCOPES = [
 ] as const;
 export type OAuthScope = (typeof OAUTH_SCOPES)[number];
 
-/** The consent-page line (`auth.consent.scopes.*`) for each scope. */
+/** The consent-page lines (`auth.consent.scopes.*`) for each scope, in order. */
 export const SCOPE_MESSAGE_KEYS = {
-    openid: "openid",
-    profile: "profile",
-    email: "email",
-    offline_access: "offlineAccess",
-    "fet:api": "api",
-} as const satisfies Record<OAuthScope, string>;
+    openid: ["openid"],
+    profile: ["profile"],
+    email: ["email"],
+    offline_access: ["offlineAccess"],
+    "fet:api": ["apiMoney", "apiSettlement", "apiSettings"],
+} as const satisfies Record<OAuthScope, readonly [string, ...string[]]>;
 
 /** Consent-line keys for the requested scopes; unknown scopes have no line. */
 export function consentScopeKeys(scopes: readonly string[]) {
@@ -26,7 +26,7 @@ export function consentScopeKeys(scopes: readonly string[]) {
         .filter((scope): scope is OAuthScope =>
             Object.hasOwn(SCOPE_MESSAGE_KEYS, scope),
         )
-        .map((scope) => SCOPE_MESSAGE_KEYS[scope]);
+        .flatMap((scope) => SCOPE_MESSAGE_KEYS[scope]);
 }
 
 export const API_RESOURCE_NAME = "Fast Expense Tracker API v1";

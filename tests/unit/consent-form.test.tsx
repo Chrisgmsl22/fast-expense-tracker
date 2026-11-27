@@ -43,7 +43,9 @@ describe("ConsentForm", () => {
         ).toEqual([
             "Confirm who you are",
             "Stay signed in until you sign out in the app",
-            "Read and change your expenses, income, cards and budgets",
+            "Read and change your expenses, income, cards and budgets.",
+            "Read and close settlements with your partner.",
+            "Read and change your settings.",
         ]);
     });
 
@@ -118,9 +120,13 @@ describe("ConsentForm", () => {
         expect(screen.getByRole("button", { name: "Permitir" })).toBeDefined();
         expect(screen.getByRole("button", { name: "Rechazar" })).toBeDefined();
         expect(
-            screen.getByText(
-                "Ver y cambiar tus gastos, ingresos, tarjetas y presupuestos",
-            ),
-        ).toBeDefined();
+            screen.getAllByRole("listitem").map((item) => item.textContent),
+        ).toEqual([
+            "Confirmar quién eres",
+            "Mantener tu sesión abierta hasta que la cierres en la app",
+            "Ver y cambiar tus gastos, ingresos, tarjetas y presupuestos.",
+            "Ver y cerrar liquidaciones con tu pareja.",
+            "Ver y cambiar tu configuración.",
+        ]);
     });
 });
